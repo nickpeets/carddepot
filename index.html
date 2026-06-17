@@ -716,43 +716,98 @@ function roloStatus(msg,cls){
   const s=document.getElementById('rolo-status');
   s.textContent=msg||''; s.className='rolo-status'+(cls?' '+cls:'');
 }
+let ALL_PLAYERS=null;        // cached full player list
+let roloLoading=false;
+async function ensurePlayerList(){
+  if(ALL_PLAYERS) return ALL_PLAYERS;
+  // Pull the full historical player list. The "all seasons" form returns
+  // every player in MLB history, so retired players are included.
+  let people=[];
+  try{
+    const r=await fetch(`${MLB_BASE}/sports/1/players?all=true`);
+    if(r.ok){const j=await r.json();people=j.people||[];}
+  }catch(e){}
+  // Fallback to current season if the all-history query is unavailable
+  if(!people.length){
+    try{
+      const r2=await fetch(`${MLB_BASE}/sports/1/players?season=${new Date().getFullYear()}`);
+      if(r2.ok){const j2=await r2.json();people=j2.people||[];}
+    }catch(e){}
+  }
+  ALL_PLAYERS=people;
+  return ALL_PLAYERS;
+}
 async function roloSearch(){
   const q=document.getElementById('rolo-name').value.trim();
   if(!q){roloStatus("Type a player name first.");return;}
+  if(roloLoading) return;
+  roloLoading=true;
   roloStatus("Searching MLB records…");
   document.getElementById('rolo-years').style.display='none';
+  document.getElementById('rolo-brand').style.display='none';
+  let people=[];
   try{
-    let people=[];
+    // Primary: the documented search endpoint (current API form)
     const r=await fetch(`${MLB_BASE}/people/search?names=${encodeURIComponent(q)}`);
-    if(r.ok){const j=await r.json();people=j.people||[];}
+    if(r.ok){const j=await r.json();people=(j.people||[]);}
+    // Fallback A: alternate query param
     if(!people.length){
       const r2=await fetch(`${MLB_BASE}/people/search?q=${encodeURIComponent(q)}`);
-      if(r2.ok){const j2=await r2.json();people=j2.people||[];}
+      if(r2.ok){const j2=await r2.json();people=(j2.people||[]);}
     }
-    if(!people.length){roloStatus("No players found. Check spelling, or enter stats manually below.","err");document.getElementById('rolo-players').style.display='none';return;}
-    const box=document.getElementById('rolo-players');
-    box.innerHTML=people.slice(0,12).map((p,i)=>{
-      const pos=(p.primaryPosition&&p.primaryPosition.name)||'';
-      const yrs=[p.mlbDebutDate?p.mlbDebutDate.slice(0,4):'',p.lastPlayedDate?p.lastPlayedDate.slice(0,4):''].filter(Boolean).join('–');
-      roloCache[i]=p;
-      return `<div class="rolo-player" onclick="roloPick(${i})">
-        <span>${p.fullName}</span><span class="meta">${pos}${yrs?' · '+yrs:''}</span></div>`;
-    }).join('');
-    box.style.display='block';
-    roloStatus(`${people.length} match${people.length>1?'es':''} — pick one.`);
+    // Fallback B: filter the full player list locally (catches retired players)
+    if(!people.length){
+      roloStatus("Searching full player list…");
+      const list=await ensurePlayerList();
+      const ql=q.toLowerCase();
+      people=list.filter(p=>(p.fullName||'').toLowerCase().includes(ql)
+        || (p.lastName||'').toLowerCase().includes(ql)
+        || (p.nameFirstLast||'').toLowerCase().includes(ql));
+    }
   }catch(e){
+    roloLoading=false;
     roloStatus("Couldn't reach MLB records (needs a live connection — works on your deployed site). Enter stats manually below.","err");
+    return;
   }
+  roloLoading=false;
+  if(!people.length){
+    roloStatus(`No match for "${q}". Try a different spelling, or just enter the card manually below.`,"err");
+    document.getElementById('rolo-players').style.display='none';
+    return;
+  }
+  roloCache={};
+  const box=document.getElementById('rolo-players');
+  box.innerHTML=people.slice(0,15).map((p,i)=>{
+    const pos=(p.primaryPosition&&p.primaryPosition.name)||'';
+    const yrs=[p.mlbDebutDate?p.mlbDebutDate.slice(0,4):'',p.lastPlayedDate?p.lastPlayedDate.slice(0,4):''].filter(Boolean).join('–');
+    roloCache[i]=p;
+    return `<div class="rolo-player" onclick="roloPick(${i})">
+      <span>${p.fullName||p.nameFirstLast||'(unknown)'}</span><span class="meta">${pos}${yrs?' · '+yrs:''}</span></div>`;
+  }).join('');
+  box.style.display='block';
+  roloStatus(`${people.length} match${people.length>1?'es':''} — pick one.`);
 }
 let roloCache={};
-function roloPick(i){
-  const p=roloCache[i]; if(!p)return;
-  roloPlayer=p;
+async function hydratePlayer(p){
+  // If we filtered from the list, we may lack debut/lastPlayed dates needed for the year picker.
+  if(p.mlbDebutDate || !p.id) return p;
+  try{
+    const r=await fetch(`${MLB_BASE}/people/${p.id}`);
+    if(r.ok){const j=await r.json(); if(j.people&&j.people[0]) return j.people[0];}
+  }catch(e){}
+  return p;
+}
+async function roloPick(i){
+  let p=roloCache[i]; if(!p)return;
   document.querySelectorAll('.rolo-player').forEach(el=>el.classList.remove('sel'));
   const els=document.querySelectorAll('.rolo-player'); if(els[i])els[i].classList.add('sel');
+  roloStatus("Loading player…");
+  p=await hydratePlayer(p);
+  roloCache[i]=p;
+  roloPlayer=p;
   const posName=(p.primaryPosition&&p.primaryPosition.name)||'';
   const isP=posName==='Pitcher';
-  document.getElementById('f-name').value=p.fullName;
+  document.getElementById('f-name').value=p.fullName||p.nameFirstLast||'';
   if(POS_ABBR[posName])document.getElementById('f-pos').value=POS_ABBR[posName];
   document.getElementById('f-type').value=isP?'pitcher':'hitter';
   updateStatHint();
@@ -767,7 +822,7 @@ function roloPick(i){
     roloStatus("Now pick the season this card is from.");
   }else{
     yrsBox.style.display='none';
-    roloStatus("Player set. Enter the year below, or fill stats manually.","ok");
+    roloStatus("Player set. Type the year below and the brand, or fill stats manually.","ok");
   }
 }
 const STAT_MAP_HIT={gamesPlayed:'G',atBats:'AB',runs:'R',hits:'H',doubles:'2B',triples:'3B',homeRuns:'HR',rbi:'RBI',stolenBases:'SB',baseOnBalls:'BB',strikeOuts:'SO',avg:'AVG',obp:'OBP',slg:'SLG',ops:'OPS'};
