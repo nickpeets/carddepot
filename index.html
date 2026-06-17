@@ -313,6 +313,14 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--brass);out
   *{transition:none!important;scroll-behavior:auto}
   .spot-inner{transition:transform .01s!important}
 }
+/* ---- card-accurate rolodex + grafted image-error + remove button ---- */
+.img-missing{display:flex;align-items:center;justify-content:center;text-align:center;background:#e9e0cc!important}
+.ph-text.err{color:#9a3b1f;line-height:1.35;font-size:.7rem;padding:.4rem}
+.spot-remove{margin-top:.55rem}
+.spot-meta .btn-ghost{display:inline-block;width:auto;padding:.4rem 1rem;font-size:.68rem;cursor:pointer}
+.rolo-yr.nocard{opacity:.7;border-style:dashed;border-color:rgba(0,0,0,.28)}
+.rolo-yr.nocard:hover{border-color:var(--brass);background:var(--cream-dim)}
+.rolo-num-list{font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--ink-soft);margin-top:.25rem}
 </style>
 </head>
 <body>
@@ -379,7 +387,7 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--brass);out
         <div class="rolodex">
           <div class="rolodex-head"><i class="ti ti-search"></i> Auto-fill from MLB records <span class="rolodex-tag">official stats</span></div>
           <div class="rolo-row">
-            <input id="rolo-name" placeholder="Search a player… (e.g. Ken Griffey)" onkeydown="if(event.key==='Enter')roloSearch()">
+            <input id="rolo-name" placeholder="Search a player… (e.g. Ken Griffey)" oninput="roloSuggest()" onkeydown="if(event.key==='Enter')roloSearch()">
             <button onclick="roloSearch()">Find</button>
           </div>
           <div id="rolo-players" class="rolo-list" style="display:none"></div>
@@ -387,7 +395,7 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--brass);out
           <div id="rolo-brand" class="rolo-brand" style="display:none">
             <span class="rolo-brand-label">Brand &amp; number:</span>
             <select id="rolo-brand-sel" onchange="roloBrandPick()"></select>
-            <input id="rolo-num" type="number" placeholder="#" onchange="roloNumPick()" oninput="roloNumPick()">
+            <input id="rolo-num" type="number" placeholder="#" onchange="roloNumPick()" oninput="roloNumPick()"><span id="rolo-num-note" class="rolo-num-list"></span>
             <input id="rolo-brand-custom" placeholder="Set name" style="display:none" onchange="roloBrandCustom()" oninput="roloBrandCustom()">
           </div>
           <div id="rolo-status" class="rolo-status"></div>
@@ -641,6 +649,10 @@ function brefURL(c){
   const q=[c.name, "baseball reference", c.yr||''].filter(Boolean).join(' ');
   return "https://www.google.com/search?q="+encodeURIComponent(q)+"&btnI=1";
 }
+function escAttr(s){ return String(s).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+function imgFail(el){ if(el.dataset.failed)return; el.dataset.failed="1"; const ph=document.createElement("div"); ph.className=el.className+" img-missing"; ph.setAttribute("style",el.getAttribute("style")||""); ph.title="Image unavailable (broken link or hotlinking blocked)"; ph.innerHTML="<span class=\"ph-text err\">image unavailable</span>"; el.replaceWith(ph); }
+function imgOk(el){ el.classList.add("loaded"); }
+function removeFromDepot(idx,e){ if(e)e.stopPropagation(); const c=COLLECTION[idx]; if(!c){ toast("Card not found."); return; } if(!confirm("Remove "+(c.name||"this card")+" from the depot? This cannot be undone.")) return; const ui=USER_CARDS.indexOf(c); if(ui===-1){ toast("This card cannot be removed."); return; } USER_CARDS.splice(ui,1); persist(); rebuild(); if(mode==="binder"){ renderBinder(); } else { renderSetPicker(); } closeSpot(null,true); toast((c.name||"Card")+" removed from the depot."); }
 function findStatsFor(idx,e){
   if(e)e.stopPropagation();
   const c=COLLECTION[idx];
@@ -671,7 +683,8 @@ function openSpot(idx){
       <button class="btn-bref" onclick="findStatsFor(${idx},event)">Look up on Baseball-Reference ↗</button>
     </div>`;
   document.getElementById('spotMeta').innerHTML=`<span class="hint">click card to flip · esc to close</span>`
-    + (c.photo?'':`<div style="margin-top:.5rem"><button class="btn-google" style="width:auto;padding:.45rem 1rem;font-size:.72rem" onclick="findImageFor(${idx},event)">Find this card on Google Images ↗</button></div>`);
+    + (c.photo?'':`<div style="margin-top:.5rem"><button class="btn-google" style="width:auto;padding:.45rem 1rem;font-size:.72rem" onclick="findImageFor(${idx},event)">Find this card on Google Images ↗</button></div>`)
+        + `<div class="spot-remove"><button class="btn-ghost" onclick="removeFromDepot(${idx},event)">Remove from depot</button></div>`;
   document.getElementById('spotCard').classList.remove('flipped');
   document.getElementById('spotlight').classList.add('open');
 }
@@ -698,6 +711,50 @@ function setMode(m){
    free for personal use. Search a player, pick a season, stats auto-fill.
    Fails soft: if a lookup returns nothing, manual entry still works. */
 const MLB_BASE = "https://statsapi.mlb.com/api/v1";
+/* ===== Checklist card data layer (keyless/static) =====
+   players.json (norm name -> {display, years[]}) loads once on first rolodex use.
+   Per-year cards-YYYY.json files load only when that year is actually picked. */
+let PLAYER_INDEX=null, PLAYER_INDEX_PROMISE=null;
+const YEAR_CACHE={};
+function normName(x){
+  x=(x||"").normalize("NFKD").replace(/[\u0300-\u036f]/g,"");
+  x=x.toLowerCase().replace(/\./g," ");
+  x=x.replace(/\b(junior|jr)\b/g,"jr").replace(/\b(senior|sr)\b/g,"sr");
+  x=x.replace(/[^a-z0-9 ]/g," ").replace(/\s+/g," ").trim();
+  return x;
+}
+async function getPlayerIndex(){
+  if(PLAYER_INDEX) return PLAYER_INDEX;
+  if(!PLAYER_INDEX_PROMISE){
+    PLAYER_INDEX_PROMISE=fetch("data/players.json").then(r=>{if(!r.ok)throw new Error("http");return r.json();})
+      .then(j=>{PLAYER_INDEX=j;return j;}).catch(e=>{PLAYER_INDEX_PROMISE=null;throw e;});
+  }
+  return PLAYER_INDEX_PROMISE;
+}
+async function loadYear(y){
+  if(YEAR_CACHE[y]!==undefined) return YEAR_CACHE[y];
+  try{ const r=await fetch("data/cards-"+y+".json"); if(!r.ok){YEAR_CACHE[y]=null;return null;} const j=await r.json(); YEAR_CACHE[y]=j; return j; }
+  catch(e){ YEAR_CACHE[y]=null; return null; }
+}
+/* Years (from the player index) where a plain-name player has a real card. */
+async function playerCardYears(displayOrName){
+  let idx; try{ idx=await getPlayerIndex(); }catch(e){ return null; } /* null = index unavailable */
+  const n=normName(displayOrName);
+  if(idx[n]) return {match:idx[n].display, years:idx[n].years.slice(), exact:true};
+  /* light fuzzy: same last token + first initial */
+  const parts=n.split(" "); if(parts.length<2) return {match:null,years:[],cands:[]};
+  const last=parts[parts.length-1], fi=parts[0][0];
+  const cands=Object.keys(idx).filter(k=>{const p=k.split(" ");return p.length>=2 && p[p.length-1]===last && p[0][0]===fi;});
+  if(cands.length===1) return {match:idx[cands[0]].display, years:idx[cands[0]].years.slice(), exact:false};
+  return {match:null, years:[], cands:cands.map(c=>idx[c].display)};
+}
+/* Real cards for a given plain-name player in a given year (from per-year file). */
+async function cardsForPlayerYear(name,y){
+  const data=await loadYear(y); if(!data) return null; /* null = year file missing */
+  const n=normName(name);
+  return data.filter(r=>normName(r.player)===n);
+}
+
 let roloPlayer = null;
 const POS_ABBR = {Pitcher:'P',Catcher:'C','First Base':'1B','Second Base':'2B','Third Base':'3B',Shortstop:'SS','Left Field':'LF','Center Field':'CF','Right Field':'RF',Outfielder:'OF','Designated Hitter':'DH'};
 
@@ -737,7 +794,43 @@ async function ensurePlayerList(){
   ALL_PLAYERS=people;
   return ALL_PLAYERS;
 }
-async function roloSearch(){
+/* ---------- static autocomplete (uses the already-loaded players.json) ---------- */
+    let ROLO_SUGG=[];
+    async function roloSuggest(){
+      const inp=document.getElementById('rolo-name');
+      const box=document.getElementById('rolo-players');
+      const q=normName(inp.value);
+      document.getElementById('rolo-years').style.display='none';
+      document.getElementById('rolo-brand').style.display='none';
+      if(q.length<2){ box.style.display='none'; box.innerHTML=''; ROLO_SUGG=[]; return; }
+      let idx; try{ idx=await getPlayerIndex(); }catch(e){ idx=null; }
+      if(!idx){ box.style.display='none'; return; }   /* offline -> fall back to Find */
+      const hits=[];
+      for(const k in idx){ if(k.indexOf(q)>=0) hits.push({k,d:idx[k].display||k}); }
+      hits.sort((a,b)=>{ const as=a.k.startsWith(q)?0:1, bs=b.k.startsWith(q)?0:1; return as-bs || a.d.localeCompare(b.d); });
+      ROLO_SUGG=hits.slice(0,8);
+      if(!ROLO_SUGG.length){ box.style.display='none'; box.innerHTML=''; return; }
+      box.innerHTML=ROLO_SUGG.map((h,i)=>{ const yrs=(idx[h.k].years||[]); const meta=yrs.length?yrs.length+' yr'+(yrs.length>1?'s':'')+' in checklist':'not in checklist'; return `<div class="rolo-player" onclick="roloPickName(${i})"><span>${h.d}</span><span class="meta">${meta}</span></div>`; }).join('');
+      box.style.display='block';
+    }
+    async function roloPickName(i){
+      const h=ROLO_SUGG[i]; if(!h)return;
+      let idx; try{ idx=await getPlayerIndex(); }catch(e){ idx=null; }
+      const name=(idx&&idx[h.k]&&idx[h.k].display)||h.d;
+      roloPlayer={fullName:name, nameFirstLast:name};
+      document.getElementById('rolo-name').value=name;
+      document.getElementById('f-name').value=name;
+      const box=document.getElementById('rolo-players'); box.style.display='none'; box.innerHTML='';
+      document.getElementById('rolo-brand').style.display='none';
+      const yrsBox=document.getElementById('rolo-years');
+      const endY=new Date().getFullYear(), startY=1980;
+      let html='<span style="font-family:\'Oswald\',sans-serif;font-size:.66rem;text-transform:uppercase;color:var(--leather);width:100%;letter-spacing:.04em">Pick a season:</span>';
+      for(let y=endY;y>=startY;y--) html+=`<button class="rolo-yr" data-year="${y}" onclick="roloYear(${y},this)">${y}</button>`;
+      yrsBox.innerHTML=html; yrsBox.style.display='flex';
+      roloStatus("Now pick the season this card is from.");
+      markCardYears(name);
+    }
+    async function roloSearch(){
   const q=document.getElementById('rolo-name').value.trim();
   if(!q){roloStatus("Type a player name first.");return;}
   if(roloLoading) return;
@@ -817,9 +910,10 @@ async function roloPick(i){
   const yrsBox=document.getElementById('rolo-years');
   if(start){
     let html='<span style="font-family:\'Oswald\',sans-serif;font-size:.66rem;text-transform:uppercase;color:var(--leather);width:100%;letter-spacing:.04em">Pick a season:</span>';
-    for(let y=end;y>=start;y--) html+=`<button class="rolo-yr" onclick="roloYear(${y},this)">${y}</button>`;
+    for(let y=end;y>=start;y--) html+=`<button class="rolo-yr" data-year="${y}" onclick="roloYear(${y},this)">${y}</button>`;
     yrsBox.innerHTML=html; yrsBox.style.display='flex';
     roloStatus("Now pick the season this card is from.");
+    markCardYears(roloPlayer.fullName||roloPlayer.nameFirstLast||"");
   }else{
     yrsBox.style.display='none';
     roloStatus("Player set. Type the year below and the brand, or fill stats manually.","ok");
@@ -851,23 +945,58 @@ const BRANDS=[
 function brandsForYear(y){
   return BRANDS.filter(b=>y>=b.from && (b.to==null || y<=b.to)).map(b=>b.name);
 }
-function roloShowBrands(y){
+let ROLO_YEAR_CARDS=[];
+async function roloShowBrands(y){
   const box=document.getElementById('rolo-brand');
   const sel=document.getElementById('rolo-brand-sel');
-  const list=brandsForYear(y);
-  sel.innerHTML='<option value="">— pick brand —</option>'
-    + list.map(n=>`<option value="${n}">${n}</option>`).join('')
-    + '<option value="__other">Other / type it…</option>';
+  const note=document.getElementById('rolo-num-note');
+  const name=(roloPlayer&&(roloPlayer.fullName||roloPlayer.nameFirstLast))||'';
+  let cards=null;
+  try{ cards=await cardsForPlayerYear(name,y); }catch(e){ cards=null; }
+  ROLO_YEAR_CARDS = Array.isArray(cards)?cards:[];
+  let list, accurate=false;
+  if(cards===null){
+    /* year file missing / offline -> manual fallback */
+    list=brandsForYear(y);
+    roloStatus("Couldn't load "+y+" cards \u2014 pick a brand and enter the card number manually (can't be auto-confirmed).","err");
+  } else if(cards.length===0){
+    list=brandsForYear(y);
+    roloStatus((name||"This player")+" has no "+y+" card in the checklist. Enter one manually if you have it (it can't be auto-confirmed).","err");
+  } else {
+    list=[...new Set(cards.map(c=>c.brand).filter(Boolean))];
+    accurate=true;
+  }
+  sel.innerHTML='<option value="">\u2014 pick brand \u2014</option>'
+    + list.map(n=>`<option value="${escAttr(n)}">${n}</option>`).join('')
+    + '<option value="__other">Other / type it\u2026</option>';
   document.getElementById('rolo-brand-custom').style.display='none';
   document.getElementById('rolo-brand-custom').value='';
+  document.getElementById('rolo-num').value='';
+  document.getElementById('f-num').value='';
+  note.textContent='';
   box.style.display='flex';
+  if(accurate){
+    const nums=[...new Set(ROLO_YEAR_CARDS.map(c=>c.number).filter(Boolean))];
+    roloStatus("\u2713 "+ROLO_YEAR_CARDS.length+" "+y+" "+(roloPlayer.fullName||name)+" card"+(ROLO_YEAR_CARDS.length===1?"":"s")+" in the checklist across "+list.length+" brand"+(list.length===1?"":"s")+". Pick a brand to see its card number"+(nums.length===1?"":"s")+".","ok");
+  }
 }
 function roloBrandPick(){
   const v=document.getElementById('rolo-brand-sel').value;
   const custom=document.getElementById('rolo-brand-custom');
-  if(v==='__other'){custom.style.display='block';custom.focus();document.getElementById('f-set').value='';return;}
+  const note=document.getElementById('rolo-num-note');
+  const numIn=document.getElementById('rolo-num');
+  if(v==='__other'){custom.style.display='block';custom.focus();document.getElementById('f-set').value='';note.textContent='';return;}
   custom.style.display='none';
   if(v)document.getElementById('f-set').value=v;
+  /* offer the actual card number(s) for this brand from the checklist */
+  const nums=[...new Set((ROLO_YEAR_CARDS||[]).filter(c=>c.brand===v).map(c=>c.number).filter(Boolean))];
+  if(nums.length===1){
+    numIn.value=nums[0]; document.getElementById('f-num').value=nums[0];
+    note.textContent='checklist #'+nums[0];
+  } else if(nums.length>1){
+    numIn.value=''; document.getElementById('f-num').value='';
+    note.textContent='checklist #s: '+nums.join(', ');
+  } else { note.textContent=''; }
 }
 function roloBrandCustom(){
   document.getElementById('f-set').value=document.getElementById('rolo-brand-custom').value.trim();
@@ -876,12 +1005,44 @@ function roloNumPick(){
   document.getElementById('f-num').value=document.getElementById('rolo-num').value;
 }
 
+/* Cross-reference career-year buttons against the checklist:
+   enable only years the player actually has a card; mark the rest "no known card". */
+async function markCardYears(playerName){
+  const btns=[...document.querySelectorAll('.rolo-yr')];
+  if(!btns.length) return;
+  let res;
+  try{ res=await playerCardYears(playerName); }catch(e){ res=null; }
+  if(res===null){
+    /* index unavailable (e.g. offline) -> don't block; allow all, note it */
+    roloStatus("Couldn't load the card checklist (works on the deployed site). All years left open \u2014 the card can't be auto-confirmed.","err");
+    return;
+  }
+  if(!res.match){
+    if(res.cands && res.cands.length){
+      roloStatus("No exact name match for \""+playerName+"\". Did you mean: "+res.cands.slice(0,6).join(", ")+"? Pick a year to enter the card manually.","err");
+    }else{
+      roloStatus("\""+playerName+"\" isn't in the checklist \u2014 pick a year and enter the card manually (it can't be auto-confirmed).","err");
+    }
+    return;
+  }
+  const have=new Set(res.years.map(String));
+  let on=0;
+  btns.forEach(b=>{ const y=b.getAttribute('data-year'); if(!y) return; if(have.has(y)){ b.classList.remove('nocard'); on++; } else { b.classList.add('nocard'); } });
+  const note=res.exact?"":" (matched \""+res.match+"\")";
+  const off=btns.length-on; roloStatus("\u2713 "+on+" season"+(on===1?"":"s")+" with a confirmed "+res.match+" card"+note+". "+(off>0?"Other years aren\u2019t in the checklist \u2014 still selectable, but you\u2019ll confirm those manually.":""),"ok");
+}
 async function roloYear(y,btn){
   document.querySelectorAll('.rolo-yr').forEach(el=>el.classList.remove('sel'));
   if(btn)btn.classList.add('sel');
   if(!roloPlayer){roloStatus("Pick a player first.","err");return;}
+  const inChecklist=!(btn&&btn.classList.contains("nocard"));
   document.getElementById('f-yr').value=y;
-  roloShowBrands(y);            // brand/number are independent of the stats lookup
+  await roloShowBrands(y);            // brand/number are independent of the stats lookup
+      if(!inChecklist){
+        document.getElementById('f-stats').value='';
+        roloStatus(""+y+" isn’t in the checklist — that’s fine, the dataset is patchy. Couldn’t auto-confirm this card; pick the brand & number and enter the details manually.","ok");
+        return;
+      }
   const isP=document.getElementById('f-type').value==='pitcher';
   const group=isP?'pitching':'hitting';
   roloStatus(`Pulling ${y} ${group} stats…`);
