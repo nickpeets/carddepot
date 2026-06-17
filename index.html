@@ -485,38 +485,7 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--brass);out
        hitters  → G AB R H 2B 3B HR RBI SB BB SO AVG OBP SLG OPS
        pitchers → W L ERA G GS SV IP H BB SO WHIP
    ============================================================ */
-const SEED = [
-  {name:"Nolan Ryan", pos:"P", type:"pitcher", team:"Astros", yr:1980, set:"Topps", num:580, era:"vintage", rare:true,
-   stats:{"W":"11","L":"10","ERA":"3.35","G":"35","GS":"35","IP":"233.2","SO":"200","BB":"98","WHIP":"1.28"}, bio:"The Express. Seven no-hitters and 5,714 career strikeouts — records that may never fall."},
-  {name:"George Brett", pos:"3B", type:"hitter", team:"Royals", yr:1980, set:"Topps", num:450, era:"vintage", rare:true,
-   stats:{"G":"117","AB":"449","R":"87","H":"175","HR":"24","RBI":"118","AVG":".390","OBP":".454","SLG":".664","OPS":"1.118"}, bio:"Chased .400 into late September. The MVP pine-tar legend of Kansas City."},
-  {name:"Robin Yount", pos:"SS", type:"hitter", team:"Brewers", yr:1980, set:"Topps", num:265, era:"vintage", rare:false,
-   stats:{"G":"143","AB":"611","R":"121","H":"179","HR":"23","RBI":"87","AVG":".293","OBP":".321","SLG":".519"}, bio:"Two MVPs at two positions. A Brewer for life."},
-  {name:"Reggie Jackson", pos:"RF", type:"hitter", team:"Yankees", yr:1980, set:"Topps", num:600, era:"vintage", rare:false,
-   stats:{"G":"143","AB":"514","R":"94","H":"154","HR":"41","RBI":"111","AVG":".300","OBP":".398","SLG":".597"}, bio:"Mr. October. Led the AL in homers and lived for the big moment."},
-
-  {name:"Ken Griffey Jr.", pos:"CF", type:"hitter", team:"Mariners", yr:1989, set:"Upper Deck", num:1, era:"junk", rare:true,
-   stats:{"G":"127","AB":"455","R":"61","H":"120","HR":"16","RBI":"61","SB":"16","AVG":".264","OBP":".329","SLG":".420"}, bio:"Card #1 of the set that changed the hobby. The Kid's iconic rookie."},
-  {name:"Frank Thomas", pos:"1B", type:"hitter", team:"White Sox", yr:1991, set:"Leaf", num:300, era:"junk", rare:true,
-   stats:{"G":"158","AB":"559","R":"104","H":"178","HR":"32","RBI":"109","AVG":".318","OBP":".453","SLG":".553"}, bio:"The Big Hurt. A rare blend of power and plate discipline."},
-  {name:"Cal Ripken Jr.", pos:"SS", type:"hitter", team:"Orioles", yr:1991, set:"Topps", num:5, era:"junk", rare:false,
-   stats:{"G":"162","AB":"650","R":"99","H":"210","HR":"34","RBI":"114","AVG":".323","OBP":".374","SLG":".566"}, bio:"His second MVP, mid-streak of 2,632 straight games."},
-  {name:"Tony Gwynn", pos:"RF", type:"hitter", team:"Padres", yr:1992, set:"Upper Deck", num:275, era:"junk", rare:false,
-   stats:{"G":"128","AB":"520","R":"77","H":"165","HR":"6","RBI":"41","SO":"16","AVG":".317","OBP":".371","SLG":".415"}, bio:"Mr. Padre. Eight batting titles and a bat that never struck out."},
-  {name:"Greg Maddux", pos:"P", type:"pitcher", team:"Cubs", yr:1992, set:"Topps", num:183, era:"junk", rare:false,
-   stats:{"W":"20","L":"11","ERA":"2.18","G":"35","GS":"35","IP":"268.0","SO":"199","CG":"9","SHO":"4"}, bio:"His first Cy Young. The Professor painted corners better than anyone — 268 innings, a 2.18 ERA, and just seven homers allowed."},
-
-  {name:"Derek Jeter", pos:"SS", type:"hitter", team:"Yankees", yr:1996, set:"SP", num:182, era:"modern", rare:true,
-   stats:{"G":"157","AB":"582","R":"104","H":"183","HR":"10","RBI":"78","AVG":".314","OBP":".370","SLG":".430"}, bio:"Rookie of the Year and the start of a dynasty in the Bronx."},
-  {name:"Chipper Jones", pos:"3B", type:"hitter", team:"Braves", yr:1995, set:"Upper Deck", num:200, era:"modern", rare:false,
-   stats:{"G":"140","AB":"524","R":"87","H":"139","HR":"23","RBI":"86","AVG":".265","OBP":".353","SLG":".450"}, bio:"Switch-hitting cornerstone of the Braves' run through the late '90s and 2000s."},
-  {name:"Pedro Martinez", pos:"P", type:"pitcher", team:"Expos", yr:1997, set:"Fleer", num:294, era:"modern", rare:true,
-   stats:{"W":"17","L":"8","ERA":"1.90","G":"31","GS":"31","IP":"241.1","SO":"305","BB":"67","WHIP":"0.93"}, bio:"His first Cy Young — the most dominant pitching peak of a generation."},
-  {name:"Mariano Rivera", pos:"P", type:"pitcher", team:"Yankees", yr:1996, set:"Bowman", num:251, era:"modern", rare:true,
-   stats:{"W":"8","L":"3","ERA":"2.09","G":"61","GS":"0","SV":"5","IP":"107.2","SO":"130","WHIP":"0.99"}, bio:"His breakout setup season, before the cutter made him the greatest closer ever."},
-  {name:"Mike Piazza", pos:"C", type:"hitter", team:"Dodgers", yr:1995, set:"Topps", num:200, era:"modern", rare:false,
-   stats:{"G":"112","AB":"434","R":"82","H":"150","HR":"32","RBI":"93","AVG":".346","OBP":".400","SLG":".606"}, bio:"A 62nd-round pick who became the best-hitting catcher in history."}
-];
+const SEED = [];
 
 const ERAS = {
   vintage:{title:"The Vintage Years", range:"pre-1981", skin:"skin-vintage",
