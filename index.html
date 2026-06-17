@@ -249,6 +249,12 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--brass);out
 .rolo-player .meta{font-family:'JetBrains Mono',monospace;font-size:.66rem;color:var(--ink-soft)}
 .rolo-player.sel{background:var(--brass);color:var(--leather-dark)}
 .rolo-years{margin-top:.55rem;display:flex;flex-wrap:wrap;gap:.3rem}
+.rolo-brand{margin-top:.55rem;display:flex;flex-wrap:wrap;align-items:center;gap:.4rem}
+.rolo-brand-label{font-family:'Oswald',sans-serif;font-size:.66rem;text-transform:uppercase;color:var(--leather);letter-spacing:.04em;width:100%}
+.rolo-brand select,.rolo-brand input{font-family:'Spectral',serif;font-size:.82rem;padding:.35rem .45rem;border:1px solid rgba(0,0,0,.2);border-radius:5px;background:#fff;color:var(--ink)}
+.rolo-brand select{flex:1;min-width:130px}
+.rolo-brand input[type=number]{width:70px}
+.rolo-brand input#rolo-brand-custom{flex:1;min-width:120px}
 .rolo-yr{font-family:'JetBrains Mono',monospace;font-size:.72rem;padding:.3rem .55rem;border:1px solid rgba(0,0,0,.2);border-radius:4px;cursor:pointer;background:#fff;color:var(--ink)}
 .rolo-yr:hover{border-color:var(--brass);background:var(--cream-dim)}
 .rolo-yr.sel{background:var(--leather);color:var(--cream);border-color:var(--leather)}
@@ -294,9 +300,7 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--brass);out
 
 @media (max-width:640px){
   .form-body{flex-direction:column}
-}
-
-
+  .stage{flex-direction:column;padding:1rem}
   .rail{flex-direction:row;flex-wrap:wrap;position:static;width:100%;margin-bottom:1rem}
   .rail-label{width:100%}
   .era-tab{flex:1;min-width:120px}
@@ -380,6 +384,12 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--brass);out
           </div>
           <div id="rolo-players" class="rolo-list" style="display:none"></div>
           <div id="rolo-years" class="rolo-years" style="display:none"></div>
+          <div id="rolo-brand" class="rolo-brand" style="display:none">
+            <span class="rolo-brand-label">Brand &amp; number:</span>
+            <select id="rolo-brand-sel" onchange="roloBrandPick()"></select>
+            <input id="rolo-num" type="number" placeholder="#" onchange="roloNumPick()" oninput="roloNumPick()">
+            <input id="rolo-brand-custom" placeholder="Set name" style="display:none" onchange="roloBrandCustom()" oninput="roloBrandCustom()">
+          </div>
           <div id="rolo-status" class="rolo-status"></div>
         </div>
         <div class="fl-row">
@@ -529,9 +539,10 @@ const PER_PAGE=9;
 
 function placeholderBg(i){return PLACEHOLDER[i%PLACEHOLDER.length]}
 
+function cssUrl(u){ return String(u).replace(/["'()\\]/g, m=>'%'+m.charCodeAt(0).toString(16)); }
 function cardHTML(card, idx, skin){
   const photoStyle = card.photo
-    ? `background-image:url('${card.photo}')`
+    ? `background-image:url("${cssUrl(card.photo)}")`
     : `background-color:${placeholderBg(idx)}`;
   return `<button class="card ${skin}" onclick="openSpot(${idx})" aria-label="${card.name}, ${card.yr} ${card.set}">
     ${card.rare?'<span class="rare-pin" title="Key card">★</span>':''}
@@ -640,7 +651,7 @@ function findStatsFor(idx,e){
 function openSpot(idx){
   spotIdx=idx;const c=COLLECTION[idx];
   const skin=ERAS[c.era].skin;
-  const photoStyle=c.photo?`background-image:url('${c.photo}')`:`background-color:${placeholderBg(idx)}`;
+  const photoStyle=c.photo?`background-image:url("${cssUrl(c.photo)}")`:`background-color:${placeholderBg(idx)}`;
   document.getElementById('spotFront').className=`spot-face ${skin}`;
   document.getElementById('spotFront').innerHTML=`<div class="frame" style="position:absolute;inset:0;display:flex;flex-direction:column">
     ${c.rare?'<span class="rare-pin" style="width:24px;height:24px;font-size:.85rem;top:10px;right:10px">★</span>':''}
@@ -697,6 +708,7 @@ function roloReset(){
   document.getElementById('rolo-players').innerHTML='';
   document.getElementById('rolo-years').style.display='none';
   document.getElementById('rolo-years').innerHTML='';
+  document.getElementById('rolo-brand').style.display='none';
   document.getElementById('rolo-status').textContent='';
   document.getElementById('rolo-status').className='rolo-status';
 }
@@ -744,6 +756,7 @@ function roloPick(i){
   if(POS_ABBR[posName])document.getElementById('f-pos').value=POS_ABBR[posName];
   document.getElementById('f-type').value=isP?'pitcher':'hitter';
   updateStatHint();
+  document.getElementById('rolo-brand').style.display='none';
   const start=p.mlbDebutDate?parseInt(p.mlbDebutDate.slice(0,4)):null;
   const end=p.lastPlayedDate?parseInt(p.lastPlayedDate.slice(0,4)):new Date().getFullYear();
   const yrsBox=document.getElementById('rolo-years');
@@ -759,10 +772,61 @@ function roloPick(i){
 }
 const STAT_MAP_HIT={gamesPlayed:'G',atBats:'AB',runs:'R',hits:'H',doubles:'2B',triples:'3B',homeRuns:'HR',rbi:'RBI',stolenBases:'SB',baseOnBalls:'BB',strikeOuts:'SO',avg:'AVG',obp:'OBP',slg:'SLG',ops:'OPS'};
 const STAT_MAP_PIT={wins:'W',losses:'L',era:'ERA',gamesPlayed:'G',gamesStarted:'GS',completeGames:'CG',shutouts:'SHO',saves:'SV',inningsPitched:'IP',hits:'H',baseOnBalls:'BB',strikeOuts:'SO',whip:'WHIP'};
+
+/* Major baseball-card brands and the (approx.) flagship-run years they printed.
+   [startYear, endYear] — endYear null means still active. Used to offer a
+   year-aware brand list. "Other…" always lets you type a set we don't list. */
+const BRANDS=[
+  {name:"Topps", from:1951, to:null},
+  {name:"Bowman", from:1948, to:1955},      // original run
+  {name:"Bowman (Topps)", from:1989, to:null}, // revived by Topps
+  {name:"Fleer", from:1981, to:2007},
+  {name:"Donruss", from:1981, to:2005},
+  {name:"Score", from:1988, to:1998},
+  {name:"Upper Deck", from:1989, to:2010},
+  {name:"Leaf", from:1990, to:1998},
+  {name:"Stadium Club", from:1991, to:null},
+  {name:"Pinnacle", from:1992, to:1998},
+  {name:"SP", from:1993, to:2005},
+  {name:"Collector's Choice", from:1994, to:2002},
+  {name:"Topps Chrome", from:1996, to:null},
+  {name:"Bowman Chrome", from:1997, to:null},
+  {name:"Panini", from:2012, to:null}        // MLBPA-only era
+];
+function brandsForYear(y){
+  return BRANDS.filter(b=>y>=b.from && (b.to==null || y<=b.to)).map(b=>b.name);
+}
+function roloShowBrands(y){
+  const box=document.getElementById('rolo-brand');
+  const sel=document.getElementById('rolo-brand-sel');
+  const list=brandsForYear(y);
+  sel.innerHTML='<option value="">— pick brand —</option>'
+    + list.map(n=>`<option value="${n}">${n}</option>`).join('')
+    + '<option value="__other">Other / type it…</option>';
+  document.getElementById('rolo-brand-custom').style.display='none';
+  document.getElementById('rolo-brand-custom').value='';
+  box.style.display='flex';
+}
+function roloBrandPick(){
+  const v=document.getElementById('rolo-brand-sel').value;
+  const custom=document.getElementById('rolo-brand-custom');
+  if(v==='__other'){custom.style.display='block';custom.focus();document.getElementById('f-set').value='';return;}
+  custom.style.display='none';
+  if(v)document.getElementById('f-set').value=v;
+}
+function roloBrandCustom(){
+  document.getElementById('f-set').value=document.getElementById('rolo-brand-custom').value.trim();
+}
+function roloNumPick(){
+  document.getElementById('f-num').value=document.getElementById('rolo-num').value;
+}
+
 async function roloYear(y,btn){
   document.querySelectorAll('.rolo-yr').forEach(el=>el.classList.remove('sel'));
   if(btn)btn.classList.add('sel');
   if(!roloPlayer){roloStatus("Pick a player first.","err");return;}
+  document.getElementById('f-yr').value=y;
+  roloShowBrands(y);            // brand/number are independent of the stats lookup
   const isP=document.getElementById('f-type').value==='pitcher';
   const group=isP?'pitching':'hitting';
   roloStatus(`Pulling ${y} ${group} stats…`);
@@ -771,20 +835,19 @@ async function roloYear(y,btn){
     if(!r.ok) throw new Error('http');
     const j=await r.json();
     const splits=(j.stats&&j.stats[0]&&j.stats[0].splits)||[];
-    if(!splits.length){roloStatus(`No ${group} stats found for ${y}. Try another year or enter manually.`,"err");return;}
+    if(!splits.length){roloStatus(`No ${group} stats found for ${y}. Pick the brand/number and enter stats manually.`,"err");return;}
     let split=splits[0];
     if(splits.length>1){split=splits.reduce((a,b)=>((b.stat.gamesPlayed||0)>(a.stat.gamesPlayed||0)?b:a),splits[0]);}
     const st=split.stat||{};
     const map=isP?STAT_MAP_PIT:STAT_MAP_HIT;
     const out=[];
     for(const k in map){ if(st[k]!=null&&st[k]!==''&&st[k]!=='.---'&&st[k]!=='-.--') out.push(`${map[k]}:${st[k]}`); }
-    if(!out.length){roloStatus(`Found ${y} but no usable stat fields. Enter manually.`,"err");return;}
+    if(!out.length){roloStatus(`Found ${y} but no usable stat fields. Pick brand/number and enter stats manually.`,"err");return;}
     document.getElementById('f-stats').value=out.join(', ');
-    document.getElementById('f-yr').value=y;
     if(split.team&&split.team.name)document.getElementById('f-team').value=split.team.name;
-    roloStatus(`✓ ${roloPlayer.fullName}, ${y} filled in. Add the set name, then find the front image.`,"ok");
+    roloStatus(`✓ ${roloPlayer.fullName}, ${y} filled in. Pick the brand & number, then find the front image.`,"ok");
   }catch(e){
-    roloStatus("Couldn't pull that season (needs live connection — works on your deployed site). Enter stats manually.","err");
+    roloStatus("Couldn't pull that season (needs live connection — works on your deployed site). Pick brand/number and enter stats manually.","err");
   }
 }
 
@@ -824,8 +887,23 @@ function imgTab(p){
 }
 function setPreview(src){
   const pv=document.getElementById('imgPreview');
-  if(src){pv.style.backgroundImage=`url('${src}')`;pv.classList.add('has-img');pv.innerHTML='';}
-  else{pv.style.backgroundImage='';pv.classList.remove('has-img');pv.innerHTML='<span class="ph-text">no image yet</span>';}
+  if(src){
+    pv.classList.add('has-img');
+    pv.innerHTML='<span class="ph-text">loading…</span>';
+    const img=new Image();
+    img.onload=()=>{ pv.innerHTML=''; pv.appendChild(img); };
+    img.onerror=()=>{
+      pv.classList.remove('has-img');
+      pv.innerHTML='<span class="ph-text" style="text-align:center;padding:0 .5rem;line-height:1.4">That link didn\u2019t load as an image.<br>Make sure it ends in .jpg/.png and is a direct image address, not a page link.</span>';
+    };
+    img.alt='card preview';
+    img.style.cssText='width:100%;height:100%;object-fit:cover';
+    img.src=src;
+  } else {
+    pv.style.backgroundImage='';
+    pv.classList.remove('has-img');
+    pv.innerHTML='<span class="ph-text">no image yet</span>';
+  }
 }
 function onFile(e){
   const file=e.target.files[0];if(!file)return;
