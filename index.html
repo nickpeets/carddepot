@@ -504,8 +504,14 @@ function loadSaved(){
   catch(e){ return []; }
 }
 function persist(){
-  try{ localStorage.setItem(STORE_KEY, JSON.stringify(USER_CARDS)); }
-  catch(e){ /* storage blocked — cards live for this session only */ }
+  try{ localStorage.setItem(STORE_KEY, JSON.stringify(USER_CARDS)); return true; }
+  catch(e){
+    const quota = (e && (e.name==='QuotaExceededError' || e.code===22 || e.code===1014 || /quota/i.test(e.message||'')));
+    toast(quota
+      ? "Couldn't save — browser storage is full. Existing cards are safe; consider removing some images."
+      : "Couldn't save — browser storage is unavailable. Existing cards are safe.");
+    return false;
+  }
 }
 let USER_CARDS = loadSaved();
 let COLLECTION = SEED.concat(USER_CARDS);
@@ -1090,10 +1096,40 @@ function setPreview(src){
     pv.innerHTML='<span class="ph-text">no image yet</span>';
   }
 }
+function downscaleDataURL(srcDataURL, maxSide, quality){
+  return new Promise((resolve)=>{
+    const img=new Image();
+    img.onload=function(){
+      let w=img.naturalWidth||img.width, h=img.naturalHeight||img.height;
+      if(!w||!h){ resolve(srcDataURL); return; }
+      const longest=Math.max(w,h);
+      // don't upscale: only shrink if larger than maxSide
+      const scale = longest>maxSide ? maxSide/longest : 1;
+      const cw=Math.round(w*scale), ch=Math.round(h*scale);
+      try{
+        const canvas=document.createElement('canvas');
+        canvas.width=cw; canvas.height=ch;
+        const ctx=canvas.getContext('2d');
+        ctx.drawImage(img,0,0,cw,ch);
+        const out=canvas.toDataURL('image/jpeg', quality);
+        // fall back to source if encoding somehow produced something larger/invalid
+        resolve((out && out.length < srcDataURL.length) ? out : srcDataURL);
+      }catch(err){ resolve(srcDataURL); }
+    };
+    img.onerror=function(){ resolve(srcDataURL); };
+    img.src=srcDataURL;
+  });
+}
 function onFile(e){
   const file=e.target.files[0];if(!file)return;
   const reader=new FileReader();
-  reader.onload=ev=>{document.getElementById('f-photo').value=ev.target.result;setPreview(ev.target.result);};
+  reader.onload=ev=>{
+    const orig=ev.target.result;
+    downscaleDataURL(orig, 600, 0.8).then(small=>{
+      document.getElementById('f-photo').value=small;
+      setPreview(small);
+    });
+  };
   reader.readAsDataURL(file);
 }
 function useUrl(){
@@ -1147,7 +1183,7 @@ function saveCard(){
     bio:document.getElementById('f-bio').value.trim()||""
   };
   USER_CARDS.push(card);
-  persist();
+  if(!persist()){ USER_CARDS.pop(); return; }
   rebuild();
   document.getElementById('formScrim').classList.remove('open');
   curEra=card.era;
