@@ -1,0 +1,928 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Depot</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Spectral:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+:root{
+  --leather:#5a2118;
+  --leather-dark:#3d160f;
+  --leather-light:#6e2c20;
+  --cream:#f2ead8;
+  --cream-dim:#e4d9c1;
+  --ink:#2a2018;
+  --ink-soft:#5e5345;
+  --brass:#c79a3b;
+  --brass-deep:#a07820;
+  --felt:#1f3a2e;
+  --paper:#fbf6ea;
+  --shadow:rgba(30,15,8,.35);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  font-family:'Spectral',Georgia,serif;
+  background:
+    radial-gradient(circle at 30% 20%, #6e2c20 0%, transparent 60%),
+    radial-gradient(circle at 80% 80%, #4a1c14 0%, transparent 55%),
+    var(--leather);
+  color:var(--ink);
+  min-height:100vh;
+  -webkit-font-smoothing:antialiased;
+}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
+
+/* ---------- top bar ---------- */
+.topbar{
+  display:flex;align-items:baseline;gap:1.25rem;
+  padding:1.4rem 2rem 1.1rem;
+  border-bottom:1px solid rgba(199,154,59,.3);
+}
+.brand{
+  font-family:'Oswald',sans-serif;font-weight:700;letter-spacing:.04em;
+  font-size:1.9rem;color:var(--cream);text-transform:uppercase;
+  line-height:1;
+}
+.brand .the{color:var(--brass);font-weight:500;font-size:1.1rem;vertical-align:.35em;margin-right:.3rem}
+.tagline{font-style:italic;color:var(--cream-dim);font-size:.95rem;opacity:.8}
+.count-chip{
+  margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:.8rem;
+  color:var(--brass);border:1px solid rgba(199,154,59,.4);
+  padding:.35rem .7rem;border-radius:4px;letter-spacing:.03em;
+}
+
+/* ---------- mode toggle ---------- */
+.modes{display:flex;gap:.5rem;padding:1rem 2rem 0;flex-wrap:wrap}
+.mode-btn{
+  font-family:'Oswald',sans-serif;text-transform:uppercase;letter-spacing:.08em;
+  font-size:.82rem;font-weight:500;color:var(--cream-dim);
+  padding:.55rem 1.1rem;border:1px solid rgba(199,154,59,.3);border-radius:5px;
+  background:rgba(0,0,0,.12);transition:all .18s;
+}
+.mode-btn:hover{color:var(--cream);border-color:rgba(199,154,59,.6)}
+.mode-btn.active{background:var(--brass);color:var(--leather-dark);border-color:var(--brass);font-weight:600}
+
+/* ---------- era rail ---------- */
+.stage{display:flex;gap:0;padding:1.25rem 2rem 3rem;align-items:flex-start}
+.rail{flex:0 0 150px;display:flex;flex-direction:column;gap:.4rem;position:sticky;top:1rem}
+.rail-label{font-family:'Oswald',sans-serif;text-transform:uppercase;letter-spacing:.12em;font-size:.68rem;color:var(--brass);margin-bottom:.3rem;padding-left:.2rem}
+.era-tab{
+  text-align:left;font-family:'Oswald',sans-serif;font-size:.9rem;letter-spacing:.02em;
+  color:var(--cream-dim);padding:.6rem .75rem;border-radius:5px;border-left:3px solid transparent;
+  transition:all .16s;line-height:1.15;
+}
+.era-tab small{display:block;font-family:'JetBrains Mono',monospace;font-size:.62rem;opacity:.6;margin-top:.15rem}
+.era-tab:hover{background:rgba(0,0,0,.15);color:var(--cream)}
+.era-tab.active{background:rgba(0,0,0,.22);color:var(--brass);border-left-color:var(--brass)}
+
+/* ---------- binder ---------- */
+.binder-wrap{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center}
+.era-head{width:100%;margin-bottom:1rem;text-align:center}
+.era-title{font-family:'Oswald',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.05em;font-size:1.5rem;color:var(--cream)}
+.era-blurb{font-style:italic;color:var(--cream-dim);opacity:.85;font-size:.95rem;margin-top:.2rem}
+
+.page{
+  background:
+    repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.012) 3px),
+    var(--paper);
+  border-radius:6px;padding:1.4rem;
+  box-shadow:0 16px 40px var(--shadow), inset 0 0 0 1px rgba(0,0,0,.04);
+  width:100%;max-width:680px;position:relative;
+  border:1px solid rgba(0,0,0,.08);
+}
+.page::before{
+  content:"";position:absolute;left:14px;top:8%;bottom:8%;width:2px;
+  background:repeating-linear-gradient(0deg,rgba(0,0,0,.18) 0 6px,transparent 6px 22px);
+  border-radius:2px;
+}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:.85rem;margin-left:1rem}
+
+.slot{aspect-ratio:5/7;border-radius:6px;position:relative}
+.slot.empty{
+  border:1.5px dashed rgba(0,0,0,.13);border-radius:6px;
+  display:flex;align-items:center;justify-content:center;
+  color:rgba(0,0,0,.18);font-family:'JetBrains Mono',monospace;font-size:.7rem;
+}
+
+/* ---------- card face ---------- */
+.card{
+  width:100%;height:100%;border-radius:6px;overflow:hidden;cursor:pointer;
+  position:relative;transition:transform .18s ease, box-shadow .18s ease;
+  box-shadow:0 3px 8px rgba(0,0,0,.22);text-align:left;display:block;
+  border:1px solid rgba(0,0,0,.15);
+}
+.card:hover{transform:translateY(-5px) scale(1.02);box-shadow:0 12px 22px rgba(0,0,0,.3);z-index:2}
+.card .frame{position:absolute;inset:0;display:flex;flex-direction:column}
+.card .photo{
+  flex:1;background-size:cover;background-position:center top;position:relative;
+}
+.card .nameplate{
+  padding:.3rem .45rem;font-family:'Oswald',sans-serif;font-weight:600;
+  font-size:.66rem;line-height:1.05;text-transform:uppercase;letter-spacing:.01em;
+}
+.card .pos{font-family:'JetBrains Mono',monospace;font-size:.54rem;opacity:.8;display:block;font-weight:400;letter-spacing:0}
+.rare-pin{
+  position:absolute;top:5px;right:5px;width:16px;height:16px;border-radius:50%;
+  background:var(--brass);color:var(--leather-dark);font-size:.6rem;
+  display:flex;align-items:center;justify-content:center;font-weight:700;
+  box-shadow:0 1px 3px rgba(0,0,0,.4);z-index:3;font-family:'Oswald',sans-serif;
+}
+
+/* era-specific card skins */
+.skin-vintage .nameplate{background:#d9c89a;color:#3a2c12;border-top:2px solid #b8472e}
+.skin-vintage .photo{background-color:#c7b48a;filter:saturate(.85)}
+.skin-junk .nameplate{background:#1c1c1c;color:#fff}
+.skin-junk .photo{background-color:#2a3f55}
+.skin-junk .card{border-color:#000}
+.skin-modern .nameplate{background:linear-gradient(90deg,#0d2436,#16456a);color:#cfe6f5}
+.skin-modern .photo{background-color:#21323f}
+
+.page-nav{display:flex;align-items:center;justify-content:center;gap:1.5rem;margin-top:1.1rem}
+.page-nav button{
+  font-family:'Oswald',sans-serif;text-transform:uppercase;letter-spacing:.06em;font-size:.8rem;
+  color:var(--cream-dim);padding:.5rem .9rem;border:1px solid rgba(199,154,59,.3);border-radius:5px;
+  transition:all .15s;
+}
+.page-nav button:hover:not(:disabled){color:var(--cream);border-color:var(--brass)}
+.page-nav button:disabled{opacity:.3;cursor:default}
+.page-dots{font-family:'JetBrains Mono',monospace;font-size:.8rem;color:var(--brass)}
+
+/* ---------- carousel ---------- */
+.carousel-stage{padding:1.5rem 2rem 3rem;display:none;flex-direction:column;align-items:center}
+.set-picker{display:flex;gap:.5rem;flex-wrap:wrap;justify-content:center;margin-bottom:1.5rem;max-width:760px}
+.set-pill{
+  font-family:'Oswald',sans-serif;font-size:.8rem;letter-spacing:.02em;color:var(--cream-dim);
+  padding:.5rem .9rem;border:1px solid rgba(199,154,59,.3);border-radius:20px;transition:all .15s;
+}
+.set-pill:hover{color:var(--cream);border-color:rgba(199,154,59,.6)}
+.set-pill.active{background:var(--brass);color:var(--leather-dark);border-color:var(--brass);font-weight:600}
+.set-pill small{font-family:'JetBrains Mono',monospace;opacity:.65;margin-left:.35rem;font-size:.68rem}
+
+.carousel-head{text-align:center;margin-bottom:1.2rem}
+.carousel-head .set-name{font-family:'Oswald',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.04em;font-size:1.6rem;color:var(--cream)}
+.carousel-head .set-meta{font-family:'JetBrains Mono',monospace;font-size:.75rem;color:var(--brass);margin-top:.25rem}
+
+.reel{display:flex;align-items:center;gap:1.5rem;width:100%;justify-content:center}
+.reel-track{display:flex;gap:1rem;overflow-x:auto;padding:1.5rem .5rem;scroll-snap-type:x mandatory;max-width:760px;scrollbar-width:thin;scrollbar-color:var(--brass) transparent}
+.reel-track::-webkit-scrollbar{height:8px}
+.reel-track::-webkit-scrollbar-thumb{background:var(--brass);border-radius:4px}
+.reel-card{flex:0 0 170px;aspect-ratio:5/7;scroll-snap-align:center;transition:transform .2s;}
+.reel-arrow{
+  flex:0 0 auto;width:44px;height:44px;border-radius:50%;
+  border:1px solid rgba(199,154,59,.4);color:var(--brass);font-size:1.2rem;
+  display:flex;align-items:center;justify-content:center;transition:all .15s;
+}
+.reel-arrow:hover{background:var(--brass);color:var(--leather-dark)}
+
+/* ---------- spotlight ---------- */
+.spotlight{
+  position:fixed;inset:0;background:rgba(20,8,4,.82);backdrop-filter:blur(6px);
+  display:none;align-items:center;justify-content:center;z-index:50;padding:2rem;
+}
+.spotlight.open{display:flex}
+.spot-card{
+  perspective:1600px;width:min(340px,80vw);aspect-ratio:5/7;cursor:pointer;
+}
+.spot-inner{position:relative;width:100%;height:100%;transition:transform .7s;transform-style:preserve-3d}
+.spot-card.flipped .spot-inner{transform:rotateY(180deg)}
+.spot-face{
+  position:absolute;inset:0;backface-visibility:hidden;border-radius:12px;overflow:hidden;
+  box-shadow:0 0 0 1px rgba(199,154,59,.5),0 30px 70px rgba(0,0,0,.6),0 0 60px rgba(199,154,59,.15);
+}
+.spot-back{transform:rotateY(180deg);background:var(--paper);padding:1.1rem 1.1rem .9rem;display:flex;flex-direction:column;overflow:hidden}
+.back-head{display:flex;align-items:baseline;justify-content:space-between;gap:.5rem;border-bottom:2px solid var(--leather);padding-bottom:.4rem;margin-bottom:.35rem}
+.back-head h3{font-family:'Oswald',sans-serif;text-transform:uppercase;font-size:1.05rem;color:var(--ink);line-height:1}
+.back-badge{font-family:'JetBrains Mono',monospace;font-size:.56rem;letter-spacing:.04em;color:var(--cream);background:var(--leather);padding:.2rem .4rem;border-radius:3px;white-space:nowrap}
+.back-sub{font-family:'JetBrains Mono',monospace;font-size:.66rem;color:var(--brass);margin-bottom:.7rem}
+.statgrid-wrap{overflow-x:auto;margin:0 -.2rem .6rem;scrollbar-width:thin;scrollbar-color:var(--brass) transparent}
+.statgrid-wrap::-webkit-scrollbar{height:5px}
+.statgrid-wrap::-webkit-scrollbar-thumb{background:var(--brass);border-radius:3px}
+.statgrid{border-collapse:collapse;font-family:'JetBrains Mono',monospace;width:100%}
+.statgrid caption{caption-side:top;text-align:left;font-family:'Spectral',serif;font-style:italic;font-size:.7rem;color:var(--ink-soft);margin-bottom:.3rem}
+.statgrid th{font-size:.56rem;letter-spacing:.02em;color:var(--cream);background:var(--leather-light);padding:.28rem .4rem;text-align:center;font-weight:500;border:1px solid var(--leather)}
+.statgrid td{font-size:.72rem;color:var(--ink);padding:.32rem .4rem;text-align:center;border:1px solid rgba(0,0,0,.12);background:#fff}
+.no-stats{font-family:'Spectral',serif;font-style:italic;font-size:.78rem;color:var(--ink-soft);padding:.5rem 0}
+.spot-back .bio{font-style:italic;font-size:.78rem;color:var(--ink-soft);line-height:1.4;margin-bottom:.5rem}
+.back-foot{margin-top:auto;padding-top:.4rem}
+.btn-bref{width:100%;font-family:'Oswald',sans-serif;text-transform:uppercase;letter-spacing:.04em;font-size:.68rem;padding:.5rem;background:#fff;color:var(--leather);border:1px solid var(--leather);border-radius:5px}
+.btn-bref:hover{background:var(--leather);color:var(--cream)}
+.spot-meta{
+  position:absolute;bottom:-3.2rem;left:0;right:0;text-align:center;
+  font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--cream-dim);
+}
+.spot-meta .hint{color:var(--brass);opacity:.8}
+.spot-close{
+  position:fixed;top:1.5rem;right:1.5rem;width:40px;height:40px;border-radius:50%;
+  border:1px solid rgba(199,154,59,.4);color:var(--cream);font-size:1.3rem;
+  display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.3);
+}
+.spot-close:hover{background:var(--brass);color:var(--leather-dark)}
+
+/* ---------- add-card form ---------- */
+.form-scrim{
+  position:fixed;inset:0;background:rgba(20,8,4,.82);backdrop-filter:blur(6px);
+  display:none;align-items:center;justify-content:center;z-index:60;padding:1.5rem;
+}
+.form-scrim.open{display:flex}
+.form-card{
+  background:var(--paper);border-radius:12px;width:min(720px,96vw);max-height:92vh;overflow-y:auto;
+  box-shadow:0 30px 70px rgba(0,0,0,.6),0 0 0 1px rgba(199,154,59,.4);
+}
+.form-head{display:flex;align-items:center;justify-content:space-between;padding:1.1rem 1.4rem;border-bottom:2px solid var(--leather)}
+.form-head h2{font-family:'Oswald',sans-serif;text-transform:uppercase;letter-spacing:.04em;font-size:1.3rem;color:var(--ink)}
+.form-body{display:flex;gap:1.5rem;padding:1.3rem 1.4rem}
+.rolodex{background:linear-gradient(180deg,#f6efe0,#efe6d2);border:1px solid var(--brass);border-radius:8px;padding:.8rem .9rem;margin-bottom:.4rem}
+.rolodex-head{font-family:'Oswald',sans-serif;text-transform:uppercase;letter-spacing:.05em;font-size:.72rem;color:var(--leather);display:flex;align-items:center;gap:.35rem;margin-bottom:.55rem}
+.rolodex-tag{margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:.56rem;background:var(--leather);color:var(--cream);padding:.15rem .4rem;border-radius:3px;letter-spacing:.02em}
+.rolo-row{display:flex;gap:.4rem}
+.rolo-row input{flex:1;font-family:'Spectral',serif;font-size:.88rem;padding:.45rem .55rem;border:1px solid rgba(0,0,0,.2);border-radius:5px;background:#fff}
+.rolo-row button{flex:0 0 auto;font-family:'Oswald',sans-serif;text-transform:uppercase;font-size:.72rem;letter-spacing:.04em;padding:0 1rem;background:var(--leather);color:var(--cream);border-radius:5px}
+.rolo-list{margin-top:.5rem;max-height:140px;overflow-y:auto;border:1px solid rgba(0,0,0,.12);border-radius:5px;background:#fff}
+.rolo-player{padding:.45rem .6rem;font-size:.82rem;cursor:pointer;border-bottom:1px solid rgba(0,0,0,.06);display:flex;justify-content:space-between;gap:.5rem}
+.rolo-player:last-child{border-bottom:none}
+.rolo-player:hover{background:var(--cream-dim)}
+.rolo-player .meta{font-family:'JetBrains Mono',monospace;font-size:.66rem;color:var(--ink-soft)}
+.rolo-player.sel{background:var(--brass);color:var(--leather-dark)}
+.rolo-years{margin-top:.55rem;display:flex;flex-wrap:wrap;gap:.3rem}
+.rolo-yr{font-family:'JetBrains Mono',monospace;font-size:.72rem;padding:.3rem .55rem;border:1px solid rgba(0,0,0,.2);border-radius:4px;cursor:pointer;background:#fff;color:var(--ink)}
+.rolo-yr:hover{border-color:var(--brass);background:var(--cream-dim)}
+.rolo-yr.sel{background:var(--leather);color:var(--cream);border-color:var(--leather)}
+.rolo-status{font-family:'Spectral',serif;font-style:italic;font-size:.74rem;color:var(--ink-soft);margin-top:.45rem;min-height:1rem}
+.rolo-status.err{color:#9a3324}
+.rolo-status.ok{color:#2c6b4f}
+.form-left{flex:1.1;display:flex;flex-direction:column;gap:.7rem}
+.form-right{flex:.9;display:flex;flex-direction:column}
+.fl-row{display:flex;gap:.7rem}
+.fl-field{display:flex;flex-direction:column;gap:.25rem;flex:1}
+.fl-field label{font-family:'Oswald',sans-serif;text-transform:uppercase;letter-spacing:.06em;font-size:.66rem;color:var(--leather)}
+.hintmini{text-transform:none;letter-spacing:0;font-family:'Spectral',serif;font-style:italic;color:var(--ink-soft);opacity:.7;font-size:.72rem}
+.fl-field input,.fl-field select,.fl-field textarea,.form-right input{
+  font-family:'Spectral',serif;font-size:.9rem;color:var(--ink);background:#fff;
+  border:1px solid rgba(0,0,0,.18);border-radius:5px;padding:.45rem .55rem;width:100%;
+}
+.fl-field input:focus,.fl-field select:focus,.fl-field textarea:focus,.form-right input:focus{outline:2px solid var(--brass);outline-offset:0;border-color:var(--brass)}
+.fl-field textarea{resize:vertical;font-family:'Spectral',serif}
+.key-toggle{display:flex;align-items:center;gap:.4rem;font-family:'Oswald',sans-serif;font-size:.78rem;color:var(--leather);text-transform:uppercase;letter-spacing:.04em;white-space:nowrap;cursor:pointer;padding:.45rem 0}
+.key-toggle input{width:auto}
+.form-right label{font-family:'Oswald',sans-serif;text-transform:uppercase;letter-spacing:.06em;font-size:.66rem;color:var(--leather);margin-bottom:.35rem;display:block}
+.preview{aspect-ratio:5/7;border-radius:8px;border:1.5px dashed rgba(0,0,0,.2);background:#e9e0cc center/cover no-repeat;display:flex;align-items:center;justify-content:center;margin-bottom:.7rem;overflow:hidden}
+.preview.has-img{border-style:solid;border-color:var(--brass)}
+.ph-text{font-family:'JetBrains Mono',monospace;font-size:.72rem;color:rgba(0,0,0,.3)}
+.img-tabs{display:flex;gap:.3rem;margin-bottom:.6rem}
+.img-tab{flex:1;font-family:'Oswald',sans-serif;font-size:.72rem;text-transform:uppercase;letter-spacing:.03em;padding:.4rem;border:1px solid rgba(0,0,0,.18);border-radius:5px;color:var(--ink-soft);background:#fff}
+.img-tab.active{background:var(--leather);color:var(--cream);border-color:var(--leather)}
+.img-pane input[type=file]{font-size:.78rem;font-family:'Spectral',serif}
+.pane-note{font-family:'Spectral',serif;font-style:italic;font-size:.74rem;color:var(--ink-soft);margin-top:.5rem;line-height:1.4}
+.search-wrap{display:flex;gap:.4rem}
+.btn-google{width:100%;font-family:'Oswald',sans-serif;text-transform:uppercase;letter-spacing:.04em;font-size:.8rem;padding:.6rem;background:var(--leather);color:var(--cream);border-radius:5px;font-weight:500}
+.btn-google:hover{background:var(--leather-light)}
+.search-wrap button{flex:0 0 auto;font-family:'Oswald',sans-serif;text-transform:uppercase;font-size:.72rem;padding:0 .8rem;background:var(--leather);color:var(--cream);border-radius:5px}
+.search-results{display:grid;grid-template-columns:repeat(3,1fr);gap:.4rem;margin-top:.5rem}
+.search-results img{width:100%;aspect-ratio:5/7;object-fit:cover;border-radius:4px;cursor:pointer;border:2px solid transparent}
+.search-results img:hover{border-color:var(--brass)}
+.form-foot{display:flex;justify-content:flex-end;gap:.7rem;padding:1rem 1.4rem;border-top:1px solid rgba(0,0,0,.12)}
+.btn-ghost{font-family:'Oswald',sans-serif;text-transform:uppercase;letter-spacing:.05em;font-size:.82rem;color:var(--ink-soft);padding:.55rem 1.1rem;border:1px solid rgba(0,0,0,.2);border-radius:5px}
+.btn-solid{font-family:'Oswald',sans-serif;text-transform:uppercase;letter-spacing:.05em;font-size:.82rem;color:var(--cream);background:var(--leather);padding:.55rem 1.3rem;border-radius:5px;font-weight:600}
+.btn-solid:hover{background:var(--leather-light)}
+.toast{position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);background:var(--felt);color:var(--cream);font-family:'Oswald',sans-serif;letter-spacing:.04em;font-size:.85rem;padding:.7rem 1.3rem;border-radius:6px;box-shadow:0 8px 24px rgba(0,0,0,.4);z-index:80;opacity:0;transition:opacity .25s;pointer-events:none}
+.toast.show{opacity:1}
+
+@media (max-width:640px){
+  .form-body{flex-direction:column}
+}
+
+
+  .rail{flex-direction:row;flex-wrap:wrap;position:static;width:100%;margin-bottom:1rem}
+  .rail-label{width:100%}
+  .era-tab{flex:1;min-width:120px}
+  .grid{margin-left:0}
+  .page::before{display:none}
+  .grid{gap:.5rem}
+  .brand{font-size:1.4rem}
+}
+@media (prefers-reduced-motion:reduce){
+  *{transition:none!important;scroll-behavior:auto}
+  .spot-inner{transition:transform .01s!important}
+}
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand"><span class="the">The</span>Depot</div>
+  <span class="tagline">a collection, pored over</span>
+  <span class="count-chip" id="countChip">— cards</span>
+</div>
+
+<div class="modes">
+  <button class="mode-btn active" id="m-binder" onclick="setMode('binder')">The Binder</button>
+  <button class="mode-btn" id="m-carousel" onclick="setMode('carousel')">By Set</button>
+  <button class="mode-btn" id="m-add" onclick="openForm()" style="margin-left:auto">+ Add a card</button>
+  <button class="mode-btn" id="m-export" onclick="exportCollection()" title="Download your collection as a file you can paste back in">Save collection</button>
+</div>
+
+<!-- BINDER -->
+<div class="stage" id="binderStage">
+  <nav class="rail">
+    <div class="rail-label">Eras</div>
+    <div id="eraTabs"></div>
+  </nav>
+  <div class="binder-wrap">
+    <div class="era-head">
+      <div class="era-title" id="eraTitle"></div>
+      <div class="era-blurb" id="eraBlurb"></div>
+    </div>
+    <div class="page">
+      <div class="grid" id="binderGrid"></div>
+    </div>
+    <div class="page-nav">
+      <button id="prevPage" onclick="turnPage(-1)">‹ Prev page</button>
+      <span class="page-dots" id="pageDots"></span>
+      <button id="nextPage" onclick="turnPage(1)">Next page ›</button>
+    </div>
+  </div>
+</div>
+
+<!-- CAROUSEL -->
+<div class="carousel-stage" id="carouselStage">
+  <div class="set-picker" id="setPicker"></div>
+  <div class="carousel-head">
+    <div class="set-name" id="setName"></div>
+    <div class="set-meta" id="setMeta"></div>
+  </div>
+  <div class="reel">
+    <button class="reel-arrow" onclick="reelScroll(-1)" aria-label="Scroll left">‹</button>
+    <div class="reel-track" id="reelTrack"></div>
+    <button class="reel-arrow" onclick="reelScroll(1)" aria-label="Scroll right">›</button>
+  </div>
+</div>
+
+<!-- ADD CARD FORM -->
+<div class="form-scrim" id="formScrim" onclick="closeForm(event)">
+  <div class="form-card" onclick="event.stopPropagation()">
+    <div class="form-head">
+      <h2 id="formTitle">Add a card</h2>
+      <button class="spot-close" style="position:static;width:34px;height:34px" onclick="closeForm(event,true)" aria-label="Close">✕</button>
+    </div>
+
+    <div class="form-body">
+      <div class="form-left">
+        <div class="rolodex">
+          <div class="rolodex-head"><i class="ti ti-search"></i> Auto-fill from MLB records <span class="rolodex-tag">official stats</span></div>
+          <div class="rolo-row">
+            <input id="rolo-name" placeholder="Search a player… (e.g. Ken Griffey)" onkeydown="if(event.key==='Enter')roloSearch()">
+            <button onclick="roloSearch()">Find</button>
+          </div>
+          <div id="rolo-players" class="rolo-list" style="display:none"></div>
+          <div id="rolo-years" class="rolo-years" style="display:none"></div>
+          <div id="rolo-status" class="rolo-status"></div>
+        </div>
+        <div class="fl-row">
+          <div class="fl-field" style="flex:2"><label>Player</label><input id="f-name" placeholder="Ken Griffey Jr."></div>
+          <div class="fl-field" style="flex:1"><label>Pos</label><input id="f-pos" placeholder="CF"></div>
+        </div>
+        <div class="fl-row">
+          <div class="fl-field" style="flex:2"><label>Team</label><input id="f-team" placeholder="Mariners"></div>
+          <div class="fl-field" style="flex:1"><label>Year</label><input id="f-yr" type="number" placeholder="1989"></div>
+        </div>
+        <div class="fl-row">
+          <div class="fl-field" style="flex:2"><label>Set</label><input id="f-set" placeholder="Upper Deck"></div>
+          <div class="fl-field" style="flex:1"><label>Card #</label><input id="f-num" type="number" placeholder="1"></div>
+        </div>
+        <div class="fl-row">
+          <div class="fl-field" style="flex:1"><label>Era</label>
+            <select id="f-era"><option value="vintage">Vintage (pre-1981)</option><option value="junk">Junk Wax (1981–94)</option><option value="modern">Modern (1995+)</option></select>
+          </div>
+          <div class="fl-field" style="flex:1"><label>Type</label>
+            <select id="f-type" onchange="updateStatHint()"><option value="hitter">Batter</option><option value="pitcher">Pitcher</option></select>
+          </div>
+          <div class="fl-field" style="flex:0 0 auto;justify-content:flex-end"><label style="opacity:0">x</label>
+            <label class="key-toggle"><input type="checkbox" id="f-rare"> Key ★</label>
+          </div>
+        </div>
+        <div class="fl-field"><label>Season stat line <span class="hintmini" id="statHint">key:value, comma-separated</span></label>
+          <input id="f-stats" placeholder="AVG:.264, HR:16, RBI:61"></div>
+        <div class="fl-field"><label>Note <span class="hintmini">optional</span></label>
+          <textarea id="f-bio" rows="2" placeholder="Card #1 of the set that changed the hobby."></textarea></div>
+      </div>
+
+      <div class="form-right">
+        <label>Card image</label>
+        <div class="preview" id="imgPreview"><span class="ph-text">no image yet</span></div>
+        <input type="hidden" id="f-photo">
+        <div class="img-tabs">
+          <button class="img-tab active" data-pane="up" onclick="imgTab('up')">Upload scan</button>
+          <button class="img-tab" data-pane="url" onclick="imgTab('url')">Paste URL</button>
+          <button class="img-tab" data-pane="search" onclick="imgTab('search')">Find on Google</button>
+        </div>
+        <div class="img-pane" id="pane-up">
+          <input type="file" id="f-file" accept="image/*" onchange="onFile(event)">
+          <p class="pane-note">Best results. Scans of cards you own — uniform and unambiguously yours.</p>
+        </div>
+        <div class="img-pane" id="pane-url" style="display:none">
+          <input id="f-url" placeholder="https://… image address" onchange="useUrl()" oninput="useUrl()">
+          <p class="pane-note">Right-click any card image online → “Copy image address” → paste here.</p>
+        </div>
+        <div class="img-pane" id="pane-search" style="display:none">
+          <button class="btn-google" onclick="openGoogleImages()"><i></i>Find on Google Images ↗</button>
+          <p class="pane-note">Opens a new tab searching for this card. Find the one you like, right-click → “Copy image address,” then paste it below.</p>
+          <input id="f-gpaste" placeholder="Paste the image address here" onchange="useGPaste()" oninput="useGPaste()" style="margin-top:.4rem">
+        </div>
+      </div>
+    </div>
+
+    <div class="form-foot">
+      <button class="btn-ghost" onclick="closeForm(event,true)">Cancel</button>
+      <button class="btn-solid" onclick="saveCard()">Add to depot</button>
+    </div>
+  </div>
+</div>
+
+<!-- SPOTLIGHT -->
+<div class="spotlight" id="spotlight" onclick="closeSpot(event)">
+  <button class="spot-close" onclick="closeSpot(event,true)" aria-label="Close">✕</button>
+  <div class="spot-card" id="spotCard" onclick="flipSpot(event)">
+    <div class="spot-inner">
+      <div class="spot-face" id="spotFront"></div>
+      <div class="spot-face spot-back" id="spotBack"></div>
+    </div>
+    <div class="spot-meta" id="spotMeta"></div>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   YOUR COLLECTION LIVES HERE.
+   Add a card by copying one block and editing the fields.
+   - era: "vintage" (pre-1981) | "junk" (1981-1994) | "modern" (1995+)
+   - type: "hitter" | "pitcher"  (drives the stat columns on the back)
+   - rare: true puts a gold pin on it + glow in spotlight
+   - photo: any image URL, or leave "" for a colored placeholder
+   - stats: the season line for the card's year. Use standard keys:
+       hitters  → G AB R H 2B 3B HR RBI SB BB SO AVG OBP SLG OPS
+       pitchers → W L ERA G GS SV IP H BB SO WHIP
+   ============================================================ */
+const SEED = [
+  {name:"Nolan Ryan", pos:"P", type:"pitcher", team:"Astros", yr:1980, set:"Topps", num:580, era:"vintage", rare:true,
+   stats:{"W":"11","L":"10","ERA":"3.35","G":"35","GS":"35","IP":"233.2","SO":"200","BB":"98","WHIP":"1.28"}, bio:"The Express. Seven no-hitters and 5,714 career strikeouts — records that may never fall."},
+  {name:"George Brett", pos:"3B", type:"hitter", team:"Royals", yr:1980, set:"Topps", num:450, era:"vintage", rare:true,
+   stats:{"G":"117","AB":"449","R":"87","H":"175","HR":"24","RBI":"118","AVG":".390","OBP":".454","SLG":".664","OPS":"1.118"}, bio:"Chased .400 into late September. The MVP pine-tar legend of Kansas City."},
+  {name:"Robin Yount", pos:"SS", type:"hitter", team:"Brewers", yr:1980, set:"Topps", num:265, era:"vintage", rare:false,
+   stats:{"G":"143","AB":"611","R":"121","H":"179","HR":"23","RBI":"87","AVG":".293","OBP":".321","SLG":".519"}, bio:"Two MVPs at two positions. A Brewer for life."},
+  {name:"Reggie Jackson", pos:"RF", type:"hitter", team:"Yankees", yr:1980, set:"Topps", num:600, era:"vintage", rare:false,
+   stats:{"G":"143","AB":"514","R":"94","H":"154","HR":"41","RBI":"111","AVG":".300","OBP":".398","SLG":".597"}, bio:"Mr. October. Led the AL in homers and lived for the big moment."},
+
+  {name:"Ken Griffey Jr.", pos:"CF", type:"hitter", team:"Mariners", yr:1989, set:"Upper Deck", num:1, era:"junk", rare:true,
+   stats:{"G":"127","AB":"455","R":"61","H":"120","HR":"16","RBI":"61","SB":"16","AVG":".264","OBP":".329","SLG":".420"}, bio:"Card #1 of the set that changed the hobby. The Kid's iconic rookie."},
+  {name:"Frank Thomas", pos:"1B", type:"hitter", team:"White Sox", yr:1991, set:"Leaf", num:300, era:"junk", rare:true,
+   stats:{"G":"158","AB":"559","R":"104","H":"178","HR":"32","RBI":"109","AVG":".318","OBP":".453","SLG":".553"}, bio:"The Big Hurt. A rare blend of power and plate discipline."},
+  {name:"Cal Ripken Jr.", pos:"SS", type:"hitter", team:"Orioles", yr:1991, set:"Topps", num:5, era:"junk", rare:false,
+   stats:{"G":"162","AB":"650","R":"99","H":"210","HR":"34","RBI":"114","AVG":".323","OBP":".374","SLG":".566"}, bio:"His second MVP, mid-streak of 2,632 straight games."},
+  {name:"Tony Gwynn", pos:"RF", type:"hitter", team:"Padres", yr:1992, set:"Upper Deck", num:275, era:"junk", rare:false,
+   stats:{"G":"128","AB":"520","R":"77","H":"165","HR":"6","RBI":"41","SO":"16","AVG":".317","OBP":".371","SLG":".415"}, bio:"Mr. Padre. Eight batting titles and a bat that never struck out."},
+  {name:"Greg Maddux", pos:"P", type:"pitcher", team:"Cubs", yr:1992, set:"Topps", num:183, era:"junk", rare:false,
+   stats:{"W":"20","L":"11","ERA":"2.18","G":"35","GS":"35","IP":"268.0","SO":"199","CG":"9","SHO":"4"}, bio:"His first Cy Young. The Professor painted corners better than anyone — 268 innings, a 2.18 ERA, and just seven homers allowed."},
+
+  {name:"Derek Jeter", pos:"SS", type:"hitter", team:"Yankees", yr:1996, set:"SP", num:182, era:"modern", rare:true,
+   stats:{"G":"157","AB":"582","R":"104","H":"183","HR":"10","RBI":"78","AVG":".314","OBP":".370","SLG":".430"}, bio:"Rookie of the Year and the start of a dynasty in the Bronx."},
+  {name:"Chipper Jones", pos:"3B", type:"hitter", team:"Braves", yr:1995, set:"Upper Deck", num:200, era:"modern", rare:false,
+   stats:{"G":"140","AB":"524","R":"87","H":"139","HR":"23","RBI":"86","AVG":".265","OBP":".353","SLG":".450"}, bio:"Switch-hitting cornerstone of the Braves' run through the late '90s and 2000s."},
+  {name:"Pedro Martinez", pos:"P", type:"pitcher", team:"Expos", yr:1997, set:"Fleer", num:294, era:"modern", rare:true,
+   stats:{"W":"17","L":"8","ERA":"1.90","G":"31","GS":"31","IP":"241.1","SO":"305","BB":"67","WHIP":"0.93"}, bio:"His first Cy Young — the most dominant pitching peak of a generation."},
+  {name:"Mariano Rivera", pos:"P", type:"pitcher", team:"Yankees", yr:1996, set:"Bowman", num:251, era:"modern", rare:true,
+   stats:{"W":"8","L":"3","ERA":"2.09","G":"61","GS":"0","SV":"5","IP":"107.2","SO":"130","WHIP":"0.99"}, bio:"His breakout setup season, before the cutter made him the greatest closer ever."},
+  {name:"Mike Piazza", pos:"C", type:"hitter", team:"Dodgers", yr:1995, set:"Topps", num:200, era:"modern", rare:false,
+   stats:{"G":"112","AB":"434","R":"82","H":"150","HR":"32","RBI":"93","AVG":".346","OBP":".400","SLG":".606"}, bio:"A 62nd-round pick who became the best-hitting catcher in history."}
+];
+
+const ERAS = {
+  vintage:{title:"The Vintage Years", range:"pre-1981", skin:"skin-vintage",
+    blurb:"Thick stock, hand-tinted color, and cardboard that smells like a drugstore in 1978."},
+  junk:{title:"The Junk Wax Era", range:"1981–1994", skin:"skin-junk",
+    blurb:"Overproduced, gloriously so. Glossy fronts, bold borders, and the rookie cards that defined a generation of collectors."},
+  modern:{title:"The Modern Game", range:"1995 onward", skin:"skin-modern",
+    blurb:"Premium foil, sharp photography, and the chase for the short print."}
+};
+const ERA_ORDER = ["vintage","junk","modern"];
+const PLACEHOLDER = ["#7d5a3c","#3a5a78","#5a3a4a","#3a5a4a","#6a4a2a","#4a4a6a"];
+
+const STORE_KEY = "depot_cards_v1";
+function loadSaved(){
+  try{ const raw=localStorage.getItem(STORE_KEY); return raw?JSON.parse(raw):[]; }
+  catch(e){ return []; }
+}
+function persist(){
+  try{ localStorage.setItem(STORE_KEY, JSON.stringify(USER_CARDS)); }
+  catch(e){ /* storage blocked — cards live for this session only */ }
+}
+let USER_CARDS = loadSaved();
+let COLLECTION = SEED.concat(USER_CARDS);
+function rebuild(){ COLLECTION = SEED.concat(USER_CARDS); document.getElementById('countChip').textContent=`${COLLECTION.length} cards`; }
+
+let mode="binder", curEra="vintage", curPage=0, curSet=null, spotIdx=null;
+const PER_PAGE=9;
+
+function placeholderBg(i){return PLACEHOLDER[i%PLACEHOLDER.length]}
+
+function cardHTML(card, idx, skin){
+  const photoStyle = card.photo
+    ? `background-image:url('${card.photo}')`
+    : `background-color:${placeholderBg(idx)}`;
+  return `<button class="card ${skin}" onclick="openSpot(${idx})" aria-label="${card.name}, ${card.yr} ${card.set}">
+    ${card.rare?'<span class="rare-pin" title="Key card">★</span>':''}
+    <div class="frame">
+      <div class="photo" style="${photoStyle}"></div>
+      <div class="nameplate">${card.name}<span class="pos">${card.pos} · ${card.team}</span></div>
+    </div>
+  </button>`;
+}
+
+/* ---------- binder ---------- */
+function renderEraTabs(){
+  document.getElementById('eraTabs').innerHTML = ERA_ORDER.map(k=>{
+    const e=ERAS[k], n=COLLECTION.filter(c=>c.era===k).length;
+    return `<button class="era-tab ${k===curEra?'active':''}" onclick="selectEra('${k}')">
+      ${e.title}<small>${e.range} · ${n} cards</small></button>`;
+  }).join('');
+}
+function selectEra(k){curEra=k;curPage=0;renderBinder()}
+function turnPage(d){
+  const cards=COLLECTION.filter(c=>c.era===curEra);
+  const pages=Math.max(1,Math.ceil(cards.length/PER_PAGE));
+  curPage=Math.min(pages-1,Math.max(0,curPage+d));
+  renderBinder();
+}
+function renderBinder(){
+  renderEraTabs();
+  const e=ERAS[curEra];
+  document.getElementById('eraTitle').textContent=e.title;
+  document.getElementById('eraBlurb').textContent=e.blurb;
+  const cards=COLLECTION.filter(c=>c.era===curEra);
+  const pages=Math.max(1,Math.ceil(cards.length/PER_PAGE));
+  const start=curPage*PER_PAGE;
+  const slice=cards.slice(start,start+PER_PAGE);
+  let html='';
+  for(let i=0;i<PER_PAGE;i++){
+    if(slice[i]){
+      const globalIdx=COLLECTION.indexOf(slice[i]);
+      html+=`<div class="slot">${cardHTML(slice[i],globalIdx,e.skin)}</div>`;
+    } else {
+      html+=`<div class="slot empty">empty</div>`;
+    }
+  }
+  document.getElementById('binderGrid').innerHTML=html;
+  document.getElementById('pageDots').textContent=`Page ${curPage+1} of ${pages}`;
+  document.getElementById('prevPage').disabled=curPage===0;
+  document.getElementById('nextPage').disabled=curPage>=pages-1;
+}
+
+/* ---------- carousel ---------- */
+function setKey(c){return `${c.yr} ${c.set}`}
+function renderSetPicker(){
+  const sets={};
+  COLLECTION.forEach(c=>{const k=setKey(c);(sets[k]=sets[k]||[]).push(c)});
+  const keys=Object.keys(sets).sort();
+  if(!curSet||!sets[curSet])curSet=keys[0];
+  document.getElementById('setPicker').innerHTML=keys.map(k=>
+    `<button class="set-pill ${k===curSet?'active':''}" onclick="selectSet('${k.replace(/'/g,"\\'")}')">${k}<small>${sets[k].length}</small></button>`
+  ).join('');
+  renderReel(sets[curSet]);
+}
+function selectSet(k){curSet=k;renderSetPicker()}
+function renderReel(cards){
+  cards=cards.slice().sort((a,b)=>(a.num||0)-(b.num||0));
+  const c0=cards[0];
+  document.getElementById('setName').textContent=curSet;
+  document.getElementById('setMeta').textContent=`${cards.length} cards in your run · ${ERAS[c0.era].title}`;
+  document.getElementById('reelTrack').innerHTML=cards.map(c=>{
+    const gi=COLLECTION.indexOf(c);
+    return `<div class="reel-card">${cardHTML(c,gi,ERAS[c.era].skin)}</div>`;
+  }).join('');
+}
+function reelScroll(d){document.getElementById('reelTrack').scrollBy({left:d*200,behavior:'smooth'})}
+
+/* ---------- spotlight ---------- */
+function cardType(c){
+  return c.type || (c.pos==='P' ? 'pitcher' : 'hitter');
+}
+const HIT_COLS = ["G","AB","R","H","2B","3B","HR","RBI","SB","BB","SO","AVG","OBP","SLG","OPS"];
+const PIT_COLS = ["W","L","ERA","G","GS","CG","SHO","SV","IP","H","BB","SO","WHIP"];
+function statTable(c){
+  const cols = cardType(c)==='pitcher' ? PIT_COLS : HIT_COLS;
+  const present = cols.filter(k=>c.stats && c.stats[k]!=null && c.stats[k]!=='');
+  const extra = Object.keys(c.stats||{}).filter(k=>!cols.includes(k));
+  const all = present.concat(extra);
+  if(!all.length) return `<div class="no-stats">No stats entered yet for this season.</div>`;
+  const head = all.map(k=>`<th>${k}</th>`).join('');
+  const row = all.map(k=>`<td>${c.stats[k]}</td>`).join('');
+  return `<div class="statgrid-wrap"><table class="statgrid">
+    <caption>${c.yr} season — ${c.team}</caption>
+    <thead><tr>${head}</tr></thead>
+    <tbody><tr>${row}</tr></tbody>
+  </table></div>`;
+}
+function brefURL(c){
+  const q=[c.name, "baseball reference", c.yr||''].filter(Boolean).join(' ');
+  return "https://www.google.com/search?q="+encodeURIComponent(q)+"&btnI=1";
+}
+function findStatsFor(idx,e){
+  if(e)e.stopPropagation();
+  const c=COLLECTION[idx];
+  const q=[c.name,(c.yr||''),"statistics baseball-reference"].filter(Boolean).join(' ');
+  window.open("https://www.google.com/search?q="+encodeURIComponent(q),'_blank','noopener');
+}
+
+function openSpot(idx){
+  spotIdx=idx;const c=COLLECTION[idx];
+  const skin=ERAS[c.era].skin;
+  const photoStyle=c.photo?`background-image:url('${c.photo}')`:`background-color:${placeholderBg(idx)}`;
+  document.getElementById('spotFront').className=`spot-face ${skin}`;
+  document.getElementById('spotFront').innerHTML=`<div class="frame" style="position:absolute;inset:0;display:flex;flex-direction:column">
+    ${c.rare?'<span class="rare-pin" style="width:24px;height:24px;font-size:.85rem;top:10px;right:10px">★</span>':''}
+    <div class="photo" style="flex:1;${photoStyle};background-size:cover;background-position:center top"></div>
+    <div class="nameplate" style="font-size:1.1rem;padding:.6rem .8rem">${c.name}<span class="pos" style="font-size:.8rem">${c.pos} · ${c.team}</span></div>
+  </div>`;
+  const isP=cardType(c)==='pitcher';
+  document.getElementById('spotBack').innerHTML=`
+    <div class="back-head">
+      <h3>${c.name}</h3>
+      <span class="back-badge">${isP?'PITCHER':'BATTER'} · ${c.pos}</span>
+    </div>
+    <div class="back-sub">${c.yr} ${c.set} · #${c.num}${c.rare?' · KEY CARD':''}</div>
+    ${statTable(c)}
+    ${c.bio?`<div class="bio">${c.bio}</div>`:''}
+    <div class="back-foot">
+      <button class="btn-bref" onclick="findStatsFor(${idx},event)">Look up on Baseball-Reference ↗</button>
+    </div>`;
+  document.getElementById('spotMeta').innerHTML=`<span class="hint">click card to flip · esc to close</span>`
+    + (c.photo?'':`<div style="margin-top:.5rem"><button class="btn-google" style="width:auto;padding:.45rem 1rem;font-size:.72rem" onclick="findImageFor(${idx},event)">Find this card on Google Images ↗</button></div>`);
+  document.getElementById('spotCard').classList.remove('flipped');
+  document.getElementById('spotlight').classList.add('open');
+}
+function flipSpot(e){e.stopPropagation();document.getElementById('spotCard').classList.toggle('flipped')}
+function closeSpot(e,force){
+  if(force||e.target.id==='spotlight'||e.target.classList.contains('spot-close')){
+    document.getElementById('spotlight').classList.remove('open');
+  }
+}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')document.getElementById('spotlight').classList.remove('open')});
+
+/* ---------- mode switch ---------- */
+function setMode(m){
+  mode=m;
+  document.getElementById('m-binder').classList.toggle('active',m==='binder');
+  document.getElementById('m-carousel').classList.toggle('active',m==='carousel');
+  document.getElementById('binderStage').style.display=m==='binder'?'flex':'none';
+  document.getElementById('carouselStage').style.display=m==='carousel'?'flex':'none';
+  if(m==='carousel')renderSetPicker();
+}
+
+/* ---------- rolodex: MLB Stats API auto-fill ----------
+   Uses MLB's public Stats API (statsapi.mlb.com) — no key, CORS-open,
+   free for personal use. Search a player, pick a season, stats auto-fill.
+   Fails soft: if a lookup returns nothing, manual entry still works. */
+const MLB_BASE = "https://statsapi.mlb.com/api/v1";
+let roloPlayer = null;
+const POS_ABBR = {Pitcher:'P',Catcher:'C','First Base':'1B','Second Base':'2B','Third Base':'3B',Shortstop:'SS','Left Field':'LF','Center Field':'CF','Right Field':'RF',Outfielder:'OF','Designated Hitter':'DH'};
+
+function roloReset(){
+  roloPlayer=null;
+  document.getElementById('rolo-name').value='';
+  document.getElementById('rolo-players').style.display='none';
+  document.getElementById('rolo-players').innerHTML='';
+  document.getElementById('rolo-years').style.display='none';
+  document.getElementById('rolo-years').innerHTML='';
+  document.getElementById('rolo-status').textContent='';
+  document.getElementById('rolo-status').className='rolo-status';
+}
+function roloStatus(msg,cls){
+  const s=document.getElementById('rolo-status');
+  s.textContent=msg||''; s.className='rolo-status'+(cls?' '+cls:'');
+}
+async function roloSearch(){
+  const q=document.getElementById('rolo-name').value.trim();
+  if(!q){roloStatus("Type a player name first.");return;}
+  roloStatus("Searching MLB records…");
+  document.getElementById('rolo-years').style.display='none';
+  try{
+    let people=[];
+    const r=await fetch(`${MLB_BASE}/people/search?names=${encodeURIComponent(q)}`);
+    if(r.ok){const j=await r.json();people=j.people||[];}
+    if(!people.length){
+      const r2=await fetch(`${MLB_BASE}/people/search?q=${encodeURIComponent(q)}`);
+      if(r2.ok){const j2=await r2.json();people=j2.people||[];}
+    }
+    if(!people.length){roloStatus("No players found. Check spelling, or enter stats manually below.","err");document.getElementById('rolo-players').style.display='none';return;}
+    const box=document.getElementById('rolo-players');
+    box.innerHTML=people.slice(0,12).map((p,i)=>{
+      const pos=(p.primaryPosition&&p.primaryPosition.name)||'';
+      const yrs=[p.mlbDebutDate?p.mlbDebutDate.slice(0,4):'',p.lastPlayedDate?p.lastPlayedDate.slice(0,4):''].filter(Boolean).join('–');
+      roloCache[i]=p;
+      return `<div class="rolo-player" onclick="roloPick(${i})">
+        <span>${p.fullName}</span><span class="meta">${pos}${yrs?' · '+yrs:''}</span></div>`;
+    }).join('');
+    box.style.display='block';
+    roloStatus(`${people.length} match${people.length>1?'es':''} — pick one.`);
+  }catch(e){
+    roloStatus("Couldn't reach MLB records (needs a live connection — works on your deployed site). Enter stats manually below.","err");
+  }
+}
+let roloCache={};
+function roloPick(i){
+  const p=roloCache[i]; if(!p)return;
+  roloPlayer=p;
+  document.querySelectorAll('.rolo-player').forEach(el=>el.classList.remove('sel'));
+  const els=document.querySelectorAll('.rolo-player'); if(els[i])els[i].classList.add('sel');
+  const posName=(p.primaryPosition&&p.primaryPosition.name)||'';
+  const isP=posName==='Pitcher';
+  document.getElementById('f-name').value=p.fullName;
+  if(POS_ABBR[posName])document.getElementById('f-pos').value=POS_ABBR[posName];
+  document.getElementById('f-type').value=isP?'pitcher':'hitter';
+  updateStatHint();
+  const start=p.mlbDebutDate?parseInt(p.mlbDebutDate.slice(0,4)):null;
+  const end=p.lastPlayedDate?parseInt(p.lastPlayedDate.slice(0,4)):new Date().getFullYear();
+  const yrsBox=document.getElementById('rolo-years');
+  if(start){
+    let html='<span style="font-family:\'Oswald\',sans-serif;font-size:.66rem;text-transform:uppercase;color:var(--leather);width:100%;letter-spacing:.04em">Pick a season:</span>';
+    for(let y=end;y>=start;y--) html+=`<button class="rolo-yr" onclick="roloYear(${y},this)">${y}</button>`;
+    yrsBox.innerHTML=html; yrsBox.style.display='flex';
+    roloStatus("Now pick the season this card is from.");
+  }else{
+    yrsBox.style.display='none';
+    roloStatus("Player set. Enter the year below, or fill stats manually.","ok");
+  }
+}
+const STAT_MAP_HIT={gamesPlayed:'G',atBats:'AB',runs:'R',hits:'H',doubles:'2B',triples:'3B',homeRuns:'HR',rbi:'RBI',stolenBases:'SB',baseOnBalls:'BB',strikeOuts:'SO',avg:'AVG',obp:'OBP',slg:'SLG',ops:'OPS'};
+const STAT_MAP_PIT={wins:'W',losses:'L',era:'ERA',gamesPlayed:'G',gamesStarted:'GS',completeGames:'CG',shutouts:'SHO',saves:'SV',inningsPitched:'IP',hits:'H',baseOnBalls:'BB',strikeOuts:'SO',whip:'WHIP'};
+async function roloYear(y,btn){
+  document.querySelectorAll('.rolo-yr').forEach(el=>el.classList.remove('sel'));
+  if(btn)btn.classList.add('sel');
+  if(!roloPlayer){roloStatus("Pick a player first.","err");return;}
+  const isP=document.getElementById('f-type').value==='pitcher';
+  const group=isP?'pitching':'hitting';
+  roloStatus(`Pulling ${y} ${group} stats…`);
+  try{
+    const r=await fetch(`${MLB_BASE}/people/${roloPlayer.id}/stats?stats=season&group=${group}&season=${y}`);
+    if(!r.ok) throw new Error('http');
+    const j=await r.json();
+    const splits=(j.stats&&j.stats[0]&&j.stats[0].splits)||[];
+    if(!splits.length){roloStatus(`No ${group} stats found for ${y}. Try another year or enter manually.`,"err");return;}
+    let split=splits[0];
+    if(splits.length>1){split=splits.reduce((a,b)=>((b.stat.gamesPlayed||0)>(a.stat.gamesPlayed||0)?b:a),splits[0]);}
+    const st=split.stat||{};
+    const map=isP?STAT_MAP_PIT:STAT_MAP_HIT;
+    const out=[];
+    for(const k in map){ if(st[k]!=null&&st[k]!==''&&st[k]!=='.---'&&st[k]!=='-.--') out.push(`${map[k]}:${st[k]}`); }
+    if(!out.length){roloStatus(`Found ${y} but no usable stat fields. Enter manually.`,"err");return;}
+    document.getElementById('f-stats').value=out.join(', ');
+    document.getElementById('f-yr').value=y;
+    if(split.team&&split.team.name)document.getElementById('f-team').value=split.team.name;
+    roloStatus(`✓ ${roloPlayer.fullName}, ${y} filled in. Add the set name, then find the front image.`,"ok");
+  }catch(e){
+    roloStatus("Couldn't pull that season (needs live connection — works on your deployed site). Enter stats manually.","err");
+  }
+}
+
+/* ---------- add-card form ---------- */
+function openForm(){
+  ['name','pos','team','yr','set','num','stats','bio','url','gpaste'].forEach(f=>{const el=document.getElementById('f-'+f);if(el)el.value='';});
+  document.getElementById('f-era').value=curEra;
+  document.getElementById('f-type').value='hitter';
+  document.getElementById('f-rare').checked=false;
+  document.getElementById('f-photo').value='';
+  document.getElementById('f-file').value='';
+  setPreview('');
+  updateStatHint();
+  roloReset();
+  imgTab('up');
+  document.getElementById('formScrim').classList.add('open');
+  setTimeout(()=>document.getElementById('f-name').focus(),50);
+}
+function updateStatHint(){
+  const t=document.getElementById('f-type').value;
+  const hint=document.getElementById('statHint');
+  const stats=document.getElementById('f-stats');
+  if(t==='pitcher'){
+    hint.textContent='e.g. W:20, L:10, ERA:2.36, SO:197';
+    stats.placeholder='W:20, L:10, ERA:2.36, SO:197, IP:267, WHIP:1.05';
+  }else{
+    hint.textContent='e.g. AVG:.264, HR:16, RBI:61, OPS:.748';
+    stats.placeholder='AVG:.264, HR:16, RBI:61, OPS:.748';
+  }
+}
+function closeForm(e,force){
+  if(force||e.target.id==='formScrim'){document.getElementById('formScrim').classList.remove('open');}
+}
+function imgTab(p){
+  document.querySelectorAll('.img-tab').forEach(t=>t.classList.toggle('active',t.dataset.pane===p));
+  ['up','url','search'].forEach(x=>document.getElementById('pane-'+x).style.display=x===p?'block':'none');
+}
+function setPreview(src){
+  const pv=document.getElementById('imgPreview');
+  if(src){pv.style.backgroundImage=`url('${src}')`;pv.classList.add('has-img');pv.innerHTML='';}
+  else{pv.style.backgroundImage='';pv.classList.remove('has-img');pv.innerHTML='<span class="ph-text">no image yet</span>';}
+}
+function onFile(e){
+  const file=e.target.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=ev=>{document.getElementById('f-photo').value=ev.target.result;setPreview(ev.target.result);};
+  reader.readAsDataURL(file);
+}
+function useUrl(){
+  const u=document.getElementById('f-url').value.trim();
+  document.getElementById('f-photo').value=u;setPreview(u);
+}
+function useGPaste(){
+  const u=document.getElementById('f-gpaste').value.trim();
+  document.getElementById('f-photo').value=u;setPreview(u);
+}
+function googleImagesURL(query){
+  return "https://www.google.com/search?tbm=isch&q="+encodeURIComponent(query);
+}
+function openGoogleImages(){
+  const name=document.getElementById('f-name').value.trim();
+  const yr=document.getElementById('f-yr').value.trim();
+  const set=document.getElementById('f-set').value.trim();
+  const num=document.getElementById('f-num').value.trim();
+  const q=[yr,set,name,num?'#'+num:'',"baseball card"].filter(Boolean).join(' ');
+  if(!name && !set){toast("Add a player or set first, so the search knows what to find.");return;}
+  window.open(googleImagesURL(q),'_blank','noopener');
+}
+/* opens Google Images for an existing card in the collection */
+function findImageFor(idx,e){
+  if(e)e.stopPropagation();
+  const c=COLLECTION[idx];
+  const q=[c.yr||'',c.set||'',c.name||'',c.num?'#'+c.num:'',"baseball card"].filter(Boolean).join(' ');
+  window.open(googleImagesURL(q),'_blank','noopener');
+}
+
+function parseStats(s){
+  const out={};
+  s.split(',').forEach(pair=>{const [k,...v]=pair.split(':');if(k&&v.length)out[k.trim()]=v.join(':').trim();});
+  return out;
+}
+function saveCard(){
+  const name=document.getElementById('f-name').value.trim();
+  if(!name){toast("A card needs a player name.");document.getElementById('f-name').focus();return;}
+  const card={
+    name,
+    pos:document.getElementById('f-pos').value.trim()||"—",
+    team:document.getElementById('f-team').value.trim()||"—",
+    yr:parseInt(document.getElementById('f-yr').value)||0,
+    set:document.getElementById('f-set').value.trim()||"Unknown",
+    num:parseInt(document.getElementById('f-num').value)||0,
+    era:document.getElementById('f-era').value,
+    type:document.getElementById('f-type').value,
+    rare:document.getElementById('f-rare').checked,
+    photo:document.getElementById('f-photo').value||"",
+    stats:parseStats(document.getElementById('f-stats').value),
+    bio:document.getElementById('f-bio').value.trim()||""
+  };
+  USER_CARDS.push(card);
+  persist();
+  rebuild();
+  document.getElementById('formScrim').classList.remove('open');
+  curEra=card.era;
+  setMode('binder');
+  const cards=COLLECTION.filter(c=>c.era===curEra);
+  curPage=Math.max(0,Math.ceil(cards.length/PER_PAGE)-1);
+  renderBinder();
+  toast(`${name} added to the depot.`);
+}
+
+function exportCollection(){
+  if(!USER_CARDS.length){toast("No added cards yet — add some first.");return;}
+  const lines=USER_CARDS.map(c=>"  "+JSON.stringify(c)).join(",\n");
+  const blob=new Blob([
+    "/* Cards you added in the app. To make them permanent,\n"+
+    "   paste these into the SEED array in index.html. */\n\n"+
+    "const ADDED = [\n"+lines+"\n];\n"
+  ],{type:"text/javascript"});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download="my-cards.js";
+  a.click();
+  toast(`Saved ${USER_CARDS.length} card${USER_CARDS.length>1?'s':''} to a file.`);
+}
+
+let toastTimer=null;
+function toast(msg){
+  let t=document.getElementById('depotToast');
+  if(!t){t=document.createElement('div');t.id='depotToast';t.className='toast';document.body.appendChild(t);}
+  t.textContent=msg;t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>t.classList.remove('show'),2600);
+}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')document.getElementById('formScrim').classList.remove('open')});
+
+/* ---------- init ---------- */
+rebuild();
+renderBinder();
+</script>
+</body>
+</html>
