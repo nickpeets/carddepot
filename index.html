@@ -282,6 +282,19 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--brass);out
 .img-tabs{display:flex;gap:.3rem;margin-bottom:.6rem}
 .img-tab{flex:1;font-family:'Oswald',sans-serif;font-size:.72rem;text-transform:uppercase;letter-spacing:.03em;padding:.4rem;border:1px solid rgba(0,0,0,.18);border-radius:5px;color:var(--ink-soft);background:#fff}
 .img-tab.active{background:var(--leather);color:var(--cream);border-color:var(--leather)}
+.slot-tabs{display:flex;gap:.3rem;margin-bottom:.5rem}
+.slot-tab{flex:1;font-family:'Oswald',sans-serif;font-size:.72rem;text-transform:uppercase;letter-spacing:.03em;padding:.4rem;border:1px solid rgba(0,0,0,.18);border-radius:5px;color:var(--ink-soft);background:#fff;cursor:pointer}
+.slot-tab.active{background:var(--brass);color:var(--cream);border-color:var(--brass)}
+.preview-row{display:flex;gap:.5rem;margin-bottom:.7rem}
+.preview-slot{flex:1;display:flex;flex-direction:column;gap:.25rem;min-width:0}
+.preview-slot .preview{margin-bottom:0;cursor:pointer}
+.preview-slot.active-slot .preview{border-color:var(--brass);box-shadow:0 0 0 2px var(--brass)}
+.slot-cap{font-family:'Oswald',sans-serif;text-transform:uppercase;letter-spacing:.06em;font-size:.6rem;color:var(--leather);text-align:center}
+.spot-back-img{flex:0 0 auto;width:100%;aspect-ratio:5/7;max-height:42%;border-radius:6px;overflow:hidden;margin-bottom:.6rem;background:#e9e0cc center top/cover no-repeat;box-shadow:0 0 0 1px rgba(0,0,0,.12)}
+.spot-back-img img{width:100%;height:100%;object-fit:cover;object-position:center top;display:block}
+.spot-back-scroll{flex:1;min-height:0;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--brass) transparent}
+.spot-back-scroll::-webkit-scrollbar{width:5px}
+.spot-back-scroll::-webkit-scrollbar-thumb{background:var(--brass);border-radius:3px}
 .img-pane input[type=file]{font-size:.78rem;font-family:'Spectral',serif}
 .pane-note{font-family:'Spectral',serif;font-style:italic;font-size:.74rem;color:var(--ink-soft);margin-top:.5rem;line-height:1.4}
 .search-wrap{display:flex;gap:.4rem}
@@ -407,7 +420,7 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--brass);out
         </div>
         <div class="fl-row">
           <div class="fl-field" style="flex:2"><label>Team</label><input id="f-team" placeholder="Mariners"></div>
-          <div class="fl-field" style="flex:1"><label>Year</label><input id="f-yr" type="number" placeholder="1989"></div>
+          <div class="fl-field" style="flex:1"><label>Year</label><input id="f-yr" type="number" placeholder="1989" oninput="onYearInput()" onchange="onYearInput()"></div>
         </div>
         <div class="fl-row">
           <div class="fl-field" style="flex:2"><label>Set</label><input id="f-set" placeholder="Upper Deck"></div>
@@ -431,9 +444,23 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--brass);out
       </div>
 
       <div class="form-right">
-        <label>Card image</label>
-        <div class="preview" id="imgPreview"><span class="ph-text">no image yet</span></div>
+        <label>Card images</label>
+        <div class="slot-tabs">
+          <button type="button" class="slot-tab active" data-slot="front" onclick="imgSlot('front')">Front</button>
+          <button type="button" class="slot-tab" data-slot="back" onclick="imgSlot('back')">Back</button>
+        </div>
+        <div class="preview-row">
+          <div class="preview-slot">
+            <span class="slot-cap">Front</span>
+            <div class="preview" id="imgPreviewFront" onclick="imgSlot('front')"><span class="ph-text">no image yet</span></div>
+          </div>
+          <div class="preview-slot">
+            <span class="slot-cap">Back</span>
+            <div class="preview" id="imgPreviewBack" onclick="imgSlot('back')"><span class="ph-text">no image yet</span></div>
+          </div>
+        </div>
         <input type="hidden" id="f-photo">
+        <input type="hidden" id="f-photo-back">
         <div class="img-tabs">
           <button class="img-tab active" data-pane="up" onclick="imgTab('up')">Upload scan</button>
           <button class="img-tab" data-pane="url" onclick="imgTab('url')">Paste URL</button>
@@ -441,18 +468,19 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--brass);out
         </div>
         <div class="img-pane" id="pane-up">
           <input type="file" id="f-file" accept="image/*" onchange="onFile(event)">
-          <p class="pane-note">Best results. Scans of cards you own — uniform and unambiguously yours.</p>
+          <p class="pane-note">Adds to the <b id="slotNoteUp">front</b>. Scans of cards you own — uniform and unambiguously yours. You can also drag an image onto a slot above, or paste from the clipboard.</p>
         </div>
         <div class="img-pane" id="pane-url" style="display:none">
           <input id="f-url" placeholder="https://… image address" onchange="useUrl()" oninput="useUrl()">
-          <p class="pane-note">Right-click any card image online → “Copy image address” → paste here.</p>
+          <p class="pane-note">Sets the <b id="slotNoteUrl">front</b>. Right-click any card image online → “Copy image address” → paste here.</p>
         </div>
         <div class="img-pane" id="pane-search" style="display:none">
           <button class="btn-google" onclick="openTcdbSearch()"><i></i>Search on TCDB ↗</button>
           <button class="btn-google" onclick="openGoogleImages()" style="margin-top:.4rem;opacity:.8"><i></i>Fall back to Google Images ↗</button>
-          <p class="pane-note">TCDB opens narrowed to this exact card — the base card is first. Click it, then save its front image and use “Upload scan” (TCDB blocks hotlinking, so a saved file is the reliable way to display it). The field below still accepts a direct image address if you have one.</p>
+          <p class="pane-note">TCDB opens narrowed to this exact card — the base card is first. Click it, then save its image and use “Upload scan” (TCDB blocks hotlinking, so a saved file is the reliable way to display it). The field below still accepts a direct image address for the <b id="slotNoteSearch">front</b> if you have one.</p>
           <input id="f-gpaste" placeholder="Paste a direct image address (optional)" onchange="useGPaste()" oninput="useGPaste()" style="margin-top:.4rem">
         </div>
+      </div>
       </div>
     </div>
 
@@ -482,7 +510,8 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--brass);out
    - era: "vintage" (pre-1981) | "junk" (1981-1994) | "modern" (1995+)
    - type: "hitter" | "pitcher"  (drives the stat columns on the back)
    - rare: true puts a gold pin on it + glow in spotlight
-   - photo: any image URL, or leave "" for a colored placeholder
+   - photoFront / photoBack: any image URL (or data URL), or leave "" for a colored placeholder
+        (legacy single "photo" still works and is treated as the front)
    - stats: the season line for the card's year. Use standard keys:
        hitters  → G AB R H 2B 3B HR RBI SB BB SO AVG OBP SLG OPS
        pitchers → W L ERA G GS SV IP H BB SO WHIP
@@ -498,6 +527,24 @@ const ERAS = {
     blurb:"Premium foil, sharp photography, and the chase for the short print."}
 };
 const ERA_ORDER = ["vintage","junk","modern"];
+// Derive era from a card's year: pre-1981 Vintage, 1981-1994 Junk Wax, 1995+ Modern.
+function eraFromYear(y){
+  const n = parseInt(y,10);
+  if(!n) return null;
+  if(n < 1981) return "vintage";
+  if(n <= 1994) return "junk";
+  return "modern";
+}
+// Auto-set the Era <select> from a year value (used by the Year field and the rolodex season pick).
+function applyEraFromYear(y){
+  const era = eraFromYear(y);
+  if(!era) return;
+  const sel = document.getElementById('f-era');
+  if(sel) sel.value = era;
+}
+function onYearInput(){
+  applyEraFromYear(document.getElementById('f-yr').value);
+}
 const PLACEHOLDER = ["#7d5a3c","#3a5a78","#5a3a4a","#3a5a4a","#6a4a2a","#4a4a6a"];
 
 const STORE_KEY = "depot_cards_v1";
@@ -510,7 +557,12 @@ function loadSaved(){
     const arr = raw?JSON.parse(raw):[];
     let changed=false;
     if(Array.isArray(arr)){
-      arr.forEach(c=>{ if(c && !c.id){ c.id = newCardId(); changed=true; } });
+      arr.forEach(c=>{
+        if(c && !c.id){ c.id = newCardId(); changed=true; }
+        // migrate legacy single photo -> photoFront (don't lose existing images)
+        if(c && typeof c.photoFront==='undefined' && c.photo){ c.photoFront = c.photo; changed=true; }
+        if(c && typeof c.photoBack==='undefined'){ c.photoBack = ''; }
+      });
       if(changed){ try{ localStorage.setItem(STORE_KEY, JSON.stringify(arr)); }catch(e){} }
     }
     return Array.isArray(arr)?arr:[];
@@ -537,14 +589,18 @@ const PER_PAGE=9;
 function placeholderBg(i){return PLACEHOLDER[i%PLACEHOLDER.length]}
 
 function cssUrl(u){ return String(u).replace(/["'()\\]/g, m=>'%'+m.charCodeAt(0).toString(16)); }
+// Front/back image accessors (legacy cards used a single .photo => treat as front).
+function frontPhoto(c){ return (c && (c.photoFront || c.photo)) || ""; }
+function backPhoto(c){ return (c && c.photoBack) || ""; }
 function cardHTML(card, idx, skin){
-  const photoStyle = card.photo
-    ? `background-image:url("${cssUrl(card.photo)}")`
+  const cphoto = frontPhoto(card);
+  const photoStyle = cphoto
+    ? `background-image:url("${cssUrl(cphoto)}")`
     : `background-color:${placeholderBg(idx)}`;
   return `<button class="card ${skin}" onclick="openSpot(${idx})" aria-label="${card.name}, ${card.yr} ${card.set}">
     ${card.rare?'<span class="rare-pin" title="Key card">★</span>':''}
     <div class="frame">
-      ${card.photo ? `<img class="photo loaded-img" src="${escAttr(card.photo)}" alt="" loading="lazy" style="width:100%;height:100%;object-fit:cover;object-position:center top;display:block" onload="imgOk(this)" onerror="imgFail(this)">` : `<div class="photo" style="${photoStyle}"></div>`}
+      ${cphoto ? `<img class="photo loaded-img" src="${escAttr(cphoto)}" alt="" loading="lazy" style="width:100%;height:100%;object-fit:cover;object-position:center top;display:block" onload="imgOk(this)" onerror="imgFail(this)">` : `<div class="photo" style="${photoStyle}"></div>`}
       <div class="nameplate">${card.name}<span class="pos">${card.pos} · ${card.team}</span></div>
     </div>
   </button>`;
@@ -652,11 +708,12 @@ function findStatsFor(idx,e){
 function openSpot(idx){
   spotIdx=idx;const c=COLLECTION[idx];
   const skin=ERAS[c.era].skin;
-  const photoStyle=c.photo?`background-image:url("${cssUrl(c.photo)}")`:`background-color:${placeholderBg(idx)}`;
+  const cphoto=frontPhoto(c), cback=backPhoto(c);
+  const photoStyle=cphoto?`background-image:url("${cssUrl(cphoto)}")`:`background-color:${placeholderBg(idx)}`;
   document.getElementById('spotFront').className=`spot-face ${skin}`;
   document.getElementById('spotFront').innerHTML=`<div class="frame" style="position:absolute;inset:0;display:flex;flex-direction:column">
     ${c.rare?'<span class="rare-pin" style="width:24px;height:24px;font-size:.85rem;top:10px;right:10px">★</span>':''}
-    ${c.photo ? `<img class="photo loaded-img" src="${escAttr(c.photo)}" alt="" style="flex:1;width:100%;min-height:0;object-fit:cover;object-position:center top;display:block" onload="imgOk(this)" onerror="imgFail(this)">` : `<div class="photo" style="flex:1;${photoStyle};background-size:cover;background-position:center top"></div>`}
+    ${cphoto ? `<img class="photo loaded-img" src="${escAttr(cphoto)}" alt="" style="flex:1;width:100%;min-height:0;object-fit:cover;object-position:center top;display:block" onload="imgOk(this)" onerror="imgFail(this)">` : `<div class="photo" style="flex:1;${photoStyle};background-size:cover;background-position:center top"></div>`}
     <div class="nameplate" style="font-size:1.1rem;padding:.6rem .8rem">${c.name}<span class="pos" style="font-size:.8rem">${c.pos} · ${c.team}</span></div>
   </div>`;
   const isP=cardType(c)==='pitcher';
@@ -666,13 +723,16 @@ function openSpot(idx){
       <span class="back-badge">${isP?'PITCHER':'BATTER'} · ${c.pos}</span>
     </div>
     <div class="back-sub">${c.yr} ${c.set} · #${c.num}${c.rare?' · KEY CARD':''}</div>
+    ${cback?`<div class="spot-back-img"><img src="${escAttr(cback)}" alt="card back" onload="imgOk(this)" onerror="imgFail(this)"></div>`:''}
+    <div class="spot-back-scroll">
     ${statTable(c)}
     ${c.bio?`<div class="bio">${c.bio}</div>`:''}
     <div class="back-foot">
       <button class="btn-bref" onclick="findStatsFor(${idx},event)">Look up on Baseball-Reference ↗</button>
+    </div>
     </div>`;
   document.getElementById('spotMeta').innerHTML=`<span class="hint">click card to flip · esc to close</span>`
-    + (c.photo?'':`<div style="margin-top:.5rem"><button class="btn-google" style="width:auto;padding:.45rem 1rem;font-size:.72rem" onclick="findImageFor(${idx},event)">Find this card on Google Images ↗</button></div>`)
+    + (cphoto?'':`<div style="margin-top:.5rem"><button class="btn-google" style="width:auto;padding:.45rem 1rem;font-size:.72rem" onclick="findImageFor(${idx},event)">Find this card on Google Images ↗</button></div>`)
         + `<div class="spot-remove"><button class="btn-ghost" onclick="removeFromDepot(${idx},event)">Remove from depot</button></div>`;
   document.getElementById('spotCard').classList.remove('flipped');
   document.getElementById('spotlight').classList.add('open');
@@ -1026,6 +1086,7 @@ async function roloYear(y,btn){
   if(!roloPlayer){roloStatus("Pick a player first.","err");return;}
   const inChecklist=!(btn&&btn.classList.contains("nocard"));
   document.getElementById('f-yr').value=y;
+  applyEraFromYear(y);
   await roloShowBrands(y);            // brand/number are independent of the stats lookup
       if(!inChecklist){
         document.getElementById('f-stats').value='';
@@ -1063,10 +1124,13 @@ function openForm(){
   document.getElementById('f-type').value='hitter';
   document.getElementById('f-rare').checked=false;
   document.getElementById('f-photo').value='';
+  document.getElementById('f-photo-back').value='';
   document.getElementById('f-file').value='';
-  setPreview('');
+  setPreview('front','');
+  setPreview('back','');
   updateStatHint();
   roloReset();
+  imgSlot('front');
   imgTab('up');
   document.getElementById('formScrim').classList.add('open');
   setTimeout(()=>document.getElementById('f-name').focus(),50);
@@ -1090,8 +1154,27 @@ function imgTab(p){
   document.querySelectorAll('.img-tab').forEach(t=>t.classList.toggle('active',t.dataset.pane===p));
   ['up','url','search'].forEach(x=>document.getElementById('pane-'+x).style.display=x===p?'block':'none');
 }
-function setPreview(src){
-  const pv=document.getElementById('imgPreview');
+let activeSlot = 'front';
+function slotPreviewEl(slot){ return document.getElementById(slot==='back'?'imgPreviewBack':'imgPreviewFront'); }
+function slotInput(slot){ return document.getElementById(slot==='back'?'f-photo-back':'f-photo'); }
+function imgSlot(slot){
+  activeSlot = (slot==='back')?'back':'front';
+  document.querySelectorAll('.slot-tab').forEach(t=>t.classList.toggle('active',t.dataset.slot===activeSlot));
+  document.querySelectorAll('.preview-slot').forEach(ps=>{
+    const has = ps.querySelector('#imgPreview'+(activeSlot==='back'?'Back':'Front'));
+    ps.classList.toggle('active-slot', !!has);
+  });
+  const word = activeSlot==='back'?'back':'front';
+  ['slotNoteUp','slotNoteUrl','slotNoteSearch'].forEach(id=>{ const el=document.getElementById(id); if(el) el.textContent=word; });
+  // reflect the current slot's stored value in the URL field for convenience
+  const cur = slotInput(activeSlot).value;
+  const urlEl = document.getElementById('f-url'); if(urlEl) urlEl.value = (cur && cur.slice(0,5)!=='data:')?cur:'';
+}
+function setPreview(slot, src){
+  // back-compat: allow setPreview(src) -> applies to the active slot
+  if(arguments.length===1){ src = slot; slot = activeSlot; }
+  const pv=slotPreviewEl(slot);
+  if(!pv) return;
   if(src){
     pv.classList.add('has-img');
     pv.innerHTML='<span class="ph-text">loading…</span>';
@@ -1140,19 +1223,19 @@ function onFile(e){
   reader.onload=ev=>{
     const orig=ev.target.result;
     downscaleDataURL(orig, 600, 0.8).then(small=>{
-      document.getElementById('f-photo').value=small;
-      setPreview(small);
+      slotInput(activeSlot).value=small;
+      setPreview(activeSlot, small);
     });
   };
   reader.readAsDataURL(file);
 }
 function useUrl(){
   const u=document.getElementById('f-url').value.trim();
-  document.getElementById('f-photo').value=u;setPreview(u);
+  slotInput(activeSlot).value=u;setPreview(activeSlot, u);
 }
 function useGPaste(){
   const u=document.getElementById('f-gpaste').value.trim();
-  document.getElementById('f-photo').value=u;setPreview(u);
+  slotInput(activeSlot).value=u;setPreview(activeSlot, u);
 }
 function googleImagesURL(query){
   return "https://www.google.com/search?tbm=isch&q="+encodeURIComponent(query);
@@ -1210,7 +1293,8 @@ function saveCard(){
     era:document.getElementById('f-era').value,
     type:document.getElementById('f-type').value,
     rare:document.getElementById('f-rare').checked,
-    photo:document.getElementById('f-photo').value||"",
+    photoFront:document.getElementById('f-photo').value||"",
+    photoBack:document.getElementById('f-photo-back').value||"",
     stats:parseStats(document.getElementById('f-stats').value),
     bio:document.getElementById('f-bio').value.trim()||""
   };
@@ -1264,9 +1348,9 @@ function setCardPhotoById(id, rawDataURL){
   const ui = findUserCardById(id);
   if(ui<0){ toast("Couldn't match that image to a card. Try again from the card."); return; }
   compressForStore(rawDataURL).then(small=>{
-    const prev = USER_CARDS[ui].photo;
-    USER_CARDS[ui].photo = small;
-    if(!persist()){ USER_CARDS[ui].photo = prev; return; }
+    const prev = USER_CARDS[ui].photoFront;
+    USER_CARDS[ui].photoFront = small;
+    if(!persist()){ USER_CARDS[ui].photoFront = prev; return; }
     rebuild();
     renderBinder();
     if(typeof spotIdx==='number' && COLLECTION[spotIdx] && COLLECTION[spotIdx].id===id){ openSpot(spotIdx); }
@@ -1326,21 +1410,23 @@ document.addEventListener('paste',e=>{
   fileToDataURL(f).then(d=>setCardPhotoById(id,d)).catch(()=>toast("Clipboard had no image."));
 });
 (function wireFormPreviewDnD(){
-  const pv=document.getElementById('imgPreview');
-  if(!pv) return;
-  ['dragenter','dragover'].forEach(ev=>pv.addEventListener(ev,e=>{
-    if(e.dataTransfer && e.dataTransfer.types && [].indexOf.call(e.dataTransfer.types,'Files')>-1){
-      e.preventDefault(); e.stopPropagation(); pv.classList.add('drop-hot');
-    }
-  }));
-  ['dragleave','dragend'].forEach(ev=>pv.addEventListener(ev,()=>pv.classList.remove('drop-hot')));
-  pv.addEventListener('drop',e=>{
-    const f=imageFileFromTransfer(e.dataTransfer);
-    if(!f) return;
-    e.preventDefault(); e.stopPropagation(); pv.classList.remove('drop-hot');
-    fileToDataURL(f).then(orig=>downscaleDataURL(orig,600,0.8)).then(small=>{
-      document.getElementById('f-photo').value=small; setPreview(small);
-    }).catch(()=>toast("That didn't look like an image."));
+  ['front','back'].forEach(slot=>{
+    const pv = slotPreviewEl(slot);
+    if(!pv) return;
+    ['dragenter','dragover'].forEach(ev=>pv.addEventListener(ev,e=>{
+      if(e.dataTransfer && e.dataTransfer.types && [].indexOf.call(e.dataTransfer.types,'Files')>-1){
+        e.preventDefault(); e.stopPropagation(); pv.classList.add('drop-hot'); imgSlot(slot);
+      }
+    }));
+    ['dragleave','dragend'].forEach(ev=>pv.addEventListener(ev,()=>pv.classList.remove('drop-hot')));
+    pv.addEventListener('drop',e=>{
+      const f=imageFileFromTransfer(e.dataTransfer);
+      if(!f) return;
+      e.preventDefault(); e.stopPropagation(); pv.classList.remove('drop-hot'); imgSlot(slot);
+      fileToDataURL(f).then(orig=>downscaleDataURL(orig,600,0.8)).then(small=>{
+        slotInput(slot).value=small; setPreview(slot, small);
+      }).catch(()=>toast("That didn't look like an image."));
+    });
   });
 })();
 document.addEventListener('paste',e=>{
@@ -1351,7 +1437,7 @@ document.addEventListener('paste',e=>{
   if(!f) return;
   e.preventDefault();
   fileToDataURL(f).then(orig=>downscaleDataURL(orig,600,0.8)).then(small=>{
-    document.getElementById('f-photo').value=small; setPreview(small);
+    slotInput(activeSlot).value=small; setPreview(activeSlot, small);
   }).catch(()=>{});
 });
 
