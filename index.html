@@ -436,7 +436,7 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--brass);out
         <div class="img-tabs">
           <button class="img-tab active" data-pane="up" onclick="imgTab('up')">Upload scan</button>
           <button class="img-tab" data-pane="url" onclick="imgTab('url')">Paste URL</button>
-          <button class="img-tab" data-pane="search" onclick="imgTab('search')">Find on Google</button>
+          <button class="img-tab" data-pane="search" onclick="imgTab('search')">Find on TCDB</button>
         </div>
         <div class="img-pane" id="pane-up">
           <input type="file" id="f-file" accept="image/*" onchange="onFile(event)">
@@ -447,8 +447,8 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--brass);out
           <p class="pane-note">Right-click any card image online → “Copy image address” → paste here.</p>
         </div>
         <div class="img-pane" id="pane-search" style="display:none">
-          <button class="btn-google" onclick="openGoogleImages()"><i></i>Find on Google Images ↗</button>
-          <p class="pane-note">Opens a new tab searching for this card. Find the one you like, right-click → “Copy image address,” then paste it below.</p>
+          <button class="btn-google" onclick="openTCDB()"><i></i>Search this card on TCDB ↗</button>
+          <p class="pane-note">Opens TCDB search for this card. Open the matching card, right-click its image &#8594; Copy image address, then paste it below.</p>
           <input id="f-gpaste" placeholder="Paste the image address here" onchange="useGPaste()" oninput="useGPaste()" style="margin-top:.4rem">
         </div>
       </div>
@@ -658,7 +658,7 @@ function openSpot(idx){
       <button class="btn-bref" onclick="findStatsFor(${idx},event)">Look up on Baseball-Reference ↗</button>
     </div>`;
   document.getElementById('spotMeta').innerHTML=`<span class="hint">click card to flip · esc to close</span>`
-    + (c.photo?'':`<div style="margin-top:.5rem"><button class="btn-google" style="width:auto;padding:.45rem 1rem;font-size:.72rem" onclick="findImageFor(${idx},event)">Find this card on Google Images ↗</button></div>`)
+    + (c.photo?'':`<div style="margin-top:.5rem"><button class="btn-google" style="width:auto;padding:.45rem 1rem;font-size:.72rem" onclick="findImageFor(${idx},event)">Search this card on TCDB ↗</button></div>`)
         + `<div class="spot-remove"><button class="btn-ghost" onclick="removeFromDepot(${idx},event)">Remove from depot</button></div>`;
   document.getElementById('spotCard').classList.remove('flipped');
   document.getElementById('spotlight').classList.add('open');
@@ -1140,24 +1140,24 @@ function useGPaste(){
   const u=document.getElementById('f-gpaste').value.trim();
   document.getElementById('f-photo').value=u;setPreview(u);
 }
-function googleImagesURL(query){
-  return "https://www.google.com/search?tbm=isch&q="+encodeURIComponent(query);
+function tcdbSearchURL(query){
+  return "https://www.tcdb.com/Search.cfm?q="+encodeURIComponent(query);
 }
-function openGoogleImages(){
+function openTCDB(){
   const name=document.getElementById('f-name').value.trim();
   const yr=document.getElementById('f-yr').value.trim();
   const set=document.getElementById('f-set').value.trim();
-  const num=document.getElementById('f-num').value.trim();
-  const q=[yr,set,name,num?'#'+num:'',"baseball card"].filter(Boolean).join(' ');
+  // TCDB search matches on set titles/players; card number pollutes results, so omit it
+  const q=[yr,set,name].filter(Boolean).join(' ');
   if(!name && !set){toast("Add a player or set first, so the search knows what to find.");return;}
-  window.open(googleImagesURL(q),'_blank','noopener');
+  window.open(tcdbSearchURL(q),'_blank','noopener');
 }
-/* opens Google Images for an existing card in the collection */
+/* opens TCDB search for an existing card in the collection */
 function findImageFor(idx,e){
   if(e)e.stopPropagation();
   const c=COLLECTION[idx];
-  const q=[c.yr||'',c.set||'',c.name||'',c.num?'#'+c.num:'',"baseball card"].filter(Boolean).join(' ');
-  window.open(googleImagesURL(q),'_blank','noopener');
+  const q=[c.yr||'',c.set||'',c.name||''].filter(Boolean).join(' ');
+  window.open(tcdbSearchURL(q),'_blank','noopener');
 }
 
 function parseStats(s){
