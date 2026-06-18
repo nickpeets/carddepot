@@ -658,7 +658,7 @@ function openSpot(idx){
       <button class="btn-bref" onclick="findStatsFor(${idx},event)">Look up on Baseball-Reference ↗</button>
     </div>`;
   document.getElementById('spotMeta').innerHTML=`<span class="hint">click card to flip · esc to close</span>`
-    + (c.photo?'':`<div style="margin-top:.5rem"><button class="btn-google" style="width:auto;padding:.45rem 1rem;font-size:.72rem" onclick="findImageFor(${idx},event)">Search this card on TCDB ↗↗</button></div>`)
+    + (c.photo?'':`<div style="margin-top:.5rem"><button class="btn-google" style="width:auto;padding:.45rem 1rem;font-size:.72rem" onclick="findImageFor(${idx},event)">Search this card on TCDB ↗</button></div>`)
         + `<div class="spot-remove"><button class="btn-ghost" onclick="removeFromDepot(${idx},event)">Remove from depot</button></div>`;
   document.getElementById('spotCard').classList.remove('flipped');
   document.getElementById('spotlight').classList.add('open');
