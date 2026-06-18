@@ -194,7 +194,7 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--brass);out
   position:absolute;inset:0;backface-visibility:hidden;border-radius:12px;overflow:hidden;
   box-shadow:0 0 0 1px rgba(199,154,59,.5),0 30px 70px rgba(0,0,0,.6),0 0 60px rgba(199,154,59,.15);
 }
-.spot-back{transform:rotateY(180deg);background:var(--paper);padding:1.1rem 1.1rem .9rem;display:flex;flex-direction:column;overflow:hidden}
+.spot-back{transform:rotateY(180deg);background:var(--paper);padding:1.1rem 1.1rem .9rem;display:flex;flex-direction:column;overflow-y:auto}
 .back-head{display:flex;align-items:baseline;justify-content:space-between;gap:.5rem;border-bottom:2px solid var(--leather);padding-bottom:.4rem;margin-bottom:.35rem}
 .back-head h3{font-family:'Oswald',sans-serif;text-transform:uppercase;font-size:1.05rem;color:var(--ink);line-height:1}
 .back-badge{font-family:'JetBrains Mono',monospace;font-size:.56rem;letter-spacing:.04em;color:var(--cream);background:var(--leather);padding:.2rem .4rem;border-radius:3px;white-space:nowrap}
@@ -290,9 +290,9 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--brass);out
 .preview-slot .preview{margin-bottom:0;cursor:pointer}
 .preview-slot.active-slot .preview{border-color:var(--brass);box-shadow:0 0 0 2px var(--brass)}
 .slot-cap{font-family:'Oswald',sans-serif;text-transform:uppercase;letter-spacing:.06em;font-size:.6rem;color:var(--leather);text-align:center}
-.spot-back-img{flex:0 0 auto;width:100%;aspect-ratio:5/7;max-height:42%;border-radius:6px;overflow:hidden;margin-bottom:.6rem;background:#e9e0cc center top/cover no-repeat;box-shadow:0 0 0 1px rgba(0,0,0,.12)}
+.spot-back-img{flex:none;width:100%;aspect-ratio:5/7;border-radius:6px;overflow:hidden;margin-bottom:.6rem;background:#e9e0cc center top/cover no-repeat;box-shadow:0 0 0 1px rgba(0,0,0,.12)}
 .spot-back-img img{width:100%;height:100%;object-fit:cover;object-position:center top;display:block}
-.spot-back-scroll{flex:1;min-height:0;overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--brass) transparent}
+.spot-back-scroll{flex:none;overflow:visible;scrollbar-width:thin;scrollbar-color:var(--brass) transparent}
 .spot-back-scroll::-webkit-scrollbar{width:5px}
 .spot-back-scroll::-webkit-scrollbar-thumb{background:var(--brass);border-radius:3px}
 .img-pane input[type=file]{font-size:.78rem;font-family:'Spectral',serif}
@@ -1095,7 +1095,7 @@ async function roloYear(y,btn){
       }
   const isP=document.getElementById('f-type').value==='pitcher';
   const group=isP?'pitching':'hitting';
-  roloStatus(`Pulling ${y} ${group} stats…`);
+  roloStatus(`Pulling ${y} ${group} stats…`); if(!roloPlayer.id){ const pname=roloPlayer.fullName||roloPlayer.nameFirstLast||document.getElementById('rolo-name').value.trim(); let found=null; try{ let rs=await fetch(`${MLB_BASE}/people/search?names=${encodeURIComponent(pname)}`); if(rs.ok){const js=await rs.json(); if(js.people&&js.people.length)found=js.people;} if(!found){rs=await fetch(`${MLB_BASE}/people/search?q=${encodeURIComponent(pname)}`); if(rs.ok){const js=await rs.json(); if(js.people&&js.people.length)found=js.people;}} if(!found){const list=await ensurePlayerList(); const ql=pname.toLowerCase(); found=list.filter(p=>(p.fullName||'').toLowerCase()===ql); if(!found.length)found=list.filter(p=>(p.fullName||'').toLowerCase().includes(ql));} }catch(e){} if(found&&found.length){roloPlayer=Object.assign({},found[0],{fullName:roloPlayer.fullName||found[0].fullName});} if(!roloPlayer.id){roloStatus(`Couldn’t match “${pname}” to an MLB player to pull stats. Pick the brand/number and enter stats manually.`,"err"); return;} }
   try{
     const r=await fetch(`${MLB_BASE}/people/${roloPlayer.id}/stats?stats=season&group=${group}&season=${y}`);
     if(!r.ok) throw new Error('http');
