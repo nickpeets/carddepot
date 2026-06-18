@@ -321,6 +321,7 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--brass);out
 .rolo-yr.nocard{opacity:.7;border-style:dashed;border-color:rgba(0,0,0,.28)}
 .rolo-yr.nocard:hover{border-color:var(--brass);background:var(--cream-dim)}
 .rolo-num-list{font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--ink-soft);margin-top:.25rem}
+.drop-hot{outline:3px dashed var(--brass,#c79a3b);outline-offset:-6px;box-shadow:0 0 0 9999px rgba(199,154,59,.08) inset;transition:outline-color .1s}
 </style>
 </head>
 <body>
@@ -436,7 +437,7 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--brass);out
         <div class="img-tabs">
           <button class="img-tab active" data-pane="up" onclick="imgTab('up')">Upload scan</button>
           <button class="img-tab" data-pane="url" onclick="imgTab('url')">Paste URL</button>
-          <button class="img-tab" data-pane="search" onclick="imgTab('search')">Find on Google</button>
+          <button class="img-tab" data-pane="search" onclick="imgTab('search')">Find image</button>
         </div>
         <div class="img-pane" id="pane-up">
           <input type="file" id="f-file" accept="image/*" onchange="onFile(event)">
@@ -447,9 +448,10 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--brass);out
           <p class="pane-note">Right-click any card image online → “Copy image address” → paste here.</p>
         </div>
         <div class="img-pane" id="pane-search" style="display:none">
-          <button class="btn-google" onclick="openGoogleImages()"><i></i>Find on Google Images ↗</button>
-          <p class="pane-note">Opens a new tab searching for this card. Find the one you like, right-click → “Copy image address,” then paste it below.</p>
-          <input id="f-gpaste" placeholder="Paste the image address here" onchange="useGPaste()" oninput="useGPaste()" style="margin-top:.4rem">
+          <button class="btn-google" onclick="openTcdbSearch()"><i></i>Search on TCDB ↗</button>
+          <button class="btn-google" onclick="openGoogleImages()" style="margin-top:.4rem;opacity:.8"><i></i>Fall back to Google Images ↗</button>
+          <p class="pane-note">TCDB opens narrowed to this exact card — the base card is first. Click it, then save its front image and use “Upload scan” (TCDB blocks hotlinking, so a saved file is the reliable way to display it). The field below still accepts a direct image address if you have one.</p>
+          <input id="f-gpaste" placeholder="Paste a direct image address (optional)" onchange="useGPaste()" oninput="useGPaste()" style="margin-top:.4rem">
         </div>
       </div>
     </div>
@@ -499,8 +501,20 @@ const ERA_ORDER = ["vintage","junk","modern"];
 const PLACEHOLDER = ["#7d5a3c","#3a5a78","#5a3a4a","#3a5a4a","#6a4a2a","#4a4a6a"];
 
 const STORE_KEY = "depot_cards_v1";
+function newCardId(){
+  return 'c_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2,8);
+}
 function loadSaved(){
-  try{ const raw=localStorage.getItem(STORE_KEY); return raw?JSON.parse(raw):[]; }
+  try{
+    const raw=localStorage.getItem(STORE_KEY);
+    const arr = raw?JSON.parse(raw):[];
+    let changed=false;
+    if(Array.isArray(arr)){
+      arr.forEach(c=>{ if(c && !c.id){ c.id = newCardId(); changed=true; } });
+      if(changed){ try{ localStorage.setItem(STORE_KEY, JSON.stringify(arr)); }catch(e){} }
+    }
+    return Array.isArray(arr)?arr:[];
+  }
   catch(e){ return []; }
 }
 function persist(){
@@ -1143,6 +1157,15 @@ function useGPaste(){
 function googleImagesURL(query){
   return "https://www.google.com/search?tbm=isch&q="+encodeURIComponent(query);
 }
+function tcdbSearchURL(name,yr,set,num){
+  var p = new URLSearchParams();
+  p.set("MODE","ADVANCED"); p.set("Type","Baseball");
+  if(yr)  p.set("Year", String(yr));
+  if(set) p.set("SetName", set);
+  if(num) p.set("CardNum", String(num));
+  if(name)p.set("Name", name);
+  return "https://www.tcdb.com/ViewResults.cfm?"+p.toString();
+}
 function openGoogleImages(){
   const name=document.getElementById('f-name').value.trim();
   const yr=document.getElementById('f-yr').value.trim();
@@ -1151,6 +1174,14 @@ function openGoogleImages(){
   const q=[yr,set,name,num?'#'+num:'',"baseball card"].filter(Boolean).join(' ');
   if(!name && !set){toast("Add a player or set first, so the search knows what to find.");return;}
   window.open(googleImagesURL(q),'_blank','noopener');
+}
+function openTcdbSearch(){
+  const name=document.getElementById('f-name').value.trim();
+  const yr=document.getElementById('f-yr').value.trim();
+  const set=document.getElementById('f-set').value.trim();
+  const num=document.getElementById('f-num').value.trim();
+  if(!name && !set){toast("Add a player or set first, so the search knows what to find.");return;}
+  window.open(tcdbSearchURL(name,yr,set,num),'_blank','noopener');
 }
 /* opens Google Images for an existing card in the collection */
 function findImageFor(idx,e){
@@ -1169,6 +1200,7 @@ function saveCard(){
   const name=document.getElementById('f-name').value.trim();
   if(!name){toast("A card needs a player name.");document.getElementById('f-name').focus();return;}
   const card={
+    id:newCardId(),
     name,
     pos:document.getElementById('f-pos').value.trim()||"—",
     team:document.getElementById('f-team').value.trim()||"—",
@@ -1218,6 +1250,110 @@ function toast(msg){
   toastTimer=setTimeout(()=>t.classList.remove('show'),2600);
 }
 document.addEventListener('keydown',e=>{if(e.key==='Escape')document.getElementById('formScrim').classList.remove('open')});
+
+/* ---------- drag-drop & paste image onto a card (low-friction attach) ---------- */
+function compressForStore(dataURL){
+  return downscaleDataURL(dataURL, 600, 0.8);
+}
+function findUserCardById(id){
+  if(!id) return -1;
+  for(let i=0;i<USER_CARDS.length;i++){ if(USER_CARDS[i].id===id) return i; }
+  return -1;
+}
+function setCardPhotoById(id, rawDataURL){
+  const ui = findUserCardById(id);
+  if(ui<0){ toast("Couldn't match that image to a card. Try again from the card."); return; }
+  compressForStore(rawDataURL).then(small=>{
+    const prev = USER_CARDS[ui].photo;
+    USER_CARDS[ui].photo = small;
+    if(!persist()){ USER_CARDS[ui].photo = prev; return; }
+    rebuild();
+    renderBinder();
+    if(typeof spotIdx==='number' && COLLECTION[spotIdx] && COLLECTION[spotIdx].id===id){ openSpot(spotIdx); }
+    toast("Image attached to "+(USER_CARDS[ui].name||"card")+".");
+  });
+}
+function fileToDataURL(file){
+  return new Promise((resolve,reject)=>{
+    if(!file || !/^image\//.test(file.type)){ reject(new Error("not an image")); return; }
+    const r=new FileReader();
+    r.onload=()=>resolve(r.result);
+    r.onerror=()=>reject(new Error("read failed"));
+    r.readAsDataURL(file);
+  });
+}
+function imageFileFromTransfer(dt){
+  if(!dt) return null;
+  if(dt.files && dt.files.length){
+    for(const f of dt.files){ if(/^image\//.test(f.type)) return f; }
+  }
+  if(dt.items && dt.items.length){
+    for(const it of dt.items){ if(it.kind==='file' && /^image\//.test(it.type)){ const f=it.getAsFile(); if(f) return f; } }
+  }
+  return null;
+}
+function activeSpotCardId(){
+  const sl=document.getElementById('spotlight');
+  if(sl && sl.classList.contains('open') && typeof spotIdx==='number' && COLLECTION[spotIdx]){
+    return COLLECTION[spotIdx].id || null;
+  }
+  return null;
+}
+(function wireSpotlightDnD(){
+  const card=document.getElementById('spotCard');
+  if(!card) return;
+  ['dragenter','dragover'].forEach(ev=>card.addEventListener(ev,e=>{
+    if(imageFileFromTransfer(e.dataTransfer) || (e.dataTransfer && e.dataTransfer.types && [].indexOf.call(e.dataTransfer.types,'Files')>-1)){
+      e.preventDefault(); e.stopPropagation(); card.classList.add('drop-hot');
+    }
+  }));
+  ['dragleave','dragend'].forEach(ev=>card.addEventListener(ev,()=>card.classList.remove('drop-hot')));
+  card.addEventListener('drop',e=>{
+    const f=imageFileFromTransfer(e.dataTransfer);
+    if(!f) return;
+    e.preventDefault(); e.stopPropagation(); card.classList.remove('drop-hot');
+    const id=activeSpotCardId();
+    if(!id){ toast("Open a card first, then drop the image on it."); return; }
+    fileToDataURL(f).then(d=>setCardPhotoById(id,d)).catch(()=>toast("That didn't look like an image."));
+  });
+})();
+document.addEventListener('paste',e=>{
+  const id=activeSpotCardId();
+  if(!id) return;
+  const f=imageFileFromTransfer(e.clipboardData);
+  if(!f) return;
+  e.preventDefault();
+  fileToDataURL(f).then(d=>setCardPhotoById(id,d)).catch(()=>toast("Clipboard had no image."));
+});
+(function wireFormPreviewDnD(){
+  const pv=document.getElementById('imgPreview');
+  if(!pv) return;
+  ['dragenter','dragover'].forEach(ev=>pv.addEventListener(ev,e=>{
+    if(e.dataTransfer && e.dataTransfer.types && [].indexOf.call(e.dataTransfer.types,'Files')>-1){
+      e.preventDefault(); e.stopPropagation(); pv.classList.add('drop-hot');
+    }
+  }));
+  ['dragleave','dragend'].forEach(ev=>pv.addEventListener(ev,()=>pv.classList.remove('drop-hot')));
+  pv.addEventListener('drop',e=>{
+    const f=imageFileFromTransfer(e.dataTransfer);
+    if(!f) return;
+    e.preventDefault(); e.stopPropagation(); pv.classList.remove('drop-hot');
+    fileToDataURL(f).then(orig=>downscaleDataURL(orig,600,0.8)).then(small=>{
+      document.getElementById('f-photo').value=small; setPreview(small);
+    }).catch(()=>toast("That didn't look like an image."));
+  });
+})();
+document.addEventListener('paste',e=>{
+  const scrim=document.getElementById('formScrim');
+  if(!scrim || !scrim.classList.contains('open')) return;
+  if(activeSpotCardId()) return;
+  const f=imageFileFromTransfer(e.clipboardData);
+  if(!f) return;
+  e.preventDefault();
+  fileToDataURL(f).then(orig=>downscaleDataURL(orig,600,0.8)).then(small=>{
+    document.getElementById('f-photo').value=small; setPreview(small);
+  }).catch(()=>{});
+});
 
 /* ---------- init ---------- */
 rebuild();
