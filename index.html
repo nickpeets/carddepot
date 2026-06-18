@@ -524,7 +524,7 @@ function cardHTML(card, idx, skin){
   return `<button class="card ${skin}" onclick="openSpot(${idx})" aria-label="${card.name}, ${card.yr} ${card.set}">
     ${card.rare?'<span class="rare-pin" title="Key card">★</span>':''}
     <div class="frame">
-      <div class="photo" style="${photoStyle}"></div>
+      ${card.photo ? `<img class="photo loaded-img" src="${escAttr(card.photo)}" alt="" loading="lazy" style="width:100%;height:100%;object-fit:cover;object-position:center top;display:block" onload="imgOk(this)" onerror="imgFail(this)">` : `<div class="photo" style="${photoStyle}"></div>`}
       <div class="nameplate">${card.name}<span class="pos">${card.pos} · ${card.team}</span></div>
     </div>
   </button>`;
@@ -636,7 +636,7 @@ function openSpot(idx){
   document.getElementById('spotFront').className=`spot-face ${skin}`;
   document.getElementById('spotFront').innerHTML=`<div class="frame" style="position:absolute;inset:0;display:flex;flex-direction:column">
     ${c.rare?'<span class="rare-pin" style="width:24px;height:24px;font-size:.85rem;top:10px;right:10px">★</span>':''}
-    <div class="photo" style="flex:1;${photoStyle};background-size:cover;background-position:center top"></div>
+    ${c.photo ? `<img class="photo loaded-img" src="${escAttr(c.photo)}" alt="" style="flex:1;width:100%;min-height:0;object-fit:cover;object-position:center top;display:block" onload="imgOk(this)" onerror="imgFail(this)">` : `<div class="photo" style="flex:1;${photoStyle};background-size:cover;background-position:center top"></div>`}
     <div class="nameplate" style="font-size:1.1rem;padding:.6rem .8rem">${c.name}<span class="pos" style="font-size:.8rem">${c.pos} · ${c.team}</span></div>
   </div>`;
   const isP=cardType(c)==='pitcher';
