@@ -328,7 +328,7 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--brass);out
 <div class="topbar">
   <div class="brand"><span class="the">The</span>Depot</div>
   <span class="tagline">a collection, pored over</span>
-  <span class="count-chip" id="countChip">â cards</span>
+  <span class="count-chip" id="countChip">— cards</span>
 </div>
 
 <div class="modes">
@@ -353,9 +353,9 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--brass);out
       <div class="grid" id="binderGrid"></div>
     </div>
     <div class="page-nav">
-      <button id="prevPage" onclick="turnPage(-1)">â¹ Prev page</button>
+      <button id="prevPage" onclick="turnPage(-1)">‹ Prev page</button>
       <span class="page-dots" id="pageDots"></span>
-      <button id="nextPage" onclick="turnPage(1)">Next page âº</button>
+      <button id="nextPage" onclick="turnPage(1)">Next page ›</button>
     </div>
   </div>
 </div>
@@ -368,9 +368,9 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--brass);out
     <div class="set-meta" id="setMeta"></div>
   </div>
   <div class="reel">
-    <button class="reel-arrow" onclick="reelScroll(-1)" aria-label="Scroll left">â¹</button>
+    <button class="reel-arrow" onclick="reelScroll(-1)" aria-label="Scroll left">‹</button>
     <div class="reel-track" id="reelTrack"></div>
-    <button class="reel-arrow" onclick="reelScroll(1)" aria-label="Scroll right">âº</button>
+    <button class="reel-arrow" onclick="reelScroll(1)" aria-label="Scroll right">›</button>
   </div>
 </div>
 
@@ -379,7 +379,7 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--brass);out
   <div class="form-card" onclick="event.stopPropagation()">
     <div class="form-head">
       <h2 id="formTitle">Add a card</h2>
-      <button class="spot-close" style="position:static;width:34px;height:34px" onclick="closeForm(event,true)" aria-label="Close">â</button>
+      <button class="spot-close" style="position:static;width:34px;height:34px" onclick="closeForm(event,true)" aria-label="Close">✕</button>
     </div>
 
     <div class="form-body">
@@ -387,7 +387,7 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--brass);out
         <div class="rolodex">
           <div class="rolodex-head"><i class="ti ti-search"></i> Auto-fill from MLB records <span class="rolodex-tag">official stats</span></div>
           <div class="rolo-row">
-            <input id="rolo-name" placeholder="Search a playerâ¦ (e.g. Ken Griffey)" oninput="roloSuggest()" onkeydown="if(event.key==='Enter')roloSearch()">
+            <input id="rolo-name" placeholder="Search a player… (e.g. Ken Griffey)" oninput="roloSuggest()" onkeydown="if(event.key==='Enter')roloSearch()">
             <button onclick="roloSearch()">Find</button>
           </div>
           <div id="rolo-players" class="rolo-list" style="display:none"></div>
@@ -414,13 +414,13 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--brass);out
         </div>
         <div class="fl-row">
           <div class="fl-field" style="flex:1"><label>Era</label>
-            <select id="f-era"><option value="vintage">Vintage (pre-1981)</option><option value="junk">Junk Wax (1981â94)</option><option value="modern">Modern (1995+)</option></select>
+            <select id="f-era"><option value="vintage">Vintage (pre-1981)</option><option value="junk">Junk Wax (1981–94)</option><option value="modern">Modern (1995+)</option></select>
           </div>
           <div class="fl-field" style="flex:1"><label>Type</label>
             <select id="f-type" onchange="updateStatHint()"><option value="hitter">Batter</option><option value="pitcher">Pitcher</option></select>
           </div>
           <div class="fl-field" style="flex:0 0 auto;justify-content:flex-end"><label style="opacity:0">x</label>
-            <label class="key-toggle"><input type="checkbox" id="f-rare"> Key â</label>
+            <label class="key-toggle"><input type="checkbox" id="f-rare"> Key ★</label>
           </div>
         </div>
         <div class="fl-field"><label>Season stat line <span class="hintmini" id="statHint">key:value, comma-separated</span></label>
@@ -440,11 +440,11 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--brass);out
         </div>
         <div class="img-pane" id="pane-up">
           <input type="file" id="f-file" accept="image/*" onchange="onFile(event)">
-          <p class="pane-note">Best results. Scans of cards you own â uniform and unambiguously yours.</p>
+          <p class="pane-note">Best results. Scans of cards you own — uniform and unambiguously yours.</p>
         </div>
         <div class="img-pane" id="pane-url" style="display:none">
-          <input id="f-url" placeholder="https://â¦ image address" onchange="useUrl()" oninput="useUrl()">
-          <p class="pane-note">Right-click any card image online â âCopy image addressâ â paste here.</p>
+          <input id="f-url" placeholder="https://… image address" onchange="useUrl()" oninput="useUrl()">
+          <p class="pane-note">Right-click any card image online → “Copy image address” → paste here.</p>
         </div>
         <div class="img-pane" id="pane-search" style="display:none">
           <button class="btn-google" onclick="openTCDB()"><i></i>Search this card on TCDB ↗</button>
@@ -463,7 +463,7 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--brass);out
 
 <!-- SPOTLIGHT -->
 <div class="spotlight" id="spotlight" onclick="closeSpot(event)">
-  <button class="spot-close" onclick="closeSpot(event,true)" aria-label="Close">â</button>
+  <button class="spot-close" onclick="closeSpot(event,true)" aria-label="Close">✕</button>
   <div class="spot-card" id="spotCard" onclick="flipSpot(event)">
     <div class="spot-inner">
       <div class="spot-face" id="spotFront"></div>
@@ -482,15 +482,15 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--brass);out
    - rare: true puts a gold pin on it + glow in spotlight
    - photo: any image URL, or leave "" for a colored placeholder
    - stats: the season line for the card's year. Use standard keys:
-       hitters  â G AB R H 2B 3B HR RBI SB BB SO AVG OBP SLG OPS
-       pitchers â W L ERA G GS SV IP H BB SO WHIP
+       hitters  → G AB R H 2B 3B HR RBI SB BB SO AVG OBP SLG OPS
+       pitchers → W L ERA G GS SV IP H BB SO WHIP
    ============================================================ */
 const SEED = [];
 
 const ERAS = {
   vintage:{title:"The Vintage Years", range:"pre-1981", skin:"skin-vintage",
     blurb:"Thick stock, hand-tinted color, and cardboard that smells like a drugstore in 1978."},
-  junk:{title:"The Junk Wax Era", range:"1981â1994", skin:"skin-junk",
+  junk:{title:"The Junk Wax Era", range:"1981–1994", skin:"skin-junk",
     blurb:"Overproduced, gloriously so. Glossy fronts, bold borders, and the rookie cards that defined a generation of collectors."},
   modern:{title:"The Modern Game", range:"1995 onward", skin:"skin-modern",
     blurb:"Premium foil, sharp photography, and the chase for the short print."}
@@ -508,8 +508,8 @@ function persist(){
   catch(e){
     const quota = (e && (e.name==='QuotaExceededError' || e.code===22 || e.code===1014 || /quota/i.test(e.message||'')));
     toast(quota
-      ? "Couldn't save â browser storage is full. Existing cards are safe; consider removing some images."
-      : "Couldn't save â browser storage is unavailable. Existing cards are safe.");
+      ? "Couldn't save — browser storage is full. Existing cards are safe; consider removing some images."
+      : "Couldn't save — browser storage is unavailable. Existing cards are safe.");
     return false;
   }
 }
@@ -528,10 +528,10 @@ function cardHTML(card, idx, skin){
     ? `background-image:url("${cssUrl(card.photo)}")`
     : `background-color:${placeholderBg(idx)}`;
   return `<button class="card ${skin}" onclick="openSpot(${idx})" aria-label="${card.name}, ${card.yr} ${card.set}">
-    ${card.rare?'<span class="rare-pin" title="Key card">â</span>':''}
+    ${card.rare?'<span class="rare-pin" title="Key card">★</span>':''}
     <div class="frame">
       ${card.photo ? `<img class="photo loaded-img" src="${escAttr(card.photo)}" alt="" loading="lazy" style="width:100%;height:100%;object-fit:cover;object-position:center top;display:block" onload="imgOk(this)" onerror="imgFail(this)">` : `<div class="photo" style="${photoStyle}"></div>`}
-      <div class="nameplate">${card.name}<span class="pos">${card.pos} Â· ${card.team}</span></div>
+      <div class="nameplate">${card.name}<span class="pos">${card.pos} · ${card.team}</span></div>
     </div>
   </button>`;
 }
@@ -541,7 +541,7 @@ function renderEraTabs(){
   document.getElementById('eraTabs').innerHTML = ERA_ORDER.map(k=>{
     const e=ERAS[k], n=COLLECTION.filter(c=>c.era===k).length;
     return `<button class="era-tab ${k===curEra?'active':''}" onclick="selectEra('${k}')">
-      ${e.title}<small>${e.range} Â· ${n} cards</small></button>`;
+      ${e.title}<small>${e.range} · ${n} cards</small></button>`;
   }).join('');
 }
 function selectEra(k){curEra=k;curPage=0;renderBinder()}
@@ -592,7 +592,7 @@ function renderReel(cards){
   cards=cards.slice().sort((a,b)=>(a.num||0)-(b.num||0));
   const c0=cards[0];
   document.getElementById('setName').textContent=curSet;
-  document.getElementById('setMeta').textContent=`${cards.length} cards in your run Â· ${ERAS[c0.era].title}`;
+  document.getElementById('setMeta').textContent=`${cards.length} cards in your run · ${ERAS[c0.era].title}`;
   document.getElementById('reelTrack').innerHTML=cards.map(c=>{
     const gi=COLLECTION.indexOf(c);
     return `<div class="reel-card">${cardHTML(c,gi,ERAS[c.era].skin)}</div>`;
@@ -615,7 +615,7 @@ function statTable(c){
   const head = all.map(k=>`<th>${k}</th>`).join('');
   const row = all.map(k=>`<td>${c.stats[k]}</td>`).join('');
   return `<div class="statgrid-wrap"><table class="statgrid">
-    <caption>${c.yr} season â ${c.team}</caption>
+    <caption>${c.yr} season — ${c.team}</caption>
     <thead><tr>${head}</tr></thead>
     <tbody><tr>${row}</tr></tbody>
   </table></div>`;
@@ -641,24 +641,24 @@ function openSpot(idx){
   const photoStyle=c.photo?`background-image:url("${cssUrl(c.photo)}")`:`background-color:${placeholderBg(idx)}`;
   document.getElementById('spotFront').className=`spot-face ${skin}`;
   document.getElementById('spotFront').innerHTML=`<div class="frame" style="position:absolute;inset:0;display:flex;flex-direction:column">
-    ${c.rare?'<span class="rare-pin" style="width:24px;height:24px;font-size:.85rem;top:10px;right:10px">â</span>':''}
+    ${c.rare?'<span class="rare-pin" style="width:24px;height:24px;font-size:.85rem;top:10px;right:10px">★</span>':''}
     ${c.photo ? `<img class="photo loaded-img" src="${escAttr(c.photo)}" alt="" style="flex:1;width:100%;min-height:0;object-fit:cover;object-position:center top;display:block" onload="imgOk(this)" onerror="imgFail(this)">` : `<div class="photo" style="flex:1;${photoStyle};background-size:cover;background-position:center top"></div>`}
-    <div class="nameplate" style="font-size:1.1rem;padding:.6rem .8rem">${c.name}<span class="pos" style="font-size:.8rem">${c.pos} Â· ${c.team}</span></div>
+    <div class="nameplate" style="font-size:1.1rem;padding:.6rem .8rem">${c.name}<span class="pos" style="font-size:.8rem">${c.pos} · ${c.team}</span></div>
   </div>`;
   const isP=cardType(c)==='pitcher';
   document.getElementById('spotBack').innerHTML=`
     <div class="back-head">
       <h3>${c.name}</h3>
-      <span class="back-badge">${isP?'PITCHER':'BATTER'} Â· ${c.pos}</span>
+      <span class="back-badge">${isP?'PITCHER':'BATTER'} · ${c.pos}</span>
     </div>
-    <div class="back-sub">${c.yr} ${c.set} Â· #${c.num}${c.rare?' Â· KEY CARD':''}</div>
+    <div class="back-sub">${c.yr} ${c.set} · #${c.num}${c.rare?' · KEY CARD':''}</div>
     ${statTable(c)}
     ${c.bio?`<div class="bio">${c.bio}</div>`:''}
     <div class="back-foot">
-      <button class="btn-bref" onclick="findStatsFor(${idx},event)">Look up on Baseball-Reference â</button>
+      <button class="btn-bref" onclick="findStatsFor(${idx},event)">Look up on Baseball-Reference ↗</button>
     </div>`;
-  document.getElementById('spotMeta').innerHTML=`<span class="hint">click card to flip Â· esc to close</span>`
-    + (c.photo?'':`<div style="margin-top:.5rem"><button class="btn-google" style="width:auto;padding:.45rem 1rem;font-size:.72rem" onclick="findImageFor(${idx},event)">Search this card on TCDB ↗â</button></div>`)
+  document.getElementById('spotMeta').innerHTML=`<span class="hint">click card to flip · esc to close</span>`
+    + (c.photo?'':`<div style="margin-top:.5rem"><button class="btn-google" style="width:auto;padding:.45rem 1rem;font-size:.72rem" onclick="findImageFor(${idx},event)">Search this card on TCDB ↗↗</button></div>`)
         + `<div class="spot-remove"><button class="btn-ghost" onclick="removeFromDepot(${idx},event)">Remove from depot</button></div>`;
   document.getElementById('spotCard').classList.remove('flipped');
   document.getElementById('spotlight').classList.add('open');
@@ -682,7 +682,7 @@ function setMode(m){
 }
 
 /* ---------- rolodex: MLB Stats API auto-fill ----------
-   Uses MLB's public Stats API (statsapi.mlb.com) â no key, CORS-open,
+   Uses MLB's public Stats API (statsapi.mlb.com) — no key, CORS-open,
    free for personal use. Search a player, pick a season, stats auto-fill.
    Fails soft: if a lookup returns nothing, manual entry still works. */
 const MLB_BASE = "https://statsapi.mlb.com/api/v1";
@@ -810,7 +810,7 @@ async function ensurePlayerList(){
   if(!q){roloStatus("Type a player name first.");return;}
   if(roloLoading) return;
   roloLoading=true;
-  roloStatus("Searching MLB recordsâ¦");
+  roloStatus("Searching MLB records…");
   document.getElementById('rolo-years').style.display='none';
   document.getElementById('rolo-brand').style.display='none';
   let people=[];
@@ -825,7 +825,7 @@ async function ensurePlayerList(){
     }
     // Fallback B: filter the full player list locally (catches retired players)
     if(!people.length){
-      roloStatus("Searching full player listâ¦");
+      roloStatus("Searching full player list…");
       const list=await ensurePlayerList();
       const ql=q.toLowerCase();
       people=list.filter(p=>(p.fullName||'').toLowerCase().includes(ql)
@@ -834,7 +834,7 @@ async function ensurePlayerList(){
     }
   }catch(e){
     roloLoading=false;
-    roloStatus("Couldn't reach MLB records (needs a live connection â works on your deployed site). Enter stats manually below.","err");
+    roloStatus("Couldn't reach MLB records (needs a live connection — works on your deployed site). Enter stats manually below.","err");
     return;
   }
   roloLoading=false;
@@ -847,13 +847,13 @@ async function ensurePlayerList(){
   const box=document.getElementById('rolo-players');
   box.innerHTML=people.slice(0,15).map((p,i)=>{
     const pos=(p.primaryPosition&&p.primaryPosition.name)||'';
-    const yrs=[p.mlbDebutDate?p.mlbDebutDate.slice(0,4):'',p.lastPlayedDate?p.lastPlayedDate.slice(0,4):''].filter(Boolean).join('â');
+    const yrs=[p.mlbDebutDate?p.mlbDebutDate.slice(0,4):'',p.lastPlayedDate?p.lastPlayedDate.slice(0,4):''].filter(Boolean).join('–');
     roloCache[i]=p;
     return `<div class="rolo-player" onclick="roloPick(${i})">
-      <span>${p.fullName||p.nameFirstLast||'(unknown)'}</span><span class="meta">${pos}${yrs?' Â· '+yrs:''}</span></div>`;
+      <span>${p.fullName||p.nameFirstLast||'(unknown)'}</span><span class="meta">${pos}${yrs?' · '+yrs:''}</span></div>`;
   }).join('');
   box.style.display='block';
-  roloStatus(`${people.length} match${people.length>1?'es':''} â pick one.`);
+  roloStatus(`${people.length} match${people.length>1?'es':''} — pick one.`);
 }
 let roloCache={};
 async function hydratePlayer(p){
@@ -869,7 +869,7 @@ async function roloPick(i){
   let p=roloCache[i]; if(!p)return;
   document.querySelectorAll('.rolo-player').forEach(el=>el.classList.remove('sel'));
   const els=document.querySelectorAll('.rolo-player'); if(els[i])els[i].classList.add('sel');
-  roloStatus("Loading playerâ¦");
+  roloStatus("Loading player…");
   p=await hydratePlayer(p);
   roloCache[i]=p;
   roloPlayer=p;
@@ -898,8 +898,8 @@ const STAT_MAP_HIT={gamesPlayed:'G',atBats:'AB',runs:'R',hits:'H',doubles:'2B',t
 const STAT_MAP_PIT={wins:'W',losses:'L',era:'ERA',gamesPlayed:'G',gamesStarted:'GS',completeGames:'CG',shutouts:'SHO',saves:'SV',inningsPitched:'IP',hits:'H',baseOnBalls:'BB',strikeOuts:'SO',whip:'WHIP'};
 
 /* Major baseball-card brands and the (approx.) flagship-run years they printed.
-   [startYear, endYear] â endYear null means still active. Used to offer a
-   year-aware brand list. "Otherâ¦" always lets you type a set we don't list. */
+   [startYear, endYear] — endYear null means still active. Used to offer a
+   year-aware brand list. "Other…" always lets you type a set we don't list. */
 const BRANDS=[
   {name:"Topps", from:1951, to:null},
   {name:"Bowman", from:1948, to:1955},      // original run
@@ -1015,12 +1015,12 @@ async function roloYear(y,btn){
   await roloShowBrands(y);            // brand/number are independent of the stats lookup
       if(!inChecklist){
         document.getElementById('f-stats').value='';
-        roloStatus(""+y+" isnât in the checklist â thatâs fine, the dataset is patchy. Couldnât auto-confirm this card; pick the brand & number and enter the details manually.","ok");
+        roloStatus(""+y+" isn’t in the checklist — that’s fine, the dataset is patchy. Couldn’t auto-confirm this card; pick the brand & number and enter the details manually.","ok");
         return;
       }
   const isP=document.getElementById('f-type').value==='pitcher';
   const group=isP?'pitching':'hitting';
-  roloStatus(`Pulling ${y} ${group} statsâ¦`);
+  roloStatus(`Pulling ${y} ${group} stats…`);
   try{
     const r=await fetch(`${MLB_BASE}/people/${roloPlayer.id}/stats?stats=season&group=${group}&season=${y}`);
     if(!r.ok) throw new Error('http');
@@ -1036,9 +1036,9 @@ async function roloYear(y,btn){
     if(!out.length){roloStatus(`Found ${y} but no usable stat fields. Pick brand/number and enter stats manually.`,"err");return;}
     document.getElementById('f-stats').value=out.join(', ');
     if(split.team&&split.team.name)document.getElementById('f-team').value=split.team.name;
-    roloStatus(`â ${roloPlayer.fullName}, ${y} filled in. Pick the brand & number, then find the front image.`,"ok");
+    roloStatus(`✓ ${roloPlayer.fullName}, ${y} filled in. Pick the brand & number, then find the front image.`,"ok");
   }catch(e){
-    roloStatus("Couldn't pull that season (needs live connection â works on your deployed site). Pick brand/number and enter stats manually.","err");
+    roloStatus("Couldn't pull that season (needs live connection — works on your deployed site). Pick brand/number and enter stats manually.","err");
   }
 }
 
@@ -1080,7 +1080,7 @@ function setPreview(src){
   const pv=document.getElementById('imgPreview');
   if(src){
     pv.classList.add('has-img');
-    pv.innerHTML='<span class="ph-text">loadingâ¦</span>';
+    pv.innerHTML='<span class="ph-text">loading…</span>';
     const img=new Image();
     img.onload=()=>{ pv.innerHTML=''; pv.appendChild(img); };
     img.onerror=()=>{
@@ -1170,8 +1170,8 @@ function saveCard(){
   if(!name){toast("A card needs a player name.");document.getElementById('f-name').focus();return;}
   const card={
     name,
-    pos:document.getElementById('f-pos').value.trim()||"â",
-    team:document.getElementById('f-team').value.trim()||"â",
+    pos:document.getElementById('f-pos').value.trim()||"—",
+    team:document.getElementById('f-team').value.trim()||"—",
     yr:parseInt(document.getElementById('f-yr').value)||0,
     set:document.getElementById('f-set').value.trim()||"Unknown",
     num:parseInt(document.getElementById('f-num').value)||0,
@@ -1195,7 +1195,7 @@ function saveCard(){
 }
 
 function exportCollection(){
-  if(!USER_CARDS.length){toast("No added cards yet â add some first.");return;}
+  if(!USER_CARDS.length){toast("No added cards yet — add some first.");return;}
   const lines=USER_CARDS.map(c=>"  "+JSON.stringify(c)).join(",\n");
   const blob=new Blob([
     "/* Cards you added in the app. To make them permanent,\n"+
