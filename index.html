@@ -1162,7 +1162,6 @@ function tcdbSearchURL(name,yr,set,num){
   p.set("MODE","ADVANCED"); p.set("Type","Baseball");
   if(yr)  p.set("Year", String(yr));
   if(set) p.set("SetName", set);
-  if(num) p.set("CardNum", String(num));
   if(name)p.set("Name", name);
   return "https://www.tcdb.com/ViewResults.cfm?"+p.toString();
 }
