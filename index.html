@@ -798,6 +798,36 @@ body{
   .spot-inner{transition:none !important;}
 }
 
+
+/* ===== STAT GRID — 6 per row x 2 rows, no horizontal scroll ===== */
+.statgrid-wrap{overflow-x:visible !important;overflow:visible !important;margin:0 0 .6rem !important;}
+.statgrid-caption{
+  font-family:'Oswald',sans-serif;font-size:.78rem;font-weight:600;color:var(--ink-soft);
+  margin-bottom:.35rem;
+}
+.statgrid{
+  display:grid !important;grid-template-columns:repeat(6,1fr);gap:0;
+  border:3px solid #000 !important;width:100%;background:#000;
+}
+.statgrid .stat-cell{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  background:#fff;border:1px solid #000;padding:.3rem .15rem;text-align:center;min-width:0;
+}
+.statgrid .stat-cell .stat-k{
+  font-family:'JetBrains Mono','Courier New',monospace;font-size:.55rem;letter-spacing:0;
+  color:#fff;background:var(--sb-blue);width:100%;padding:.18rem 0;margin:-.3rem -.15rem .22rem;
+  border-bottom:1px solid #000;
+}
+.statgrid .stat-cell .stat-v{
+  font-family:'JetBrains Mono','Courier New',monospace;font-size:.74rem;color:var(--ink);
+  line-height:1.1;word-break:break-word;
+}
+@media (max-width:640px){
+  .statgrid{grid-template-columns:repeat(6,1fr);}
+  .statgrid .stat-cell .stat-v{font-size:.62rem;}
+  .statgrid .stat-cell .stat-k{font-size:.48rem;}
+}
+
 </style>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 </head>
@@ -1238,13 +1268,8 @@ function statTable(c){
   const extra = Object.keys(c.stats||{}).filter(k=>!cols.includes(k));
   const all = present.concat(extra);
   if(!all.length) return `<div class="no-stats">No stats entered yet for this season.</div>`;
-  const head = all.map(k=>`<th>${k}</th>`).join('');
-  const row = all.map(k=>`<td>${c.stats[k]}</td>`).join('');
-  return `<div class="statgrid-wrap"><table class="statgrid">
-    <caption>${c.yr} season — ${c.team}</caption>
-    <thead><tr>${head}</tr></thead>
-    <tbody><tr>${row}</tr></tbody>
-  </table></div>`;
+  const cells = all.map(k=>`<div class="stat-cell"><span class="stat-k">${k}</span><span class="stat-v">${c.stats[k]}</span></div>`).join('');
+  return `<div class="statgrid-wrap"><div class="statgrid-caption">${c.yr} season — ${c.team}</div><div class="statgrid">${cells}</div></div>`;
 }
 function brefURL(c){
   const q=[c.name, "baseball reference", c.yr||''].filter(Boolean).join(' ');
@@ -1283,11 +1308,8 @@ function openSpot(idx){
     <div class="spot-back-scroll">
     ${statTable(c)}
     ${c.bio?`<div class="bio">${c.bio}</div>`:''}
-    <div class="back-foot">
-      <button class="btn-bref" onclick="findStatsFor(${idx},event)">Look up on Baseball-Reference ↗</button>
-    </div>
-    </div>`;
-  document.getElementById('spotMeta').innerHTML=`<div class="spot-name">${c.name}<span class="spot-name-sub">${c.pos} · ${c.team}</span></div><span class="hint">click card to flip · esc to close</span>`
+        </div>`;
+  document.getElementById('spotMeta').innerHTML=`<span class="hint">click card to flip · esc to close</span>`
     + (cphoto?'':`<div style="margin-top:.5rem"><button class="btn-google" style="width:auto;padding:.45rem 1rem;font-size:.72rem" onclick="findImageFor(${idx},event)">Find this card on Google Images ↗</button></div>`)
         + `<div class="spot-remove"><button class="btn-ghost" onclick="removeFromDepot(${idx},event)">Remove from depot</button></div>`;
   document.getElementById('spotCard').classList.remove('flipped');
