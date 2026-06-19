@@ -85,6 +85,14 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--brass);out
 .era-head{width:100%;margin-bottom:1rem;text-align:center}
 .era-title{font-family:'Oswald',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.05em;font-size:1.5rem;color:var(--cream)}
 .era-blurb{font-style:italic;color:var(--cream-dim);opacity:.85;font-size:.95rem;margin-top:.2rem}
+.group-by{display:flex;align-items:center;gap:.5rem;margin-top:.6rem;font-size:.9rem;color:var(--cream-dim)}
+.group-by label{text-transform:uppercase;letter-spacing:.06em;font-size:.78rem;opacity:.8}
+.group-by select{background:rgba(0,0,0,.25);color:var(--cream);border:1px solid var(--cream-dim);border-radius:6px;padding:.25rem .5rem;font:inherit}
+.group-section{margin:0 0 1.6rem}
+.group-head{display:flex;align-items:center;gap:.5rem;font-size:1.05rem;color:var(--cream);border-bottom:1px solid rgba(255,255,255,.15);padding-bottom:.3rem;margin:.4rem 0 .8rem}
+.group-count{font-size:.78rem;background:rgba(255,255,255,.12);border-radius:999px;padding:.05rem .5rem;color:var(--cream-dim)}
+.group-grid{margin-bottom:.4rem}
+.group-empty{color:var(--cream-dim);font-style:italic}
 
 .page{
   background:
@@ -362,6 +370,17 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--brass);out
     <div class="era-head">
       <div class="era-title" id="eraTitle"></div>
       <div class="era-blurb" id="eraBlurb"></div>
+      <div class="group-by" id="groupByBar">
+        <label for="groupBy">Group by</label>
+        <select id="groupBy" onchange="setGroupMode(this.value)">
+          <option value="era">Era</option>
+          <option value="year">Year</option>
+          <option value="brand">Brand</option>
+          <option value="team">Team</option>
+          <option value="player">Player</option>
+          <option value="decade">Decade</option>
+        </select>
+      </div>
     </div>
     <div class="page">
       <div class="grid" id="binderGrid"></div>
@@ -428,7 +447,7 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--brass);out
         </div>
         <div class="fl-row">
           <div class="fl-field" style="flex:1"><label>Era</label>
-            <select id="f-era"><option value="vintage">Vintage (pre-1981)</option><option value="junk">Junk Wax (1981–94)</option><option value="modern">Modern (1995+)</option></select>
+            <select id="f-era"><option value="vintage">Vintage (≤ 1985)</option><option value="junk">Junk Wax (1986–93)</option><option value="modern">Modern (1994+)</option></select>
           </div>
           <div class="fl-field" style="flex:1"><label>Type</label>
             <select id="f-type" onchange="updateStatHint()"><option value="hitter">Batter</option><option value="pitcher">Pitcher</option></select>
@@ -507,7 +526,7 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--brass);out
 /* ============================================================
    YOUR COLLECTION LIVES HERE.
    Add a card by copying one block and editing the fields.
-   - era: "vintage" (pre-1981) | "junk" (1981-1994) | "modern" (1995+)
+   - era: "vintage" (≤ 1985) | "junk" (1986-1993) | "modern" (1994+)
    - type: "hitter" | "pitcher"  (drives the stat columns on the back)
    - rare: true puts a gold pin on it + glow in spotlight
    - photoFront / photoBack: any image URL (or data URL), or leave "" for a colored placeholder
@@ -519,22 +538,24 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--brass);out
 const SEED = [];
 
 const ERAS = {
-  vintage:{title:"The Vintage Years", range:"pre-1981", skin:"skin-vintage",
+  vintage:{title:"The Vintage Years", range:"≤ 1985", skin:"skin-vintage",
     blurb:"Thick stock, hand-tinted color, and cardboard that smells like a drugstore in 1978."},
-  junk:{title:"The Junk Wax Era", range:"1981–1994", skin:"skin-junk",
+  junk:{title:"The Junk Wax Era", range:"1986–1993", skin:"skin-junk",
     blurb:"Overproduced, gloriously so. Glossy fronts, bold borders, and the rookie cards that defined a generation of collectors."},
-  modern:{title:"The Modern Game", range:"1995 onward", skin:"skin-modern",
+  modern:{title:"The Modern Game", range:"1994 onward", skin:"skin-modern",
     blurb:"Premium foil, sharp photography, and the chase for the short print."}
 };
 const ERA_ORDER = ["vintage","junk","modern"];
-// Derive era from a card's year: pre-1981 Vintage, 1981-1994 Junk Wax, 1995+ Modern.
+// Derive era from a card's year: ≤ 1985 Vintage, 1986-1993 Junk Wax, 1994+ Modern.
 function eraFromYear(y){
   const n = parseInt(y,10);
   if(!n) return null;
-  if(n < 1981) return "vintage";
-  if(n <= 1994) return "junk";
+  if(n <= 1985) return "vintage";
+  if(n <= 1993) return "junk";
   return "modern";
 }
+// Re-derive each card's stored era from its year so saved/seed cards re-file under current era boundaries.
+function normalizeEras(arr){ if(Array.isArray(arr)){ arr.forEach(function(c){ if(c){ var e=eraFromYear(c.yr); if(e) c.era=e; } }); } return arr; }
 // Auto-set the Era <select> from a year value (used by the Year field and the rolodex season pick).
 function applyEraFromYear(y){
   const era = eraFromYear(y);
@@ -580,10 +601,10 @@ function persist(){
   }
 }
 let USER_CARDS = loadSaved();
-let COLLECTION = SEED.concat(USER_CARDS);
-function rebuild(){ COLLECTION = SEED.concat(USER_CARDS); document.getElementById('countChip').textContent=`${COLLECTION.length} cards`; }
+let COLLECTION = normalizeEras(SEED.concat(USER_CARDS));
+function rebuild(){ COLLECTION = normalizeEras(SEED.concat(USER_CARDS)); document.getElementById('countChip').textContent=`${COLLECTION.length} cards`; }
 
-let mode="binder", curEra="vintage", curPage=0, curSet=null, spotIdx=null;
+let mode="binder", curEra="vintage", curPage=0, curSet=null, spotIdx=null, groupMode="era";
 const PER_PAGE=9;
 
 function placeholderBg(i){return PLACEHOLDER[i%PLACEHOLDER.length]}
@@ -622,6 +643,8 @@ function turnPage(d){
   renderBinder();
 }
 function renderBinder(){
+  if(groupMode && groupMode!=="era"){ renderGrouped(); return; }
+  showEraChrome(true);
   renderEraTabs();
   const e=ERAS[curEra];
   document.getElementById('eraTitle').textContent=e.title;
@@ -643,6 +666,81 @@ function renderBinder(){
   document.getElementById('pageDots').textContent=`Page ${curPage+1} of ${pages}`;
   document.getElementById('prevPage').disabled=curPage===0;
   document.getElementById('nextPage').disabled=curPage>=pages-1;
+}
+
+
+/* ---------- group-by (binder view layer) ---------- */
+function setGroupMode(m){
+  groupMode = m || "era";
+  var sel = document.getElementById('groupBy');
+  if(sel && sel.value !== groupMode) sel.value = groupMode;
+  curPage = 0;
+  renderBinder();
+}
+function showEraChrome(show){
+  var rail = document.querySelector('#binderStage .rail'); if(rail) rail.style.display = show ? '' : 'none';
+  var nav = document.querySelector('#binderStage .page-nav'); if(nav) nav.style.display = show ? '' : 'none';
+}
+function groupKeyFor(c, mode){
+  if(mode === 'year'){
+    return c.yr ? {key:'y'+c.yr, label:String(c.yr), sort:c.yr} : {key:'unknown', label:'Unknown', sort:Infinity};
+  }
+  if(mode === 'decade'){
+    if(!c.yr) return {key:'unknown', label:'Unknown', sort:Infinity};
+    var d = Math.floor(c.yr/10)*10; return {key:'d'+d, label:d+'s', sort:d};
+  }
+  if(mode === 'brand'){
+    var b = (c.set||'').trim(); if(!b || b==='Unknown' || b==='—') return {key:'unknown', label:'Unknown', sort:null};
+    return {key:'b:'+b.toLowerCase(), label:b, sort:b.toLowerCase()};
+  }
+  if(mode === 'team'){
+    var t = (c.team||'').trim(); if(!t || t==='—') return {key:'unknown', label:'Unknown', sort:null};
+    return {key:'t:'+t.toLowerCase(), label:t, sort:t.toLowerCase()};
+  }
+  if(mode === 'player'){
+    var p = (c.name||'').trim(); if(!p) return {key:'unknown', label:'Unknown', sort:null};
+    return {key:'p:'+p.toLowerCase(), label:p, sort:p.toLowerCase()};
+  }
+  var ek = c.era || 'unknown';
+  return {key:ek, label:(ERAS[ek]?ERAS[ek].title:'Unknown'), sort:ERA_ORDER.indexOf(ek)};
+}
+function renderGrouped(){
+  showEraChrome(false);
+  var head = document.getElementById('eraTitle');
+  var labels = {year:'Year', brand:'Brand', team:'Team', player:'Player', decade:'Decade'};
+  if(head) head.textContent = 'Grouped by ' + (labels[groupMode]||'Era');
+  var blurb = document.getElementById('eraBlurb');
+  if(blurb) blurb.textContent = COLLECTION.length + ' cards across all eras.';
+  var buckets = {};
+  COLLECTION.forEach(function(c){
+    var g = groupKeyFor(c, groupMode);
+    if(!buckets[g.key]) buckets[g.key] = {label:g.label, sort:g.sort, cards:[]};
+    buckets[g.key].cards.push(c);
+  });
+  var keys = Object.keys(buckets);
+  var numericModes = (groupMode==='year' || groupMode==='decade' || groupMode==='era');
+  keys.sort(function(a,b){
+    var A=buckets[a], B=buckets[b];
+    var aU = a==='unknown', bU = b==='unknown';
+    if(aU && !bU) return 1; if(bU && !aU) return -1;
+    if(numericModes){ return (A.sort||0)-(B.sort||0); }
+    return String(A.sort).localeCompare(String(B.sort));
+  });
+  var html = '';
+  keys.forEach(function(k){
+    var b = buckets[k];
+    b.cards.sort(function(x,y){ return (x.yr||0)-(y.yr||0) || (x.num||0)-(y.num||0); });
+    html += '<section class="group-section"><h3 class="group-head">'+escAttr(b.label)+' <span class="group-count">'+b.cards.length+'</span></h3>';
+    html += '<div class="grid group-grid">';
+    b.cards.forEach(function(c){
+      var gi = COLLECTION.indexOf(c);
+      var skin = (ERAS[c.era] && ERAS[c.era].skin) || '';
+      html += '<div class="slot">'+cardHTML(c, gi, skin)+'</div>';
+    });
+    html += '</div></section>';
+  });
+  if(!html) html = '<p class="group-empty">No cards to display.</p>';
+  document.getElementById('binderGrid').innerHTML = html;
 }
 
 /* ---------- carousel ---------- */
