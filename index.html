@@ -953,22 +953,11 @@ body{
         <input type="hidden" id="f-photo-back">
         <div class="img-tabs">
           <button class="img-tab active" data-pane="up" onclick="imgTab('up')">Upload scan</button>
-          <button class="img-tab" data-pane="url" onclick="imgTab('url')">Paste URL</button>
-          <button class="img-tab" data-pane="search" onclick="imgTab('search')">Find image</button>
+          <button class="img-tab" onclick="findCard()">Find card</button>
         </div>
         <div class="img-pane" id="pane-up">
           <input type="file" id="f-file" accept="image/*" onchange="onFile(event)">
           <p class="pane-note">Adds to the <b id="slotNoteUp">front</b>. Scans of cards you own — uniform and unambiguously yours. You can also drag an image onto a slot above, or paste from the clipboard.</p>
-        </div>
-        <div class="img-pane" id="pane-url" style="display:none">
-          <input id="f-url" placeholder="https://… image address" onchange="useUrl()" oninput="useUrl()">
-          <p class="pane-note">Sets the <b id="slotNoteUrl">front</b>. Right-click any card image online → “Copy image address” → paste here.</p>
-        </div>
-        <div class="img-pane" id="pane-search" style="display:none">
-          <button class="btn-google" onclick="openTcdbSearch()"><i></i>Search on TCDB ↗</button>
-          <button class="btn-google" onclick="openGoogleImages()" style="margin-top:.4rem;opacity:.8"><i></i>Fall back to Google Images ↗</button>
-          <p class="pane-note">TCDB opens narrowed to this exact card — the base card is first. Click it, then save its image and use “Upload scan” (TCDB blocks hotlinking, so a saved file is the reliable way to display it). The field below still accepts a direct image address for the <b id="slotNoteSearch">front</b> if you have one.</p>
-          <input id="f-gpaste" placeholder="Paste a direct image address (optional)" onchange="useGPaste()" oninput="useGPaste()" style="margin-top:.4rem">
         </div>
       </div>
       </div>
@@ -1718,8 +1707,9 @@ function closeForm(e,force){
 }
 function imgTab(p){
   document.querySelectorAll('.img-tab').forEach(t=>t.classList.toggle('active',t.dataset.pane===p));
-  ['up','url','search'].forEach(x=>document.getElementById('pane-'+x).style.display=x===p?'block':'none');
+  ['up','url','search'].forEach(x=>{var pe=document.getElementById('pane-'+x);if(pe)pe.style.display=x===p?'block':'none';});
 }
+function findCard(){ /* Find card: placeholder no-op. To be wired up in a future change. */ }
 let activeSlot = 'front';
 function slotPreviewEl(slot){ return document.getElementById(slot==='back'?'imgPreviewBack':'imgPreviewFront'); }
 function slotInput(slot){ return document.getElementById(slot==='back'?'f-photo-back':'f-photo'); }
