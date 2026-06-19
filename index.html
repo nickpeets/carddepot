@@ -752,6 +752,52 @@ body{
   #appFrame, .page, .card{transition:none !important;animation:none !important;}
 }
 
+
+/* ===== SPOTLIGHT VERTICAL STACK — full image, name/team + hint below, remove underneath ===== */
+.spot-card{
+  aspect-ratio:auto !important;
+  display:flex;flex-direction:column;align-items:stretch;
+  width:min(360px,86vw);max-height:92vh;
+}
+.spot-inner{
+  position:relative;width:100%;aspect-ratio:2.5/3.5;flex:none;
+}
+.spot-face{position:absolute;inset:0;}
+.spot-face .frame{position:absolute;inset:0;display:flex;}
+.spot-face .photo{
+  flex:1;background-size:contain !important;background-repeat:no-repeat !important;
+  background-position:center center !important;background-color:#0d2d5c;
+}
+.spot-back .spot-back-img{
+  aspect-ratio:auto !important;width:100%;max-height:60vh;
+  background:#0d2d5c !important;display:flex;align-items:center;justify-content:center;
+}
+.spot-back .spot-back-img img{
+  width:100%;height:auto;max-height:60vh;object-fit:contain !important;
+  object-position:center center !important;
+}
+.spot-meta{
+  position:static !important;bottom:auto !important;left:auto !important;right:auto !important;
+  margin-top:.9rem;width:100%;display:flex;flex-direction:column;align-items:stretch;gap:.55rem;
+}
+.spot-meta .spot-name{
+  font-family:'Press Start 2P',monospace;font-size:.6rem;line-height:1.6;color:var(--brass);
+  text-shadow:2px 2px 0 #000;text-align:center;text-transform:uppercase;
+}
+.spot-meta .spot-name .spot-name-sub{
+  display:block;color:#fff;font-size:.45rem;margin-top:.4rem;text-shadow:2px 2px 0 #000;
+}
+.spot-meta .hint{display:block;text-align:center;}
+.spot-meta .spot-remove{margin-top:0 !important;width:100%;}
+.spot-meta .spot-remove .btn-ghost{width:100% !important;display:block;}
+@media (max-width:640px){
+  .spot-card{width:90vw;}
+  .spot-back .spot-back-img,.spot-back .spot-back-img img{max-height:48vh;}
+}
+@media (prefers-reduced-motion:reduce){
+  .spot-inner{transition:none !important;}
+}
+
 </style>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 </head>
@@ -1224,7 +1270,7 @@ function openSpot(idx){
   document.getElementById('spotFront').innerHTML=`<div class="frame" style="position:absolute;inset:0;display:flex;flex-direction:column">
     ${c.rare?'<span class="rare-pin" style="width:24px;height:24px;font-size:.85rem;top:10px;right:10px">★</span>':''}
     ${cphoto ? `<img class="photo loaded-img" src="${escAttr(cphoto)}" alt="" style="flex:1;width:100%;min-height:0;object-fit:cover;object-position:center top;display:block" onload="imgOk(this)" onerror="imgFail(this)">` : `<div class="photo" style="flex:1;${photoStyle};background-size:cover;background-position:center top"></div>`}
-    <div class="nameplate" style="font-size:1.1rem;padding:.6rem .8rem">${c.name}<span class="pos" style="font-size:.8rem">${c.pos} · ${c.team}</span></div>
+    
   </div>`;
   const isP=cardType(c)==='pitcher';
   document.getElementById('spotBack').innerHTML=`
@@ -1241,7 +1287,7 @@ function openSpot(idx){
       <button class="btn-bref" onclick="findStatsFor(${idx},event)">Look up on Baseball-Reference ↗</button>
     </div>
     </div>`;
-  document.getElementById('spotMeta').innerHTML=`<span class="hint">click card to flip · esc to close</span>`
+  document.getElementById('spotMeta').innerHTML=`<div class="spot-name">${c.name}<span class="spot-name-sub">${c.pos} · ${c.team}</span></div><span class="hint">click card to flip · esc to close</span>`
     + (cphoto?'':`<div style="margin-top:.5rem"><button class="btn-google" style="width:auto;padding:.45rem 1rem;font-size:.72rem" onclick="findImageFor(${idx},event)">Find this card on Google Images ↗</button></div>`)
         + `<div class="spot-remove"><button class="btn-ghost" onclick="removeFromDepot(${idx},event)">Remove from depot</button></div>`;
   document.getElementById('spotCard').classList.remove('flipped');
