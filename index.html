@@ -799,33 +799,16 @@ body{
 }
 
 
-/* ===== STAT GRID — 6 per row x 2 rows, no horizontal scroll ===== */
+/* ===== STAT GRID — old table look, two rows, no horizontal scroll ===== */
 .statgrid-wrap{overflow-x:visible !important;overflow:visible !important;margin:0 0 .6rem !important;}
-.statgrid-caption{
-  font-family:'Oswald',sans-serif;font-size:.78rem;font-weight:600;color:var(--ink-soft);
-  margin-bottom:.35rem;
-}
-.statgrid{
-  display:grid !important;grid-template-columns:repeat(6,1fr);gap:0;
-  border:3px solid #000 !important;width:100%;background:#000;
-}
-.statgrid .stat-cell{
-  display:flex;flex-direction:column;align-items:center;justify-content:center;
-  background:#fff;border:1px solid #000;padding:.3rem .15rem;text-align:center;min-width:0;
-}
-.statgrid .stat-cell .stat-k{
-  font-family:'JetBrains Mono','Courier New',monospace;font-size:.55rem;letter-spacing:0;
-  color:#fff;background:var(--sb-blue);width:100%;padding:.18rem 0;margin:-.3rem -.15rem .22rem;
-  border-bottom:1px solid #000;
-}
-.statgrid .stat-cell .stat-v{
-  font-family:'JetBrains Mono','Courier New',monospace;font-size:.74rem;color:var(--ink);
-  line-height:1.1;word-break:break-word;
-}
+.statgrid{display:table !important;border-collapse:collapse !important;width:100%;table-layout:fixed;background:transparent;border:0 !important;}
+.statgrid caption{font-family:'Oswald',sans-serif !important;font-style:normal;font-size:.78rem;color:var(--ink-soft);font-weight:600;text-align:left;caption-side:top;margin-bottom:.35rem;}
+.statgrid th{font-family:'JetBrains Mono','Courier New',monospace !important;font-size:.58rem;letter-spacing:0;background:var(--sb-blue) !important;color:#fff !important;border:1px solid #000 !important;padding:.3rem .2rem;text-align:center;font-weight:500;}
+.statgrid td{font-family:'JetBrains Mono','Courier New',monospace !important;font-size:.74rem;color:var(--ink);border:1px solid #000 !important;background:#fff;padding:.32rem .2rem;text-align:center;word-break:break-word;}
+.statgrid tbody+thead th{border-top:2px solid #000 !important;}
 @media (max-width:640px){
-  .statgrid{grid-template-columns:repeat(6,1fr);}
-  .statgrid .stat-cell .stat-v{font-size:.62rem;}
-  .statgrid .stat-cell .stat-k{font-size:.48rem;}
+  .statgrid th{font-size:.5rem;}
+  .statgrid td{font-size:.62rem;}
 }
 
 </style>
@@ -1267,9 +1250,14 @@ function statTable(c){
   const present = cols.filter(k=>c.stats && c.stats[k]!=null && c.stats[k]!=='');
   const extra = Object.keys(c.stats||{}).filter(k=>!cols.includes(k));
   const all = present.concat(extra);
-  if(!all.length) return `<div class="no-stats">No stats entered yet for this season.</div>`;
-  const cells = all.map(k=>`<div class="stat-cell"><span class="stat-k">${k}</span><span class="stat-v">${c.stats[k]}</span></div>`).join('');
-  return `<div class="statgrid-wrap"><div class="statgrid-caption">${c.yr} season — ${c.team}</div><div class="statgrid">${cells}</div></div>`;
+  if(!all.length) return `<div class="no-stats">No stats recorded yet.</div>`;
+  const half = Math.ceil(all.length/2);
+  const r1 = all.slice(0, half), r2 = all.slice(half);
+  const headRow = ks=>ks.map(k=>`<th>${k}</th>`).join('');
+  const valRow = ks=>ks.map(k=>`<td>${c.stats[k]}</td>`).join('');
+  const body = `<thead><tr>${headRow(r1)}</tr></thead><tbody><tr>${valRow(r1)}</tr></tbody>`
+    + (r2.length?`<thead><tr>${headRow(r2)}</tr></thead><tbody><tr>${valRow(r2)}</tr></tbody>`:'');
+  return `<div class="statgrid-wrap"><table class="statgrid"><caption>${c.yr} season — ${c.team}</caption>${body}</table></div>`;
 }
 function brefURL(c){
   const q=[c.name, "baseball reference", c.yr||''].filter(Boolean).join(' ');
@@ -1309,7 +1297,7 @@ function openSpot(idx){
     ${statTable(c)}
     ${c.bio?`<div class="bio">${c.bio}</div>`:''}
         </div>`;
-  document.getElementById('spotMeta').innerHTML=`<span class="hint">click card to flip · esc to close</span>`
+  document.getElementById('spotMeta').innerHTML=`${c.name?`<div class="spot-name">${c.name}</div>`:''}<span class="hint">click card to flip · esc to close</span>`
     + (cphoto?'':`<div style="margin-top:.5rem"><button class="btn-google" style="width:auto;padding:.45rem 1rem;font-size:.72rem" onclick="findImageFor(${idx},event)">Find this card on Google Images ↗</button></div>`)
         + `<div class="spot-remove"><button class="btn-ghost" onclick="removeFromDepot(${idx},event)">Remove from depot</button></div>`;
   document.getElementById('spotCard').classList.remove('flipped');
