@@ -1206,6 +1206,34 @@ let DEPOT_COLLECTION_ID = null;   // the user's default collection id
 const DEPOT_IMPORT_FLAG = 'depot_imported_v1';
 
 function depotSB(){ return window.supabaseClient || null; }
+async function depotUploadImage(dataUrl, cardId, side){
+  try{
+    const sb=depotSB(); if(!sb||!DEPOT_USER||!DEPOT_COLLECTION_ID) return null;
+    if(!dataUrl || dataUrl.indexOf('data:')!==0) return null;
+    const res=await fetch(dataUrl); const blob=await res.blob();
+    const path=DEPOT_USER.id+'/'+DEPOT_COLLECTION_ID+'/'+cardId+'_'+side+'.jpg';
+    const up=await sb.storage.from('card-images').upload(path, blob, {contentType:'image/jpeg', upsert:true});
+    if(up.error){ console.warn('[DepotData] image upload error', up.error); return null; }
+    return path;
+  }catch(e){ console.warn('[DepotData] image upload exception', e); return null; }
+}
+async function depotSignedUrl(path){
+  if(!path) return '';
+  if(path.indexOf('data:')===0) return path;
+  try{
+    const sb=depotSB(); if(!sb) return '';
+    const r=await sb.storage.from('card-images').createSignedUrl(path, 3600);
+    if(r.error){ console.warn('[DepotData] signed url error', r.error); return ''; }
+    return (r.data && r.data.signedUrl) || '';
+  }catch(e){ console.warn('[DepotData] signed url exception', e); return ''; }
+}
+async function depotResolveCardPhotos(c){
+  if(c){
+    if(c.photoFront){ c._frontPath=c.photoFront; c.photoFront=await depotSignedUrl(c.photoFront); }
+    if(c.photoBack){ c._backPath=c.photoBack; c.photoBack=await depotSignedUrl(c.photoBack); }
+  }
+  return c;
+}
 function depotLoggedIn(){ return !!(DEPOT_USER && depotSB()); }
 
 /* App cards carry fields the DB has no column for (pos,type,rare,stats).
@@ -1283,6 +1311,7 @@ async function depotLoadCards(){
   let { data, error } = await sb.from('cards').select('*').eq('collection_id', DEPOT_COLLECTION_ID).order('created_at',{ascending:true});
   if(error){ console.warn('[DepotData] load error', error); toast('Could not load your cards from the server.'); return; }
   const cards = (data||[]).map(rowToCard);
+  for(const c of cards){ await depotResolveCardPhotos(c); }
   USER_CARDS.length = 0;
   cards.forEach(c=>USER_CARDS.push(c));
   rebuild();
@@ -1291,9 +1320,23 @@ async function depotLoadCards(){
 }
 async function depotInsertCard(c){
   const sb = depotSB(); const row = cardToRow(c);
+  const frontSrc = (typeof c.photoFront==='string' && c.photoFront.indexOf('data:')===0) ? c.photoFront : null;
+  const backSrc  = (typeof c.photoBack==='string'  && c.photoBack.indexOf('data:')===0)  ? c.photoBack  : null;
+  row.photo_front_path = null; row.photo_back_path = null;
   let ins = await sb.from('cards').insert(row).select('id').single();
   if(ins.error){ console.warn('[DepotData] insert error', ins.error); toast('Could not save the card to the server.'); return null; }
   c.id = ins.data.id;
+  let fPath=null, bPath=null;
+  if(frontSrc){ fPath = await depotUploadImage(frontSrc, c.id, 'front'); }
+  if(backSrc){  bPath = await depotUploadImage(backSrc,  c.id, 'back');  }
+  if(fPath || bPath){
+    const upd = await sb.from('cards').update({ photo_front_path: fPath, photo_back_path: bPath }).eq('id', c.id);
+    if(upd.error){ console.warn('[DepotData] path update error', upd.error); }
+  }
+  if((frontSrc && !fPath) || (backSrc && !bPath)){ toast('Card saved, but an image upload failed; re-edit to retry.'); }
+  c.photoFront = fPath ? await depotSignedUrl(fPath) : '';
+  c.photoBack  = bPath ? await depotSignedUrl(bPath) : '';
+  c._frontPath = fPath; c._backPath = bPath;
   return ins.data.id;
 }
 async function depotDeleteCard(c){
@@ -1304,8 +1347,16 @@ async function depotDeleteCard(c){
 }
 async function depotUpdateCardPhoto(c){
   const sb = depotSB();
-  let up = await sb.from('cards').update({ photo_front_path: c.photoFront, photo_back_path: c.photoBack }).eq('id', c.id);
+  const frontSrc = (typeof c.photoFront==='string' && c.photoFront.indexOf('data:')===0) ? c.photoFront : null;
+  const backSrc  = (typeof c.photoBack==='string'  && c.photoBack.indexOf('data:')===0)  ? c.photoBack  : null;
+  let fPath = c._frontPath || null, bPath = c._backPath || null;
+  if(frontSrc){ fPath = await depotUploadImage(frontSrc, c.id, 'front'); }
+  if(backSrc){  bPath = await depotUploadImage(backSrc,  c.id, 'back');  }
+  let up = await sb.from('cards').update({ photo_front_path: fPath, photo_back_path: bPath }).eq('id', c.id);
   if(up.error){ console.warn('[DepotData] photo update error', up.error); toast('Could not save the image to the server.'); return false; }
+  if((frontSrc && !fPath) || (backSrc && !bPath)){ toast('An image upload failed; please retry.'); }
+  c.photoFront = fPath ? await depotSignedUrl(fPath) : ''; c._frontPath = fPath;
+  c.photoBack  = bPath ? await depotSignedUrl(bPath) : ''; c._backPath = bPath;
   return true;
 }
 function depotOnAuth(session){
