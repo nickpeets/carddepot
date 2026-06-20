@@ -948,6 +948,30 @@ body{
 
 </head>
 <body>
+<!-- Phase 4: login-required gate. Logged-out users see ONLY this; no collection. -->
+<style>
+#loginGate{display:none;position:fixed;inset:0;z-index:40;align-items:center;justify-content:center;
+  background:#1a1a2e;padding:2rem;}
+#loginGate.show{display:flex;}
+#loginGate .lg-card{background:var(--sb-blue,#0d2d5c);border:4px solid #000;box-shadow:8px 8px 0 #000;
+  max-width:460px;width:100%;padding:2.2rem 1.8rem;text-align:center;}
+#loginGate .lg-title{font-family:'Press Start 2P',monospace;color:var(--brass,#f8d000);font-size:1rem;
+  line-height:1.6;text-shadow:3px 3px 0 #000;margin-bottom:1rem;}
+#loginGate .lg-sub{font-family:'Press Start 2P',monospace;color:#dfeaff;font-size:.5rem;line-height:1.9;
+  margin-bottom:1.6rem;}
+#loginGate .lg-btn{font-family:'Press Start 2P',monospace;font-size:.6rem;color:#000;background:var(--brass,#f8d000);
+  border:3px solid #000;box-shadow:3px 3px 0 #000;padding:.8rem 1.2rem;cursor:pointer;}
+#loginGate .lg-btn:hover{background:#ffe24d;}
+#loginGate .lg-btn:active{transform:translate(3px,3px);box-shadow:0 0 0 #000;}
+body.logged-out #appFrame{display:none !important;}
+</style>
+<div id="loginGate">
+  <div class="lg-card">
+    <div class="lg-title">THE DEPOT</div>
+    <div class="lg-sub">Log in to view and manage your collection.</div>
+    <button class="lg-btn" type="button" onclick="DepotAuth.openModal()">Log in</button>
+  </div>
+</div>
 <div id="appFrame">
 
 <div class="topbar">
@@ -967,7 +991,7 @@ body{
   <button class="mode-btn active" id="m-binder" onclick="setMode('binder')">The Binder</button>
   <button class="mode-btn" id="m-carousel" onclick="setMode('carousel')">By Set</button>
   <button class="mode-btn" id="m-add" onclick="openForm()" style="margin-left:auto">+ Add a card</button>
-  <button class="mode-btn" id="m-export" onclick="exportCollection()" title="Download your collection as a file you can paste back in">Save collection</button>
+  
 </div>
 
 <!-- BINDER -->
@@ -1166,45 +1190,15 @@ function onYearInput(){
 }
 const PLACEHOLDER = ["#7d5a3c","#3a5a78","#5a3a4a","#3a5a4a","#6a4a2a","#4a4a6a"];
 
-const STORE_KEY = "depot_cards_v1";
 function newCardId(){
   return 'c_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2,8);
 }
-function loadSaved(){
-  try{
-    const raw=localStorage.getItem(STORE_KEY);
-    const arr = raw?JSON.parse(raw):[];
-    let changed=false;
-    if(Array.isArray(arr)){
-      arr.forEach(c=>{
-        if(c && !c.id){ c.id = newCardId(); changed=true; }
-        // migrate legacy single photo -> photoFront (don't lose existing images)
-        if(c && typeof c.photoFront==='undefined' && c.photo){ c.photoFront = c.photo; changed=true; }
-        if(c && typeof c.photoBack==='undefined'){ c.photoBack = ''; }
-      });
-      if(changed){ try{ localStorage.setItem(STORE_KEY, JSON.stringify(arr)); }catch(e){} }
-    }
-    return Array.isArray(arr)?arr:[];
-  }
-  catch(e){ return []; }
-}
-function persist(){
-  try{ localStorage.setItem(STORE_KEY, JSON.stringify(USER_CARDS)); return true; }
-  catch(e){
-    const quota = (e && (e.name==='QuotaExceededError' || e.code===22 || e.code===1014 || /quota/i.test(e.message||'')));
-    toast(quota
-      ? "Couldn't save — browser storage is full. Existing cards are safe; consider removing some images."
-      : "Couldn't save — browser storage is unavailable. Existing cards are safe.");
-    return false;
-  }
-}
-let USER_CARDS = loadSaved();
+let USER_CARDS = [];
 
 /* ===== DEPOT DATA (Phase 2): Supabase-backed card storage for logged-in users.
    Logged-out users keep the existing localStorage flow untouched. ===== */
 let DEPOT_USER = null;            // current Supabase user (or null when logged out)
 let DEPOT_COLLECTION_ID = null;   // the user's default collection id
-const DEPOT_IMPORT_FLAG = 'depot_imported_v1';
 
 function depotSB(){ return window.supabaseClient || null; }
 async function depotUploadImage(dataUrl, cardId, side){
@@ -1317,7 +1311,6 @@ async function depotLoadCards(){
   cards.forEach(c=>USER_CARDS.push(c));
   rebuild();
   if(mode==='binder'){ renderBinder(); } else { renderSetPicker(); }
-  updateImportButton();
 }
 async function depotInsertCard(c){
   const sb = depotSB(); const row = cardToRow(c);
@@ -1365,80 +1358,14 @@ function depotOnAuth(session){
   const loggedIn = !!(session && session.user);
   if(loggedIn){
     DEPOT_USER = session.user;
+    setAuthUI(true);
     depotEnsureCollection().then(function(){ depotLoadCards(); });
   } else {
     DEPOT_USER = null; DEPOT_COLLECTION_ID = null;
-    const local = loadSaved();
-    USER_CARDS.length = 0; local.forEach(function(c){ USER_CARDS.push(c); });
+    USER_CARDS.length = 0;
     rebuild();
-    if(mode==='binder'){ renderBinder(); } else { renderSetPicker(); }
+    setAuthUI(false);
   }
-  updateImportButton();
-}
-/* ---- one-time local -> account import ---- */
-function localCardCount(){
-  try{ const raw=localStorage.getItem(STORE_KEY); const arr=raw?JSON.parse(raw):[]; return Array.isArray(arr)?arr.length:0; }catch(e){ return 0; }
-}
-function importSig(player, year, brand, number){
-  return [String(player||'').trim().toLowerCase(), String(year||'').trim(), String(brand||'').trim().toLowerCase(), String(number||'').trim().toLowerCase()].join('|');
-}
-function normalizeLocalForRow(lc){
-  return {
-    yr: lc.yr, set: lc.set, num: lc.num, name: lc.name, team: lc.team,
-    pos: lc.pos, type: lc.type, rare: lc.rare, stats: lc.stats||{},
-    bio: lc.bio||'', photoFront: lc.photoFront||lc.photo||'', photoBack: lc.photoBack||'', tcdb_url: lc.tcdb_url||''
-  };
-}
-function ensureImportButton(){
-  let btn = document.getElementById('depotImportBtn');
-  if(!btn){
-    const modes = document.querySelector('.modes');
-    if(!modes) return null;
-    btn = document.createElement('button');
-    btn.className = 'mode-btn';
-    btn.id = 'depotImportBtn';
-    btn.type = 'button';
-    btn.textContent = 'Import my local cards to my account';
-    btn.title = 'Copy the cards saved in this browser into your account';
-    btn.style.display = 'none';
-    btn.onclick = depotImportLocal;
-    modes.appendChild(btn);
-  }
-  return btn;
-}
-function updateImportButton(){
-  const btn = ensureImportButton(); if(!btn) return;
-  const show = depotLoggedIn() && localCardCount() > 0;
-  btn.style.display = show ? '' : 'none';
-}
-async function depotImportLocal(){
-  if(!depotLoggedIn()){ toast('Log in first to import.'); return; }
-  if(!DEPOT_COLLECTION_ID){ await depotEnsureCollection(); }
-  if(!DEPOT_COLLECTION_ID){ toast('No collection to import into.'); return; }
-  const sb = depotSB();
-  let localCards = [];
-  try{ const raw=localStorage.getItem(STORE_KEY); const arr=raw?JSON.parse(raw):[]; if(Array.isArray(arr)) localCards=arr; }catch(e){}
-  if(!localCards.length){ toast('No local cards to import.'); return; }
-  const btn = document.getElementById('depotImportBtn'); if(btn) btn.disabled = true;
-  toast('Importing '+localCards.length+' card'+(localCards.length>1?'s':'')+'\u2026');
-  let existing = new Set();
-  try{
-    let { data } = await sb.from('cards').select('player,year,brand,number').eq('collection_id', DEPOT_COLLECTION_ID);
-    (data||[]).forEach(function(r){ existing.add(importSig(r.player, r.year, r.brand, r.number)); });
-  }catch(e){}
-  let imported = 0, skipped = 0;
-  for(const lc of localCards){
-    const sig = importSig(lc.name, parseInt(lc.yr,10)||null, lc.set, (lc.num!=null?String(lc.num):null));
-    if(existing.has(sig)){ skipped++; continue; }
-    const row = cardToRow(normalizeLocalForRow(lc));
-    let ins = await sb.from('cards').insert(row);
-    if(ins.error){ console.warn('[DepotData] import insert error', ins.error); continue; }
-    existing.add(sig); imported++;
-  }
-  try{ localStorage.setItem(DEPOT_IMPORT_FLAG+':'+DEPOT_COLLECTION_ID, JSON.stringify({ at: Date.now(), imported: imported })); }catch(e){}
-  if(btn) btn.disabled = false;
-  await depotLoadCards();
-  toast('Imported '+imported+' card'+(imported===1?'':'s')+(skipped?(', skipped '+skipped+' already present'):'')+'. Local backup kept.');
 }
 if(depotSB()){
   depotSB().auth.onAuthStateChange(function(ev, session){ depotOnAuth(session); });
@@ -1640,7 +1567,7 @@ function brefURL(c){
 function escAttr(s){ return String(s).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
 function imgFail(el){ if(el.dataset.failed)return; el.dataset.failed="1"; const ph=document.createElement("div"); ph.className=el.className+" img-missing"; ph.setAttribute("style",el.getAttribute("style")||""); ph.title="Image unavailable (broken link or hotlinking blocked)"; ph.innerHTML="<span class=\"ph-text err\">image unavailable</span>"; el.replaceWith(ph); }
 function imgOk(el){ el.classList.add("loaded"); }
-async function removeFromDepot(idx,e){ if(e)e.stopPropagation(); const c=COLLECTION[idx]; if(!c){ toast("Card not found."); return; } if(!confirm("Remove "+(c.name||"this card")+" from the depot? This cannot be undone.")) return; const ui=USER_CARDS.indexOf(c); if(ui===-1){ toast("This card cannot be removed."); return; } if(depotLoggedIn()){ if(!(await depotDeleteCard(c))){ return; } USER_CARDS.splice(ui,1); } else { USER_CARDS.splice(ui,1); persist(); } rebuild(); if(mode==="binder"){ renderBinder(); } else { renderSetPicker(); } closeSpot(null,true); toast((c.name||"Card")+" removed from the depot."); }
+async function removeFromDepot(idx,e){ if(e)e.stopPropagation(); const c=COLLECTION[idx]; if(!c){ toast("Card not found."); return; } if(!confirm("Remove "+(c.name||"this card")+" from the depot? This cannot be undone.")) return; const ui=USER_CARDS.indexOf(c); if(ui===-1){ toast("This card cannot be removed."); return; } if(depotLoggedIn()){ if(!(await depotDeleteCard(c))){ return; } USER_CARDS.splice(ui,1); } else { toast("Please log in."); return; } rebuild(); if(mode==="binder"){ renderBinder(); } else { renderSetPicker(); } closeSpot(null,true); toast((c.name||"Card")+" removed from the depot."); }
 function findStatsFor(idx,e){
   if(e)e.stopPropagation();
   const c=COLLECTION[idx];
@@ -2255,8 +2182,7 @@ async function saveCard(){
     if(!_id){ return; }
     USER_CARDS.push(card);
   } else {
-    USER_CARDS.push(card);
-    if(!persist()){ USER_CARDS.pop(); return; }
+    toast("Please log in to save cards."); return;
   }
   rebuild();
   document.getElementById('formScrim').classList.remove('open');
@@ -2268,20 +2194,6 @@ async function saveCard(){
   toast(`${name} added to the depot.`);
 }
 
-function exportCollection(){
-  if(!USER_CARDS.length){toast("No added cards yet — add some first.");return;}
-  const lines=USER_CARDS.map(c=>"  "+JSON.stringify(c)).join(",\n");
-  const blob=new Blob([
-    "/* Cards you added in the app. To make them permanent,\n"+
-    "   paste these into the SEED array in index.html. */\n\n"+
-    "const ADDED = [\n"+lines+"\n];\n"
-  ],{type:"text/javascript"});
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(blob);
-  a.download="my-cards.js";
-  a.click();
-  toast(`Saved ${USER_CARDS.length} card${USER_CARDS.length>1?'s':''} to a file.`);
-}
 
 let toastTimer=null;
 function toast(msg){
@@ -2310,7 +2222,7 @@ function setCardPhotoById(id, rawDataURL){
     USER_CARDS[ui].photoFront = small;
     const _finishUI=function(){ rebuild(); renderBinder(); if(typeof spotIdx==='number' && COLLECTION[spotIdx] && COLLECTION[spotIdx].id===id){ openSpot(spotIdx); } toast("Image attached to "+(USER_CARDS[ui].name||"card")+"."); };
     if(depotLoggedIn()){ depotUpdateCardPhoto(USER_CARDS[ui]).then(function(ok){ if(!ok){ USER_CARDS[ui].photoFront = prev; rebuild(); renderBinder(); return; } _finishUI(); }); }
-    else { if(!persist()){ USER_CARDS[ui].photoFront = prev; return; } _finishUI(); }
+    else { USER_CARDS[ui].photoFront = prev; toast("Please log in."); return; }
   });
 }
 function fileToDataURL(file){
@@ -2397,9 +2309,18 @@ document.addEventListener('paste',e=>{
   }).catch(()=>{});
 });
 
+/* Phase 4: toggle the whole app vs the login gate (login-required). */
+function setAuthUI(loggedIn){
+  var gate=document.getElementById('loginGate');
+  document.body.classList.toggle('logged-out', !loggedIn);
+  if(gate) gate.classList.toggle('show', !loggedIn);
+  if(loggedIn){
+    if(mode==='binder'){ renderBinder(); } else { renderSetPicker(); }
+  }
+}
 /* ---------- init ---------- */
 rebuild();
-renderBinder();
+setAuthUI(false);
 </script>
 </body>
 </html>
