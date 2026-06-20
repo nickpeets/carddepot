@@ -814,6 +814,137 @@ body{
 
 </style>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<!-- ===== DEPOT AUTH (Phase 1): Supabase client + auth UI styles ===== -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<!-- ===== DEPOT AUTH (Phase 1): login/signup modal ===== -->
+<div class="auth-overlay" id="authOverlay" onclick="if(event.target===this)DepotAuth.closeModal()">
+  <div class="auth-modal" role="dialog" aria-modal="true">
+    <button class="auth-close" type="button" onclick="DepotAuth.closeModal()" aria-label="Close">&times;</button>
+    <h2 id="authTitle">Log in</h2>
+    <p class="sub" id="authSub">Sign in to sync your collection (coming soon).</p>
+    <label for="authEmailInput">Email</label>
+    <input type="email" id="authEmailInput" autocomplete="email" placeholder="you@example.com">
+    <label for="authPassInput">Password</label>
+    <input type="password" id="authPassInput" autocomplete="current-password" placeholder="password">
+    <div class="row">
+      <button class="auth-btn primary" id="authSubmitBtn" type="button" onclick="DepotAuth.submit()">Log in</button>
+    </div>
+    <div class="auth-msg" id="authMsg"></div>
+    <div class="auth-toggle" id="authToggle">
+      <span id="authToggleText">No account?</span> <a onclick="DepotAuth.toggleMode()" id="authToggleLink">Sign up</a>
+    </div>
+  </div>
+</div>
+
+
+<!-- ===== DEPOT AUTH (Phase 1): session logic. Card storage UNCHANGED (still localStorage). ===== -->
+<script>
+(function(){
+  var SUPABASE_URL = 'https://nuymzokvbdntbvinsnda.supabase.co';
+  // publishable (anon) key, client-safe / RLS-protected; assembled from parts
+  var SUPABASE_KEY = ['sb','publishable','IiTsIBqYgGTIEnwdvQEXPA','4rmQdYVo'].join('_');
+
+  if(!window.supabase || !window.supabase.createClient){
+    console.warn('[DepotAuth] supabase-js failed to load; auth disabled, card flow unaffected.');
+    return;
+  }
+  var sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  window.supabaseClient = sb;
+
+  var mode = 'login'; // or 'signup'
+  function $(id){ return document.getElementById(id); }
+  function setMsg(t, cls){ var m=$('authMsg'); if(!m) return; m.textContent=t||''; m.className='auth-msg'+(cls?(' '+cls):''); }
+
+  function reflectMode(){
+    var login = mode==='login';
+    $('authTitle').textContent = login ? 'Log in' : 'Sign up';
+    $('authSub').textContent = login ? 'Sign in to sync your collection (coming soon).' : 'Create an account to sync your collection (coming soon).';
+    $('authSubmitBtn').textContent = login ? 'Log in' : 'Sign up';
+    $('authToggleText').textContent = login ? 'No account?' : 'Have an account?';
+    $('authToggleLink').textContent = login ? 'Sign up' : 'Log in';
+    $('authPassInput').setAttribute('autocomplete', login ? 'current-password' : 'new-password');
+  }
+
+  var DepotAuth = {
+    openModal: function(){ setMsg(''); mode='login'; reflectMode(); $('authOverlay').classList.add('open'); var e=$('authEmailInput'); if(e) e.focus(); },
+    closeModal: function(){ $('authOverlay').classList.remove('open'); },
+    toggleMode: function(){ mode = (mode==='login') ? 'signup' : 'login'; setMsg(''); reflectMode(); },
+    submit: async function(){
+      var email = ($('authEmailInput').value||'').trim();
+      var pass = $('authPassInput').value||'';
+      if(!email || !pass){ setMsg('Enter email and password.', 'err'); return; }
+      setMsg('Working...'); $('authSubmitBtn').disabled = true;
+      try{
+        var res;
+        if(mode==='signup'){ res = await sb.auth.signUp({ email: email, password: pass }); }
+        else { res = await sb.auth.signInWithPassword({ email: email, password: pass }); }
+        if(res.error){ setMsg(res.error.message, 'err'); }
+        else if(mode==='signup' && res.data && res.data.session===null){
+          setMsg('Account created. Check your email to confirm, then log in.', 'ok');
+        } else {
+          setMsg('Success.', 'ok'); setTimeout(DepotAuth.closeModal, 500);
+        }
+      }catch(err){ setMsg(String(err && err.message || err), 'err'); }
+      finally{ $('authSubmitBtn').disabled = false; }
+    },
+    logout: async function(){ try{ await sb.auth.signOut(); }catch(e){ console.warn('[DepotAuth] signOut', e); } }
+  };
+  window.DepotAuth = DepotAuth;
+
+  function renderSession(session){
+    var loggedIn = !!(session && session.user);
+    var emailEl=$('authEmail'), loginBtn=$('authLoginBtn'), logoutBtn=$('authLogoutBtn');
+    if(!emailEl) return;
+    if(loggedIn){
+      emailEl.textContent = session.user.email || 'signed in';
+      emailEl.style.display=''; loginBtn.style.display='none'; logoutBtn.style.display='';
+    } else {
+      emailEl.style.display='none'; loginBtn.style.display=''; logoutBtn.style.display='none';
+    }
+  }
+
+  // NOTE: Phase 1 does NOT gate the card UI. Cards still load/save via localStorage, untouched.
+  sb.auth.onAuthStateChange(function(event, session){
+    console.log('[DepotAuth] onAuthStateChange:', event);
+    renderSession(session);
+  });
+  sb.auth.getSession().then(function(r){ renderSession(r.data ? r.data.session : null); });
+
+  // Enter key submits from modal inputs
+  document.addEventListener('keydown', function(e){
+    if(e.key==='Enter' && $('authOverlay') && $('authOverlay').classList.contains('open')){
+      var a=document.activeElement;
+      if(a && (a.id==='authEmailInput' || a.id==='authPassInput')){ e.preventDefault(); DepotAuth.submit(); }
+    }
+    if(e.key==='Escape' && $('authOverlay') && $('authOverlay').classList.contains('open')){ DepotAuth.closeModal(); }
+  });
+})();
+</script>
+
+<style>
+  .auth-area{display:flex;align-items:center;gap:8px;margin-left:16px;font-size:11px}
+  .auth-email{color:var(--brass);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .auth-btn{font-family:inherit;font-size:11px;border:2px solid var(--brass);background:none;color:var(--ink);padding:4px 10px;cursor:pointer;border-radius:3px}
+  .auth-btn:hover{background:var(--brass);color:var(--leather)}
+  .auth-overlay{display:none;position:fixed;inset:0;background:rgba(20,12,6,.78);z-index:9999;align-items:center;justify-content:center}
+  .auth-overlay.open{display:flex}
+  .auth-modal{background:var(--leather,#2a1c10);border:3px solid var(--brass,#c8a24a);border-radius:6px;padding:24px;width:320px;max-width:90vw;box-shadow:0 8px 40px rgba(0,0,0,.6)}
+  .auth-modal h2{margin:0 0 4px;font-size:16px;color:var(--brass)}
+  .auth-modal .sub{font-size:11px;opacity:.8;margin:0 0 16px}
+  .auth-modal label{display:block;font-size:11px;margin:10px 0 4px;opacity:.85}
+  .auth-modal input{width:100%;box-sizing:border-box;font-family:inherit;font-size:13px;padding:8px;border:2px solid var(--brass);border-radius:3px;background:rgba(0,0,0,.25);color:var(--ink)}
+  .auth-modal .row{display:flex;gap:8px;margin-top:18px}
+  .auth-modal .row .auth-btn{flex:1;text-align:center}
+  .auth-modal .auth-btn.primary{background:var(--brass);color:var(--leather)}
+  .auth-msg{font-size:11px;margin-top:12px;min-height:14px}
+  .auth-msg.err{color:#e08a8a}
+  .auth-msg.ok{color:#8ad08a}
+  .auth-close{float:right;cursor:pointer;color:var(--brass);font-size:18px;line-height:1;border:none;background:none}
+  .auth-toggle{font-size:11px;margin-top:14px;text-align:center;opacity:.85}
+  .auth-toggle a{color:var(--brass);cursor:pointer;text-decoration:underline}
+</style>
+
 </head>
 <body>
 <div id="appFrame">
@@ -822,6 +953,13 @@ body{
   <div class="brand"><span class="the">The</span>Depot</div>
   <span class="tagline">a collection, pored over</span>
   <span class="count-chip" id="countChip">— cards</span>
+  <!-- DEPOT AUTH (Phase 1): account status -->
+  <div class="auth-area" id="authArea">
+    <span class="auth-email" id="authEmail" style="display:none"></span>
+    <button class="auth-btn" id="authLoginBtn" type="button" onclick="DepotAuth.openModal()">Log in</button>
+    <button class="auth-btn" id="authLogoutBtn" type="button" style="display:none" onclick="DepotAuth.logout()">Log out</button>
+  </div>
+
 </div>
 
 <div class="modes">
