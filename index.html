@@ -1198,6 +1198,202 @@ function persist(){
   }
 }
 let USER_CARDS = loadSaved();
+
+/* ===== DEPOT DATA (Phase 2): Supabase-backed card storage for logged-in users.
+   Logged-out users keep the existing localStorage flow untouched. ===== */
+let DEPOT_USER = null;            // current Supabase user (or null when logged out)
+let DEPOT_COLLECTION_ID = null;   // the user's default collection id
+const DEPOT_IMPORT_FLAG = 'depot_imported_v1';
+
+function depotSB(){ return window.supabaseClient || null; }
+function depotLoggedIn(){ return !!(DEPOT_USER && depotSB()); }
+
+/* App cards carry fields the DB has no column for (pos,type,rare,stats).
+   We tuck those into notes as a hidden JSON sidecar so nothing regresses.
+   era is re-derived from year; numSort is re-derived from number. */
+const META_MARK = '\n\n<!--DEPOT_META:';
+const META_END  = '-->';
+function packNotes(c){
+  const meta = { pos:c.pos, type:c.type, rare:!!c.rare, stats:c.stats||{} };
+  const bio = c.bio || '';
+  return bio + META_MARK + JSON.stringify(meta) + META_END;
+}
+function unpackNotes(notes){
+  notes = notes || '';
+  const i = notes.indexOf(META_MARK);
+  if(i < 0) return { bio: notes, meta: {} };
+  const bio = notes.slice(0, i);
+  let meta = {};
+  const j = notes.indexOf(META_END, i);
+  if(j > i){ try{ meta = JSON.parse(notes.slice(i + META_MARK.length, j)); }catch(e){ meta = {}; } }
+  return { bio: bio, meta: meta };
+}
+function cardToRow(c){
+  return {
+    owner_id: DEPOT_USER.id,
+    collection_id: DEPOT_COLLECTION_ID,
+    year: parseInt(c.yr,10) || null,
+    brand: c.set || null,
+    set: c.set || null,
+    number: (c.num!=null && c.num!=='' ? String(c.num) : null),
+    player: c.name || null,
+    team: c.team || null,
+    notes: packNotes(c),
+    tcdb_url: c.tcdb_url || null,
+    photo_front_path: c.photoFront || null,
+    photo_back_path: c.photoBack || null
+  };
+}
+function rowToCard(r){
+  const u = unpackNotes(r.notes);
+  const yr = r.year || 0;
+  return {
+    id: r.id,
+    name: r.player || '',
+    pos: u.meta.pos || '\u2014',
+    team: r.team || '\u2014',
+    yr: yr,
+    set: r.brand || r.set || 'Unknown',
+    num: (r.number!=null ? String(r.number) : ''),
+    numSort: parseInt(r.number,10) || 0,
+    era: eraFromYear(yr) || 'modern',
+    type: u.meta.type || 'hitter',
+    rare: !!u.meta.rare,
+    photoFront: r.photo_front_path || '',
+    photoBack: r.photo_back_path || '',
+    tcdb_url: r.tcdb_url || '',
+    stats: u.meta.stats || {},
+    bio: u.bio || ''
+  };
+}
+async function depotEnsureCollection(){
+  const sb = depotSB(); if(!sb || !DEPOT_USER) return null;
+  let { data, error } = await sb.from('collections').select('id').eq('owner_id', DEPOT_USER.id).order('created_at',{ascending:true}).limit(1);
+  if(error){ console.warn('[DepotData] collection select error', error); return null; }
+  if(data && data.length){ DEPOT_COLLECTION_ID = data[0].id; return DEPOT_COLLECTION_ID; }
+  let ins = await sb.from('collections').insert({ owner_id: DEPOT_USER.id, name: 'My Collection' }).select('id').single();
+  if(ins.error){ console.warn('[DepotData] collection insert error', ins.error); return null; }
+  DEPOT_COLLECTION_ID = ins.data.id;
+  return DEPOT_COLLECTION_ID;
+}
+async function depotLoadCards(){
+  const sb = depotSB(); if(!sb || !DEPOT_USER) return;
+  if(!DEPOT_COLLECTION_ID){ await depotEnsureCollection(); }
+  if(!DEPOT_COLLECTION_ID) return;
+  let { data, error } = await sb.from('cards').select('*').eq('collection_id', DEPOT_COLLECTION_ID).order('created_at',{ascending:true});
+  if(error){ console.warn('[DepotData] load error', error); toast('Could not load your cards from the server.'); return; }
+  const cards = (data||[]).map(rowToCard);
+  USER_CARDS.length = 0;
+  cards.forEach(c=>USER_CARDS.push(c));
+  rebuild();
+  if(mode==='binder'){ renderBinder(); } else { renderSetPicker(); }
+  updateImportButton();
+}
+async function depotInsertCard(c){
+  const sb = depotSB(); const row = cardToRow(c);
+  let ins = await sb.from('cards').insert(row).select('id').single();
+  if(ins.error){ console.warn('[DepotData] insert error', ins.error); toast('Could not save the card to the server.'); return null; }
+  c.id = ins.data.id;
+  return ins.data.id;
+}
+async function depotDeleteCard(c){
+  const sb = depotSB();
+  let del = await sb.from('cards').delete().eq('id', c.id);
+  if(del.error){ console.warn('[DepotData] delete error', del.error); toast('Could not delete the card on the server.'); return false; }
+  return true;
+}
+async function depotUpdateCardPhoto(c){
+  const sb = depotSB();
+  let up = await sb.from('cards').update({ photo_front_path: c.photoFront, photo_back_path: c.photoBack }).eq('id', c.id);
+  if(up.error){ console.warn('[DepotData] photo update error', up.error); toast('Could not save the image to the server.'); return false; }
+  return true;
+}
+function depotOnAuth(session){
+  const sb = depotSB(); if(!sb) return;
+  const loggedIn = !!(session && session.user);
+  if(loggedIn){
+    DEPOT_USER = session.user;
+    depotEnsureCollection().then(function(){ depotLoadCards(); });
+  } else {
+    DEPOT_USER = null; DEPOT_COLLECTION_ID = null;
+    const local = loadSaved();
+    USER_CARDS.length = 0; local.forEach(function(c){ USER_CARDS.push(c); });
+    rebuild();
+    if(mode==='binder'){ renderBinder(); } else { renderSetPicker(); }
+  }
+  updateImportButton();
+}
+/* ---- one-time local -> account import ---- */
+function localCardCount(){
+  try{ const raw=localStorage.getItem(STORE_KEY); const arr=raw?JSON.parse(raw):[]; return Array.isArray(arr)?arr.length:0; }catch(e){ return 0; }
+}
+function importSig(player, year, brand, number){
+  return [String(player||'').trim().toLowerCase(), String(year||'').trim(), String(brand||'').trim().toLowerCase(), String(number||'').trim().toLowerCase()].join('|');
+}
+function normalizeLocalForRow(lc){
+  return {
+    yr: lc.yr, set: lc.set, num: lc.num, name: lc.name, team: lc.team,
+    pos: lc.pos, type: lc.type, rare: lc.rare, stats: lc.stats||{},
+    bio: lc.bio||'', photoFront: lc.photoFront||lc.photo||'', photoBack: lc.photoBack||'', tcdb_url: lc.tcdb_url||''
+  };
+}
+function ensureImportButton(){
+  let btn = document.getElementById('depotImportBtn');
+  if(!btn){
+    const modes = document.querySelector('.modes');
+    if(!modes) return null;
+    btn = document.createElement('button');
+    btn.className = 'mode-btn';
+    btn.id = 'depotImportBtn';
+    btn.type = 'button';
+    btn.textContent = 'Import my local cards to my account';
+    btn.title = 'Copy the cards saved in this browser into your account';
+    btn.style.display = 'none';
+    btn.onclick = depotImportLocal;
+    modes.appendChild(btn);
+  }
+  return btn;
+}
+function updateImportButton(){
+  const btn = ensureImportButton(); if(!btn) return;
+  const show = depotLoggedIn() && localCardCount() > 0;
+  btn.style.display = show ? '' : 'none';
+}
+async function depotImportLocal(){
+  if(!depotLoggedIn()){ toast('Log in first to import.'); return; }
+  if(!DEPOT_COLLECTION_ID){ await depotEnsureCollection(); }
+  if(!DEPOT_COLLECTION_ID){ toast('No collection to import into.'); return; }
+  const sb = depotSB();
+  let localCards = [];
+  try{ const raw=localStorage.getItem(STORE_KEY); const arr=raw?JSON.parse(raw):[]; if(Array.isArray(arr)) localCards=arr; }catch(e){}
+  if(!localCards.length){ toast('No local cards to import.'); return; }
+  const btn = document.getElementById('depotImportBtn'); if(btn) btn.disabled = true;
+  toast('Importing '+localCards.length+' card'+(localCards.length>1?'s':'')+'\u2026');
+  let existing = new Set();
+  try{
+    let { data } = await sb.from('cards').select('player,year,brand,number').eq('collection_id', DEPOT_COLLECTION_ID);
+    (data||[]).forEach(function(r){ existing.add(importSig(r.player, r.year, r.brand, r.number)); });
+  }catch(e){}
+  let imported = 0, skipped = 0;
+  for(const lc of localCards){
+    const sig = importSig(lc.name, parseInt(lc.yr,10)||null, lc.set, (lc.num!=null?String(lc.num):null));
+    if(existing.has(sig)){ skipped++; continue; }
+    const row = cardToRow(normalizeLocalForRow(lc));
+    let ins = await sb.from('cards').insert(row);
+    if(ins.error){ console.warn('[DepotData] import insert error', ins.error); continue; }
+    existing.add(sig); imported++;
+  }
+  try{ localStorage.setItem(DEPOT_IMPORT_FLAG+':'+DEPOT_COLLECTION_ID, JSON.stringify({ at: Date.now(), imported: imported })); }catch(e){}
+  if(btn) btn.disabled = false;
+  await depotLoadCards();
+  toast('Imported '+imported+' card'+(imported===1?'':'s')+(skipped?(', skipped '+skipped+' already present'):'')+'. Local backup kept.');
+}
+if(depotSB()){
+  depotSB().auth.onAuthStateChange(function(ev, session){ depotOnAuth(session); });
+  depotSB().auth.getSession().then(function(r){ depotOnAuth(r && r.data ? r.data.session : null); });
+}
+/* ===== END DEPOT DATA (Phase 2) ===== */
+
 let COLLECTION = normalizeEras(SEED.concat(USER_CARDS));
 function rebuild(){ COLLECTION = normalizeEras(SEED.concat(USER_CARDS)); document.getElementById('countChip').textContent=`${COLLECTION.length} cards`; }
 
@@ -1392,7 +1588,7 @@ function brefURL(c){
 function escAttr(s){ return String(s).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
 function imgFail(el){ if(el.dataset.failed)return; el.dataset.failed="1"; const ph=document.createElement("div"); ph.className=el.className+" img-missing"; ph.setAttribute("style",el.getAttribute("style")||""); ph.title="Image unavailable (broken link or hotlinking blocked)"; ph.innerHTML="<span class=\"ph-text err\">image unavailable</span>"; el.replaceWith(ph); }
 function imgOk(el){ el.classList.add("loaded"); }
-function removeFromDepot(idx,e){ if(e)e.stopPropagation(); const c=COLLECTION[idx]; if(!c){ toast("Card not found."); return; } if(!confirm("Remove "+(c.name||"this card")+" from the depot? This cannot be undone.")) return; const ui=USER_CARDS.indexOf(c); if(ui===-1){ toast("This card cannot be removed."); return; } USER_CARDS.splice(ui,1); persist(); rebuild(); if(mode==="binder"){ renderBinder(); } else { renderSetPicker(); } closeSpot(null,true); toast((c.name||"Card")+" removed from the depot."); }
+async function removeFromDepot(idx,e){ if(e)e.stopPropagation(); const c=COLLECTION[idx]; if(!c){ toast("Card not found."); return; } if(!confirm("Remove "+(c.name||"this card")+" from the depot? This cannot be undone.")) return; const ui=USER_CARDS.indexOf(c); if(ui===-1){ toast("This card cannot be removed."); return; } if(depotLoggedIn()){ if(!(await depotDeleteCard(c))){ return; } USER_CARDS.splice(ui,1); } else { USER_CARDS.splice(ui,1); persist(); } rebuild(); if(mode==="binder"){ renderBinder(); } else { renderSetPicker(); } closeSpot(null,true); toast((c.name||"Card")+" removed from the depot."); }
 function findStatsFor(idx,e){
   if(e)e.stopPropagation();
   const c=COLLECTION[idx];
@@ -1982,7 +2178,7 @@ function parseStats(s){
   s.split(',').forEach(pair=>{const [k,...v]=pair.split(':');if(k&&v.length)out[k.trim()]=v.join(':').trim();});
   return out;
 }
-function saveCard(){
+async function saveCard(){
   const name=document.getElementById('f-name').value.trim();
   if(!name){toast("A card needs a player name.");document.getElementById('f-name').focus();return;}
   const card={
@@ -2002,8 +2198,14 @@ function saveCard(){
     stats:parseStats(document.getElementById('f-stats').value),
     bio:document.getElementById('f-bio').value.trim()||""
   };
-  USER_CARDS.push(card);
-  if(!persist()){ USER_CARDS.pop(); return; }
+  if(depotLoggedIn()){
+    const _id = await depotInsertCard(card);
+    if(!_id){ return; }
+    USER_CARDS.push(card);
+  } else {
+    USER_CARDS.push(card);
+    if(!persist()){ USER_CARDS.pop(); return; }
+  }
   rebuild();
   document.getElementById('formScrim').classList.remove('open');
   curEra=card.era;
@@ -2054,11 +2256,9 @@ function setCardPhotoById(id, rawDataURL){
   compressForStore(rawDataURL).then(small=>{
     const prev = USER_CARDS[ui].photoFront;
     USER_CARDS[ui].photoFront = small;
-    if(!persist()){ USER_CARDS[ui].photoFront = prev; return; }
-    rebuild();
-    renderBinder();
-    if(typeof spotIdx==='number' && COLLECTION[spotIdx] && COLLECTION[spotIdx].id===id){ openSpot(spotIdx); }
-    toast("Image attached to "+(USER_CARDS[ui].name||"card")+".");
+    const _finishUI=function(){ rebuild(); renderBinder(); if(typeof spotIdx==='number' && COLLECTION[spotIdx] && COLLECTION[spotIdx].id===id){ openSpot(spotIdx); } toast("Image attached to "+(USER_CARDS[ui].name||"card")+"."); };
+    if(depotLoggedIn()){ depotUpdateCardPhoto(USER_CARDS[ui]).then(function(ok){ if(!ok){ USER_CARDS[ui].photoFront = prev; rebuild(); renderBinder(); return; } _finishUI(); }); }
+    else { if(!persist()){ USER_CARDS[ui].photoFront = prev; return; } _finishUI(); }
   });
 }
 function fileToDataURL(file){
