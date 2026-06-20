@@ -813,6 +813,10 @@ body{
   .statgrid td{font-size:.62rem;}
 }
 
+.rolo-var-flag{display:inline-block;margin:0 6px 4px 0;padding:2px 8px;border-radius:4px;background:#7a2e00;color:#ffd9b3;font-weight:600;font-size:.8rem;border:1px solid #ff8c2e;}
+.rolo-var-chip{display:inline-block;margin:0 4px 4px 0;padding:2px 9px;border-radius:12px;background:#1e2a38;color:#cfe2ff;border:1px solid #3a5a80;font-size:.8rem;cursor:pointer;font-family:inherit;}
+.rolo-var-chip:hover{background:#27405c;border-color:#5a8ac0;}
+.rolo-var-chip.sel{background:#2e7d32;color:#fff;border-color:#7bd17f;font-weight:700;}
 </style>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 <!-- ===== DEPOT AUTH (Phase 1): Supabase client + auth UI styles ===== -->
@@ -1914,17 +1918,39 @@ function roloBrandPick(){
     if(v){ populateSetOptions(v); }
   /* offer the actual card number(s) for this brand from the checklist */
   const nums=[...new Set((ROLO_YEAR_CARDS||[]).filter(c=>c.brand===v).map(c=>c.number).filter(Boolean))];
+  // Card # auto-fill + variation flag (Add-a-Card UX)
   if(nums.length===1){
     numIn.value=nums[0]; document.getElementById('f-num').value=nums[0];
-    note.textContent='checklist #'+nums[0];
+    note.innerHTML=''; note.appendChild(document.createTextNode('checklist #'+nums[0]));
   } else if(nums.length>1){
-    numIn.value=''; document.getElementById('f-num').value='';
-    note.textContent='checklist #s: '+nums.join(', ');
-  } else { note.textContent=''; }
+    var bases=nums.filter(function(n){return /^[0-9]+$/.test(String(n).trim());});
+    bases.sort(function(a,b){return parseInt(a,10)-parseInt(b,10);});
+    var base = bases.length ? bases[0] : nums[0];
+    numIn.value=base; document.getElementById('f-num').value=base;
+    renderCardVariations(note, nums, base);
+  } else { note.innerHTML=''; }
 resolveCurrentCardUrl();
 }
 function roloBrandCustom(){
   document.getElementById('f-set').value=document.getElementById('rolo-brand-custom').value.trim();
+}
+function renderCardVariations(note, nums, current){
+  note.innerHTML='';
+  var flag=document.createElement('span'); flag.className='rolo-var-flag';
+  flag.textContent='⚠ '+nums.length+' versions — base #'+current+' selected:';
+  note.appendChild(flag);
+  nums.forEach(function(n){
+    var chip=document.createElement('button'); chip.type='button';
+    chip.className='rolo-var-chip'+(String(n)===String(current)?' sel':'');
+    chip.textContent='#'+n; chip.title='Use card #'+n;
+    chip.onclick=function(){
+      document.getElementById('rolo-num').value=n; roloNumPick();
+      var sib=note.querySelectorAll('.rolo-var-chip');
+      for(var i=0;i<sib.length;i++){ sib[i].classList.toggle('sel', sib[i]===chip); }
+      flag.textContent='⚠ '+nums.length+' versions — #'+n+' selected:';
+    };
+    note.appendChild(chip);
+  });
 }
 function roloNumPick(){
   document.getElementById('f-num').value=document.getElementById('rolo-num').value; resolveCurrentCardUrl();
