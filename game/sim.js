@@ -607,6 +607,42 @@ function clearFlightLine() {
     pitchIdx: -1         // index into current PA's pitch sequence (pitch mode only)
   };
 
+  // ---- Lineup-column highlight: single source of truth = batting team + batterIdx ----
+  function lineupColumns() {
+    var stage = $("stage") || document.body;
+    var cols = Array.prototype.filter.call(stage.querySelectorAll("div"), function(d){
+      if (d.children.length !== 9) return false;
+      for (var i=0;i<9;i++){ if (d.children[i].children.length !== 2) return false; }
+      return true;
+    });
+    return cols;
+  }
+  function nameSpanOf(row){
+    // Row has a position label (1-2 char code) and a player name; order differs
+    // between left/right columns. Pick the child that is NOT a position code.
+    var POS = { "P":1,"C":1,"1B":1,"2B":1,"3B":1,"SS":1,"LF":1,"CF":1,"RF":1,"DH":1 };
+    var kids = row.children, cand = null;
+    for (var i=0;i<kids.length;i++){
+      var t = kids[i].textContent.trim();
+      if (!POS[t]) { cand = kids[i]; break; }
+    }
+    return cand || kids[kids.length - 1];
+  }
+  function highlightLineup(teamCode, batIdx) {
+    var cols = lineupColumns();
+    if (!cols.length) return;
+    // Clear name highlight on every row of every detected lineup column.
+    cols.forEach(function(col){
+      for (var i=0;i<9;i++){ nameSpanOf(col.children[i]).style.color = "#ffffff"; }
+    });
+    // Decide which column belongs to the batting team.
+    // mudcats = left column (lower X), acorns = right column (higher X).
+    var ordered = cols.slice().sort(function(a,b){ return a.getBoundingClientRect().left - b.getBoundingClientRect().left; });
+    var col = (teamCode === "acorns") ? ordered[ordered.length-1] : ordered[0];
+    if (col && batIdx >= 0 && batIdx < 9) {
+      nameSpanOf(col.children[batIdx]).style.color = "#f6c81e";
+    }
+  }
   function applyEvent(ev, skipCount) {
     // Inning indicator
     setInning(ev.inning, ev.half);
@@ -625,6 +661,8 @@ function clearFlightLine() {
     setPanel('panel-inhole', ev.inHole.name, ev.inHole.avg, ev.inHole.hr, ev.inHole.rbi);
     // Pitching box
     setPanel('pitching-box', ev.pitcher.name, ev.pitcher.era, ev.pitcher.w, ev.pitcher.l);
+    // Sync lineup-column highlight to the current batter (same source as AT BAT/ON DECK/IN THE HOLE)
+    highlightLineup(ev.teamCode, ev.batterIdx);
 
     // Runners on base
     showRunners(ev.basesAfter);
