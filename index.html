@@ -1201,6 +1201,7 @@ body.logged-out #appFrame{display:none !important;}
 const SEED = [];
 
 const ERAS = {
+  all:{title:"All", range:"every era", skin:"skin-modern", blurb:"Your entire collection, sorted A→Z by player."},
   vintage:{title:"The Vintage Years", range:"≤ 1985", skin:"skin-vintage",
     blurb:"Thick stock, hand-tinted color, and cardboard that smells like a drugstore in 1978."},
   junk:{title:"The Junk Wax Era", range:"1986–1993", skin:"skin-junk",
@@ -1208,7 +1209,7 @@ const ERAS = {
   modern:{title:"The Modern Game", range:"1994 onward", skin:"skin-modern",
     blurb:"Premium foil, sharp photography, and the chase for the short print."}
 };
-const ERA_ORDER = ["vintage","junk","modern"];
+const ERA_ORDER = ["all","vintage","junk","modern"];
 // Derive era from a card's year: ≤ 1985 Vintage, 1986-1993 Junk Wax, 1994+ Modern.
 function eraFromYear(y){
   const n = parseInt(y,10);
@@ -1441,16 +1442,17 @@ function cardHTML(card, idx, skin){
 }
 
 /* ---------- binder ---------- */
+function eraCards(era){ if(era==="all"){ return COLLECTION.slice().sort(function(a,b){ return String(a.player||"").toLowerCase().localeCompare(String(b.player||"").toLowerCase()); }); } return COLLECTION.filter(function(c){ return c.era===era; }); }
 function renderEraTabs(){
   document.getElementById('eraTabs').innerHTML = ERA_ORDER.map(k=>{
-    const e=ERAS[k], n=COLLECTION.filter(c=>c.era===k).length;
+    const e=ERAS[k], n=(k==="all"?COLLECTION.length:COLLECTION.filter(c=>c.era===k).length);
     return `<button class="era-tab ${k===curEra?'active':''}" onclick="selectEra('${k}')">
       ${e.title}<small>${e.range} · ${n} cards</small></button>`;
   }).join('');
 }
 function selectEra(k){curEra=k;curPage=0;renderBinder()}
 function turnPage(d){
-  const cards=COLLECTION.filter(c=>c.era===curEra);
+  const cards=eraCards(curEra);
   const pages=Math.max(1,Math.ceil(cards.length/PER_PAGE));
   curPage=Math.min(pages-1,Math.max(0,curPage+d));
   renderBinder();
@@ -1462,7 +1464,7 @@ function renderBinder(){
   const e=ERAS[curEra];
   document.getElementById('eraTitle').textContent=e.title;
   document.getElementById('eraBlurb').textContent=e.blurb;
-  const cards=COLLECTION.filter(c=>c.era===curEra);
+  const cards=eraCards(curEra);
   const pages=Math.max(1,Math.ceil(cards.length/PER_PAGE));
   const start=curPage*PER_PAGE;
   const slice=cards.slice(start,start+PER_PAGE);
@@ -2251,7 +2253,7 @@ async function saveCard(){
   document.getElementById('formScrim').classList.remove('open');
   curEra=card.era;
   setMode('binder');
-  const cards=COLLECTION.filter(c=>c.era===curEra);
+  const cards=eraCards(curEra);
   curPage=Math.max(0,Math.ceil(cards.length/PER_PAGE)-1);
   renderBinder();
   toast(`${name} added to the depot.`);
