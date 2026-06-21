@@ -950,8 +950,41 @@ body{
   .auth-toggle a{color:var(--brass);cursor:pointer;text-decoration:underline}
 </style>
 
+<!-- PHASE5-SHARE-CSS -->
+<style id="phase5-share-style">
+  #shareBtn{ font-family:"Press Start 2P",monospace; font-size:.5rem; line-height:1.4; cursor:pointer;
+    background:var(--brass,#f8d000); color:#1a1300; border:3px solid #000; box-shadow:3px 3px 0 #000;
+    padding:.45rem .6rem; margin-left:.5rem; text-transform:uppercase; letter-spacing:.5px; }
+  #shareBtn:active{ transform:translate(2px,2px); box-shadow:1px 1px 0 #000; }
+  #shareBtn.sharing{ background:#6fcf5f; color:#08210a; }
+  /* Read-only shared view: hide every owner / edit control */
+  body.shared-mode #authArea,
+  body.shared-mode #m-add,
+  body.shared-mode #shareBtn,
+  body.shared-mode .spot-remove,
+  body.shared-mode .btn-google{ display:none !important; }
+  body.shared-mode #appFrame{ display:block !important; }
+  #shareBanner{ display:none; font-family:"Press Start 2P",monospace; font-size:.6rem; line-height:1.7;
+    text-align:center; color:#1a1300; background:var(--brass,#f8d000);
+    border-bottom:4px solid #000; padding:.7rem 1rem; }
+  body.shared-mode #shareBanner{ display:block; }
+  #sharedUnavailable{ display:none; }
+  body.shared-unavailable #loginGate,
+  body.shared-unavailable #appFrame{ display:none !important; }
+  body.shared-unavailable #sharedUnavailable{ display:flex; position:fixed; inset:0; z-index:60;
+    align-items:center; justify-content:center; background:#0a1c3c; }
+  #sharedUnavailable .su-card{ background:var(--sb-blue,#0d2d5c); border:4px solid #000; box-shadow:8px 8px 0 #000;
+    max-width:460px; padding:2rem; text-align:center; }
+  #sharedUnavailable .su-title{ font-family:"Press Start 2P",monospace; color:var(--brass,#f8d000);
+    font-size:.9rem; line-height:1.7; margin-bottom:1rem; }
+  #sharedUnavailable .su-sub{ font-family:"Press Start 2P",monospace; color:#dfeaff; font-size:.55rem; line-height:1.9; }
+</style>
+<!-- /PHASE5-SHARE-CSS -->
+
 </head>
 <body>
+  <div id="sharedUnavailable"><div class="su-card"><div class="su-title">Not available</div><div class="su-sub">This collection isn&rsquo;t available.</div></div></div>
+
 <!-- Phase 4: login-required gate. Logged-out users see ONLY this; no collection. -->
 <style>
 #loginGate{display:none;position:fixed;inset:0;z-index:40;align-items:center;justify-content:center;
@@ -977,6 +1010,8 @@ body.logged-out #appFrame{display:none !important;}
   </div>
 </div>
 <div id="appFrame">
+    <div id="shareBanner"></div>
+
 
 <div class="topbar">
   <div class="brand"><span class="the">The</span>Depot</div>
@@ -987,6 +1022,8 @@ body.logged-out #appFrame{display:none !important;}
     <span class="auth-email" id="authEmail" style="display:none"></span>
     <button class="auth-btn" id="authLoginBtn" type="button" onclick="DepotAuth.openModal()">Log in</button>
     <button class="auth-btn" id="authLogoutBtn" type="button" style="display:none" onclick="DepotAuth.logout()">Log out</button>
+      <button class="auth-btn" id="shareBtn" type="button" style="display:none" onclick="DepotShare.toggle()">Share my collection</button>
+
   </div>
 
 </div>
@@ -2347,6 +2384,183 @@ function setAuthUI(loggedIn){
 /* ---------- init ---------- */
 rebuild();
 setAuthUI(false);
+
+/* ===== PHASE5-SHARE-JS (injected at tail of body script; shares scope with USER_CARDS, COLLECTION, mode, DEPOT_COLLECTION_ID) ===== */
+;(function(){
+  function $id(x){ return document.getElementById(x); }
+  function notify(msg){
+    try{ if(typeof toast==='function'){ toast(msg); return; } }catch(e){}
+    var t=$id('depotToast'); if(t){ t.textContent=msg; t.classList.add('show'); setTimeout(function(){ t.classList.remove('show'); },2200); }
+  }
+  function getShareToken(){
+    try{ return new URLSearchParams(location.search).get('share'); }catch(e){ return null; }
+  }
+  function shareUrlFor(token){ return location.origin + location.pathname + '?share=' + encodeURIComponent(token); }
+  function sbc(){ return (typeof depotSB==='function') ? depotSB() : (window.supabaseClient||null); }
+
+  /* Are we rendering a read-only shared view? Guards below read this. */
+  window.__DEPOT_SHARED = false;
+  function sharedActive(){ return !!window.__DEPOT_SHARED; }
+
+  /* ---------- Owner share control ---------- */
+  window.DepotShare = {
+    isSharing:false,
+    busy:false,
+
+    collId:function(){
+      try{ if(typeof DEPOT_COLLECTION_ID!=='undefined' && DEPOT_COLLECTION_ID) return DEPOT_COLLECTION_ID; }catch(e){}
+      return null;
+    },
+
+    setUI:function(on){
+      this.isSharing=!!on;
+      var b=$id('shareBtn'); if(!b) return;
+      if(on){ b.textContent='Stop sharing'; b.classList.add('sharing'); }
+      else { b.textContent='Share my collection'; b.classList.remove('sharing'); }
+    },
+
+    /* Reflect current is_shared state from the DB for the logged-in owner. */
+    refresh:async function(){
+      var s=sbc(); var cid=this.collId();
+      if(!s || !cid){ this.setUI(false); return; }
+      try{
+        var r=await s.from('collections').select('is_shared').eq('id',cid).maybeSingle();
+        this.setUI(!!(r && r.data && r.data.is_shared));
+      }catch(e){ /* leave UI as-is */ }
+    },
+
+    toggle:async function(){
+      if(this.busy) return;
+      if(this.isSharing) await this.stop(); else await this.start();
+    },
+
+    start:async function(){
+      var s=sbc(); var cid=this.collId();
+      if(!s){ notify('Not ready.'); return; }
+      if(!cid){ notify('No collection to share yet.'); return; }
+      this.busy=true;
+      try{
+        var r=await s.rpc('share_collection',{ p_collection_id: cid });
+        if(r.error){ console.warn('[DepotShare] share error', r.error); notify('Could not start sharing.'); return; }
+        var token=r.data; if(token && typeof token==='object'){ token=token.share_token||token.token||token[0]; }
+        if(!token){ notify('Could not start sharing.'); return; }
+        var url=shareUrlFor(token);
+        var copied=false;
+        try{ await navigator.clipboard.writeText(url); copied=true; }catch(e){ copied=fallbackCopy(url); }
+        this.setUI(true);
+        notify(copied ? 'Link copied!' : 'Sharing on. Copy: '+url);
+        if(!copied) window.prompt('Copy your share link:', url);
+      } finally { this.busy=false; }
+    },
+
+    stop:async function(){
+      var s=sbc(); var cid=this.collId();
+      if(!s || !cid){ this.setUI(false); return; }
+      this.busy=true;
+      try{
+        var r=await s.rpc('unshare_collection',{ p_collection_id: cid });
+        if(r.error){ console.warn('[DepotShare] unshare error', r.error); notify('Could not stop sharing.'); return; }
+        this.setUI(false);
+        notify('Sharing stopped.');
+      } finally { this.busy=false; }
+    }
+  };
+
+  function fallbackCopy(text){
+    try{
+      var ta=document.createElement('textarea'); ta.value=text;
+      ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta);
+      ta.focus(); ta.select(); var ok=document.execCommand('copy'); document.body.removeChild(ta); return ok;
+    }catch(e){ return false; }
+  }
+
+  /* ---------- Read-only shared view ---------- */
+  async function enterSharedView(token){
+    var s=sbc();
+    if(!s){ showUnavailable(); return; }
+    var name=null, rows=null;
+    try{
+      var rc=await s.rpc('get_shared_collection',{ p_token: token });
+      if(rc.error){ console.warn('[DepotShare] get_shared_collection', rc.error); showUnavailable(); return; }
+      var cd=rc.data; if(Array.isArray(cd)) cd=cd[0];
+      if(!cd){ showUnavailable(); return; }   /* invalid / not shared / unshared */
+      name=cd.name || 'Shared';
+      var rr=await s.rpc('get_shared_cards',{ p_token: token });
+      if(rr.error){ console.warn('[DepotShare] get_shared_cards', rr.error); showUnavailable(); return; }
+      rows=rr.data || [];
+    }catch(e){ console.warn('[DepotShare] shared view error', e); showUnavailable(); return; }
+
+    window.__DEPOT_SHARED = true;
+
+    /* Map + resolve photos using the existing pipeline (anon client + shared storage policy). */
+    var cards=[];
+    try{ cards=(rows||[]).map(rowToCard); }catch(e){ console.warn('[DepotShare] map', e); }
+    for(var i=0;i<cards.length;i++){ try{ await depotResolveCardPhotos(cards[i]); }catch(e){} }
+
+    /* Feed the existing render pipeline. */
+    try{
+      USER_CARDS.length = 0;
+      cards.forEach(function(c){ USER_CARDS.push(c); });
+    }catch(e){ /* USER_CARDS not in scope -> fall back below */ window.USER_CARDS = cards; }
+
+    /* Flip UI into shared, read-only mode. */
+    document.body.classList.remove('logged-out');
+    document.body.classList.add('shared-mode');
+    var lg=$id('loginGate'); if(lg) lg.classList.remove('show');
+    var banner=$id('shareBanner'); if(banner){ banner.textContent='Viewing '+name+' (read-only)'; }
+    var chip=$id('countChip'); /* count set by rebuild */
+
+    try{ if(typeof rebuild==='function') rebuild(); }catch(e){ console.warn('[DepotShare] rebuild', e); }
+    try{ if(typeof setMode==='function') setMode('binder'); else if(typeof renderBinder==='function') renderBinder(); }catch(e){ console.warn('[DepotShare] render', e); }
+  }
+
+  function showUnavailable(){
+    document.body.classList.remove('shared-mode');
+    document.body.classList.add('shared-unavailable');
+    var lg=$id('loginGate'); if(lg) lg.classList.remove('show');
+  }
+
+  /* ---------- Defense-in-depth: neutralise mutating actions while in shared view ---------- */
+  function guard(name){
+    var orig=window[name];
+    if(typeof orig!=='function') return;
+    window[name]=function(){
+      if(sharedActive()){ console.warn('[DepotShare] blocked '+name+' in read-only shared view'); return; }
+      return orig.apply(this, arguments);
+    };
+  }
+  ['removeFromDepot','saveCard','openForm','depotInsertCard','depotDeleteCard','depotUpdateCardPhoto'].forEach(guard);
+
+  /* ---------- Owner button visibility tied to auth ---------- */
+  function reflectShareBtn(loggedIn){
+    var b=$id('shareBtn'); if(!b) return;
+    if(loggedIn && !sharedActive()){
+      b.style.display='';
+      try{ DepotShare.refresh(); }catch(e){}
+    } else {
+      b.style.display='none';
+    }
+  }
+  try{
+    var s0=sbc();
+    if(s0 && s0.auth && s0.auth.onAuthStateChange){
+      s0.auth.onAuthStateChange(function(evt, session){ reflectShareBtn(!!(session && session.user)); });
+    }
+    if(s0 && s0.auth && s0.auth.getSession){
+      s0.auth.getSession().then(function(r){ reflectShareBtn(!!(r && r.data && r.data.session)); });
+    }
+  }catch(e){ console.warn('[DepotShare] auth hook', e); }
+
+  /* ---------- Bootstrap ---------- */
+  function boot(){
+    var token=getShareToken();
+    if(token){ enterSharedView(token); }
+  }
+  if(document.readyState==='loading'){ document.addEventListener('DOMContentLoaded', boot); }
+  else { boot(); }
+})();
+<!-- /PHASE5-SHARE-JS -->
+
 </script>
 </body>
 </html>
