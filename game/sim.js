@@ -212,7 +212,8 @@
       if (ev.hit) hits++;
       runs += ev.runs;
       if (ev.outs) outs += ev.outs;
-      ev.basesAfter = bases.slice();
+      ev.endHalf = (outs >= 3);
+      ev.basesAfter = ev.endHalf ? [null, null, null] : bases.slice();
       ev.outsAfter = outs;
       events.push(ev);
       idx++;
@@ -267,6 +268,83 @@
   function $(id) { return document.getElementById(id); }
   function setText(id, v) { var e = $(id); if (e) e.textContent = String(v); }
 
+// ---- Pitch-stat tracking (PC / K / BB) + pitch speed unit ------------
+var PITCH = { pc: 0, k: 0, bb: 0, pcSpan: null, kSpan: null, bbSpan: null, speedSpan: null, resolved: false };
+function resolvePitchSpans() {
+  if (PITCH.resolved) return;
+  var speedLine = $('last-pitch-speed');
+  if (speedLine) PITCH.speedSpan = speedLine.querySelector('span');
+  var pcLine = speedLine ? speedLine.previousElementSibling : null;
+  if (pcLine) {
+    pcLine.style.whiteSpace = 'nowrap';
+    pcLine.style.fontSize = '15px';
+    pcLine.style.letterSpacing = '0px';
+    var _box = $('pitch-info');
+    if (_box) { _box.style.width = '300px'; _box.style.left = '430px'; }
+    pcLine.innerHTML = 'PC <span style=\"color:#fff;\">0</span> K <span style=\"color:#fff;\">0</span> BB <span id=\"pitch-bb-span\" style=\"color:#fff;\">0</span>';
+    var spans = pcLine.querySelectorAll('span');
+    PITCH.pcSpan = spans[0]; PITCH.kSpan = spans[1]; PITCH.bbSpan = spans[2];
+  }
+  PITCH.resolved = !!(PITCH.pcSpan && PITCH.kSpan && PITCH.bbSpan);
+}
+function renderPitchStats() {
+  resolvePitchSpans();
+  if (PITCH.pcSpan) PITCH.pcSpan.textContent = PITCH.pc;
+  if (PITCH.kSpan) PITCH.kSpan.textContent = PITCH.k;
+  if (PITCH.bbSpan) PITCH.bbSpan.textContent = PITCH.bb;
+}
+function setPitchSpeed(mph) {
+  resolvePitchSpans();
+  if (PITCH.speedSpan) { PITCH.speedSpan.textContent = mph; }
+  else { setText('last-pitch-speed', mph + ' MPH'); }
+}
+function incPC(n) { PITCH.pc += (n || 1); renderPitchStats(); }
+function addK() { PITCH.k += 1; renderPitchStats(); }
+function addBB() { PITCH.bb += 1; renderPitchStats(); }
+function resetPitchStats() { PITCH.pc = 0; PITCH.k = 0; PITCH.bb = 0; renderPitchStats(); }
+function pitchesInPA(ev) { return (ev && ev.pitches && ev.pitches.length) ? ev.pitches.length : 1; }
+// ---- Ball-flight line overlay (static dotted line: home -> hit field) -
+var HOME_PT = { x: 1000, y: 1180 };
+var FIELD_ENDPOINTS = {
+  'LEFT': { x: 470, y: 470 }, 'LEFT-CENTER': { x: 735, y: 420 }, 'CENTER': { x: 1000, y: 400 },
+  'RIGHT-CENTER': { x: 1265, y: 420 }, 'RIGHT': { x: 1530, y: 470 }
+};
+function ensureFlightLine() {
+  if ($('ball-flight-svg')) return $('ball-flight-line');
+  var stage = $('stage');
+  if (!stage) { var r1 = $('sprite-runner-1b'); stage = r1 ? r1.parentElement : document.body; }
+  var svgNS = 'http://www.w3.org/2000/svg';
+  var svg = document.createElementNS(svgNS, 'svg');
+  svg.id = 'ball-flight-svg';
+  svg.setAttribute('viewBox', '0 0 2000 1333');
+  svg.setAttribute('style', 'position:absolute;left:0;top:0;width:2000px;height:1333px;pointer-events:none;z-index:40;');
+  var line = document.createElementNS(svgNS, 'line');
+  line.id = 'ball-flight-line';
+  line.setAttribute('stroke', '#ffe14d');
+  line.setAttribute('stroke-width', '6');
+  line.setAttribute('stroke-dasharray', '14 12');
+  line.setAttribute('stroke-linecap', 'round');
+  line.setAttribute('x1', HOME_PT.x); line.setAttribute('y1', HOME_PT.y);
+  line.setAttribute('x2', HOME_PT.x); line.setAttribute('y2', HOME_PT.y);
+  line.style.display = 'none';
+  svg.appendChild(line);
+  stage.appendChild(svg);
+  return line;
+}
+function showFlightLine(loc) {
+  var line = ensureFlightLine();
+  if (!line) return;
+  var end = FIELD_ENDPOINTS[loc] || FIELD_ENDPOINTS['CENTER'];
+  line.setAttribute('x1', HOME_PT.x); line.setAttribute('y1', HOME_PT.y);
+  line.setAttribute('x2', end.x); line.setAttribute('y2', end.y);
+  line.style.display = 'block';
+}
+function clearFlightLine() {
+  var line = $('ball-flight-line');
+  if (line) line.style.display = 'none';
+}
+
+
   // Collect the leaf text nodes of a panel's text column: [name, stat1, stat2, stat3]
   function panelLeaves(panelId) {
     var p = $(panelId); if (!p) return null;
@@ -283,10 +361,17 @@
     return leaves;
   }
   // Set a player panel: name + three numeric stats (avg/era, hr/w, rbi/l)
+  // ---- Per-player face library (consistent per player, varied across lineup) ----
+  var FACE_FILES = ["assets/faces/face_01_light_clean_blonde.png", "assets/faces/face_02_light_mustache_brown.png", "assets/faces/face_03_light_beard_red.png", "assets/faces/face_04_light_stubble_black.png", "assets/faces/face_05_light_goatee_auburn.png", "assets/faces/face_06_medlight_clean_sandy.png", "assets/faces/face_07_medlight_full_brown.png", "assets/faces/face_08_medlight_mustache_black.png", "assets/faces/face_09_med_beard_black.png", "assets/faces/face_10_med_clean_dkbrown.png", "assets/faces/face_11_med_goatee_black.png", "assets/faces/face_12_medtan_stubble_black.png", "assets/faces/face_13_medtan_full_black.png", "assets/faces/face_14_medtan_clean_black.png", "assets/faces/face_15_brown_beard_black.png", "assets/faces/face_16_brown_mustache_black.png", "assets/faces/face_17_brown_clean_black.png", "assets/faces/face_18_dkbrown_goatee_black.png", "assets/faces/face_19_dkbrown_full_black.png", "assets/faces/face_20_dark_clean_black.png", "assets/faces/face_21_dark_beard_gray.png", "assets/faces/face_22_med_clean_gray.png"];
+  function faceHash(name) { var h = 0; name = String(name || ""); for (var i = 0; i < name.length; i++) { h = (h * 31 + name.charCodeAt(i)) >>> 0; } return h; }
+  function faceForPlayer(name) { return FACE_FILES[faceHash(name) % FACE_FILES.length]; }
+  function setFace(panelId, name) { var p = $(panelId); if (!p) return; var img = p.querySelector("img"); if (img && name) img.src = faceForPlayer(name); }
   function setPanel(panelId, name, s1, s2, s3) {
     var L = panelLeaves(panelId);
     if (!L || L.length < 4) return;
     L[0].textContent = name;
+    setFace(panelId, name);
+    if (panelId === "atbat-box") { L[0].style.color = ""; L[0].style.fontWeight = ""; L[0].style.textShadow = ""; }
     L[1].textContent = s1;
     L[2].textContent = s2;
     L[3].textContent = s3;
@@ -317,8 +402,18 @@
     ensure('sprite-runner-2b', 'base-2b');
     ensure('sprite-runner-3b', 'base-3b');
   }
+  // ---- Invented retro-game ad tile (replaces energy-drink tile; original IP) ----
+  function renderAdTile() {
+    var ad = $("tile-ad"); if (!ad) return;
+    ad.style.background = "#142a52"; ad.style.borderColor = "#4d8cff"; ad.style.color = "#dfe9ff";
+    ad.innerHTML = "" +
+      '<div style="color:#ffe14d;font-size:11px;letter-spacing:1px;">NEW GAME</div>' +
+      '<div style="color:#fff;font-size:17px;line-height:1.15;margin:4px 0;">DIAMOND<br>QUEST</div>' +
+      '<div style="color:#9fc0ff;font-size:9px;letter-spacing:1px;">AN 8-BIT BALL SAGA</div>';
+  }
   function showRunners(bases) {
     ensureRunnerSprites();
+    renderAdTile();
     [['sprite-runner-1b', 0], ['sprite-runner-2b', 1], ['sprite-runner-3b', 2]].forEach(function (pair) {
       var el = $(pair[0]);
       if (el) el.style.display = bases[pair[1]] ? 'block' : 'none';
@@ -400,7 +495,7 @@
             onDeck: team.lineup[(bi + 1) % 9], inHole: team.lineup[(bi + 2) % 9],
             pitcher: pit,
             outcome: ev.outcome, location: ev.location, error: !!ev.error,
-            runsOnPlay: ev.runs, basesAfter: bases.slice(), outsAfter: outs,
+            runsOnPlay: ev.runs, basesAfter: (outs >= 3 ? [null, null, null] : bases.slice()), outsAfter: outs,
             text: resultText(ev, rng),
             pitches: buildPitchSequence(ev.outcome, rng),
             lineSnapshot: null // filled below
@@ -535,14 +630,25 @@
     showRunners(ev.basesAfter);
 
     // Pitch info (cosmetic): last pitch speed/type
-    var speeds = [88, 91, 93, 78, 84, 95, 72];
-    var types = ['FASTBALL', 'CURVE', 'SLIDER', 'CHANGEUP', 'SINKER'];
-    if (!skipCount) {
-      setText('last-pitch-speed', speeds[(Math.random() * speeds.length) | 0]);
-      setText('last-pitch-type', types[(Math.random() * types.length) | 0]);
-    }
+  var speeds = [88, 91, 93, 78, 84, 95, 72];
+  var types = ['FASTBALL', 'CURVE', 'SLIDER', 'CHANGEUP', 'SINKER'];
+  if (!skipCount) {
+    var lastP = (ev.pitches && ev.pitches.length) ? ev.pitches[ev.pitches.length - 1] : null;
+    setPitchSpeed(lastP ? lastP.speed : speeds[(Math.random() * speeds.length) | 0]);
+    setText('last-pitch-type', lastP ? lastP.type : types[(Math.random() * types.length) | 0]);
+  }
+  // Pitch-count tally. In batter/rapid the PA resolves whole here; in pitch
+  // mode the pitches were already counted (skipCount=true) so don't re-add.
+  if (!skipCount) {
+    incPC(pitchesInPA(ev));
+    if (ev.outcome === 'K') addK();
+    else if (ev.outcome === 'BB') addBB();
+  }
+  // Ball-flight line: draw toward the hit field on a ball in play; else clear.
+  if (ev.location && ev.outcome !== 'BB' && ev.outcome !== 'K') showFlightLine(ev.location);
+  else clearFlightLine();
 
-    // Result line
+  // Result line
     setText('result-line', ev.text);
 
     // Linescore: recompute running totals up to this event
@@ -583,9 +689,11 @@
     setPanel('panel-ondeck', ev.onDeck.name, ev.onDeck.avg, ev.onDeck.hr, ev.onDeck.rbi);
     setPanel('panel-inhole', ev.inHole.name, ev.inHole.avg, ev.inHole.hr, ev.inHole.rbi);
     setPanel('pitching-box', ev.pitcher.name, ev.pitcher.era, ev.pitcher.w, ev.pitcher.l);
-    setText('last-pitch-speed', pitch.speed);
-    setText('last-pitch-type', pitch.type);
-    // small live call in the result line as the count builds
+  setPitchSpeed(pitch.speed);
+  setText('last-pitch-type', pitch.type);
+  incPC(1);            // count this pitch
+  clearFlightLine();   // new pitch incoming -> clear prior ball-flight line
+  // small live call in the result line as the count builds
     var callWord = pitch.call === 'BALL' ? 'BALL' : pitch.call === 'FOUL' ? 'FOUL' :
                    pitch.call === 'STRIKE' ? 'STRIKE' : 'SWING';
     if (!pitch.terminal) {
@@ -633,11 +741,14 @@
     ev.outsBefore = GAME._outsBefore;
     if (pitch.terminal) {
       // resolve the whole PA (result line, outs, runners, linescore) but keep our count display
-      setText('count-b', pitch.balls);
-      setText('count-s', pitch.strikes);
-      setText('last-pitch-speed', pitch.speed);
-      setText('last-pitch-type', pitch.type);
-      applyEvent(ev, true);          // skipCount=true -> preserves built count
+    setText('count-b', pitch.balls);
+    setText('count-s', pitch.strikes);
+    setPitchSpeed(pitch.speed);
+    setText('last-pitch-type', pitch.type);
+    incPC(1);                               // count the terminal pitch
+    if (ev.outcome === 'K') addK();         // applyEvent skips these (skipCount)
+    else if (ev.outcome === 'BB') addBB();
+    applyEvent(ev, true);          // skipCount=true -> preserves built count
       GAME.pitchIdx = -1;            // PA done; next call starts a new PA
     } else {
       applyPitch(ev, pitch);
@@ -703,6 +814,8 @@
     GAME.line = { mudcats: { innings: [], r: 0, h: 0, e: 0 }, acorns: { innings: [], r: 0, h: 0, e: 0 } };
     clearLinescore();
     showRunners([null, null, null]);
+    resetPitchStats();   // PC/K/BB -> 0 (per-pitcher; pitching change resets too)
+    clearFlightLine();
     setText('result-line', 'PLAY BALL!');
   }
 
