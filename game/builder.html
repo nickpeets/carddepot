@@ -263,11 +263,13 @@
 
   // ----- Master resolver: API by name+year -> card-text fallback -> unusable -----
   async function resolveCard(card){
-    var out={ status:'pending', note:'', team:card.team||'', tendency:'spray', avg:'.000', hr:0, rbi:0, rates:null };
+    var out={ status:'pending', note:'', team:card.team||'', tendency:'spray', avg:'.000', hr:0, rbi:0, rates:null, pos:'' };
     // 1) MLB API by player name + card year
     if(card.player && card.yr){
       var person=await mlbFindPlayer(card.player);
       if(person && !person.ambiguous && person.id){
+        // Capture the player's actual fielding position from the same API lookup.
+        out.pos=(person.primaryPosition && person.primaryPosition.abbreviation) || '';
         var line=await mlbSeasonHitting(person.id, card.yr);
         if(line){
           var rates=lineToRates(line);
@@ -346,7 +348,7 @@
   // ===== HAND-OFF TO SIM =====
   function buildTeamPayload(){
     var lineup=LINEUP.map(function(id){ var c=cardById(id); var rv=RESOLVED[id];
-      return { name:(c.player||'PLAYER').toUpperCase(), avg:rv.avg, hr:rv.hr, rbi:rv.rbi, tendency:rv.tendency||'spray', rates:rv.rates };
+      return { name:(c.player||'PLAYER').toUpperCase(), avg:rv.avg, hr:rv.hr, rbi:rv.rbi, tendency:rv.tendency||'spray', rates:rv.rates, pos:(rv.pos || c.pos || '\u2014') };
     });
     var teamName=(CARDS.length&&deriveTeamName())||'DEPOT';
     return { name:teamName, code:'mudcats', lineup:lineup };

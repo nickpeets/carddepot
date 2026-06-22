@@ -128,7 +128,7 @@
     var raw = (typeof window!=="undefined" && window.__DEPOT_USER_TEAM) || null;
     if(!raw && typeof sessionStorage!=="undefined"){ var j=sessionStorage.getItem("depot_user_team"); if(j) raw=JSON.parse(j); }
     if(!raw || !raw.lineup || raw.lineup.length!==9) return;
-    var lu = raw.lineup.map(function(p){ return batter(p.name||"PLAYER", p.avg||".000", p.hr||0, p.rbi||0, R(p.rates.BB,p.rates.K,p.rates.HR,p.rates._2B,p.rates._3B,p.rates._1B), p.tendency||"spray"); });
+    var lu = raw.lineup.map(function(p){ var b=batter(p.name||"PLAYER", p.avg||".000", p.hr||0, p.rbi||0, R(p.rates.BB,p.rates.K,p.rates.HR,p.rates._2B,p.rates._3B,p.rates._1B), p.tendency||"spray"); b.pos=p.pos||'\u2014'; return b; });
     MUDCATS.lineup = lu;
     if(raw.name) MUDCATS.name = String(raw.name).toUpperCase().slice(0,12);
     if(raw.pitcher){ var pp=raw.pitcher; MUDCATS.pitcher = { name: pp.name||MUDCATS.pitcher.name, era: pp.era||MUDCATS.pitcher.era, w: pp.w||MUDCATS.pitcher.w, l: pp.l||MUDCATS.pitcher.l, BB:(pp.BB!=null?pp.BB:MUDCATS.pitcher.BB), K:(pp.K!=null?pp.K:MUDCATS.pitcher.K), HR:(pp.HR!=null?pp.HR:MUDCATS.pitcher.HR), _2B:(pp._2B!=null?pp._2B:MUDCATS.pitcher._2B), _3B:(pp._3B!=null?pp._3B:MUDCATS.pitcher._3B), _1B:(pp._1B!=null?pp._1B:MUDCATS.pitcher._1B) }; }
@@ -695,6 +695,13 @@ function clearFlightLine() {
     }
     return cand || kids[kids.length - 1];
   }
+  // Complement of nameSpanOf: the row child whose text IS a position code.
+  function posCellOf(row){
+    var POS = { "P":1,"C":1,"1B":1,"2B":1,"3B":1,"SS":1,"LF":1,"CF":1,"RF":1,"DH":1 };
+    var kids = row.children;
+    for (var i=0;i<kids.length;i++){ if (POS[kids[i].textContent.trim()]) return kids[i]; }
+    return null;
+  }
   // ----- Depot: paint visitor (Mudcats/left) lineup-column names from MUDCATS.lineup (once) -----
   var _depotNamesPainted=false;
   function paintDepotVisitorNames(){
@@ -705,7 +712,7 @@ function clearFlightLine() {
       var ordered=cols.slice().sort(function(a,b){ return a.getBoundingClientRect().left-b.getBoundingClientRect().left; });
       var col=ordered[0]; // visitor = left column = Mudcats
       if(!col || !MUDCATS.lineup) return;
-      for(var i=0;i<9 && i<col.children.length;i++){ var sp=nameSpanOf(col.children[i]); if(sp && MUDCATS.lineup[i]) sp.textContent=fmtName(MUDCATS.lineup[i].name); }
+      for(var i=0;i<9 && i<col.children.length;i++){ var row=col.children[i]; var ld=MUDCATS.lineup[i]; if(!ld) continue; var sp=nameSpanOf(row); if(sp) sp.textContent=fmtName(ld.name); var pc=posCellOf(row); if(pc && ld.pos) pc.textContent=ld.pos; }
       _depotNamesPainted=true;
     }catch(e){}
   }
