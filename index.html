@@ -1022,8 +1022,6 @@ body.logged-out #appFrame{display:none !important;}
     <span class="auth-email" id="authEmail" style="display:none"></span>
     <button class="auth-btn" id="authLoginBtn" type="button" onclick="DepotAuth.openModal()">Log in</button>
     <button class="auth-btn" id="authLogoutBtn" type="button" style="display:none" onclick="DepotAuth.logout()">Log out</button>
-      <button class="auth-btn" id="shareBtn" type="button" style="display:none" onclick="DepotShare.toggle()">Share my collection</button>
-
   </div>
 
 </div>
@@ -2532,26 +2530,6 @@ setAuthUI(false);
     };
   }
   ['removeFromDepot','saveCard','openForm','depotInsertCard','depotDeleteCard','depotUpdateCardPhoto'].forEach(guard);
-
-  /* ---------- Owner button visibility tied to auth ---------- */
-  function reflectShareBtn(loggedIn){
-    var b=$id('shareBtn'); if(!b) return;
-    if(loggedIn && !sharedActive()){
-      b.style.display='';
-      try{ DepotShare.refresh(); }catch(e){}
-    } else {
-      b.style.display='none';
-    }
-  }
-  try{
-    var s0=sbc();
-    if(s0 && s0.auth && s0.auth.onAuthStateChange){
-      s0.auth.onAuthStateChange(function(evt, session){ reflectShareBtn(!!(session && session.user)); });
-    }
-    if(s0 && s0.auth && s0.auth.getSession){
-      s0.auth.getSession().then(function(r){ reflectShareBtn(!!(r && r.data && r.data.session)); });
-    }
-  }catch(e){ console.warn('[DepotShare] auth hook', e); }
 
   /* ---------- Bootstrap ---------- */
   function boot(){
