@@ -4,48 +4,111 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>The Depot &mdash; Lineup Builder</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-  :root{ --bg:#0b1622; --panel:#13243a; --ink:#dff3ff; --gold:#ffe14d; --green:#4fd45a; --red:#e23b3b; --blue:#2bb6e0; --dim:#7c93ac; }
+  :root{
+    /* The Depot game palette (extracted from game/index.html) */
+    --field:#0a4a20; --field-deep:#14502a; --field-dark:#0a3318;
+    --green-bright:#2f9a44; --green:#2f9a44;
+    --gold:#f6c81e; --cream:#f3ead0; --cream-dim:#e8d9b0;
+    --leather:#b06a30; --red:#a03318; --red-bright:#d23b3b;
+    --blue:#143f8f; --blue-bright:#3a72d6;
+    --frame:#000; --bg:#0a0a0a;
+    --panel:#0a3318; --ink:#f3ead0; --dim:#cdbd8e;
+  }
   *{box-sizing:border-box}
-  body{margin:0;background:var(--bg);color:var(--ink);font-family:'Courier New',monospace;}
-  header{display:flex;align-items:center;justify-content:space-between;padding:12px 18px;background:#091019;border-bottom:3px solid var(--blue);}
-  header h1{font-size:18px;margin:0;letter-spacing:2px;color:var(--gold);}
-  header .who{font-size:12px;color:var(--dim);}
-  button{font-family:inherit;cursor:pointer;border:none;border-radius:4px;padding:8px 14px;font-weight:bold;}
-  .btn-primary{background:var(--green);color:#062a0c;}
-  .btn-primary:disabled{background:#2c3a2e;color:#5d6f60;cursor:not-allowed;}
-  .btn-ghost{background:transparent;color:var(--ink);border:1px solid var(--dim);}
-  .wrap{max-width:1200px;margin:0 auto;padding:16px;}
-  #loginView{max-width:380px;margin:60px auto;background:var(--panel);padding:24px;border-radius:8px;border:2px solid var(--blue);}
-  #loginView h2{margin:0 0 6px;color:var(--gold);}
-  #loginView p{color:var(--dim);font-size:13px;margin:0 0 16px;}
-  #loginView label{display:block;font-size:12px;margin:10px 0 4px;color:var(--dim);}
-  #loginView input{width:100%;padding:9px;border-radius:4px;background:#0b1622;color:var(--ink);border:1px solid #29415c;}
-  #authMsg{min-height:18px;font-size:12px;margin-top:8px;color:var(--gold);}
-  .grid{display:grid;grid-template-columns:1.3fr 1fr;gap:16px;}
-  .col h3{color:var(--gold);font-size:14px;letter-spacing:1px;border-bottom:1px solid #29415c;padding-bottom:6px;}
-  #cardList{max-height:62vh;overflow:auto;display:flex;flex-direction:column;gap:6px;}
-  .card-row{display:flex;align-items:center;gap:10px;background:var(--panel);padding:8px 10px;border-radius:5px;border:1px solid #20364f;}
-  .card-row .nm{flex:1;}
-  .card-row .nm b{display:block;font-size:13px;}
-  .card-row .nm small{color:var(--dim);font-size:11px;}
-  .pill{font-size:10px;padding:2px 6px;border-radius:8px;font-weight:bold;}
-  .pill.api{background:#10351f;color:var(--green);}
-  .pill.card{background:#3a3410;color:var(--gold);}
-  .pill.bad{background:#3a1414;color:var(--red);}
-  .pill.pending{background:#1a2b3f;color:var(--dim);}
-  .slot{display:flex;align-items:center;gap:8px;background:var(--panel);padding:7px 10px;border-radius:5px;border:1px dashed #34506e;min-height:42px;}
-  .slot.filled{border-style:solid;border-color:var(--green);}
-  .slot .ord{width:34px;color:var(--gold);font-weight:bold;text-align:center;} .slot.oop{border-color:var(--gold);} .oop-tag{color:#04222b;background:var(--gold);font-size:10px;padding:1px 4px;border-radius:3px;font-weight:bold;margin-left:4px;vertical-align:middle;} .pos-sel{background:#10351f;color:var(--green);border:1px solid var(--green);font-size:12px;padding:2px 4px;border-radius:4px;margin-right:6px;} .pos-sel:disabled{opacity:.4;}
-  .slot .who{flex:1;font-size:13px;}
-  .slot .who small{color:var(--dim);display:block;font-size:11px;}
-  #status{margin:10px 0;font-size:13px;}
-  #status .ok{color:var(--green);} #status .no{color:var(--red);}
-  .add-btn{background:var(--blue);color:#04222b;padding:4px 9px;font-size:12px;}
-  .add-btn:disabled{background:#23323c;color:#52646f;cursor:not-allowed;}
-  .rm-btn{background:transparent;color:var(--red);border:1px solid var(--red);padding:2px 8px;font-size:11px;}
-  .muted{color:var(--dim);font-size:12px;}
+  body{
+    margin:0;background:var(--bg);color:var(--ink);
+    font-family:'Press Start 2P',monospace;
+    image-rendering:pixelated;-webkit-font-smoothing:none;
+    line-height:1.6;padding:14px;
+    background-image:repeating-linear-gradient(0deg,#0a0a0a 0 2px,#0c0c0c 2px 4px);
+  }
+  /* ---- header / scoreboard ---- */
+  header{
+    display:flex;align-items:center;justify-content:space-between;
+    gap:10px;padding:14px 16px;background:var(--field);
+    border:4px solid var(--gold);box-shadow:0 0 0 4px var(--frame);
+    margin-bottom:18px;flex-wrap:wrap;
+  }
+  header h1{font-size:15px;margin:0;letter-spacing:1px;color:var(--gold);
+    text-shadow:2px 2px 0 var(--frame);line-height:1.5;}
+  header .who{font-size:9px;color:var(--cream);}
+  button{font-family:inherit;cursor:pointer;border:none;font-weight:bold;
+    image-rendering:pixelated;}
+  .btn-primary{background:var(--gold);color:var(--frame);
+    border:3px solid var(--frame);box-shadow:3px 3px 0 var(--field-dark);
+    padding:12px 16px;font-size:11px;letter-spacing:1px;}
+  .btn-primary:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--field-dark);}
+  .btn-primary:disabled{background:#5a6450;color:#2c3a2a;cursor:not-allowed;
+    box-shadow:3px 3px 0 #1a1a1a;}
+  .btn-ghost{background:transparent;color:var(--cream);
+    border:2px solid var(--cream-dim);padding:7px 10px;font-size:9px;}
+  .wrap{max-width:1200px;margin:0 auto;padding:4px;}
+  /* ---- login ---- */
+  #loginView{max-width:420px;margin:60px auto;background:var(--field);
+    color:var(--cream);padding:24px;border:4px solid var(--gold);
+    box-shadow:0 0 0 4px var(--frame);}
+  #loginView h2{margin:0 0 12px;color:var(--gold);font-size:13px;
+    text-shadow:2px 2px 0 var(--frame);}
+  #loginView p{color:var(--cream-dim);font-size:10px;margin:8px 0;line-height:1.8;}
+  #loginView label{display:block;font-size:9px;margin:12px 0 5px;color:var(--gold);}
+  #loginView input{width:100%;padding:11px;background:var(--field-dark);
+    color:var(--cream);border:2px solid var(--gold);font-family:inherit;
+    font-size:10px;}
+  #authMsg{min-height:18px;font-size:9px;margin-top:10px;color:var(--gold);}
+  /* ---- layout ---- */
+  .grid{display:grid;grid-template-columns:1.3fr 1fr;gap:18px;}
+  .col h3{color:var(--gold);font-size:12px;letter-spacing:1px;
+    border-bottom:3px solid var(--gold);padding-bottom:8px;
+    text-shadow:1px 1px 0 var(--frame);}
+  #cardList{max-height:62vh;overflow:auto;display:flex;flex-direction:column;gap:8px;
+    padding-right:4px;}
+  .card-row{display:flex;align-items:center;gap:10px;background:var(--field);
+    padding:10px 12px;border:3px solid var(--field-dark);}
+  .card-row .nm{flex:1}
+  .card-row .nm b{display:block;font-size:10px;color:var(--cream);line-height:1.5;}
+  .card-row .nm small{color:var(--dim);font-size:8px;}
+  /* ---- pills / badges ---- */
+  .pill{font-size:8px;padding:4px 7px;border:2px solid var(--frame);
+    font-weight:bold;letter-spacing:.5px;}
+  .pill.api{background:var(--green-bright);color:var(--frame);}
+  .pill.card{background:var(--gold);color:var(--frame);}
+  .pill.bad{background:var(--red-bright);color:var(--cream);}
+  .pill.pending{background:var(--leather);color:var(--cream);}
+  /* ---- position slots ---- */
+  .slot{display:flex;align-items:center;gap:10px;background:var(--field-deep);
+    padding:9px 12px;border:3px dashed var(--green-bright);min-height:46px;}
+  .slot.filled{border-style:solid;border-color:var(--gold);}
+  .slot .ord{width:36px;color:var(--gold);font-weight:bold;text-align:center;
+    font-size:11px;text-shadow:1px 1px 0 var(--frame);}
+  .slot.oop{border-color:var(--red-bright);}
+  .oop-tag{color:var(--cream);background:var(--red);font-size:8px;
+    padding:3px 6px;border:2px solid var(--frame);font-weight:bold;
+    margin-left:6px;vertical-align:middle;letter-spacing:.5px;}
+  .pos-sel{background:var(--field-dark);color:var(--gold);
+    border:2px solid var(--gold);font-size:10px;padding:4px 6px;
+    margin-right:6px;font-family:inherit;}
+  .pos-sel:disabled{opacity:.4}
+  .slot .who{flex:1;font-size:10px;color:var(--cream);line-height:1.5;}
+  .slot .who small{color:var(--dim);display:block;font-size:8px;}
+  /* ---- status line ---- */
+  #status{margin:14px 0;font-size:11px;color:var(--cream);
+    background:var(--field-dark);border:3px solid var(--gold);
+    padding:10px 12px;letter-spacing:.5px;}
+  #status.ok{color:var(--gold);border-color:var(--gold);}
+  #status.no{color:var(--red-bright);border-color:var(--red-bright);}
+  /* ---- add / remove ---- */
+  .add-btn{background:var(--blue-bright);color:var(--cream);
+    border:2px solid var(--frame);padding:7px 10px;font-size:9px;}
+  .add-btn:disabled{background:#3a4334;color:#5a6450;cursor:not-allowed;}
+  .rm-btn{background:transparent;color:var(--red-bright);
+    border:2px solid var(--red-bright);padding:5px 9px;font-size:8px;}
+  .muted{color:var(--dim);font-size:9px;line-height:1.8;}
+  @media(max-width:760px){.grid{grid-template-columns:1fr;}header h1{font-size:12px;}}
 </style>
 </head>
 <body>
