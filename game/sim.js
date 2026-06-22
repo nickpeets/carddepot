@@ -58,6 +58,16 @@
     for (var i = 0; i < w.length; i++) { acc += w[i]; if (r <= acc) return FIELDS[i]; }
     return 'CENTER';
   }
+  // A ground ball is fielded by an INFIELDER. Map the batted-ball ZONE (which already
+  // reflects pull/spray/oppo tendency) to the infielder who'd field it on the ground.
+  // pull -> left side (3B/SS); spray -> up the middle (SS/2B); oppo -> right side (2B/1B).
+  var ZONE_TO_INFIELDER = {
+    'LEFT': '3B', 'LEFT-CENTER': 'SS', 'CENTER': '2B', 'RIGHT-CENTER': '2B', 'RIGHT': '1B'
+  };
+  // Full position words for spoken-style commentary.
+  var POS_WORD = {
+    'P': 'PITCHER', 'C': 'CATCHER', '1B': 'FIRST', '2B': 'SECOND', '3B': 'THIRD', 'SS': 'SHORTSTOP'
+  };
   // Map a field location to the fielder/base most involved (for sprite emphasis).
   var FIELD_TO_SPRITE = {
     'LEFT': 'sprite-lf', 'LEFT-CENTER': 'sprite-cf', 'CENTER': 'sprite-cf',
@@ -112,7 +122,21 @@
     ]
   };
 
-  // ---- Seeded RNG (mulberry32) so headless runs are reproducible-ish ----
+  // ----- Depot lineup-builder hand-off: override visitor (top) team with user lineup -----
+(function(){
+  try {
+    var raw = (typeof window!=="undefined" && window.__DEPOT_USER_TEAM) || null;
+    if(!raw && typeof sessionStorage!=="undefined"){ var j=sessionStorage.getItem("depot_user_team"); if(j) raw=JSON.parse(j); }
+    if(!raw || !raw.lineup || raw.lineup.length!==9) return;
+    var lu = raw.lineup.map(function(p){ return batter(p.name||"PLAYER", p.avg||".000", p.hr||0, p.rbi||0, R(p.rates.BB,p.rates.K,p.rates.HR,p.rates._2B,p.rates._3B,p.rates._1B), p.tendency||"spray"); });
+    MUDCATS.lineup = lu;
+    if(raw.name) MUDCATS.name = String(raw.name).toUpperCase().slice(0,12);
+    if(raw.pitcher){ var pp=raw.pitcher; MUDCATS.pitcher = { name: pp.name||MUDCATS.pitcher.name, era: pp.era||MUDCATS.pitcher.era, w: pp.w||MUDCATS.pitcher.w, l: pp.l||MUDCATS.pitcher.l, BB:(pp.BB!=null?pp.BB:MUDCATS.pitcher.BB), K:(pp.K!=null?pp.K:MUDCATS.pitcher.K), HR:(pp.HR!=null?pp.HR:MUDCATS.pitcher.HR), _2B:(pp._2B!=null?pp._2B:MUDCATS.pitcher._2B), _3B:(pp._3B!=null?pp._3B:MUDCATS.pitcher._3B), _1B:(pp._1B!=null?pp._1B:MUDCATS.pitcher._1B) }; }
+    if(typeof window!=="undefined") window.__DEPOT_TEAM_LOADED = MUDCATS.name;
+  } catch(e){ if(typeof console!=="undefined") console.warn("[DepotLineup] hand-off failed, using demo team:", e); }
+})();
+
+// ---- Seeded RNG (mulberry32) so headless runs are reproducible-ish ----
   function makeRng(seed) {
     var a = seed >>> 0;
     return function () {
@@ -143,7 +167,7 @@
   function simPA(bat, pit, bases, rng) {
     var dist = matchupDist(bat, pit);
     var outcome = pick(dist, rng);
-    var ev = { batter: bat.name, outcome: outcome, runs: 0, hit: false, location: null, scored: [] };
+    var ev = { batter: bat.name, outcome: outcome, runs: 0, hit: false, location: null, outType: null, scored: [] };
 
     function advance(numBases, batterName) {
       // Move existing runners then place batter (HR clears).
@@ -175,6 +199,12 @@
       ev.outs = 1;
       ev.inPlay = true;
       ev.location = locationFor(bat.tendency, rng);
+      // Ball IN PLAY: classify as ground-ball or air out (fly/line/pop).
+      // ~48% ground outs; ground outs draw a SHORT line into the infield,
+      // air outs a longer line to the outfield (see showFlightLine).
+      ev.outType = (rng() < 0.48) ? 'GB' : 'AIR';
+      // Ground out: pick the infielder by hit zone; he throws the batter out at first.
+      ev.infielder = (ev.outType === 'GB') ? (ZONE_TO_INFIELDER[ev.location] || 'SS') : null;
     } else if (outcome === 'BB') {
       // walk: force only when bases loaded ahead
       if (bases[0]) {
@@ -309,6 +339,12 @@ var FIELD_ENDPOINTS = {
   'LEFT': { x: 470, y: 470 }, 'LEFT-CENTER': { x: 735, y: 420 }, 'CENTER': { x: 1000, y: 400 },
   'RIGHT-CENTER': { x: 1265, y: 420 }, 'RIGHT': { x: 1530, y: 470 }
 };
+// Ground-out targets: SHORT lines into the infield (~42% from home to the
+// matching outfield point), distinct from the longer outfield endpoints above.
+var INFIELD_ENDPOINTS = {
+  'LEFT': { x: 777, y: 882 }, 'LEFT-CENTER': { x: 889, y: 861 }, 'CENTER': { x: 1000, y: 852 },
+  'RIGHT-CENTER': { x: 1111, y: 861 }, 'RIGHT': { x: 1223, y: 882 }
+};
 function ensureFlightLine() {
   if ($('ball-flight-svg')) return $('ball-flight-line');
   var stage = $('stage');
@@ -331,10 +367,12 @@ function ensureFlightLine() {
   stage.appendChild(svg);
   return line;
 }
-function showFlightLine(loc) {
+function showFlightLine(loc, outType) {
   var line = ensureFlightLine();
   if (!line) return;
-  var end = FIELD_ENDPOINTS[loc] || FIELD_ENDPOINTS['CENTER'];
+  // Ground outs land in the infield (short line); hits and air outs reach the outfield.
+  var ENDS = (outType === 'GB') ? INFIELD_ENDPOINTS : FIELD_ENDPOINTS;
+  var end = ENDS[loc] || ENDS['CENTER'];
   line.setAttribute('x1', HOME_PT.x); line.setAttribute('y1', HOME_PT.y);
   line.setAttribute('x2', end.x); line.setAttribute('y2', end.y);
   line.style.display = 'block';
@@ -366,10 +404,30 @@ function clearFlightLine() {
   function faceHash(name) { var h = 0; name = String(name || ""); for (var i = 0; i < name.length; i++) { h = (h * 31 + name.charCodeAt(i)) >>> 0; } return h; }
   function faceForPlayer(name) { return FACE_FILES[faceHash(name) % FACE_FILES.length]; }
   function setFace(panelId, name) { var p = $(panelId); if (!p) return; var img = p.querySelector("img"); if (img && name) img.src = faceForPlayer(name); }
+  // ---- Display name formatter: fit names into narrow NES boxes ----
+  // Keep short names as-is; otherwise render first-initial + FULL last name
+  // (e.g. CARNEY LANSFORD -> C. LANSFORD). Only ellipsis-truncate if even that
+  // overflows. Display-only: underlying lineup/sim data is untouched.
+  function fmtName(name, max){
+    max = max || 12;
+    var n = String(name == null ? '' : name).trim();
+    if (n.length <= max) return n;
+    var parts = n.split(/\s+/);
+    if (parts.length < 2) {
+      return n.length > max ? n.slice(0, max - 1) + '\u2026' : n;
+    }
+    var last = parts[parts.length - 1];
+    var abbr = parts[0].charAt(0) + '. ' + last;
+    if (abbr.length <= max) return abbr;
+    // even 'F. LASTNAME' too long: keep initial + truncated last name with ellipsis
+    var room = max - 3; // account for 'F. ' prefix
+    if (room < 1) return abbr.slice(0, max - 1) + '\u2026';
+    return parts[0].charAt(0) + '. ' + last.slice(0, room - 1) + '\u2026';
+  }
   function setPanel(panelId, name, s1, s2, s3) {
     var L = panelLeaves(panelId);
     if (!L || L.length < 4) return;
-    L[0].textContent = name;
+    L[0].textContent = fmtName(name);
     setFace(panelId, name);
     if (panelId === "atbat-box") { L[0].style.color = "#ffffff"; L[0].style.fontWeight = "normal"; L[0].style.textShadow = "none"; }
     L[1].textContent = s1;
@@ -451,9 +509,17 @@ function clearFlightLine() {
     if (k === 'BB') return phrase('BB', rng) + ' — ' + who;
     if (k === 'K')  return who + ' ' + phrase('K', rng);
     if (k === 'OUT') {
-      var verb = phrase('OUT', rng);
-      var loc = fieldWord(ev.location);
-      return who + ' ' + verb + ' TO ' + loc + (ev.error ? ' (E!)' : '');
+      // Verb matches batted-ball type so commentary agrees with the flight line.
+      if (ev.outType === 'GB') {
+      // Grounder fielded by an infielder, thrown out at first (no outfield zone).
+      var pos = ev.infielder || 'SS';
+      var gtxt = (pos === '1B') ? 'GROUNDS OUT TO FIRST'
+        : 'GROUNDS OUT, ' + (POS_WORD[pos] || pos) + ' TO FIRST';
+      return who + ' ' + gtxt + (ev.error ? ' (E!)' : '');
+    }
+    var verb = ['FLIES OUT', 'LINES OUT', 'POPS OUT'][Math.floor(rng() * 3)];
+    var loc = fieldWord(ev.location);
+    return who + ' ' + verb + ' TO ' + loc + (ev.error ? ' (E!)' : '');
     }
     // hits
     var label = phrase(k, rng);
@@ -495,7 +561,7 @@ function clearFlightLine() {
             batterIdx: bi, batter: bat,
             onDeck: team.lineup[(bi + 1) % 9], inHole: team.lineup[(bi + 2) % 9],
             pitcher: pit,
-            outcome: ev.outcome, location: ev.location, error: !!ev.error,
+            outcome: ev.outcome, location: ev.location, outType: ev.outType, infielder: ev.infielder, error: !!ev.error,
             runsOnPlay: ev.runs, basesAfter: (outs >= 3 ? [null, null, null] : bases.slice()), outsAfter: outs,
             text: resultText(ev, rng),
             pitches: buildPitchSequence(ev.outcome, rng),
@@ -629,6 +695,21 @@ function clearFlightLine() {
     }
     return cand || kids[kids.length - 1];
   }
+  // ----- Depot: paint visitor (Mudcats/left) lineup-column names from MUDCATS.lineup (once) -----
+  var _depotNamesPainted=false;
+  function paintDepotVisitorNames(){
+    try{
+      if(_depotNamesPainted) return;
+      if(typeof window==="undefined" || !window.__DEPOT_TEAM_LOADED) return; // only when user team loaded
+      var cols=lineupColumns(); if(!cols.length) return;
+      var ordered=cols.slice().sort(function(a,b){ return a.getBoundingClientRect().left-b.getBoundingClientRect().left; });
+      var col=ordered[0]; // visitor = left column = Mudcats
+      if(!col || !MUDCATS.lineup) return;
+      for(var i=0;i<9 && i<col.children.length;i++){ var sp=nameSpanOf(col.children[i]); if(sp && MUDCATS.lineup[i]) sp.textContent=fmtName(MUDCATS.lineup[i].name); }
+      _depotNamesPainted=true;
+    }catch(e){}
+  }
+
   function highlightLineup(teamCode, batIdx) {
     var cols = lineupColumns();
     if (!cols.length) return;
@@ -701,6 +782,7 @@ function clearFlightLine() {
     setPanel('pitching-box', ev.pitcher.name, ev.pitcher.era, ev.pitcher.w, ev.pitcher.l);
     // Sync lineup-column highlight to the current batter (same source as AT BAT/ON DECK/IN THE HOLE)
     highlightLineup(ev.teamCode, ev.batterIdx);
+    paintDepotVisitorNames();
 
     // Runners on base
     showRunners(ev.basesAfter);
@@ -721,7 +803,7 @@ function clearFlightLine() {
     else if (ev.outcome === 'BB') addBB();
   }
   // Ball-flight line: draw toward the hit field on a ball in play; else clear.
-  if (ev.location && ev.outcome !== 'BB' && ev.outcome !== 'K') showFlightLine(ev.location);
+  if (ev.location && ev.outcome !== 'BB' && ev.outcome !== 'K') showFlightLine(ev.location, ev.outType);
   else clearFlightLine();
 
   // Result line
