@@ -402,12 +402,26 @@ function clearFlightLine() {
   // ---- Per-player face library (consistent per player, varied across lineup) ----
   var FACE_FILES = ["assets/faces/face_01_light_clean_blonde.png", "assets/faces/face_02_light_mustache_brown.png", "assets/faces/face_03_light_beard_red.png", "assets/faces/face_04_light_stubble_black.png", "assets/faces/face_05_light_goatee_auburn.png", "assets/faces/face_06_medlight_clean_sandy.png", "assets/faces/face_07_medlight_full_brown.png", "assets/faces/face_08_medlight_mustache_black.png", "assets/faces/face_09_med_beard_black.png", "assets/faces/face_10_med_clean_dkbrown.png", "assets/faces/face_11_med_goatee_black.png", "assets/faces/face_12_medtan_stubble_black.png", "assets/faces/face_13_medtan_full_black.png", "assets/faces/face_14_medtan_clean_black.png", "assets/faces/face_15_brown_beard_black.png", "assets/faces/face_16_brown_mustache_black.png", "assets/faces/face_17_brown_clean_black.png", "assets/faces/face_18_dkbrown_goatee_black.png", "assets/faces/face_19_dkbrown_full_black.png", "assets/faces/face_20_dark_clean_black.png", "assets/faces/face_21_dark_beard_gray.png", "assets/faces/face_22_med_clean_gray.png"];
   function faceHash(name) { var h = 0; name = String(name || ""); for (var i = 0; i < name.length; i++) { h = (h * 31 + name.charCodeAt(i)) >>> 0; } return h; }
-  function faceForPlayer(name) { return FACE_FILES[faceHash(name) % FACE_FILES.length]; }
+  function faceForPlayer(name) { /* Tone-aware, deterministic, self-contained. The cards carry no skin-tone/photo field, so we group the face library by the tone token in each filename and use two independent name-hashes: one picks a tone bucket (realistic spread across the lineup), the other picks a face within it. Same name => same face (consistent), varied across the lineup, and no individual's real appearance is fabricated. */ if (!faceForPlayer._buckets) { var ORDER = ["light","medlight","med","medtan","brown","dkbrown","dark"]; var byTone = {}; for (var t = 0; t < ORDER.length; t++) byTone[ORDER[t]] = []; for (var i = 0; i < FACE_FILES.length; i++) { var m = FACE_FILES[i].match(/face_\d+_([a-z]+)_/); var tone = (m && byTone[m[1]]) ? m[1] : "med"; byTone[tone].push(FACE_FILES[i]); } var buckets = []; for (var k = 0; k < ORDER.length; k++) { if (byTone[ORDER[k]].length) buckets.push(byTone[ORDER[k]]); } faceForPlayer._buckets = buckets; } var B = faceForPlayer._buckets; if (!B.length) return FACE_FILES[faceHash(name) % FACE_FILES.length]; var s = String(name || ""), th = 5381; for (var j = 0; j < s.length; j++) { th = (th * 33 + s.charCodeAt(j)) >>> 0; } var bucket = B[th % B.length]; return bucket[faceHash(name) % bucket.length]; }
   function setFace(panelId, name) { var p = $(panelId); if (!p) return; var img = p.querySelector("img"); if (img && name) img.src = faceForPlayer(name); }
   // ---- Display name formatter: fit names into narrow NES boxes ----
   // Keep short names as-is; otherwise render first-initial + FULL last name
   // (e.g. CARNEY LANSFORD -> C. LANSFORD). Only ellipsis-truncate if even that
   // overflows. Display-only: underlying lineup/sim data is untouched.
+  // Lineup-column name: ALL-CAPS, LAST NAME ONLY, suffix-aware (Jr./Sr./II/III/IV/V).
+  // On-field lineup columns only; the AT BAT/on-deck/in-the-hole panels still use fmtName.
+  function fmtLineupName(name){
+    var n = String(name == null ? '' : name).trim();
+    if (!n) return '';
+    var parts = n.split(/\s+/);
+    var SUFFIX = { JR:1, SR:1, II:1, III:1, IV:1, V:1 };
+    while (parts.length > 1) {
+      var tail = parts[parts.length-1].toUpperCase().replace(/[.,]+$/,'');
+      if (SUFFIX[tail]) { parts.pop(); } else { break; }
+    }
+    return (parts[parts.length-1] || n).toUpperCase();
+  }
+
   function fmtName(name, max){
     max = max || 12;
     var n = String(name == null ? '' : name).trim();
@@ -712,7 +726,7 @@ function clearFlightLine() {
       var ordered=cols.slice().sort(function(a,b){ return a.getBoundingClientRect().left-b.getBoundingClientRect().left; });
       var col=ordered[0]; // visitor = left column = Mudcats
       if(!col || !MUDCATS.lineup) return;
-      for(var i=0;i<9 && i<col.children.length;i++){ var row=col.children[i]; var ld=MUDCATS.lineup[i]; if(!ld) continue; var sp=nameSpanOf(row); if(sp) sp.textContent=fmtName(ld.name); var pc=posCellOf(row); if(pc && ld.pos) pc.textContent=ld.pos; }
+      for(var i=0;i<9 && i<col.children.length;i++){ var row=col.children[i]; var ld=MUDCATS.lineup[i]; if(!ld) continue; var sp=nameSpanOf(row); if(sp) sp.textContent=fmtLineupName(ld.name); var pc=posCellOf(row); if(pc && ld.pos) pc.textContent=ld.pos; }
       _depotNamesPainted=true;
     }catch(e){}
   }

@@ -37,7 +37,7 @@
   .pill.pending{background:#1a2b3f;color:var(--dim);}
   .slot{display:flex;align-items:center;gap:8px;background:var(--panel);padding:7px 10px;border-radius:5px;border:1px dashed #34506e;min-height:42px;}
   .slot.filled{border-style:solid;border-color:var(--green);}
-  .slot .ord{width:20px;color:var(--gold);font-weight:bold;}
+  .slot .ord{width:34px;color:var(--gold);font-weight:bold;text-align:center;} .slot.oop{border-color:var(--gold);} .oop-tag{color:#04222b;background:var(--gold);font-size:10px;padding:1px 4px;border-radius:3px;font-weight:bold;margin-left:4px;vertical-align:middle;} .pos-sel{background:#10351f;color:var(--green);border:1px solid var(--green);font-size:12px;padding:2px 4px;border-radius:4px;margin-right:6px;} .pos-sel:disabled{opacity:.4;}
   .slot .who{flex:1;font-size:13px;}
   .slot .who small{color:var(--dim);display:block;font-size:11px;}
   #status{margin:10px 0;font-size:13px;}
@@ -79,7 +79,7 @@
       <div id="cardList"><div class="muted">Loading your cards&hellip;</div></div>
     </div>
     <div class="col">
-      <h3>BATTING ORDER (1&ndash;9)</h3>
+      <h3>DEFENSE (9 POSITIONS)</h3>
       <div id="slots"></div>
       <div style="margin-top:14px;display:flex;gap:8px;align-items:center;">
         <button class="btn-primary" id="playBtn" disabled>PLAY BALL &#9654;</button>
@@ -103,7 +103,7 @@
   if(!sb){ $('authMsg').textContent='Auth library failed to load. Check your connection and reload.'; }
 
   // ----- State -----
-  var USER=null, CARDS=[], LINEUP=new Array(9).fill(null); // LINEUP holds cardId or null
+  var USER=null, CARDS=[]; var POSITIONS=['P','C','1B','2B','3B','SS','LF','CF','RF']; /* LINEUP[i] = cardId or null for the fielding position POSITIONS[i] (defensive chart). */ var LINEUP=new Array(9).fill(null); /* Default batting order among the 9 fielders, by position (simple fixed default; no manual reorder). */ var BAT_ORDER=['CF','SS','RF','3B','1B','LF','C','2B','P']; function slotIndexOfPos(pos){ return POSITIONS.indexOf(pos); } function normPos(raw){ var r=String(raw||'').toUpperCase().trim(); if(POSITIONS.indexOf(r)>=0) return r; if(r==='OF') { var o=['LF','CF','RF'].filter(function(x){return LINEUP[POSITIONS.indexOf(x)]==null;}); return o.length?o[0]:'CF'; } if(r==='IF') { var f=['1B','2B','3B','SS'].filter(function(x){return LINEUP[POSITIONS.indexOf(x)]==null;}); return f.length?f[0]:'SS'; } if(r==='LHP'||r==='RHP'||r==='SP'||r==='RP'||r==='TWP') return 'P'; return ''; /* DH/PH/unknown -> no natural defensive slot */ } function naturalPosOf(id){ var rv=id?RESOLVED[id]:null; return rv?normPos(rv.pos):''; } function naturalSlotIndex(id){ var np=naturalPosOf(id); return np?POSITIONS.indexOf(np):-1; } function isOOP(i){ var id=LINEUP[i]; if(!id) return false; var np=naturalPosOf(id); return !np || np!==POSITIONS[i]; }
   var RESOLVED={}; // cardId -> {status:'api'|'card'|'bad'|'pending', team, rates, avg, hr, rbi, tendency, note}
 
   // ----- Auth -----
@@ -301,58 +301,16 @@
     return '<span class="pill pending">\u2026</span>';
   }
   function renderAll(){ renderCards(); renderSlots(); renderStatus(); }
-  function renderCards(){
-    $('collCount').textContent=CARDS.length?('('+CARDS.length+' cards)'):'';
-    if(!CARDS.length){ if($('cardList').innerHTML.indexOf('Could not')<0) $('cardList').innerHTML='<div class="muted">No hitter cards found in your collection.</div>'; return; }
-    var html='';
-    CARDS.forEach(function(c){
-      var rv=RESOLVED[c.id]; var st=rv?rv.status:'pending';
-      var used=inLineup(c.id);
-      var canAdd=(st==='api'||st==='card') && !used && firstEmptySlot()>=0;
-      var sub=(c.yr||'?')+' '+(c.team||'')+(rv&&rv.note?' \u00b7 '+rv.note:'');
-      html+='<div class="card-row">'+
-        '<div class="nm"><b>'+esc(c.player||'(unnamed)')+'</b><small>'+esc(sub)+'</small></div>'+
-        pillFor(st)+
-        '<button class="add-btn" data-add="'+c.id+'" '+(canAdd?'':'disabled')+'>'+(used?'in lineup':'Add')+'</button>'+
-      '</div>';
-    });
-    $('cardList').innerHTML=html;
-    Array.prototype.forEach.call($('cardList').querySelectorAll('[data-add]'),function(b){ b.addEventListener('click',function(){ addToLineup(b.getAttribute('data-add')); }); });
-  }
-  function renderSlots(){
-    var html='';
-    for(var i=0;i<9;i++){
-      var id=LINEUP[i]; var c=id?cardById(id):null; var rv=id?RESOLVED[id]:null;
-      var filled=c&&rv&&(rv.status==='api'||rv.status==='card');
-      html+='<div class="slot'+(filled?' filled':'')+'">'+
-        '<div class="ord">'+(i+1)+'</div>'+
-        '<div class="who">'+(c?('<b>'+esc(c.player)+'</b><small>'+esc((c.yr||'?')+' '+(c.team||'')+' \u00b7 AVG '+(rv?rv.avg:'')+', '+(rv?rv.hr:0)+' HR')+'</small>'):'<span class="muted">empty</span>')+'</div>'+
-        (c?'<button class="rm-btn" data-rm="'+i+'">remove</button>':'')+
-      '</div>';
-    }
-    $('slots').innerHTML=html;
-    Array.prototype.forEach.call($('slots').querySelectorAll('[data-rm]'),function(b){ b.addEventListener('click',function(){ removeSlot(+b.getAttribute('data-rm')); }); });
-  }
-  function renderStatus(){
-    var filled=LINEUP.filter(function(id){ var rv=id?RESOLVED[id]:null; return rv&&(rv.status==='api'||rv.status==='card'); }).length;
-    var ready=filled===9;
-    $('status').innerHTML='Lineup: <b class="'+(ready?'ok':'no')+'">'+filled+' / 9</b> usable players set.'+(ready?' <span class="ok">Ready to play.</span>':' <span class="no">Fill all 9 to start.</span>');
-    $('playBtn').disabled=!ready;
-    $('playHint').textContent=ready?'':'Need '+(9-filled)+' more usable.';
-  }
-  function addToLineup(id){ var s=firstEmptySlot(); if(s<0) return; if(inLineup(id)) return; LINEUP[s]=id; renderAll(); }
+  function renderCards(){ $('collCount').textContent=CARDS.length?('('+CARDS.length+' cards)'):''; if(!CARDS.length){ if($('cardList').innerHTML.indexOf('Could not')<0) $('cardList').innerHTML='<div class="muted">No hitter cards found in your collection.</div>'; return; } var html=''; CARDS.forEach(function(c){   var rv=RESOLVED[c.id]; var st=rv?rv.status:'pending';   var used=inLineup(c.id);   var usable=(st==='api'||st==='card');   var canAdd=usable && !used;   var np=usable?naturalPosOf(c.id):'';   var sub=(c.yr||'?')+' '+(c.team||'')+(rv&&rv.note?' \u00b7 '+rv.note:'')+(np?' \u00b7 '+np:(usable?' \u00b7 no pos':''));   var sel='<select class="pos-sel" data-possel="'+c.id+'" '+(canAdd?'':'disabled')+'>'+POSITIONS.map(function(P){ var natural=(P===np); return '<option value="'+P+'"'+(natural?' selected':'')+'>'+P+(natural?' (nat)':'')+'</option>'; }).join('')+'</select>';   html+='<div class="card-row">'     +'<div class="nm"><b>'+esc(c.player||'(unnamed)')+'</b><small>'+esc(sub)+'</small></div>'     +pillFor(st)     +(canAdd?sel:'')     +'<button class="add-btn" data-add="'+c.id+'" '+(canAdd?'':'disabled')+'>'+(used?'in lineup':'Add')+'</button>'     +'</div>'; }); $('cardList').innerHTML=html; Array.prototype.forEach.call($('cardList').querySelectorAll('[data-add]'),function(b){ b.addEventListener('click',function(){ var id=b.getAttribute('data-add'); var ss=$('cardList').querySelector('[data-possel="'+id+'"]'); addToLineup(id, ss?ss.value:null); }); });}
+  function renderSlots(){ var html=''; for(var i=0;i<9;i++){   var pos=POSITIONS[i]; var id=LINEUP[i]; var c=id?cardById(id):null; var rv=id?RESOLVED[id]:null;   var filled=c&&rv&&(rv.status==='api'||rv.status==='card');   var oop=filled&&isOOP(i);   var natTxt=oop?(naturalPosOf(id)||'\u2014'):'';   html+='<div class="slot'+(filled?' filled':'')+(oop?' oop':'')+'">'     +'<div class="ord">'+pos+'</div>'     +'<div class="who">'+(c?('<b>'+esc(c.player)+'</b>'+(oop?' <span class="oop-tag">OOP\u2190'+esc(natTxt)+'</span>':'')+'<small>'+esc((c.yr||'?')+' '+(c.team||'')+' \u00b7 AVG '+(rv?rv.avg:'')+', '+(rv?rv.hr:0)+' HR')+'</small>'):'<span class="muted">empty</span>')+'</div>'     +(c?'<button class="rm-btn" data-rm="'+i+'">remove</button>':'')     +'</div>'; } $('slots').innerHTML=html; Array.prototype.forEach.call($('slots').querySelectorAll('[data-rm]'),function(b){ b.addEventListener('click',function(){ removeSlot(+b.getAttribute('data-rm')); }); });}
+  function renderStatus(){ var filled=LINEUP.filter(function(id){ var rv=id?RESOLVED[id]:null; return rv&&(rv.status==='api'||rv.status==='card'); }).length; var oopCount=0; for(var i=0;i<9;i++){ if(isOOP(i)) oopCount++; } var ready=filled===9; $('status').innerHTML='Defense: <b class="'+(ready?'ok':'no')+'">'+filled+' / 9</b> positions set.'+(oopCount?' <span class="no">'+oopCount+' out of position.</span>':'')+(ready?' <span class="ok">Ready to play.</span>':' <span class="no">Fill all 9 positions to start.</span>'); $('playBtn').disabled=!ready; $('playHint').textContent=ready?'':'Need '+(9-filled)+' more position(s).';}
+  function addToLineup(id, posOverride){ if(inLineup(id)) return; var rv=RESOLVED[id]; if(!rv||!(rv.status==='api'||rv.status==='card')) return; var target=-1; if(posOverride){ target=POSITIONS.indexOf(posOverride); if(target>=0 && LINEUP[target]!=null) target=-1; } if(target<0){ var ni=naturalSlotIndex(id); if(ni>=0 && LINEUP[ni]==null) target=ni; } if(target<0){ target=LINEUP.indexOf(null); } if(target<0) return; LINEUP[target]=id; renderAll();}
   function removeSlot(i){ LINEUP[i]=null; renderAll(); }
   $('clearBtn').addEventListener('click',function(){ LINEUP=new Array(9).fill(null); renderAll(); });
   function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
 
   // ===== HAND-OFF TO SIM =====
-  function buildTeamPayload(){
-    var lineup=LINEUP.map(function(id){ var c=cardById(id); var rv=RESOLVED[id];
-      return { name:(c.player||'PLAYER').toUpperCase(), avg:rv.avg, hr:rv.hr, rbi:rv.rbi, tendency:rv.tendency||'spray', rates:rv.rates, pos:(rv.pos || c.pos || '\u2014') };
-    });
-    var teamName=(CARDS.length&&deriveTeamName())||'DEPOT';
-    return { name:teamName, code:'mudcats', lineup:lineup };
-  }
+  function buildTeamPayload(){ var lineup=BAT_ORDER.map(function(P){   var i=POSITIONS.indexOf(P); var id=LINEUP[i]; var c=cardById(id); var rv=RESOLVED[id];   return { name:(c.player||'PLAYER').toUpperCase(), avg:rv.avg, hr:rv.hr, rbi:rv.rbi, tendency:rv.tendency||'spray', rates:rv.rates, pos:P, oop:isOOP(i) }; }); var teamName=(CARDS.length&&deriveTeamName())||'DEPOT'; return { name:teamName, code:'mudcats', lineup:lineup };}
   function deriveTeamName(){ var n=(USER&&USER.email||'').split('@')[0]; return (n||'DEPOT').toUpperCase().slice(0,12); }
   $('playBtn').addEventListener('click',function(){
     var ready=LINEUP.every(function(id){ var rv=id?RESOLVED[id]:null; return rv&&(rv.status==='api'||rv.status==='card'); });
