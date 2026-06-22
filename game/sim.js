@@ -371,7 +371,7 @@ function clearFlightLine() {
     if (!L || L.length < 4) return;
     L[0].textContent = name;
     setFace(panelId, name);
-    if (panelId === "atbat-box") { L[0].style.color = ""; L[0].style.fontWeight = ""; L[0].style.textShadow = ""; }
+    if (panelId === "atbat-box") { L[0].style.color = "#ffffff"; L[0].style.fontWeight = "normal"; L[0].style.textShadow = "none"; }
     L[1].textContent = s1;
     L[2].textContent = s2;
     L[3].textContent = s3;
@@ -405,11 +405,12 @@ function clearFlightLine() {
   // ---- Invented retro-game ad tile (replaces energy-drink tile; original IP) ----
   function renderAdTile() {
     var ad = $("tile-ad"); if (!ad) return;
-    ad.style.background = "#142a52"; ad.style.borderColor = "#4d8cff"; ad.style.color = "#dfe9ff";
+    ad.style.background = "#0d2438"; ad.style.borderColor = "#2bb6e0"; ad.style.color = "#dff3ff";
     ad.innerHTML = "" +
-      '<div style="color:#ffe14d;font-size:11px;letter-spacing:1px;">NEW GAME</div>' +
-      '<div style="color:#fff;font-size:17px;line-height:1.15;margin:4px 0;">DIAMOND<br>QUEST</div>' +
-      '<div style="color:#9fc0ff;font-size:9px;letter-spacing:1px;">AN 8-BIT BALL SAGA</div>';
+      '<div style="color:#ffe14d;font-size:10px;letter-spacing:1px;">NOW DIVING</div>' +
+      '<div style="margin:2px 0;"><svg width=\"140\" height=\"98\" viewBox=\"0 0 20 14\" style=\"image-rendering:pixelated;display:block;\" xmlns=\"http://www.w3.org/2000/svg\"><rect x=\"9\" y=\"1\" width=\"1\" height=\"1\" fill=\"#3a2a1a\"/><rect x=\"10\" y=\"1\" width=\"1\" height=\"1\" fill=\"#3a2a1a\"/><rect x=\"11\" y=\"1\" width=\"1\" height=\"1\" fill=\"#3a2a1a\"/><rect x=\"8\" y=\"2\" width=\"1\" height=\"1\" fill=\"#3a2a1a\"/><rect x=\"9\" y=\"2\" width=\"1\" height=\"1\" fill=\"#e23b3b\"/><rect x=\"10\" y=\"2\" width=\"1\" height=\"1\" fill=\"#e23b3b\"/><rect x=\"11\" y=\"2\" width=\"1\" height=\"1\" fill=\"#e23b3b\"/><rect x=\"12\" y=\"2\" width=\"1\" height=\"1\" fill=\"#3a2a1a\"/><rect x=\"1\" y=\"3\" width=\"1\" height=\"1\" fill=\"#3a2a1a\"/><rect x=\"2\" y=\"3\" width=\"1\" height=\"1\" fill=\"#3a2a1a\"/><rect x=\"8\" y=\"3\" width=\"1\" height=\"1\" fill=\"#3a2a1a\"/><rect x=\"9\" y=\"3\" width=\"1\" height=\"1\" fill=\"#e23b3b\"/><rect x=\"10\" y=\"3\" width=\"1\" height=\"1\" fill=\"#e23b3b\"/><rect x=\"11\" y=\"3\" width=\"1\" height=\"1\" fill=\"#e23b3b\"/><rect x=\"12\" y=\"3\" width=\"1\" height=\"1\" fill=\"#3a2a1a\"/><rect x=\"0\" y=\"4\" width=\"1\" height=\"1\" fill=\"#3a2a1a\"/><rect x=\"1\" y=\"4\" width=\"1\" height=\"1\" fill=\"#f3e8c8\"/><rect x=\"2\" y=\"4\" width=\"1\" height=\"1\" fill=\"#f3e8c8\"/><rect x=\"3\" y=\"4\" width=\"1\" height=\"1\" fill=\"#3a2a1a\"/><rect x=\"7\" y=\"4\" width=\"1\" height=\"1\" fill=\"#3a2a1a\"/><rect x=\"8\" y=\"4\" width=\"1\" height=\"1\" fill=\"#f0c9a0\"/><rect x=\"9\" y=\"4\" width=\"1\" height=\"1\" fill=\"#f0c9a0\"/><rect x=\"10\" y=\"4\" width=\"1\" height=\"1\" fill=\"#f0c9a0\"/><rect x=\"11\" y=\"4\" width=\"1\" height=\"1\" fill=\"#f0c9a0\"/><rect x=\"12\" y=\"4\" width=\"1\" height=\"1\" fill=\"#3a2a1a\"/><rect x=\"1\" y=\"5\" width=\"1\" height=\"1\" fill=\"#3a2a1a\"/><rect x=\"2\" y=\"5\" width=\"1\" height=\"1\" fill=\"#f3e8c8\"/><rect x=\"3\" y=\"5\" width=\"1\" height=\"1\" fill=\"#f3e8c8\"/><rect x=\"4\" y=\"5\" width=\"1\" height=\"1\" fill=\"#3a2a1a\"/><rect x=\"5\" y=\"5\" width=\"1\" height=\"1\" fill=\"#3a2a1a\"/><rect x=\"6\" y=\"5\" width=\"1\" height=\"1\" fill=\"#3a2a1a\"/><rect x=\"7\" y=\"5\" width=\"1\" height=\"1\" fill=\"#3a2a1a\"/><rect x=\"8\" y=\"5\" width=\"1\" height=\"1\" fill=\"#f0c9a0\"/><rect x=\"9\" y=\"5\" width=\"1\" height=\"1\" fill=\"#f3e8c8\"/><rect x=\"10\" y=\"5\" width=\"1\" height=\"1\" fill=\"#f3e8c8\"/><rect x=\"11\" y=\"5\" width=\"1\" height=\"1\" fill=\"#f0c9a0\"/><rect x=\"12\" y=\"5\" width=\"1\" height=\"1\" fill=\"#3a2a1a\"/><rect x=\"2\" y=\"6\" width=\"1\" height=\"1\" fill=\"#3a2a1a\"/><rect x=\"3\" y=\"6\" width=\"1\" height=\"1\" fill=\"#f3e8c8\"/><rect x=\"4\" y=\"6\" width=\"1\" height=\"1\" fill=\"#f3e8c8\"/><rect x=\"5\" y=\"6\" width=\"1\" height=\"1\" fill=\"#f3e8c8\"/><rect x=\"6\" y=\"6\" width=\"1\" height=\"1\" fill=\"#f3e8c8\"/><rect x=\"7\" y=\"6\" width=\"1\" height=\"1\" fill=\"#f3e8c8\"/><rect x=\"8\" y=\"6\" width=\"1\" height=\"1\" fill=\"#f3e8c8\"/><rect x=\"9\" y=\"6\" width=\"1\" height=\"1\" fill=\"#f3e8c8\"/><rect x=\"10\" y=\"6\" width=\"1\" height=\"1\" fill=\"#f3e8c8\"/><rect x=\"11\" y=\"6\" width=\"1\" height=\"1\" fill=\"#f3e8c8\"/><rect x=\"12\" y=\"6\" width=\"1\" height=\"1\" fill=\"#e23b3b\"/><rect x=\"13\" y=\"6\" width=\"1\" height=\"1\" fill=\"#e23b3b\"/><rect x=\"14\" y=\"6\" width=\"1\" height=\"1\" fill=\"#3a2a1a\"/><rect x=\"3\" y=\"7\" width=\"1\" height=\"1\" fill=\"#3a2a1a\"/><rect x=\"4\" y=\"7\" width=\"1\" height=\"1\" fill=\"#f3e8c8\"/><rect x=\"5\" y=\"7\" width=\"1\" height=\"1\" fill=\"#f3e8c8\"/><rect x=\"6\" y=\"7\" width=\"1\" height=\"1\" fill=\"#f3e8c8\"/><rect x=\"7\" y=\"7\" width=\"1\" height=\"1\" fill=\"#f3e8c8\"/><rect x=\"8\" y=\"7\" width=\"1\" height=\"1\" fill=\"#f3e8c8\"/><rect x=\"9\" y=\"7\" width=\"1\" height=\"1\" fill=\"#f3e8c8\"/><rect x=\"10\" y=\"7\" width=\"1\" height=\"1\" fill=\"#f3e8c8\"/><rect x=\"11\" y=\"7\" width=\"1\" height=\"1\" fill=\"#e23b3b\"/><rect x=\"12\" y=\"7\" width=\"1\" height=\"1\" fill=\"#e23b3b\"/><rect x=\"13\" y=\"7\" width=\"1\" height=\"1\" fill=\"#e23b3b\"/><rect x=\"14\" y=\"7\" width=\"1\" height=\"1\" fill=\"#e23b3b\"/><rect x=\"15\" y=\"7\" width=\"1\" height=\"1\" fill=\"#3a2a1a\"/><rect x=\"4\" y=\"8\" width=\"1\" height=\"1\" fill=\"#3a2a1a\"/><rect x=\"5\" y=\"8\" width=\"1\" height=\"1\" fill=\"#f3e8c8\"/><rect x=\"6\" y=\"8\" width=\"1\" height=\"1\" fill=\"#f3e8c8\"/><rect x=\"7\" y=\"8\" width=\"1\" height=\"1\" fill=\"#f3e8c8\"/><rect x=\"8\" y=\"8\" width=\"1\" height=\"1\" fill=\"#f3e8c8\"/><rect x=\"9\" y=\"8\" width=\"1\" height=\"1\" fill=\"#f3e8c8\"/><rect x=\"10\" y=\"8\" width=\"1\" height=\"1\" fill=\"#f3e8c8\"/><rect x=\"11\" y=\"8\" width=\"1\" height=\"1\" fill=\"#f3e8c8\"/><rect x=\"12\" y=\"8\" width=\"1\" height=\"1\" fill=\"#e23b3b\"/><rect x=\"13\" y=\"8\" width=\"1\" height=\"1\" fill=\"#e23b3b\"/><rect x=\"14\" y=\"8\" width=\"1\" height=\"1\" fill=\"#e23b3b\"/><rect x=\"15\" y=\"8\" width=\"1\" height=\"1\" fill=\"#3a2a1a\"/><rect x=\"5\" y=\"9\" width=\"1\" height=\"1\" fill=\"#3a2a1a\"/><rect x=\"6\" y=\"9\" width=\"1\" height=\"1\" fill=\"#f3e8c8\"/><rect x=\"7\" y=\"9\" width=\"1\" height=\"1\" fill=\"#f3e8c8\"/><rect x=\"8\" y=\"9\" width=\"1\" height=\"1\" fill=\"#f3e8c8\"/><rect x=\"9\" y=\"9\" width=\"1\" height=\"1\" fill=\"#f3e8c8\"/><rect x=\"10\" y=\"9\" width=\"1\" height=\"1\" fill=\"#f3e8c8\"/><rect x=\"11\" y=\"9\" width=\"1\" height=\"1\" fill=\"#f3e8c8\"/><rect x=\"12\" y=\"9\" width=\"1\" height=\"1\" fill=\"#f3e8c8\"/><rect x=\"13\" y=\"9\" width=\"1\" height=\"1\" fill=\"#f3e8c8\"/><rect x=\"14\" y=\"9\" width=\"1\" height=\"1\" fill=\"#f3e8c8\"/><rect x=\"15\" y=\"9\" width=\"1\" height=\"1\" fill=\"#3a2a1a\"/><rect x=\"6\" y=\"10\" width=\"1\" height=\"1\" fill=\"#3a2a1a\"/><rect x=\"7\" y=\"10\" width=\"1\" height=\"1\" fill=\"#f3e8c8\"/><rect x=\"8\" y=\"10\" width=\"1\" height=\"1\" fill=\"#f3e8c8\"/><rect x=\"9\" y=\"10\" width=\"1\" height=\"1\" fill=\"#3a2a1a\"/><rect x=\"11\" y=\"10\" width=\"1\" height=\"1\" fill=\"#3a2a1a\"/><rect x=\"12\" y=\"10\" width=\"1\" height=\"1\" fill=\"#f3e8c8\"/><rect x=\"13\" y=\"10\" width=\"1\" height=\"1\" fill=\"#f3e8c8\"/><rect x=\"14\" y=\"10\" width=\"1\" height=\"1\" fill=\"#f3e8c8\"/><rect x=\"15\" y=\"10\" width=\"1\" height=\"1\" fill=\"#f3e8c8\"/><rect x=\"16\" y=\"10\" width=\"1\" height=\"1\" fill=\"#3a2a1a\"/><rect x=\"6\" y=\"11\" width=\"1\" height=\"1\" fill=\"#3a2a1a\"/><rect x=\"7\" y=\"11\" width=\"1\" height=\"1\" fill=\"#f3e8c8\"/><rect x=\"8\" y=\"11\" width=\"1\" height=\"1\" fill=\"#3a2a1a\"/><rect x=\"12\" y=\"11\" width=\"1\" height=\"1\" fill=\"#3a2a1a\"/><rect x=\"13\" y=\"11\" width=\"1\" height=\"1\" fill=\"#f3e8c8\"/><rect x=\"14\" y=\"11\" width=\"1\" height=\"1\" fill=\"#f3e8c8\"/><rect x=\"15\" y=\"11\" width=\"1\" height=\"1\" fill=\"#f3e8c8\"/><rect x=\"16\" y=\"11\" width=\"1\" height=\"1\" fill=\"#3a2a1a\"/><rect x=\"5\" y=\"12\" width=\"1\" height=\"1\" fill=\"#3a2a1a\"/><rect x=\"6\" y=\"12\" width=\"1\" height=\"1\" fill=\"#f3e8c8\"/><rect x=\"7\" y=\"12\" width=\"1\" height=\"1\" fill=\"#3a2a1a\"/><rect x=\"13\" y=\"12\" width=\"1\" height=\"1\" fill=\"#3a2a1a\"/><rect x=\"14\" y=\"12\" width=\"1\" height=\"1\" fill=\"#3a2a1a\"/><rect x=\"15\" y=\"12\" width=\"1\" height=\"1\" fill=\"#3a2a1a\"/><rect x=\"5\" y=\"13\" width=\"1\" height=\"1\" fill=\"#3a2a1a\"/><rect x=\"6\" y=\"13\" width=\"1\" height=\"1\" fill=\"#3a2a1a\"/></svg></div>' +
+      '<div style="color:#fff;font-size:18px;letter-spacing:2px;font-weight:bold;">YANTZEN</div>' +
+      '<div style="color:#9fdcff;font-size:8px;letter-spacing:1px;">SWIM &amp; DIVE</div>';
   }
   function showRunners(bases) {
     ensureRunnerSprites();
@@ -643,6 +644,43 @@ function clearFlightLine() {
       nameSpanOf(col.children[batIdx]).style.color = "#f6c81e";
     }
   }
+  // ---- Result/commentary ticker: never wrap; marquee-scroll over-long lines ----
+  function ensureMarqueeStyle() {
+    if (document.getElementById("rl-marquee-style")) return;
+    var st = document.createElement("style");
+    st.id = "rl-marquee-style";
+    st.textContent = "@keyframes rlScroll { 0%{transform:translateX(0);} 100%{transform:translateX(var(--rl-shift));} }";
+    document.head.appendChild(st);
+  }
+  function setResultLine(msg) {
+    var box = $("result-line");
+    if (!box) return;
+    ensureMarqueeStyle();
+    // Make the box single-line + overflow-robust + a bit wider.
+    box.style.whiteSpace = "nowrap";
+    box.style.overflow = "hidden";
+    box.style.width = "960px";
+    box.style.padding = "0 14px";
+    box.style.boxSizing = "border-box";
+    // Inner span carries the text so we can measure/scroll it.
+    var span = box.querySelector(".rl-text");
+    if (!span) { box.textContent = ""; span = document.createElement("span"); span.className = "rl-text"; span.style.display = "inline-block"; box.appendChild(span); }
+    span.style.animation = "none";
+    span.style.setProperty("--rl-shift", "0px");
+    span.textContent = String(msg == null ? "" : msg);
+    // Measure: if the text is wider than the visible box, marquee it; else center it.
+    var avail = box.clientWidth - 28; // minus padding
+    var need = span.scrollWidth;
+    if (need > avail) {
+      box.style.justifyContent = "flex-start";
+      var shift = (need - avail) + 40;
+      span.style.setProperty("--rl-shift", (-shift) + "px");
+      var dur = Math.max(4, (shift / 60)); // ~60px/sec
+      span.style.animation = "rlScroll " + dur.toFixed(1) + "s linear infinite alternate";
+    } else {
+      box.style.justifyContent = "center";
+    }
+  }
   function applyEvent(ev, skipCount) {
     // Inning indicator
     setInning(ev.inning, ev.half);
@@ -687,7 +725,7 @@ function clearFlightLine() {
   else clearFlightLine();
 
   // Result line
-    setText('result-line', ev.text);
+    setResultLine(ev.text);
 
     // Linescore: recompute running totals up to this event
     updateLinescore(ev);
@@ -735,7 +773,7 @@ function clearFlightLine() {
     var callWord = pitch.call === 'BALL' ? 'BALL' : pitch.call === 'FOUL' ? 'FOUL' :
                    pitch.call === 'STRIKE' ? 'STRIKE' : 'SWING';
     if (!pitch.terminal) {
-      setText('result-line', ev.batter.name + ' \u2014 ' + pitch.type + ' ' + pitch.speed +
+      setResultLine(ev.batter.name + ' \u2014 ' + pitch.type + ' ' + pitch.speed +
         ' MPH \u2014 ' + callWord + '  (' + pitch.balls + '-' + pitch.strikes + ')');
     }
   }
@@ -854,13 +892,13 @@ function clearFlightLine() {
     showRunners([null, null, null]);
     resetPitchStats();   // PC/K/BB -> 0 (per-pitcher; pitching change resets too)
     clearFlightLine();
-    setText('result-line', 'PLAY BALL!');
+    setResultLine('PLAY BALL!');
   }
 
   function flashDone() {
     var L = GAME.line;
     var msg = 'FINAL — MUDCATS ' + L.mudcats.r + ', ACORNS ' + L.acorns.r;
-    setText('result-line', msg);
+    setResultLine(msg);
   }
 
   // ---- Control panel (fixed, outside the scaled stage) ------------------
