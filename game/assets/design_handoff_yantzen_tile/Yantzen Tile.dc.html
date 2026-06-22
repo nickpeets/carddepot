@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <style>
+    @keyframes scbBlink { 0%,55% { opacity: 1; } 56%,100% { opacity: 0.18; } }
+    @keyframes scbBob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-4px); } }
+  </style>
+</helmet>
+<div style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:#0a0a0a;padding:40px;font-family:'Press Start 2P',monospace;">
+  <div style="background:#0a5b23;padding:4px;border-radius:3px;box-shadow:0 0 0 2px #073d18;">
+    <div style="background:#0d2339;border:3px solid #1f9fce;border-radius:2px;width:300px;height:228px;display:flex;flex-direction:column;align-items:center;padding:14px 12px 16px;box-sizing:border-box;">
+
+      <div style="color:#ffcb1e;font-size:13px;letter-spacing:1px;text-shadow:2px 2px 0 #7a4d00;animation:{{ headlineAnim }};">NOW DIVING</div>
+
+      <div style="flex:1;display:flex;align-items:center;justify-content:center;width:100%;">
+        <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAF8AAAAbCAYAAAAahVOPAAAAAXNSR0IArs4c6QAAAxlJREFUaEPtmi9vFFEUxWcNiiYYElJBKkgFIYjKCvCkqqmoQOGwfICKBsUXwJCqihVNPwOtqKwgpKJBoAiSBBSm5Gw4m7O39/2bfTszTWZMd2ffe3fmd8+7f146+XN5ctM0TXN/a2+Cv+O1WgLkDSsT/TI6oC54ZcuVf15/mRuZwceNR5vPR/VXZE/wZIulCZ6sZ6FmdEBF6v95WtgKnmF+AT5ujjugnSM0xGho0dXAVvPrPMl622TMAb4jUrHczrLQ+futCochiLuAA5dxhK55l3eXCjS1P0LAdZ5bXnq7oK0TsNb56fTWs24+e3onQlwJcBVsjliDtb1nlN4scQRVf/31qtk4vVxwwvfdrebV+5PB9hd2x8bUnqN0Oz/64tYBNKDlkyYQuzhVD5V78DH+8fGHQZa4peBzlF4En4NDecDWrbq4Kh7w/x4eu8K5d/C6ebJ/OCj12/eNVS9toAcTbmhreUlTH8puOzue8C9+/Z6b2H6w1gwJfkl8r1GSFykutRU1J6hjbMihAwB/CGGna+jFytcQhM+e6u19ziF8QAdwwl9/87KXhJvTEHm1+jIhxosoRcr3Yjrv2UrIKv/H0dmC/a5V3wa4vltt8Fi7NXxMDlVD1supdjtWMcXKOysG7jwrhNCOzFm7RmwP2VkKvg1F+pIeAH0Ie9DE30oVxjxkqyn0EKiyci+ERl5sAGuIIma/CvyQAvV+zBmeI3KcwD7CNm+wC/gvdvcXclMIhAc+x36uY1eq/NDioeooJyykOsZv04ObUO9QAl/Bw1ldQCev6sr3HGEbLk1k/JyTFzgWZ0We2tV2Svl9qV2fsRP4MKgHbDYW67GF57yYwkO7LhbzLfi+OuzO4AMSQgVevAR+G/B0CLpnvYag9l6UT/VPd97OGi3GZa0w+Dl0CFeS4NDIoYnjoZ6tZLqM7b0kXGsUoUfhl8AMjdWzIm8MHIALTugrvAwCPh7i0/rD2f8JUf0lDkiB5loKPFU1ldivPbbTmM+4//ndx1bvQah2MnPIKrvRVg+cmNQ5fJt4QyehfO4hK3dZh/wDXZsJqAXQu34AAAAASUVORK5CYII=" alt="diving female swan diver" width="240" style="image-rendering:pixelated;display:block;animation:{{ bobAnim }};filter:drop-shadow(2px 3px 0 rgba(0,0,0,0.35));" />
+      </div>
+
+      <div style="color:#eef3fb;font-size:30px;letter-spacing:1px;line-height:1;text-shadow:3px 3px 0 #16365a;">YANTZEN</div>
+      <div style="color:#7fd0ec;font-size:11px;letter-spacing:3px;margin-top:9px;">SWIM &amp; DIVE</div>
+
+    </div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{&quot;$preview&quot;:{&quot;width&quot;:380,&quot;height&quot;:320},&quot;blink&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;},&quot;bob&quot;:{&quot;editor&quot;:&quot;boolean&quot;,&quot;default&quot;:true,&quot;tsType&quot;:&quot;boolean&quot;}}">
+class Component extends DCLogic {
+  renderVals() {
+    const blink = this.props.blink ?? true;
+    const bob = this.props.bob ?? true;
+    return {
+      headlineAnim: blink ? "scbBlink 1.1s steps(1,end) infinite" : "none",
+      bobAnim: bob ? "scbBob 2.6s ease-in-out infinite" : "none",
+    };
+  }
+}
+</script>
+</body>
+</html>
