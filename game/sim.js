@@ -307,13 +307,18 @@ function resolvePitchSpans() {
   var pcLine = speedLine ? speedLine.previousElementSibling : null;
   if (pcLine) {
     pcLine.style.whiteSpace = 'nowrap';
-    pcLine.style.fontSize = '15px';
-    pcLine.style.letterSpacing = '0px';
-    var _box = $('pitch-info');
-    if (_box) { _box.style.width = '300px'; _box.style.left = '430px'; }
-    pcLine.innerHTML = 'PC <span style=\"color:#fff;\">0</span> K <span style=\"color:#fff;\">0</span> BB <span id=\"pitch-bb-span\" style=\"color:#fff;\">0</span>';
-    var spans = pcLine.querySelectorAll('span');
-    PITCH.pcSpan = spans[0]; PITCH.kSpan = spans[1]; PITCH.bbSpan = spans[2];
+      pcLine.style.fontSize = '20px';
+      pcLine.style.letterSpacing = '0px';
+      pcLine.style.lineHeight = '1';
+      pcLine.style.display = 'flex';
+      pcLine.style.flexDirection = 'column';
+      pcLine.style.gap = '6px';
+      var _box = $('pitch-info');
+      if (_box) { _box.style.width = '134px'; _box.style.height = '150px'; _box.style.left = '474px'; _box.style.padding = '13px'; _box.style.gap = '8px'; _box.style.alignItems = 'flex-start'; }
+      var _spd = $('last-pitch-speed');
+      if (_spd) { _spd.style.fontSize = '14px'; _spd.style.whiteSpace = 'nowrap'; _spd.style.letterSpacing = '0px'; var _ptype = _spd.nextElementSibling; if (_ptype) { _ptype.style.fontSize = '12px'; _ptype.style.whiteSpace = 'nowrap'; _ptype.style.letterSpacing = '0px'; } }
+      pcLine.innerHTML = '<div style="display:flex;align-items:center"><span style="display:inline-block;width:2.4em">PC</span><span id="pc-val" style="color:#fff;">0</span></div><div style="display:flex;align-items:center"><span style="display:inline-block;width:2.4em">K</span><span id="k-val" style="color:#fff;">0</span></div><div style="display:flex;align-items:center"><span style="display:inline-block;width:2.4em">BB</span><span id="pitch-bb-span" style="color:#fff;">0</span></div>';
+      PITCH.pcSpan = $('pc-val'); PITCH.kSpan = $('k-val'); PITCH.bbSpan = $('pitch-bb-span');
   }
   PITCH.resolved = !!(PITCH.pcSpan && PITCH.kSpan && PITCH.bbSpan);
 }
