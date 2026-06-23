@@ -1,5 +1,5 @@
 {
-  "note": "Each file is one outfield ad-slot creative, 290x96, 8-bit NES style. Requires the 'Press Start 2P' Google font. The single element id is the stable slot handle.",
+  "note": "Each file is one outfield ad-slot creative, native 290x96 pixel-pure (no scale transforms), 8-bit NES style. Requires the 'Press Start 2P' Google font. The single element id is the stable slot handle.",
   "size": "290x96",
   "count": 36,
   "slots": [
