@@ -1,0 +1,576 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Depot &mdash; Lineup Builder</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<style>
+  :root{
+    /* The Depot palette — lightened for a brighter, more readable builder */
+    --field:#1f7a3e; --field-deep:#2a8a4c; --field-dark:#176235;
+    --green-bright:#3fb85a; --green:#3fb85a;
+    --gold:#f6c81e; --cream:#f7f0db; --cream-dim:#e8d9b0;
+    --leather:#c07a3a; --red:#b8442a; --red-bright:#e25151;
+    --blue:#2a5fc0; --blue-bright:#4a82e6;
+    --frame:#0c2c18; --bg:#16321f;
+    --panel:#2a8a4c; --ink:#f7f0db; --dim:#cde6d2;
+    --paper-ink:#1c2e22; --paper-dim:#5d7a64;
+    --paper:#f7f0db; --paper-line:#efe4c4;
+  }
+  *{box-sizing:border-box}
+  body{
+    margin:0;background:var(--bg);color:var(--ink);
+    font-family:'Press Start 2P',monospace;
+    image-rendering:pixelated;-webkit-font-smoothing:none;
+    line-height:1.6;padding:14px;
+    background-image:repeating-linear-gradient(0deg,#16321f 0 2px,#193a24 2px 4px);
+  }
+  /* ---- header / scoreboard ---- */
+  header{
+    display:flex;align-items:center;justify-content:space-between;
+    gap:10px;padding:14px 16px;background:var(--field);
+    border:4px solid var(--gold);box-shadow:0 0 0 4px var(--frame);
+    margin-bottom:18px;flex-wrap:wrap;
+  }
+  header h1{font-size:15px;margin:0;letter-spacing:1px;color:var(--gold);
+    text-shadow:2px 2px 0 var(--frame);line-height:1.5;}
+  header .who{font-size:9px;color:var(--cream);}
+  button{font-family:inherit;cursor:pointer;border:none;font-weight:bold;
+    image-rendering:pixelated;}
+  .btn-primary{background:var(--gold);color:var(--frame);
+    border:3px solid var(--frame);box-shadow:3px 3px 0 var(--field-dark);
+    padding:12px 16px;font-size:11px;letter-spacing:1px;}
+  .btn-primary:active{transform:translate(2px,2px);box-shadow:1px 1px 0 var(--field-dark);}
+  .btn-primary:disabled{background:#5a6450;color:#2c3a2a;cursor:not-allowed;
+    box-shadow:3px 3px 0 #1a1a1a;}
+  .btn-ghost{background:transparent;color:var(--cream);
+    border:2px solid var(--cream-dim);padding:7px 10px;font-size:9px;}
+  .wrap{max-width:1200px;margin:0 auto;padding:4px;}
+  /* ---- login ---- */
+  #loginView{max-width:420px;margin:60px auto;background:var(--field);
+    color:var(--cream);padding:24px;border:4px solid var(--gold);
+    box-shadow:0 0 0 4px var(--frame);}
+  #loginView h2{margin:0 0 12px;color:var(--gold);font-size:13px;
+    text-shadow:2px 2px 0 var(--frame);}
+  #loginView p{color:var(--cream-dim);font-size:10px;margin:8px 0;line-height:1.8;}
+  #loginView label{display:block;font-size:9px;margin:12px 0 5px;color:var(--gold);}
+  #loginView input{width:100%;padding:11px;background:var(--field-dark);
+    color:var(--cream);border:2px solid var(--gold);font-family:inherit;
+    font-size:10px;}
+  #authMsg{min-height:18px;font-size:9px;margin-top:10px;color:var(--gold);}
+  /* ---- layout ---- */
+  .grid{display:grid;grid-template-columns:1.3fr 1fr;gap:18px;}
+  .col h3{color:var(--gold);font-size:12px;letter-spacing:1px;
+    border-bottom:3px solid var(--gold);padding-bottom:8px;
+    text-shadow:1px 1px 0 var(--frame);}
+  #cardList{max-height:62vh;overflow:auto;display:flex;flex-direction:column;gap:8px;
+    padding-right:4px;}
+  .card-row{display:flex;align-items:center;gap:10px;background:var(--field);
+    padding:10px 12px;border:3px solid var(--field-dark);}
+  .card-row .nm{flex:1}
+  .card-row .nm b{display:block;font-size:10px;color:var(--cream);line-height:1.5;}
+  .card-row .nm small{color:var(--dim);font-size:8px;}
+  /* ---- pills / badges ---- */
+  .pill{font-size:8px;padding:4px 7px;border:2px solid var(--frame);
+    font-weight:bold;letter-spacing:.5px;}
+  .pill.api{background:var(--green-bright);color:var(--frame);}
+  .pill.card{background:var(--gold);color:var(--frame);}
+  .pill.bad{background:var(--red-bright);color:var(--cream);}
+  .pill.pending{background:var(--leather);color:var(--cream);}
+  /* ---- position slots ---- */
+  .slot{display:flex;align-items:center;gap:10px;background:var(--field-deep);
+    padding:9px 12px;border:3px dashed var(--green-bright);min-height:46px;}
+  .slot.filled{border-style:solid;border-color:var(--gold);}
+  .slot .ord{width:36px;color:var(--gold);font-weight:bold;text-align:center;
+    font-size:11px;text-shadow:1px 1px 0 var(--frame);}
+  .slot.oop{border-color:var(--red-bright);}
+  .oop-tag{color:var(--cream);background:var(--red);font-size:8px;
+    padding:3px 6px;border:2px solid var(--frame);font-weight:bold;
+    margin-left:6px;vertical-align:middle;letter-spacing:.5px;}
+  .pos-sel{background:var(--field-dark);color:var(--gold);
+    border:2px solid var(--gold);font-size:10px;padding:4px 6px;
+    margin-right:6px;font-family:inherit;}
+  .pos-sel:disabled{opacity:.4}
+  .slot .who{flex:1;font-size:10px;color:var(--cream);line-height:1.5;}
+  .slot .who small{color:var(--dim);display:block;font-size:8px;}
+  /* ---- status line ---- */
+  #status{margin:14px 0;font-size:11px;color:var(--cream);
+    background:var(--field-dark);border:3px solid var(--gold);
+    padding:10px 12px;letter-spacing:.5px;}
+  #status.ok{color:var(--gold);border-color:var(--gold);}
+  #status.no{color:var(--red-bright);border-color:var(--red-bright);}
+  /* ---- add / remove ---- */
+  .add-btn{background:var(--blue-bright);color:var(--cream);
+    border:2px solid var(--frame);padding:7px 10px;font-size:9px;}
+  .add-btn:disabled{background:#3a4334;color:#5a6450;cursor:not-allowed;}
+  .rm-btn{background:transparent;color:var(--red-bright);
+    border:2px solid var(--red-bright);padding:5px 9px;font-size:8px;}
+  .muted{color:var(--dim);font-size:9px;line-height:1.8;}
+  @media(max-width:760px){.grid{grid-template-columns:1fr;}header h1{font-size:12px;}}
+
+  /* ===== v2 lineup builder: lighter panels + new components ===== */
+  h3{color:var(--gold);text-shadow:2px 2px 0 var(--frame);font-size:12px;}
+  .col{background:rgba(0,0,0,0.10);border-radius:0;}
+  /* collection + order panels are light "paper" for readability */
+  #cardList{max-height:66vh;}
+  .card-row{background:var(--paper);color:var(--paper-ink);border:3px solid var(--field-dark);
+    border-radius:0;display:flex;align-items:center;gap:10px;padding:9px 11px;flex-wrap:wrap;}
+  .card-row .nm{flex:1;min-width:160px;}
+  .card-row .nm b{display:block;font-size:10px;color:var(--paper-ink);line-height:1.5;}
+  .card-row .nm small{color:var(--paper-dim);font-size:8px;display:block;}
+  .card-row.dim-row{opacity:.72;}
+  .row-actions{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+  .hint-bad{color:var(--red);font-size:8px;font-weight:bold;letter-spacing:.5px;}
+  .add-btn{background:var(--blue-bright);color:#fff;border:2px solid var(--frame);
+    padding:6px 9px;font-size:8px;font-family:inherit;cursor:pointer;}
+  .add-btn:disabled{background:#9bbf9f;color:#42563f;cursor:not-allowed;}
+  .pit-btn{background:var(--cream);color:var(--field-dark);border:2px solid var(--frame);
+    padding:6px 9px;font-size:8px;font-family:inherit;cursor:pointer;}
+  .pit-btn.on{background:var(--gold);color:var(--frame);}
+  /* pitcher box */
+  .pbox{background:var(--paper);color:var(--paper-ink);border:3px solid var(--gold);
+    padding:10px 12px;display:flex;align-items:center;gap:10px;min-height:42px;}
+  .pbox .who b{display:block;font-size:11px;color:var(--paper-ink);}
+  .pbox .who small{color:var(--paper-dim);font-size:8px;}
+  /* batting-order rows (drag to reorder) */
+  #slots{display:flex;flex-direction:column;gap:7px;}
+  .bat{display:flex;align-items:center;gap:10px;background:var(--paper);color:var(--paper-ink);
+    border:3px solid var(--field-dark);padding:8px 10px;min-height:46px;}
+  .bat.filled{cursor:grab;}
+  .bat.filled:active{cursor:grabbing;}
+  .bat.empty{background:rgba(247,240,219,0.18);border-style:dashed;border-color:var(--green-bright);color:var(--cream);}
+  .bat .ord{width:30px;height:30px;flex:0 0 30px;display:flex;align-items:center;justify-content:center;
+    background:var(--gold);color:var(--frame);font-size:12px;font-weight:bold;border:2px solid var(--frame);}
+  .bat .who{flex:1;min-width:120px;}
+  .bat .who b{display:block;font-size:10px;color:var(--paper-ink);line-height:1.5;}
+  .bat .who small{color:var(--paper-dim);font-size:8px;display:block;}
+  .bat.empty .muted{color:var(--cream-dim);}
+  .bat.dragging{opacity:.45;}
+  .bat.over{outline:3px solid var(--gold);outline-offset:-1px;}
+  .pos-sel{background:var(--cream);color:var(--field-dark);border:2px solid var(--field-dark);
+    font-size:10px;padding:4px 5px;font-family:inherit;}
+  .rm-btn{background:transparent;color:var(--red);border:2px solid var(--red);
+    padding:5px 8px;font-size:8px;font-family:inherit;cursor:pointer;}
+  /* status line */
+  #status{margin:14px 0;font-size:11px;color:var(--frame);background:var(--gold);
+    border:3px solid var(--frame);padding:10px 12px;letter-spacing:.5px;}
+  #status .ok{color:#0c4a22;font-weight:bold;}
+  #status .no{color:var(--red);font-weight:bold;}
+  .muted{color:var(--dim);font-size:9px;line-height:1.8;}
+</style>
+</head>
+<body>
+<header>
+  <h1>THE DEPOT &mdash; LINEUP BUILDER</h1>
+  <div><span class="who" id="whoami"></span> <button class="btn-ghost" id="logoutBtn" style="display:none">Log out</button></div>
+</header>
+
+<!-- Logged-out: login prompt, no builder -->
+<div id="loginView">
+  <h2>Log in</h2>
+  <p>Sign in to load your Depot collection and build a lineup.</p>
+  <label for="email">Email</label>
+  <input type="email" id="email" autocomplete="email" placeholder="you@example.com">
+  <label for="pass">Password</label>
+  <input type="password" id="pass" autocomplete="current-password" placeholder="password">
+  <div style="margin-top:14px;display:flex;gap:8px;">
+    <button class="btn-primary" id="loginBtn" style="flex:1">Log in</button>
+  </div>
+  <div id="authMsg"></div>
+  <p class="muted" style="margin-top:14px">No password entry is stored by this page; it uses the same Supabase login as the main app.</p>
+</div>
+
+<!-- Logged-in: builder -->
+<div id="builderView" class="wrap" style="display:none">
+  <div id="status"></div>
+  <div class="grid">
+    <div class="col">
+      <h3>YOUR COLLECTION <span class="muted" id="collCount"></span></h3>
+      <div class="muted" style="margin:6px 0">Each card plays as its card-year self. Stats resolve from the MLB Stats API by player + year, falling back to the card&rsquo;s saved stat line.</div>
+      <div id="cardList"><div class="muted">Loading your cards&hellip;</div></div>
+    </div>
+    <div class="col">
+      <h3>PITCHER <span class="muted">(pitching box)</span></h3>
+          <div id="pitcherBox" class="pbox"><span class="muted">No pitcher chosen yet.</span></div>
+          <h3 style="margin-top:18px;">BATTING ORDER <span class="muted">(1–9 · drag to reorder)</span></h3>
+          <div id="slots"></div>
+      <div style="margin-top:14px;display:flex;gap:8px;align-items:center;">
+        <button class="btn-primary" id="playBtn" disabled>PLAY BALL &#9654;</button>
+        <button class="btn-ghost" id="clearBtn">Clear</button>
+        <span class="muted" id="playHint"></span>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+(function(){
+  'use strict';
+  var $=function(id){return document.getElementById(id);};
+  // ----- Config (publishable key only; same project as main app) -----
+  var SUPABASE_URL='https://nuymzokvbdntbvinsnda.supabase.co';
+  var SUPABASE_KEY=['sb','publishable','IiTsIBqYgGTIEnwdvQEXPA','4rmQdYVo'].join('_');
+  var MLB_BASE='https://statsapi.mlb.com/api/v1';
+  var META_MARK='\n\n<!--DEPOT_META:'; var META_END='-->';
+  var sb=null;
+  try{ if(window.supabase&&window.supabase.createClient){ sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY); } }catch(e){}
+  if(!sb){ $('authMsg').textContent='Auth library failed to load. Check your connection and reload.'; }
+
+  // ----- State -----
+    var USER=null, CARDS=[];
+    // 8 fielding positions (no pitcher) + DH = 9 batting-order slots.
+    var FIELD_POS=['C','1B','2B','3B','SS','LF','CF','RF'];
+    var BAT_POS=['C','1B','2B','3B','SS','LF','CF','RF','DH']; // valid positions a batter can occupy
+    // ORDER[i] = { id: cardId, pos: 'C'|'1B'|...|'DH' } or null. Index = batting slot 0..8 (shown 1..9).
+    var ORDER=new Array(9).fill(null);
+    // Separately-chosen pitcher (pitching box). No hitting line required.
+    var PITCHER=null; // cardId or null
+    var RESOLVED={}; // cardId -> {status:'api'|'card'|'bad'|'pending', team, rates, avg, hr, rbi, tendency, pos, note}
+    // normalize a raw card position string to one of our position codes (for default suggestion)
+    function normPos(raw){ var r=String(raw||'').toUpperCase().trim();
+      if(BAT_POS.indexOf(r)>=0) return r;
+      if(r==='OF'){ return 'LF'; }
+      if(r==='IF'){ return '1B'; }
+      if(r.length>=2 && r[0]>='1' && r[0]<='9'){ var f=['1B','2B','3B','SS'].filter(function(x){return r.indexOf(x)>=0;}); return f.length?f[0]:''; }
+      if(r==='LHP'||r==='RHP'||r==='SP'||r==='RP'||r==='TWP'||r==='P') return 'P';
+      return ''; }
+    function naturalPosFor(id){ var rv=id?RESOLVED[id]:null; return rv?normPos(rv.pos):''; }
+    function isUsableHitter(id){ var rv=id?RESOLVED[id]:null; return !!(rv && (rv.status==='api'||rv.status==='card')); }
+    function inOrder(id){ for(var i=0;i<9;i++){ if(ORDER[i]&&ORDER[i].id===id) return i; } return -1; }
+    function firstEmptySlot(){ return ORDER.indexOf(null); }
+    function usedPositions(){ var u={}; for(var i=0;i<9;i++){ if(ORDER[i]) u[ORDER[i].pos]=true; } return u; }
+    function nextFreePos(prefer){ var u=usedPositions(); if(prefer && !u[prefer]) return prefer; for(var i=0;i<BAT_POS.length;i++){ if(!u[BAT_POS[i]]) return BAT_POS[i]; } return 'DH'; }
+    
+    // ----- Auth -----
+  function setAuthMsg(t){ $('authMsg').textContent=t||''; }
+  function showLoggedIn(email){ $('loginView').style.display='none'; $('builderView').style.display='block'; $('whoami').textContent=email||''; $('logoutBtn').style.display='inline-block'; }
+  function showLoggedOut(){ $('builderView').style.display='none'; $('loginView').style.display='block'; $('whoami').textContent=''; $('logoutBtn').style.display='none'; }
+  async function doLogin(){
+    if(!sb) return;
+    var email=($('email').value||'').trim(); var pass=$('pass').value||'';
+    if(!email||!pass){ setAuthMsg('Enter email and password.'); return; }
+    setAuthMsg('Working\u2026'); $('loginBtn').disabled=true;
+    try{
+      var res=await sb.auth.signInWithPassword({email:email,password:pass});
+      if(res.error){ setAuthMsg(res.error.message||'Login failed.'); }
+      else { setAuthMsg(''); }
+    }catch(e){ setAuthMsg('Login error: '+(e&&e.message||e)); }
+    finally{ $('loginBtn').disabled=false; }
+  }
+  async function doLogout(){ try{ await sb.auth.signOut(); }catch(e){} }
+
+  if(sb){
+    sb.auth.onAuthStateChange(function(event,session){ onSession(session?session:null); });
+    sb.auth.getSession().then(function(r){ onSession(r&&r.data?r.data.session:null); });
+  }
+  function onSession(session){
+    if(session&&session.user){ USER=session.user; showLoggedIn(USER.email); loadCards(); }
+    else { USER=null; showLoggedOut(); }
+  }
+  $('loginBtn').addEventListener('click',doLogin);
+  $('pass').addEventListener('keydown',function(e){ if(e.key==='Enter') doLogin(); });
+  $('logoutBtn').addEventListener('click',doLogout);
+
+  // ----- Notes sidecar (mirrors main app unpackNotes) -----
+  function unpackNotes(notes){
+    notes=notes||'';
+    var i=notes.indexOf(META_MARK);
+    if(i<0) return { bio:notes, meta:{} };
+    var bio=notes.slice(0,i);
+    var j=notes.indexOf(META_END,i);
+    var meta={};
+    if(j>i){ try{ meta=JSON.parse(notes.slice(i+META_MARK.length,j)); }catch(e){ meta={}; } }
+    return { bio:bio, meta:meta };
+  }
+
+  // ----- Load user's cards from Supabase (mirrors main app collections->cards) -----
+  async function loadCards(){
+    if(!sb||!USER) return;
+    $('cardList').innerHTML='<div class="muted">Loading your cards\u2026</div>';
+    try{
+      var coll=await sb.from('collections').select('id').eq('owner_id',USER.id).order('created_at',{ascending:true}).limit(1);
+      if(coll.error) throw coll.error;
+      if(!coll.data||!coll.data.length){ $('cardList').innerHTML='<div class="muted">No collection found for this account yet. Add cards in the main app first.</div>'; CARDS=[]; renderAll(); return; }
+      var collectionId=coll.data[0].id;
+      var res=await sb.from('cards').select('*').eq('collection_id',collectionId).order('created_at',{ascending:true});
+      if(res.error) throw res.error;
+      CARDS=(res.data||[]).map(rowToCard).filter(function(c){ return c.type!=='pitching'; });
+      renderAll();
+    }catch(e){
+      $('cardList').innerHTML='<div class="muted">Could not load your cards: '+(e&&e.message||e)+'</div>';
+    }
+  }
+
+  function rowToCard(r){
+    var u=unpackNotes(r.notes);
+    var yr=parseInt(r.year,10)||null;
+    return {
+      id:r.id, player:r.player||'', team:r.team||'', yr:yr,
+      brand:r.brand||'', set:r.set||'', number:r.number||'',
+      pos:(u.meta&&u.meta.pos)||'', type:(u.meta&&u.meta.type)||'hitter',
+      stats:(u.meta&&u.meta.stats)||{}
+    };
+  }
+
+  // ===== STAT RESOLUTION =====
+  // Map a full season hitting line to per-PA log5 rates {BB,K,HR,_2B,_3B,_1B} (OUT = remainder).
+  function lineToRates(L){
+    var AB=+L.AB||0, H=+L.H||0, d2=+L['2B']||0, t3=+L['3B']||0, hr=+L.HR||0, bb=+L.BB||0, so=+L.SO||0, hbp=+L.HBP||0, sf=+L.SF||0;
+    var PA=+L.PA|| (AB+bb+hbp+sf) || 0;
+    if(PA<50) return null; // too few PA to model reliably
+    var singles=Math.max(0, H-d2-t3-hr);
+    var r={ BB:(bb+hbp)/PA, K:so/PA, HR:hr/PA, _2B:d2/PA, _3B:t3/PA, _1B:singles/PA };
+    return clampRates(r);
+  }
+  // Sparse fallback: only AVG (+HR,RBI) known. Assume league-baseline shape.
+  function avgToRates(avg,hr,rbi){
+    avg=parseFloat(avg)||0; hr=parseInt(hr,10)||0;
+    if(avg<=0||avg>=1) return null;
+    var PA=600, AB=545;            // league-ish full season
+    var H=Math.round(avg*AB);
+    var hrPA=Math.min(hr,H)/PA;    // HR per PA from the card's HR
+    // League-baseline hit-type distribution among non-HR hits: ~ 2B 20%, 3B 2%, 1B 78%
+    var nonHrH=Math.max(0,H-hr);
+    var d2=nonHrH*0.20, t3=nonHrH*0.02, s1=nonHrH*0.78;
+    var bbRate=0.085, kRate=0.200; // league baseline walk/strikeout per PA
+    var r={ BB:bbRate, K:kRate, HR:hrPA, _2B:d2/PA, _3B:t3/PA, _1B:s1/PA };
+    return clampRates(r);
+  }
+  function clampRates(r){
+    ['BB','K','HR','_2B','_3B','_1B'].forEach(function(k){ if(!isFinite(r[k])||r[k]<0) r[k]=0; });
+    var sum=r.BB+r.K+r.HR+r._2B+r._3B+r._1B;
+    if(sum>0.97){ var sc=0.97/sum; ['BB','K','HR','_2B','_3B','_1B'].forEach(function(k){ r[k]*=sc; }); } // leave >=3% OUT room
+    return r;
+  }
+  // Parse card stat-line text like 'AVG:.264, HR:16, RBI:61, OPS:.748' (order-free, case-insensitive).
+  function parseStatLine(txt){
+    if(!txt) return {};
+    var out={}; var re=/([A-Za-z0-9]+)\s*[:=]\s*\.?(\d*\.?\d+)/g; var m;
+    while((m=re.exec(String(txt)))){ out[m[1].toUpperCase()]=m[0].split(/[:=]/)[1].trim(); }
+    return out;
+  }
+  // Pull AVG/HR/RBI from the card's stats sidecar (object or free-text placeholder).
+  function cardStatFields(card){
+    var s=card.stats||{};
+    var avg=s.AVG||s.avg, hr=s.HR||s.hr, rbi=s.RBI||s.rbi;
+    if((avg==null||hr==null) && (s.placeholder||s.line||s.text)){
+      var p=parseStatLine(s.placeholder||s.line||s.text);
+      avg=avg||p.AVG; hr=hr||p.HR; rbi=rbi||p.RBI;
+    }
+    return { avg:avg, hr:hr, rbi:rbi };
+  }
+
+  // ----- MLB Stats API (keyless, CORS-open) -----
+  function cleanName(s){ return String(s||'').toLowerCase().replace(/[.,'`\u2019]/g,'').replace(/\s+jr\b|\s+sr\b|\s+ii+\b|\s+iv\b/g,'').replace(/\s+/g,' ').trim(); }
+  async function mlbFindPlayer(name){
+    var q=encodeURIComponent(name);
+    // primary: people/search
+    try{
+      var r=await fetch(MLB_BASE+'/people/search?names='+q);
+      if(r.ok){ var j=await r.json(); if(j&&j.people&&j.people.length) return pickPerson(j.people,name); }
+    }catch(e){}
+    try{
+      var r2=await fetch(MLB_BASE+'/people/search?q='+q);
+      if(r2.ok){ var j2=await r2.json(); if(j2&&j2.people&&j2.people.length) return pickPerson(j2.people,name); }
+    }catch(e){}
+    return null;
+  }
+  function pickPerson(people,name){
+    var cn=cleanName(name);
+    var exact=people.filter(function(p){ return cleanName(p.fullName)===cn; });
+    var pool=exact.length?exact:people;
+    if(pool.length>1 && exact.length!==1) return { ambiguous:true, count:pool.length };
+    return pool[0];
+  }
+  async function mlbSeasonHitting(personId,year){
+    var url=MLB_BASE+'/people/'+personId+'/stats?stats=season&group=hitting&season='+year;
+    try{
+      var r=await fetch(url); if(!r.ok) return null; var j=await r.json();
+      var splits=(j&&j.stats&&j.stats[0]&&j.stats[0].splits)||[];
+      if(!splits.length) return null;
+      // prefer the aggregate / largest-AB split if multiple (traded mid-year)
+      var best=splits[0], bestAB=-1;
+      splits.forEach(function(sp){ var ab=(sp.stat&&+sp.stat.atBats)||0; if(ab>bestAB){ bestAB=ab; best=sp; } });
+      var st=best.stat||{};
+      return { AB:st.atBats, H:st.hits, '2B':st.doubles, '3B':st.triples, HR:st.homeRuns, BB:st.baseOnBalls, SO:st.strikeOuts, HBP:st.hitByPitch, SF:st.sacFlies, PA:st.plateAppearances, AVG:st.avg, RBI:st.rbi };
+    }catch(e){ return null; }
+  }
+
+  // ----- Master resolver: API by name+year -> card-text fallback -> unusable -----
+  async function resolveCard(card){
+    var out={ status:'pending', note:'', team:card.team||'', tendency:'spray', avg:'.000', hr:0, rbi:0, rates:null, pos:'', era:'', w:null, l:null };
+      try{ var _cs=card.stats||{}; if(_cs.ERA!=null) out.era=String(_cs.ERA); if(_cs.W!=null) out.w=String(_cs.W); if(_cs.L!=null) out.l=String(_cs.L); }catch(_e){}
+    // 1) MLB API by player name + card year
+    if(card.player && card.yr){
+      var person=await mlbFindPlayer(card.player);
+      if(person && !person.ambiguous && person.id){
+        // Capture the player's actual fielding position from the same API lookup.
+        out.pos=(person.primaryPosition && person.primaryPosition.abbreviation) || '';
+        var line=await mlbSeasonHitting(person.id, card.yr);
+        if(line){
+          var rates=lineToRates(line);
+          if(rates){ out.status='api'; out.rates=rates; out.avg=fmtAvg(line.AVG); out.hr=+line.HR||0; out.rbi=+line.RBI||0; out.note='MLB API '+card.yr; return out; }
+        }
+        out.note='MLB API: no '+card.yr+' hitting line';
+      } else if(person && person.ambiguous){ out.note='MLB API: ambiguous name'; }
+      else { out.note='MLB API: no match'; }
+    } else { out.note='missing name or year'; }
+    // 2) Fallback: card stat-line text (AVG/HR/RBI)
+    var cf=cardStatFields(card);
+    if(cf.avg){
+      var fr=avgToRates(cf.avg,cf.hr,cf.rbi);
+      if(fr){ out.status='card'; out.rates=fr; out.avg=fmtAvg(cf.avg); out.hr=parseInt(cf.hr,10)||0; out.rbi=parseInt(cf.rbi,10)||0; out.note=(out.note?out.note+'; ':'')+'card stat-line (approx)'; return out; }
+    }
+    // 3) Unusable
+    out.status='bad'; out.note=(out.note?out.note+'; ':'')+'no usable stats'; out.rates=null; return out;
+  }
+  function fmtAvg(a){ a=parseFloat(a); if(!isFinite(a)) return '.000'; return a.toFixed(3).replace(/^0/,''); }
+
+  // ===== UI =====
+    function cardById(id){ for(var i=0;i<CARDS.length;i++) if(CARDS[i].id===id) return CARDS[i]; return null; }
+    function fmtMeta(c){ var rv=RESOLVED[c.id]; var bits=[]; if(c.yr) bits.push(c.yr); if(c.team) bits.push(c.team); var np=rv?normPos(rv.pos):''; if(np&&np!=='P') bits.push(np); return bits.join(' \u00b7 '); }
+
+    // ----- LEFT: collection -----
+    function renderCards(){
+      $('collCount').textContent=CARDS.length?('('+CARDS.length+' cards)'):'';
+      if(!CARDS.length){ if($('cardList').innerHTML.indexOf('Could not')<0) $('cardList').innerHTML='<div class="muted">No cards found in your collection.</div>'; return; }
+      var html=''; CARDS.forEach(function(c){
+        var rv=RESOLVED[c.id]||{status:'pending'};
+        var st=rv.status;
+        var usable=isUsableHitter(c.id);
+        var inOrd=inOrder(c.id)>=0;
+        var isPit=(PITCHER===c.id);
+        var sub=fmtMeta(c);
+        var note=(st==='bad')?(rv.note||'no hitting line'):'';
+        // status text (no MLB-API pill): just a tiny dim note when unusable as a hitter
+        var hitTag = usable ? '' : '<span class="hint-bad">no hitting line</span>';
+        // Add-to-order button: disabled if already in order, or order full, or not a usable hitter
+        var full=(firstEmptySlot()<0);
+        var canAdd = usable && !inOrd && !full;
+        var addLbl = inOrd ? 'in order' : 'Add to order';
+        var addBtn = '<button class="add-btn" data-add="'+c.id+'"'+(canAdd?'':' disabled')+'>'+addLbl+'</button>';
+        // Pitcher pick button: ANY card selectable by name, no hitting line needed
+        var pitBtn = '<button class="pit-btn'+(isPit?' on':'')+'" data-pit="'+c.id+'">'+(isPit?'\u2605 Pitcher':'Set as P')+'</button>';
+        html+= '<div class="card-row'+(usable?'':' dim-row')+'">'
+             +   '<div class="nm"><b>'+esc(c.player||'(unnamed)')+'</b>'
+             +     '<small>'+esc(sub)+(note?(' \u00b7 '+esc(note)):'')+'</small></div>'
+             +   '<div class="row-actions">'+hitTag+pitBtn+addBtn+'</div>'
+             + '</div>';
+      });
+      $('cardList').innerHTML=html;
+      Array.prototype.forEach.call($('cardList').querySelectorAll('[data-add]'),function(b){ b.addEventListener('click',function(){ addToOrder(b.getAttribute('data-add')); }); });
+      Array.prototype.forEach.call($('cardList').querySelectorAll('[data-pit]'),function(b){ b.addEventListener('click',function(){ setPitcher(b.getAttribute('data-pit')); }); });
+    }
+
+    // ----- RIGHT: batting order (drag to reorder) -----
+    var dragFrom=-1;
+    function renderOrder(){
+      var html='';
+      for(var i=0;i<9;i++){
+        var slot=ORDER[i];
+        if(slot){
+          var c=cardById(slot.id); var rv=RESOLVED[slot.id]||{};
+          var posSel='<select class="pos-sel" data-pos="'+i+'">'+BAT_POS.map(function(P){ var u=usedPositions(); var taken=(u[P]&&P!==slot.pos); return '<option value="'+P+'"'+(P===slot.pos?' selected':'')+(taken?' disabled':'')+'>'+P+'</option>'; }).join('')+'</select>';
+          html+='<div class="bat filled" draggable="true" data-slot="'+i+'">'
+              +   '<div class="ord">'+(i+1)+'</div>'
+              +   '<div class="who"><b>'+esc(c?c.player:'?')+'</b>'
+              +     '<small>'+esc((rv.avg||'.000'))+' AVG \u00b7 '+(rv.hr||0)+' HR \u00b7 '+(rv.rbi||0)+' RBI</small></div>'
+              +   posSel
+              +   '<button class="rm-btn" data-rm="'+i+'">remove</button>'
+              + '</div>';
+        } else {
+          html+='<div class="bat empty" data-slot="'+i+'"><div class="ord">'+(i+1)+'</div><span class="muted">empty \u2014 add a hitter from the left</span></div>';
+        }
+      }
+      $('slots').innerHTML=html;
+      var rows=$('slots').querySelectorAll('.bat');
+      Array.prototype.forEach.call(rows,function(row){
+        row.addEventListener('dragstart',function(e){ dragFrom=+row.getAttribute('data-slot'); row.classList.add('dragging'); try{e.dataTransfer.effectAllowed='move'; e.dataTransfer.setData('text/plain',String(dragFrom));}catch(_){} });
+        row.addEventListener('dragend',function(){ dragFrom=-1; Array.prototype.forEach.call($('slots').querySelectorAll('.bat'),function(r){r.classList.remove('dragging','over');}); });
+        row.addEventListener('dragover',function(e){ e.preventDefault(); try{e.dataTransfer.dropEffect='move';}catch(_){} row.classList.add('over'); });
+        row.addEventListener('dragleave',function(){ row.classList.remove('over'); });
+        row.addEventListener('drop',function(e){ e.preventDefault(); var to=+row.getAttribute('data-slot'); moveSlot(dragFrom,to); });
+      });
+      Array.prototype.forEach.call($('slots').querySelectorAll('[data-rm]'),function(b){ b.addEventListener('click',function(){ removeSlot(+b.getAttribute('data-rm')); }); });
+      Array.prototype.forEach.call($('slots').querySelectorAll('[data-pos]'),function(sel){ sel.addEventListener('change',function(){ setSlotPos(+sel.getAttribute('data-pos'), sel.value); }); });
+    }
+
+    // ----- pitcher box -----
+    function renderPitcher(){
+      var box=$('pitcherBox'); if(!box) return;
+      if(PITCHER){ var c=cardById(PITCHER); var rv=RESOLVED[PITCHER]||{}; var era=(rv.era!=null&&rv.era!=='')?rv.era:'\u2014';
+        box.innerHTML='<div class="who"><b>'+esc(c?c.player:'?')+'</b><small>'+esc((c&&c.team)||'')+(rv.era?(' \u00b7 '+esc(rv.era)+' ERA'):'')+'</small></div><button class="rm-btn" id="rmPit">remove</button>';
+        var rb=$('rmPit'); if(rb) rb.addEventListener('click',function(){ PITCHER=null; renderAll(); });
+      } else { box.innerHTML='<span class="muted">No pitcher chosen \u2014 pick one from your collection (\u201cSet as P\u201d).</span>'; }
+    }
+
+    function renderAll(){ renderCards(); renderOrder(); renderPitcher(); renderStatus(); }
+
+    function renderStatus(){
+      var filledCount=0, usableCount=0;
+      for(var i=0;i<9;i++){ if(ORDER[i]){ filledCount++; if(isUsableHitter(ORDER[i].id)) usableCount++; } }
+      var hasPit=!!PITCHER;
+      var ready=(filledCount===9 && usableCount===9 && hasPit);
+      var msg='Batting order: <b class="'+(filledCount===9?'ok':'no')+'">'+filledCount+' / 9</b> hitters set.';
+      msg+=' Pitcher: <b class="'+(hasPit?'ok':'no')+'">'+(hasPit?'set':'none')+'</b>.';
+      msg+= ready ? ' <span class="ok">Ready to play.</span>' : ' <span class="no">'+(9-filledCount)+' more hitter(s)'+(hasPit?'':' and a pitcher')+' needed.</span>';
+      $('status').innerHTML=msg;
+      $('playBtn').disabled=!ready;
+      $('playHint').textContent=ready?'ready':('Need '+(9-filledCount)+' hitter(s)'+(hasPit?'':' + pitcher'));
+    }
+
+    function addToOrder(id){ if(inOrder(id)>=0) return; if(!isUsableHitter(id)) return; var slot=firstEmptySlot(); if(slot<0) return; if(PITCHER===id) PITCHER=null; var pref=naturalPosFor(id); ORDER[slot]={ id:id, pos:nextFreePos(pref==='P'?'':pref) }; renderAll(); }
+    function removeSlot(i){ ORDER[i]=null; renderAll(); }
+    function setSlotPos(i,pos){ if(!ORDER[i]) return; var u=usedPositions(); if(u[pos] && ORDER[i].pos!==pos){ /* swap with whoever holds it */ for(var k=0;k<9;k++){ if(k!==i && ORDER[k] && ORDER[k].pos===pos){ ORDER[k].pos=ORDER[i].pos; break; } } } ORDER[i].pos=pos; renderAll(); }
+    function setPitcher(id){ if(PITCHER===id){ PITCHER=null; renderAll(); return; } var oi=inOrder(id); if(oi>=0) ORDER[oi]=null; PITCHER=id; renderAll(); }
+    function moveSlot(from,to){ if(from<0||to<0||from===to||from>8||to>8) return; var arr=ORDER.slice(); var item=arr.splice(from,1)[0]; arr.splice(to,0,item); ORDER=arr; renderAll(); }
+
+    $('clearBtn').addEventListener('click',function(){ ORDER=new Array(9).fill(null); PITCHER=null; renderAll(); });
+    function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+
+    
+    // ===== HAND-OFF TO SIM =====
+    // Batting order = 9 hitters (8 fielders + DH), NO pitcher. Pitcher sent separately.
+    function buildTeamPayload(){
+      var lineup=ORDER.map(function(slot){ var id=slot.id; var c=cardById(id); var rv=RESOLVED[id]||{};
+        return { name:(c.player||'PLAYER').toUpperCase(), avg:rv.avg, hr:rv.hr, rbi:rv.rbi, tendency:rv.tendency||'spray', rates:rv.rates, pos:slot.pos };
+      });
+      var pitcher=null;
+      if(PITCHER){ var pc=cardById(PITCHER); var prv=RESOLVED[PITCHER]||{};
+        pitcher={ name:(pc.player||'PITCHER').toUpperCase() };
+        if(prv.era!=null && prv.era!=='') pitcher.era=String(prv.era);
+        if(prv.w!=null) pitcher.w=String(prv.w);
+        if(prv.l!=null) pitcher.l=String(prv.l);
+      }
+      var teamName=(CARDS.length&&deriveTeamName())||'DEPOT';
+      return { name:teamName, code:'mudcats', lineup:lineup, pitcher:pitcher };
+    }
+    function deriveTeamName(){ var n=(USER&&USER.email||'').split('@')[0]; return (n||'DEPOT').toUpperCase().slice(0,12); }
+    $('playBtn').addEventListener('click',function(){
+      var usable=ORDER.every(function(slot){ return slot && isUsableHitter(slot.id); });
+      if(!usable || ORDER.indexOf(null)>=0 || !PITCHER) return;
+      try{ sessionStorage.setItem('depot_user_team', JSON.stringify(buildTeamPayload())); }catch(e){}
+      window.location.href='./?from=builder';
+    });
+    
+    // ===== Resolve all cards after load (sequential, gentle on the API) =====
+  async function resolveAll(){
+    for(var i=0;i<CARDS.length;i++){
+      var c=CARDS[i];
+      RESOLVED[c.id]=await resolveCard(c);
+      renderCards(); renderStatus();
+    }
+  }
+  // hook resolveAll into loadCards completion
+  var _renderAll=renderAll;
+  renderAll=function(){ _renderAll(); if(CARDS.length && !renderAll._kicked){ renderAll._kicked=true; resolveAll(); } };
+
+  // expose a couple internals for headless tests
+  window.__DepotBuilder={ lineToRates:lineToRates, avgToRates:avgToRates, parseStatLine:parseStatLine, resolveCard:resolveCard, mlbFindPlayer:mlbFindPlayer, mlbSeasonHitting:mlbSeasonHitting, buildTeamPayload:function(){return buildTeamPayload();} };
+})();
+</script>
+</body>
+</html>
