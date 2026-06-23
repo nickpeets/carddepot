@@ -12,17 +12,19 @@
 
   // ---- Ad library (flat paths; manifest's slots/ prefix is stale) ----------
   // ad-open is the "YOUR AD HERE" placeholder: fallback only, never in the pool.
-  var AD_IDS = ['ad-taylors','ad-tophat','ad-dublin','ad-satyricon','ad-laluna',
-    'ad-mavericks','ad-millennium','ad-efny','ad-scholls','ad-taborview',
-    'ad-yantzen','ad-berbatis','ad-leroys','ad-jimmymaks','ad-tonic',
-    'ad-hungfarlow','ad-skyline','ad-powells','ad-dragon','ad-omsi',
-    'ad-farrells','ad-alpenrose','ad-whitestag','ad-yem','ad-saturdaymarket',
-    'ad-oakspark','ad-enchanted','ad-bullseye'];
+  var AD_IDS = [
+  'ad-21stave','ad-alpenrose','ad-berbatis','ad-bullseye','ad-dragon',
+  'ad-dublin','ad-efny','ad-enchanted','ad-farrells','ad-gobytrain',
+  'ad-hungfarlow','ad-jimmymaks','ad-laluna','ad-larrysteele','ad-leroys',
+  'ad-malibu','ad-mavericks','ad-millennium','ad-oakspark','ad-omsi',
+  'ad-powells','ad-renners','ad-saltworks','ad-saturdaymarket','ad-satyricon',
+  'ad-scholls','ad-skyline','ad-taborview','ad-taylors','ad-tonic',
+  'ad-tophat','ad-weinhards','ad-whitestag','ad-yantzen','ad-yem'];
   var FALLBACK_ID = 'ad-open';
   var BASE = 'billboards/';
 
-  // Native creative size (every creative authored at 360x120).
-  var CREATIVE_W = 360, CREATIVE_H = 120;
+  // Native creative size (every creative authored natively at 290x96).
+  var CREATIVE_W = 290, CREATIVE_H = 96;
 
   var POOL = {};        // id -> inner markup string of <div id="ad-*">
   var poolReady = false;
@@ -65,7 +67,7 @@
       var st = d.getAttribute('style') || '';
       if (!/position:\s*absolute/.test(st)) return;
       var w = px(st,'width'), h = px(st,'height'), top = px(st,'top'), left = px(st,'left');
-      if (w === 290 && h === 96 && top !== null && left !== null && top >= 380 && top <= 420) {
+      if (w === 341 && h === 113 && top !== null && left !== null && top >= 380 && top <= 420) {
         out.push({ el: d, left: left });
       }
     });
@@ -89,7 +91,7 @@
     var st = board.getAttribute('style') || '';
     var bW = px(st,'width'), bH = px(st,'height');
     var bdr = (st.match(/border:\s*([\d.]+)px/) || [0,5])[1]; bdr = parseFloat(bdr) || 5;
-    var innerW = bW - 2*bdr, innerH = bH - 2*bdr;
+    var innerW = bW, innerH = bH; // slot is edgeless now: fill full box
     var scale = Math.min(innerW / CREATIVE_W, innerH / CREATIVE_H); // preserve 360:120 ratio
     screen.style.cssText =
       'width:' + CREATIVE_W + 'px;height:' + CREATIVE_H + 'px;' +

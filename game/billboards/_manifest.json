@@ -1,5 +1,7 @@
 {
-  "note": "Each file is one outfield ad-slot creative, 360x120, 8-bit NES style. Requires the 'Press Start 2P' Google font. The single element id is the stable slot handle.",
+  "note": "Each file is one outfield ad-slot creative, native 290x96 pixel-pure (no scale transforms), 8-bit NES style. Requires the 'Press Start 2P' Google font. The single element id is the stable slot handle.",
+  "size": "290x96",
+  "count": 36,
   "slots": [
     {
       "id": "ad-taylors",
@@ -108,6 +110,34 @@
     {
       "id": "ad-enchanted",
       "file": "slots/ad-enchanted.html"
+    },
+    {
+      "id": "ad-21stave",
+      "file": "slots/ad-21stave.html"
+    },
+    {
+      "id": "ad-weinhards",
+      "file": "slots/ad-weinhards.html"
+    },
+    {
+      "id": "ad-gobytrain",
+      "file": "slots/ad-gobytrain.html"
+    },
+    {
+      "id": "ad-renners",
+      "file": "slots/ad-renners.html"
+    },
+    {
+      "id": "ad-malibu",
+      "file": "slots/ad-malibu.html"
+    },
+    {
+      "id": "ad-larrysteele",
+      "file": "slots/ad-larrysteele.html"
+    },
+    {
+      "id": "ad-saltworks",
+      "file": "slots/ad-saltworks.html"
     },
     {
       "id": "ad-bullseye",
