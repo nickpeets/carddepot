@@ -899,13 +899,13 @@ body{
 
   function renderSession(session){
     var loggedIn = !!(session && session.user);
-    var emailEl=$('authEmail'), loginBtn=$('authLoginBtn'), logoutBtn=$('authLogoutBtn');
+    var emailEl=$('authEmail'), loginBtn=$('authLoginBtn'), logoutBtn=$('authLogoutBtn'), playBtn=$('homePlayBtn');
     if(!emailEl) return;
     if(loggedIn){
       emailEl.textContent = session.user.email || 'signed in';
-      emailEl.style.display=''; loginBtn.style.display='none'; logoutBtn.style.display='';
+      emailEl.style.display=''; loginBtn.style.display='none'; logoutBtn.style.display=''; if(playBtn) playBtn.style.display='';
     } else {
-      emailEl.style.display='none'; loginBtn.style.display=''; logoutBtn.style.display='none';
+      emailEl.style.display='none'; loginBtn.style.display=''; logoutBtn.style.display='none'; if(playBtn) playBtn.style.display='none';
     }
   }
 
@@ -1021,7 +1021,7 @@ body.logged-out #appFrame{display:none !important;}
   <div class="auth-area" id="authArea">
     <span class="auth-email" id="authEmail" style="display:none"></span>
     <button class="auth-btn" id="authLoginBtn" type="button" onclick="DepotAuth.openModal()">Log in</button>
-    <button class="auth-btn" id="authLogoutBtn" type="button" style="display:none" onclick="DepotAuth.logout()">Log out</button>
+    <button class="auth-btn" id="authLogoutBtn" type="button" style="display:none" onclick="DepotAuth.logout()">Log out</button><button class="auth-btn" id="homePlayBtn" type="button" style="display:none" onclick="window.location.href='game/builder.html'">Play Ball</button>
   </div>
 
 </div>
