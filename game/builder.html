@@ -131,6 +131,8 @@
   .pit-btn{background:var(--cream);color:var(--field-dark);border:2px solid var(--frame);
     padding:6px 9px;font-size:8px;font-family:inherit;cursor:pointer;}
   .pit-btn.on{background:var(--gold);color:var(--frame);}
+    .sortbtn{background:var(--cream);color:var(--field-dark);border:2px solid var(--field-dark);padding:4px 7px;font-size:8px;font-family:inherit;cursor:pointer;vertical-align:middle;}
+    .sortbtn.on{background:var(--gold);color:var(--frame);border-color:var(--frame);}
   /* pitcher box */
   .pbox{background:var(--paper);color:var(--paper-ink);border:3px solid var(--gold);
     padding:10px 12px;display:flex;align-items:center;gap:10px;min-height:42px;}
@@ -189,7 +191,7 @@
   <div id="status"></div>
   <div class="grid">
     <div class="col">
-      <h3>YOUR COLLECTION <span class="muted" id="collCount"></span></h3>
+      <h3>YOUR COLLECTION <span class="muted" id="collCount"></span> <button type="button" id="sortPosBtn" class="sortbtn" aria-pressed="false">Sort by position</button></h3>
       <div class="muted" style="margin:6px 0">Each card plays as its card-year self. Stats resolve from the MLB Stats API by player + year, falling back to the card&rsquo;s saved stat line.</div>
       <div id="cardList"><div class="muted">Loading your cards&hellip;</div></div>
     </div>
@@ -232,6 +234,7 @@
     // Separately-chosen pitcher (pitching box). No hitting line required.
     var PITCHER=null; // cardId or null
     var RESOLVED={}; // cardId -> {status:'api'|'card'|'bad'|'pending', team, rates, avg, hr, rbi, tendency, pos, note}
+    var SORT_BY_POS=false; // collection-list sort toggle (left list only; does not affect lineup)
     // normalize a raw card position string to one of our position codes (for default suggestion)
     function normPos(raw){ var r=String(raw||'').toUpperCase().trim();
       if(BAT_POS.indexOf(r)>=0) return r;
@@ -241,6 +244,10 @@
       if(r==='LHP'||r==='RHP'||r==='SP'||r==='RP'||r==='TWP'||r==='P') return 'P';
       return ''; }
     function naturalPosFor(id){ var rv=id?RESOLVED[id]:null; return rv?normPos(rv.pos):''; }
+    // ----- Collection-list sort-by-position (left list ordering only) -----
+    var POS_ORDER=['C','1B','2B','3B','SS','LF','CF','RF','DH','P']; // sensible fielding order; pitchers after DH, unresolved last
+    function posRank(id){ var code=naturalPosFor(id); var i=POS_ORDER.indexOf(code); return i>=0?i:POS_ORDER.length; } // unresolved/'' sort last
+    function collectionList(){ if(!SORT_BY_POS) return CARDS; return CARDS.slice().sort(function(a,b){ var ra=posRank(a.id), rb=posRank(b.id); if(ra!==rb) return ra-rb; var na=String(a.player||'').toLowerCase(), nb=String(b.player||'').toLowerCase(); return na<nb?-1:(na>nb?1:0); }); } // stable-ish: position then name; never mutates CARDS
     function isUsableHitter(id){ var rv=id?RESOLVED[id]:null; return !!(rv && (rv.status==='api'||rv.status==='card')); }
     function inOrder(id){ for(var i=0;i<9;i++){ if(ORDER[i]&&ORDER[i].id===id) return i; } return -1; }
     function firstEmptySlot(){ return ORDER.indexOf(null); }
@@ -440,7 +447,7 @@
     function renderCards(){
       $('collCount').textContent=CARDS.length?('('+CARDS.length+' cards)'):'';
       if(!CARDS.length){ if($('cardList').innerHTML.indexOf('Could not')<0) $('cardList').innerHTML='<div class="muted">No cards found in your collection.</div>'; return; }
-      var html=''; CARDS.forEach(function(c){
+      var html=''; collectionList().forEach(function(c){
         var rv=RESOLVED[c.id]||{status:'pending'};
         var st=rv.status;
         var usable=isUsableHitter(c.id);
@@ -532,6 +539,7 @@
     function moveSlot(from,to){ if(from<0||to<0||from===to||from>8||to>8) return; var arr=ORDER.slice(); var item=arr.splice(from,1)[0]; arr.splice(to,0,item); ORDER=arr; renderAll(); }
 
     $('clearBtn').addEventListener('click',function(){ ORDER=new Array(9).fill(null); PITCHER=null; renderAll(); });
+      var _sortBtn=$('sortPosBtn'); if(_sortBtn){ _sortBtn.addEventListener('click',function(){ SORT_BY_POS=!SORT_BY_POS; _sortBtn.classList.toggle('on',SORT_BY_POS); _sortBtn.setAttribute('aria-pressed',SORT_BY_POS?'true':'false'); _sortBtn.textContent=SORT_BY_POS?'Sorted by position':'Sort by position'; renderCards(); }); }
     function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
 
     
