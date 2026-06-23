@@ -10,14 +10,16 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   :root{
-    /* The Depot game palette (extracted from game/index.html) */
-    --field:#0a4a20; --field-deep:#14502a; --field-dark:#0a3318;
-    --green-bright:#2f9a44; --green:#2f9a44;
-    --gold:#f6c81e; --cream:#f3ead0; --cream-dim:#e8d9b0;
-    --leather:#b06a30; --red:#a03318; --red-bright:#d23b3b;
-    --blue:#143f8f; --blue-bright:#3a72d6;
-    --frame:#000; --bg:#0a0a0a;
-    --panel:#0a3318; --ink:#f3ead0; --dim:#cdbd8e;
+    /* The Depot palette — lightened for a brighter, more readable builder */
+    --field:#1f7a3e; --field-deep:#2a8a4c; --field-dark:#176235;
+    --green-bright:#3fb85a; --green:#3fb85a;
+    --gold:#f6c81e; --cream:#f7f0db; --cream-dim:#e8d9b0;
+    --leather:#c07a3a; --red:#b8442a; --red-bright:#e25151;
+    --blue:#2a5fc0; --blue-bright:#4a82e6;
+    --frame:#0c2c18; --bg:#16321f;
+    --panel:#2a8a4c; --ink:#f7f0db; --dim:#cde6d2;
+    --paper-ink:#1c2e22; --paper-dim:#5d7a64;
+    --paper:#f7f0db; --paper-line:#efe4c4;
   }
   *{box-sizing:border-box}
   body{
@@ -25,7 +27,7 @@
     font-family:'Press Start 2P',monospace;
     image-rendering:pixelated;-webkit-font-smoothing:none;
     line-height:1.6;padding:14px;
-    background-image:repeating-linear-gradient(0deg,#0a0a0a 0 2px,#0c0c0c 2px 4px);
+    background-image:repeating-linear-gradient(0deg,#16321f 0 2px,#193a24 2px 4px);
   }
   /* ---- header / scoreboard ---- */
   header{
@@ -109,6 +111,56 @@
     border:2px solid var(--red-bright);padding:5px 9px;font-size:8px;}
   .muted{color:var(--dim);font-size:9px;line-height:1.8;}
   @media(max-width:760px){.grid{grid-template-columns:1fr;}header h1{font-size:12px;}}
+
+  /* ===== v2 lineup builder: lighter panels + new components ===== */
+  h3{color:var(--gold);text-shadow:2px 2px 0 var(--frame);font-size:12px;}
+  .col{background:rgba(0,0,0,0.10);border-radius:0;}
+  /* collection + order panels are light "paper" for readability */
+  #cardList{max-height:66vh;}
+  .card-row{background:var(--paper);color:var(--paper-ink);border:3px solid var(--field-dark);
+    border-radius:0;display:flex;align-items:center;gap:10px;padding:9px 11px;flex-wrap:wrap;}
+  .card-row .nm{flex:1;min-width:160px;}
+  .card-row .nm b{display:block;font-size:10px;color:var(--paper-ink);line-height:1.5;}
+  .card-row .nm small{color:var(--paper-dim);font-size:8px;display:block;}
+  .card-row.dim-row{opacity:.72;}
+  .row-actions{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+  .hint-bad{color:var(--red);font-size:8px;font-weight:bold;letter-spacing:.5px;}
+  .add-btn{background:var(--blue-bright);color:#fff;border:2px solid var(--frame);
+    padding:6px 9px;font-size:8px;font-family:inherit;cursor:pointer;}
+  .add-btn:disabled{background:#9bbf9f;color:#42563f;cursor:not-allowed;}
+  .pit-btn{background:var(--cream);color:var(--field-dark);border:2px solid var(--frame);
+    padding:6px 9px;font-size:8px;font-family:inherit;cursor:pointer;}
+  .pit-btn.on{background:var(--gold);color:var(--frame);}
+  /* pitcher box */
+  .pbox{background:var(--paper);color:var(--paper-ink);border:3px solid var(--gold);
+    padding:10px 12px;display:flex;align-items:center;gap:10px;min-height:42px;}
+  .pbox .who b{display:block;font-size:11px;color:var(--paper-ink);}
+  .pbox .who small{color:var(--paper-dim);font-size:8px;}
+  /* batting-order rows (drag to reorder) */
+  #slots{display:flex;flex-direction:column;gap:7px;}
+  .bat{display:flex;align-items:center;gap:10px;background:var(--paper);color:var(--paper-ink);
+    border:3px solid var(--field-dark);padding:8px 10px;min-height:46px;}
+  .bat.filled{cursor:grab;}
+  .bat.filled:active{cursor:grabbing;}
+  .bat.empty{background:rgba(247,240,219,0.18);border-style:dashed;border-color:var(--green-bright);color:var(--cream);}
+  .bat .ord{width:30px;height:30px;flex:0 0 30px;display:flex;align-items:center;justify-content:center;
+    background:var(--gold);color:var(--frame);font-size:12px;font-weight:bold;border:2px solid var(--frame);}
+  .bat .who{flex:1;min-width:120px;}
+  .bat .who b{display:block;font-size:10px;color:var(--paper-ink);line-height:1.5;}
+  .bat .who small{color:var(--paper-dim);font-size:8px;display:block;}
+  .bat.empty .muted{color:var(--cream-dim);}
+  .bat.dragging{opacity:.45;}
+  .bat.over{outline:3px solid var(--gold);outline-offset:-1px;}
+  .pos-sel{background:var(--cream);color:var(--field-dark);border:2px solid var(--field-dark);
+    font-size:10px;padding:4px 5px;font-family:inherit;}
+  .rm-btn{background:transparent;color:var(--red);border:2px solid var(--red);
+    padding:5px 8px;font-size:8px;font-family:inherit;cursor:pointer;}
+  /* status line */
+  #status{margin:14px 0;font-size:11px;color:var(--frame);background:var(--gold);
+    border:3px solid var(--frame);padding:10px 12px;letter-spacing:.5px;}
+  #status .ok{color:#0c4a22;font-weight:bold;}
+  #status .no{color:var(--red);font-weight:bold;}
+  .muted{color:var(--dim);font-size:9px;line-height:1.8;}
 </style>
 </head>
 <body>
@@ -142,8 +194,10 @@
       <div id="cardList"><div class="muted">Loading your cards&hellip;</div></div>
     </div>
     <div class="col">
-      <h3>DEFENSE (9 POSITIONS)</h3>
-      <div id="slots"></div>
+      <h3>PITCHER <span class="muted">(pitching box)</span></h3>
+          <div id="pitcherBox" class="pbox"><span class="muted">No pitcher chosen yet.</span></div>
+          <h3 style="margin-top:18px;">BATTING ORDER <span class="muted">(1–9 · drag to reorder)</span></h3>
+          <div id="slots"></div>
       <div style="margin-top:14px;display:flex;gap:8px;align-items:center;">
         <button class="btn-primary" id="playBtn" disabled>PLAY BALL &#9654;</button>
         <button class="btn-ghost" id="clearBtn">Clear</button>
@@ -166,10 +220,31 @@
   if(!sb){ $('authMsg').textContent='Auth library failed to load. Check your connection and reload.'; }
 
   // ----- State -----
-  var USER=null, CARDS=[]; var POSITIONS=['P','C','1B','2B','3B','SS','LF','CF','RF']; /* LINEUP[i] = cardId or null for the fielding position POSITIONS[i] (defensive chart). */ var LINEUP=new Array(9).fill(null); /* Default batting order among the 9 fielders, by position (simple fixed default; no manual reorder). */ var BAT_ORDER=['CF','SS','RF','3B','1B','LF','C','2B','P']; function slotIndexOfPos(pos){ return POSITIONS.indexOf(pos); } function normPos(raw){ var r=String(raw||'').toUpperCase().trim(); if(POSITIONS.indexOf(r)>=0) return r; if(r==='OF') { var o=['LF','CF','RF'].filter(function(x){return LINEUP[POSITIONS.indexOf(x)]==null;}); return o.length?o[0]:'CF'; } if(r==='IF') { var f=['1B','2B','3B','SS'].filter(function(x){return LINEUP[POSITIONS.indexOf(x)]==null;}); return f.length?f[0]:'SS'; } if(r==='LHP'||r==='RHP'||r==='SP'||r==='RP'||r==='TWP') return 'P'; return ''; /* DH/PH/unknown -> no natural defensive slot */ } function naturalPosOf(id){ var rv=id?RESOLVED[id]:null; return rv?normPos(rv.pos):''; } function naturalSlotIndex(id){ var np=naturalPosOf(id); return np?POSITIONS.indexOf(np):-1; } function isOOP(i){ var id=LINEUP[i]; if(!id) return false; var np=naturalPosOf(id); return !np || np!==POSITIONS[i]; }
-  var RESOLVED={}; // cardId -> {status:'api'|'card'|'bad'|'pending', team, rates, avg, hr, rbi, tendency, note}
-
-  // ----- Auth -----
+    var USER=null, CARDS=[];
+    // 8 fielding positions (no pitcher) + DH = 9 batting-order slots.
+    var FIELD_POS=['C','1B','2B','3B','SS','LF','CF','RF'];
+    var BAT_POS=['C','1B','2B','3B','SS','LF','CF','RF','DH']; // valid positions a batter can occupy
+    // ORDER[i] = { id: cardId, pos: 'C'|'1B'|...|'DH' } or null. Index = batting slot 0..8 (shown 1..9).
+    var ORDER=new Array(9).fill(null);
+    // Separately-chosen pitcher (pitching box). No hitting line required.
+    var PITCHER=null; // cardId or null
+    var RESOLVED={}; // cardId -> {status:'api'|'card'|'bad'|'pending', team, rates, avg, hr, rbi, tendency, pos, note}
+    // normalize a raw card position string to one of our position codes (for default suggestion)
+    function normPos(raw){ var r=String(raw||'').toUpperCase().trim();
+      if(BAT_POS.indexOf(r)>=0) return r;
+      if(r==='OF'){ return 'LF'; }
+      if(r==='IF'){ return '1B'; }
+      if(r.length>=2 && r[0]>='1' && r[0]<='9'){ var f=['1B','2B','3B','SS'].filter(function(x){return r.indexOf(x)>=0;}); return f.length?f[0]:''; }
+      if(r==='LHP'||r==='RHP'||r==='SP'||r==='RP'||r==='TWP'||r==='P') return 'P';
+      return ''; }
+    function naturalPosFor(id){ var rv=id?RESOLVED[id]:null; return rv?normPos(rv.pos):''; }
+    function isUsableHitter(id){ var rv=id?RESOLVED[id]:null; return !!(rv && (rv.status==='api'||rv.status==='card')); }
+    function inOrder(id){ for(var i=0;i<9;i++){ if(ORDER[i]&&ORDER[i].id===id) return i; } return -1; }
+    function firstEmptySlot(){ return ORDER.indexOf(null); }
+    function usedPositions(){ var u={}; for(var i=0;i<9;i++){ if(ORDER[i]) u[ORDER[i].pos]=true; } return u; }
+    function nextFreePos(prefer){ var u=usedPositions(); if(prefer && !u[prefer]) return prefer; for(var i=0;i<BAT_POS.length;i++){ if(!u[BAT_POS[i]]) return BAT_POS[i]; } return 'DH'; }
+    
+    // ----- Auth -----
   function setAuthMsg(t){ $('authMsg').textContent=t||''; }
   function showLoggedIn(email){ $('loginView').style.display='none'; $('builderView').style.display='block'; $('whoami').textContent=email||''; $('logoutBtn').style.display='inline-block'; }
   function showLoggedOut(){ $('builderView').style.display='none'; $('loginView').style.display='block'; $('whoami').textContent=''; $('logoutBtn').style.display='none'; }
@@ -326,7 +401,8 @@
 
   // ----- Master resolver: API by name+year -> card-text fallback -> unusable -----
   async function resolveCard(card){
-    var out={ status:'pending', note:'', team:card.team||'', tendency:'spray', avg:'.000', hr:0, rbi:0, rates:null, pos:'' };
+    var out={ status:'pending', note:'', team:card.team||'', tendency:'spray', avg:'.000', hr:0, rbi:0, rates:null, pos:'', era:'', w:null, l:null };
+      try{ var _cs=card.stats||{}; if(_cs.ERA!=null) out.era=String(_cs.ERA); if(_cs.W!=null) out.w=String(_cs.W); if(_cs.L!=null) out.l=String(_cs.L); }catch(_e){}
     // 1) MLB API by player name + card year
     if(card.player && card.yr){
       var person=await mlbFindPlayer(card.player);
@@ -354,35 +430,133 @@
   function fmtAvg(a){ a=parseFloat(a); if(!isFinite(a)) return '.000'; return a.toFixed(3).replace(/^0/,''); }
 
   // ===== UI =====
-  function cardById(id){ for(var i=0;i<CARDS.length;i++) if(CARDS[i].id===id) return CARDS[i]; return null; }
-  function inLineup(id){ return LINEUP.indexOf(id)>=0; }
-  function firstEmptySlot(){ return LINEUP.indexOf(null); }
-  function pillFor(st){
-    if(st==='api') return '<span class="pill api">MLB API</span>';
-    if(st==='card') return '<span class="pill card">CARD STATS</span>';
-    if(st==='bad') return '<span class="pill bad">NOT USABLE</span>';
-    return '<span class="pill pending">\u2026</span>';
-  }
-  function renderAll(){ renderCards(); renderSlots(); renderStatus(); }
-  function renderCards(){ $('collCount').textContent=CARDS.length?('('+CARDS.length+' cards)'):''; if(!CARDS.length){ if($('cardList').innerHTML.indexOf('Could not')<0) $('cardList').innerHTML='<div class="muted">No hitter cards found in your collection.</div>'; return; } var html=''; CARDS.forEach(function(c){   var rv=RESOLVED[c.id]; var st=rv?rv.status:'pending';   var used=inLineup(c.id);   var usable=(st==='api'||st==='card');   var canAdd=usable && !used;   var np=usable?naturalPosOf(c.id):'';   var sub=(c.yr||'?')+' '+(c.team||'')+(rv&&rv.note?' \u00b7 '+rv.note:'')+(np?' \u00b7 '+np:(usable?' \u00b7 no pos':''));   var sel='<select class="pos-sel" data-possel="'+c.id+'" '+(canAdd?'':'disabled')+'>'+POSITIONS.map(function(P){ var natural=(P===np); return '<option value="'+P+'"'+(natural?' selected':'')+'>'+P+(natural?' (nat)':'')+'</option>'; }).join('')+'</select>';   html+='<div class="card-row">'     +'<div class="nm"><b>'+esc(c.player||'(unnamed)')+'</b><small>'+esc(sub)+'</small></div>'     +pillFor(st)     +(canAdd?sel:'')     +'<button class="add-btn" data-add="'+c.id+'" '+(canAdd?'':'disabled')+'>'+(used?'in lineup':'Add')+'</button>'     +'</div>'; }); $('cardList').innerHTML=html; Array.prototype.forEach.call($('cardList').querySelectorAll('[data-add]'),function(b){ b.addEventListener('click',function(){ var id=b.getAttribute('data-add'); var ss=$('cardList').querySelector('[data-possel="'+id+'"]'); addToLineup(id, ss?ss.value:null); }); });}
-  function renderSlots(){ var html=''; for(var i=0;i<9;i++){   var pos=POSITIONS[i]; var id=LINEUP[i]; var c=id?cardById(id):null; var rv=id?RESOLVED[id]:null;   var filled=c&&rv&&(rv.status==='api'||rv.status==='card');   var oop=filled&&isOOP(i);   var natTxt=oop?(naturalPosOf(id)||'\u2014'):'';   html+='<div class="slot'+(filled?' filled':'')+(oop?' oop':'')+'">'     +'<div class="ord">'+pos+'</div>'     +'<div class="who">'+(c?('<b>'+esc(c.player)+'</b>'+(oop?' <span class="oop-tag">OOP\u2190'+esc(natTxt)+'</span>':'')+'<small>'+esc((c.yr||'?')+' '+(c.team||'')+' \u00b7 AVG '+(rv?rv.avg:'')+', '+(rv?rv.hr:0)+' HR')+'</small>'):'<span class="muted">empty</span>')+'</div>'     +(c?'<button class="rm-btn" data-rm="'+i+'">remove</button>':'')     +'</div>'; } $('slots').innerHTML=html; Array.prototype.forEach.call($('slots').querySelectorAll('[data-rm]'),function(b){ b.addEventListener('click',function(){ removeSlot(+b.getAttribute('data-rm')); }); });}
-  function renderStatus(){ var filled=LINEUP.filter(function(id){ var rv=id?RESOLVED[id]:null; return rv&&(rv.status==='api'||rv.status==='card'); }).length; var oopCount=0; for(var i=0;i<9;i++){ if(isOOP(i)) oopCount++; } var ready=filled===9; $('status').innerHTML='Defense: <b class="'+(ready?'ok':'no')+'">'+filled+' / 9</b> positions set.'+(oopCount?' <span class="no">'+oopCount+' out of position.</span>':'')+(ready?' <span class="ok">Ready to play.</span>':' <span class="no">Fill all 9 positions to start.</span>'); $('playBtn').disabled=!ready; $('playHint').textContent=ready?'':'Need '+(9-filled)+' more position(s).';}
-  function addToLineup(id, posOverride){ if(inLineup(id)) return; var rv=RESOLVED[id]; if(!rv||!(rv.status==='api'||rv.status==='card')) return; var target=-1; if(posOverride){ target=POSITIONS.indexOf(posOverride); if(target>=0 && LINEUP[target]!=null) target=-1; } if(target<0){ var ni=naturalSlotIndex(id); if(ni>=0 && LINEUP[ni]==null) target=ni; } if(target<0){ target=LINEUP.indexOf(null); } if(target<0) return; LINEUP[target]=id; renderAll();}
-  function removeSlot(i){ LINEUP[i]=null; renderAll(); }
-  $('clearBtn').addEventListener('click',function(){ LINEUP=new Array(9).fill(null); renderAll(); });
-  function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+    function cardById(id){ for(var i=0;i<CARDS.length;i++) if(CARDS[i].id===id) return CARDS[i]; return null; }
+    function fmtMeta(c){ var rv=RESOLVED[c.id]; var bits=[]; if(c.yr) bits.push(c.yr); if(c.team) bits.push(c.team); var np=rv?normPos(rv.pos):''; if(np&&np!=='P') bits.push(np); return bits.join(' \u00b7 '); }
 
-  // ===== HAND-OFF TO SIM =====
-  function buildTeamPayload(){ var lineup=BAT_ORDER.map(function(P){   var i=POSITIONS.indexOf(P); var id=LINEUP[i]; var c=cardById(id); var rv=RESOLVED[id];   return { name:(c.player||'PLAYER').toUpperCase(), avg:rv.avg, hr:rv.hr, rbi:rv.rbi, tendency:rv.tendency||'spray', rates:rv.rates, pos:P, oop:isOOP(i) }; }); var teamName=(CARDS.length&&deriveTeamName())||'DEPOT'; return { name:teamName, code:'mudcats', lineup:lineup };}
-  function deriveTeamName(){ var n=(USER&&USER.email||'').split('@')[0]; return (n||'DEPOT').toUpperCase().slice(0,12); }
-  $('playBtn').addEventListener('click',function(){
-    var ready=LINEUP.every(function(id){ var rv=id?RESOLVED[id]:null; return rv&&(rv.status==='api'||rv.status==='card'); });
-    if(!ready) return;
-    try{ sessionStorage.setItem('depot_user_team',JSON.stringify(buildTeamPayload())); }catch(e){}
-    window.location.href='./?from=builder';
-  });
+    // ----- LEFT: collection -----
+    function renderCards(){
+      $('collCount').textContent=CARDS.length?('('+CARDS.length+' cards)'):'';
+      if(!CARDS.length){ if($('cardList').innerHTML.indexOf('Could not')<0) $('cardList').innerHTML='<div class="muted">No cards found in your collection.</div>'; return; }
+      var html=''; CARDS.forEach(function(c){
+        var rv=RESOLVED[c.id]||{status:'pending'};
+        var st=rv.status;
+        var usable=isUsableHitter(c.id);
+        var inOrd=inOrder(c.id)>=0;
+        var isPit=(PITCHER===c.id);
+        var sub=fmtMeta(c);
+        var note=(st==='bad')?(rv.note||'no hitting line'):'';
+        // status text (no MLB-API pill): just a tiny dim note when unusable as a hitter
+        var hitTag = usable ? '' : '<span class="hint-bad">no hitting line</span>';
+        // Add-to-order button: disabled if already in order, or order full, or not a usable hitter
+        var full=(firstEmptySlot()<0);
+        var canAdd = usable && !inOrd && !full;
+        var addLbl = inOrd ? 'in order' : 'Add to order';
+        var addBtn = '<button class="add-btn" data-add="'+c.id+'"'+(canAdd?'':' disabled')+'>'+addLbl+'</button>';
+        // Pitcher pick button: ANY card selectable by name, no hitting line needed
+        var pitBtn = '<button class="pit-btn'+(isPit?' on':'')+'" data-pit="'+c.id+'">'+(isPit?'\u2605 Pitcher':'Set as P')+'</button>';
+        html+= '<div class="card-row'+(usable?'':' dim-row')+'">'
+             +   '<div class="nm"><b>'+esc(c.player||'(unnamed)')+'</b>'
+             +     '<small>'+esc(sub)+(note?(' \u00b7 '+esc(note)):'')+'</small></div>'
+             +   '<div class="row-actions">'+hitTag+pitBtn+addBtn+'</div>'
+             + '</div>';
+      });
+      $('cardList').innerHTML=html;
+      Array.prototype.forEach.call($('cardList').querySelectorAll('[data-add]'),function(b){ b.addEventListener('click',function(){ addToOrder(b.getAttribute('data-add')); }); });
+      Array.prototype.forEach.call($('cardList').querySelectorAll('[data-pit]'),function(b){ b.addEventListener('click',function(){ setPitcher(b.getAttribute('data-pit')); }); });
+    }
 
-  // ===== Resolve all cards after load (sequential, gentle on the API) =====
+    // ----- RIGHT: batting order (drag to reorder) -----
+    var dragFrom=-1;
+    function renderOrder(){
+      var html='';
+      for(var i=0;i<9;i++){
+        var slot=ORDER[i];
+        if(slot){
+          var c=cardById(slot.id); var rv=RESOLVED[slot.id]||{};
+          var posSel='<select class="pos-sel" data-pos="'+i+'">'+BAT_POS.map(function(P){ var u=usedPositions(); var taken=(u[P]&&P!==slot.pos); return '<option value="'+P+'"'+(P===slot.pos?' selected':'')+(taken?' disabled':'')+'>'+P+'</option>'; }).join('')+'</select>';
+          html+='<div class="bat filled" draggable="true" data-slot="'+i+'">'
+              +   '<div class="ord">'+(i+1)+'</div>'
+              +   '<div class="who"><b>'+esc(c?c.player:'?')+'</b>'
+              +     '<small>'+esc((rv.avg||'.000'))+' AVG \u00b7 '+(rv.hr||0)+' HR \u00b7 '+(rv.rbi||0)+' RBI</small></div>'
+              +   posSel
+              +   '<button class="rm-btn" data-rm="'+i+'">remove</button>'
+              + '</div>';
+        } else {
+          html+='<div class="bat empty" data-slot="'+i+'"><div class="ord">'+(i+1)+'</div><span class="muted">empty \u2014 add a hitter from the left</span></div>';
+        }
+      }
+      $('slots').innerHTML=html;
+      var rows=$('slots').querySelectorAll('.bat');
+      Array.prototype.forEach.call(rows,function(row){
+        row.addEventListener('dragstart',function(e){ dragFrom=+row.getAttribute('data-slot'); row.classList.add('dragging'); try{e.dataTransfer.effectAllowed='move'; e.dataTransfer.setData('text/plain',String(dragFrom));}catch(_){} });
+        row.addEventListener('dragend',function(){ dragFrom=-1; Array.prototype.forEach.call($('slots').querySelectorAll('.bat'),function(r){r.classList.remove('dragging','over');}); });
+        row.addEventListener('dragover',function(e){ e.preventDefault(); try{e.dataTransfer.dropEffect='move';}catch(_){} row.classList.add('over'); });
+        row.addEventListener('dragleave',function(){ row.classList.remove('over'); });
+        row.addEventListener('drop',function(e){ e.preventDefault(); var to=+row.getAttribute('data-slot'); moveSlot(dragFrom,to); });
+      });
+      Array.prototype.forEach.call($('slots').querySelectorAll('[data-rm]'),function(b){ b.addEventListener('click',function(){ removeSlot(+b.getAttribute('data-rm')); }); });
+      Array.prototype.forEach.call($('slots').querySelectorAll('[data-pos]'),function(sel){ sel.addEventListener('change',function(){ setSlotPos(+sel.getAttribute('data-pos'), sel.value); }); });
+    }
+
+    // ----- pitcher box -----
+    function renderPitcher(){
+      var box=$('pitcherBox'); if(!box) return;
+      if(PITCHER){ var c=cardById(PITCHER); var rv=RESOLVED[PITCHER]||{}; var era=(rv.era!=null&&rv.era!=='')?rv.era:'\u2014';
+        box.innerHTML='<div class="who"><b>'+esc(c?c.player:'?')+'</b><small>'+esc((c&&c.team)||'')+(rv.era?(' \u00b7 '+esc(rv.era)+' ERA'):'')+'</small></div><button class="rm-btn" id="rmPit">remove</button>';
+        var rb=$('rmPit'); if(rb) rb.addEventListener('click',function(){ PITCHER=null; renderAll(); });
+      } else { box.innerHTML='<span class="muted">No pitcher chosen \u2014 pick one from your collection (\u201cSet as P\u201d).</span>'; }
+    }
+
+    function renderAll(){ renderCards(); renderOrder(); renderPitcher(); renderStatus(); }
+
+    function renderStatus(){
+      var filledCount=0, usableCount=0;
+      for(var i=0;i<9;i++){ if(ORDER[i]){ filledCount++; if(isUsableHitter(ORDER[i].id)) usableCount++; } }
+      var hasPit=!!PITCHER;
+      var ready=(filledCount===9 && usableCount===9 && hasPit);
+      var msg='Batting order: <b class="'+(filledCount===9?'ok':'no')+'">'+filledCount+' / 9</b> hitters set.';
+      msg+=' Pitcher: <b class="'+(hasPit?'ok':'no')+'">'+(hasPit?'set':'none')+'</b>.';
+      msg+= ready ? ' <span class="ok">Ready to play.</span>' : ' <span class="no">'+(9-filledCount)+' more hitter(s)'+(hasPit?'':' and a pitcher')+' needed.</span>';
+      $('status').innerHTML=msg;
+      $('playBtn').disabled=!ready;
+      $('playHint').textContent=ready?'ready':('Need '+(9-filledCount)+' hitter(s)'+(hasPit?'':' + pitcher'));
+    }
+
+    function addToOrder(id){ if(inOrder(id)>=0) return; if(!isUsableHitter(id)) return; var slot=firstEmptySlot(); if(slot<0) return; if(PITCHER===id) PITCHER=null; var pref=naturalPosFor(id); ORDER[slot]={ id:id, pos:nextFreePos(pref==='P'?'':pref) }; renderAll(); }
+    function removeSlot(i){ ORDER[i]=null; renderAll(); }
+    function setSlotPos(i,pos){ if(!ORDER[i]) return; var u=usedPositions(); if(u[pos] && ORDER[i].pos!==pos){ /* swap with whoever holds it */ for(var k=0;k<9;k++){ if(k!==i && ORDER[k] && ORDER[k].pos===pos){ ORDER[k].pos=ORDER[i].pos; break; } } } ORDER[i].pos=pos; renderAll(); }
+    function setPitcher(id){ if(PITCHER===id){ PITCHER=null; renderAll(); return; } var oi=inOrder(id); if(oi>=0) ORDER[oi]=null; PITCHER=id; renderAll(); }
+    function moveSlot(from,to){ if(from<0||to<0||from===to||from>8||to>8) return; var arr=ORDER.slice(); var item=arr.splice(from,1)[0]; arr.splice(to,0,item); ORDER=arr; renderAll(); }
+
+    $('clearBtn').addEventListener('click',function(){ ORDER=new Array(9).fill(null); PITCHER=null; renderAll(); });
+    function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+
+    
+    // ===== HAND-OFF TO SIM =====
+    // Batting order = 9 hitters (8 fielders + DH), NO pitcher. Pitcher sent separately.
+    function buildTeamPayload(){
+      var lineup=ORDER.map(function(slot){ var id=slot.id; var c=cardById(id); var rv=RESOLVED[id]||{};
+        return { name:(c.player||'PLAYER').toUpperCase(), avg:rv.avg, hr:rv.hr, rbi:rv.rbi, tendency:rv.tendency||'spray', rates:rv.rates, pos:slot.pos };
+      });
+      var pitcher=null;
+      if(PITCHER){ var pc=cardById(PITCHER); var prv=RESOLVED[PITCHER]||{};
+        pitcher={ name:(pc.player||'PITCHER').toUpperCase() };
+        if(prv.era!=null && prv.era!=='') pitcher.era=String(prv.era);
+        if(prv.w!=null) pitcher.w=String(prv.w);
+        if(prv.l!=null) pitcher.l=String(prv.l);
+      }
+      var teamName=(CARDS.length&&deriveTeamName())||'DEPOT';
+      return { name:teamName, code:'mudcats', lineup:lineup, pitcher:pitcher };
+    }
+    function deriveTeamName(){ var n=(USER&&USER.email||'').split('@')[0]; return (n||'DEPOT').toUpperCase().slice(0,12); }
+    $('playBtn').addEventListener('click',function(){
+      var usable=ORDER.every(function(slot){ return slot && isUsableHitter(slot.id); });
+      if(!usable || ORDER.indexOf(null)>=0 || !PITCHER) return;
+      try{ sessionStorage.setItem('depot_user_team', JSON.stringify(buildTeamPayload())); }catch(e){}
+      window.location.href='./?from=builder';
+    });
+    
+    // ===== Resolve all cards after load (sequential, gentle on the API) =====
   async function resolveAll(){
     for(var i=0;i<CARDS.length;i++){
       var c=CARDS[i];
