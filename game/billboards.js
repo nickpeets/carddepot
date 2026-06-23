@@ -77,7 +77,15 @@
 
   // ---- Prepare a board: clear hardcoded content, add a centered scaled screen
   function prepBoard(board){
-    if (board.__bbScreen) return board.__bbScreen;
+    if (board.__bbScreen) {
+      // Defensive: strip any stray/hardcoded children that aren't our managed
+      // screen, so no leftover content can flash under the injected creative.
+      var kids = Array.prototype.slice.call(board.childNodes);
+      for (var k = 0; k < kids.length; k++) {
+        if (kids[k] !== board.__bbScreen) board.removeChild(kids[k]);
+      }
+      return board.__bbScreen;
+    }
     // Keep the board's frame (its own position/size/border); host the creative inside.
     board.innerHTML = '';
     board.style.display = 'flex';
