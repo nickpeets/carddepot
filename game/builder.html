@@ -133,6 +133,17 @@
   .pit-btn.on{background:var(--gold);color:var(--frame);}
     .sortbtn{background:var(--cream);color:var(--field-dark);border:2px solid var(--field-dark);padding:4px 7px;font-size:8px;font-family:inherit;cursor:pointer;vertical-align:middle;}
     .sortbtn.on{background:var(--gold);color:var(--frame);border-color:var(--frame);}
+    .viewbtn{background:var(--cream);color:var(--field-dark);border:2px solid var(--field-dark);padding:4px 7px;font-size:8px;font-family:inherit;cursor:pointer;vertical-align:middle;}
+    .viewbtn.on{background:var(--gold);color:var(--frame);border-color:var(--frame);}
+    #cardList.cardview{display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:10px;align-content:start;}
+    .ctile{display:flex;flex-direction:column;border:3px solid var(--gold);background:var(--field-dark);padding:6px;gap:6px;}
+    .ctile.dim-row{opacity:.55;}
+    .ctile-art{position:relative;width:100%;aspect-ratio:5/7;background:var(--frame);border:2px solid var(--field-dark);overflow:hidden;display:flex;align-items:center;justify-content:center;}
+    .ctile-img{width:100%;height:100%;object-fit:cover;image-rendering:auto;display:block;}
+    .ctile-ph{display:none;flex-direction:column;align-items:center;justify-content:center;text-align:center;gap:4px;padding:6px;color:var(--gold);}
+    .ctile-ph b{font-size:9px;line-height:1.3;} .ctile-ph small{font-size:7px;color:var(--dim);}
+    .ctile.noimg .ctile-img{display:none;} .ctile.noimg .ctile-ph{display:flex;}
+    .ctile-actions{display:flex;flex-wrap:wrap;gap:4px;justify-content:center;}
   /* pitcher box */
   .pbox{background:var(--paper);color:var(--paper-ink);border:3px solid var(--gold);
     padding:10px 12px;display:flex;align-items:center;gap:10px;min-height:42px;}
@@ -191,7 +202,7 @@
   <div id="status"></div>
   <div class="grid">
     <div class="col">
-      <h3>YOUR COLLECTION <span class="muted" id="collCount"></span> <button type="button" id="sortPosBtn" class="sortbtn" aria-pressed="false">Sort by position</button></h3>
+      <h3>YOUR COLLECTION <span class="muted" id="collCount"></span> <button type="button" id="sortPosBtn" class="sortbtn" aria-pressed="false">Sort by position</button> <button type="button" id="viewBtn" class="viewbtn" aria-pressed="false" title="Toggle list / card view">View: List</button></h3>
       <div class="muted" style="margin:6px 0">Each card plays as its card-year self. Stats resolve from the MLB Stats API by player + year, falling back to the card&rsquo;s saved stat line.</div>
       <div id="cardList"><div class="muted">Loading your cards&hellip;</div></div>
     </div>
@@ -235,6 +246,7 @@
     var PITCHER=null; // cardId or null
     var RESOLVED={}; // cardId -> {status:'api'|'card'|'bad'|'pending', team, rates, avg, hr, rbi, tendency, pos, note}
     var SORT_BY_POS=false; // collection-list sort toggle (left list only; does not affect lineup)
+    var VIEW_MODE='list'; // collection view: 'list' (compact rows, default) or 'card' (card art). View-only; never affects lineup/sort.
     // normalize a raw card position string to one of our position codes (for default suggestion)
     function normPos(raw){ var r=String(raw||'').toUpperCase().trim();
       if(BAT_POS.indexOf(r)>=0) return r;
@@ -248,6 +260,12 @@
     var POS_ORDER=['C','1B','2B','3B','SS','LF','CF','RF','DH','P']; // sensible fielding order; pitchers after DH, unresolved last
     function posRank(id){ var code=naturalPosFor(id); var i=POS_ORDER.indexOf(code); return i>=0?i:POS_ORDER.length; } // unresolved/'' sort last
     function collectionList(){ if(!SORT_BY_POS) return CARDS; return CARDS.slice().sort(function(a,b){ var ra=posRank(a.id), rb=posRank(b.id); if(ra!==rb) return ra-rb; var na=String(a.player||'').toLowerCase(), nb=String(b.player||'').toLowerCase(); return na<nb?-1:(na>nb?1:0); }); } // stable-ish: position then name; never mutates CARDS
+    // ----- Card-art view: resolve Supabase signed URLs for collection card images -----
+    async function cardSignedUrl(path){ if(!path) return ''; if(String(path).indexOf('data:')===0) return path; try{ if(!sb) return ''; var r=await sb.storage.from('card-images').createSignedUrl(path,3600); if(r.error){ return ''; } return (r.data&&r.data.signedUrl)||''; }catch(e){ return ''; } }
+    function ctileImgFail(img){ try{ var t=img.parentNode; while(t && t.className.indexOf('ctile')<0){ t=t.parentNode; } if(t) t.classList.add('noimg'); }catch(e){} } // image 404/expired -> fall back to placeholder tile
+    var _imgResolving=false;
+    async function resolveCardImages(){ if(_imgResolving) return; _imgResolving=true; var changed=false; try{ for(var i=0;i<CARDS.length;i++){ var c=CARDS[i]; if(c && c.photoPath && c._imgUrl===undefined){ c._imgUrl=await cardSignedUrl(c.photoPath); changed=true; } } }finally{ _imgResolving=false; } if(changed) renderCards(); } // caches resolved url on c._imgUrl; '' means resolved-but-empty
+
     function isUsableHitter(id){ var rv=id?RESOLVED[id]:null; return !!(rv && (rv.status==='api'||rv.status==='card')); }
     function inOrder(id){ for(var i=0;i<9;i++){ if(ORDER[i]&&ORDER[i].id===id) return i; } return -1; }
     function firstEmptySlot(){ return ORDER.indexOf(null); }
@@ -318,7 +336,7 @@
     var u=unpackNotes(r.notes);
     var yr=parseInt(r.year,10)||null;
     return {
-      id:r.id, player:r.player||'', team:r.team||'', yr:yr,
+      id:r.id, player:r.player||'', team:r.team||'', yr:yr, photoPath:r.photo_front_path||'',
       brand:r.brand||'', set:r.set||'', number:r.number||'',
       pos:(u.meta&&u.meta.pos)||'', type:(u.meta&&u.meta.type)||'hitter',
       stats:(u.meta&&u.meta.stats)||{}
@@ -464,12 +482,25 @@
         var addBtn = '<button class="add-btn" data-add="'+c.id+'"'+(canAdd?'':' disabled')+'>'+addLbl+'</button>';
         // Pitcher pick button: ANY card selectable by name, no hitting line needed
         var pitBtn = '<button class="pit-btn'+(isPit?' on':'')+'" data-pit="'+c.id+'">'+(isPit?'\u2605 Pitcher':'Set as P')+'</button>';
+        if(VIEW_MODE==='card'){
+          // CARD VIEW: real card art (signed url cached on c._imgUrl); graceful no-image fallback.
+          var _u=c._imgUrl;
+          var _imgInner = _u ? '<img class="ctile-img" src="'+esc(_u)+'" alt="'+esc(c.player||'card')+'" loading="lazy" onerror="ctileImgFail(this)">' : '';
+          var _ph = '<div class="ctile-ph"><b>'+esc(c.player||'(unnamed)')+'</b><small>'+esc(sub)+'</small></div>';
+          var _hasImg = !!_u;
+          html+= '<div class="ctile'+(usable?'':' dim-row')+(_hasImg?'':' noimg')+'" title="'+esc(c.player||'')+'">'
+            +   '<div class="ctile-art">'+_imgInner+_ph+'</div>'
+            +   '<div class="ctile-actions row-actions">'+hitTag+pitBtn+addBtn+'</div>'
+            + '</div>';
+        } else {
         html+= '<div class="card-row'+(usable?'':' dim-row')+'">'
              +   '<div class="nm"><b>'+esc(c.player||'(unnamed)')+'</b>'
              +     '<small>'+esc(sub)+(note?(' \u00b7 '+esc(note)):'')+'</small></div>'
              +   '<div class="row-actions">'+hitTag+pitBtn+addBtn+'</div>'
              + '</div>';
+        }
       });
+      var _cl=$('cardList'); if(_cl){ _cl.classList.toggle('cardview', VIEW_MODE==='card'); }
       $('cardList').innerHTML=html;
       Array.prototype.forEach.call($('cardList').querySelectorAll('[data-add]'),function(b){ b.addEventListener('click',function(){ addToOrder(b.getAttribute('data-add')); }); });
       Array.prototype.forEach.call($('cardList').querySelectorAll('[data-pit]'),function(b){ b.addEventListener('click',function(){ setPitcher(b.getAttribute('data-pit')); }); });
@@ -540,6 +571,7 @@
 
     $('clearBtn').addEventListener('click',function(){ ORDER=new Array(9).fill(null); PITCHER=null; renderAll(); });
       var _sortBtn=$('sortPosBtn'); if(_sortBtn){ _sortBtn.addEventListener('click',function(){ SORT_BY_POS=!SORT_BY_POS; _sortBtn.classList.toggle('on',SORT_BY_POS); _sortBtn.setAttribute('aria-pressed',SORT_BY_POS?'true':'false'); _sortBtn.textContent=SORT_BY_POS?'Sorted by position':'Sort by position'; renderCards(); }); }
+      var _viewBtn=$('viewBtn'); if(_viewBtn){ _viewBtn.addEventListener('click',function(){ VIEW_MODE=(VIEW_MODE==='card')?'list':'card'; var on=(VIEW_MODE==='card'); _viewBtn.classList.toggle('on',on); _viewBtn.setAttribute('aria-pressed',on?'true':'false'); _viewBtn.textContent=on?'View: Card':'View: List'; if(on) resolveCardImages(); renderCards(); }); } // view-only toggle; never touches lineup/sort
     function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
 
     
