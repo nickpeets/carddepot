@@ -198,6 +198,7 @@
           <div id="pitcherBox" class="pbox"><span class="muted">No pitcher chosen yet.</span></div>
           <h3 style="margin-top:18px;">BATTING ORDER <span class="muted">(1–9 · drag to reorder)</span></h3>
           <div id="slots"></div>
+        <div id="teamNameWrap" style="margin-top:16px;"><label for="teamNameInput" style="display:block;font-size:9px;letter-spacing:1px;margin:0 0 6px;color:var(--gold);">TEAM NAME</label><input type="text" id="teamNameInput" maxlength="12" autocomplete="off" spellcheck="false" placeholder="YOUR TEAM" style="width:100%;max-width:300px;padding:10px;background:var(--field-dark);color:var(--gold);border:2px solid var(--gold);font-family:inherit;font-size:11px;letter-spacing:1px;text-transform:uppercase;"><div class="muted" style="font-size:8px;margin-top:5px;">Shows on the scoreboard &amp; field (max 12 chars).</div></div>
       <div style="margin-top:14px;display:flex;gap:8px;align-items:center;">
         <button class="btn-primary" id="playBtn" disabled>PLAY BALL &#9654;</button>
         <button class="btn-ghost" id="clearBtn">Clear</button>
@@ -246,7 +247,7 @@
     
     // ----- Auth -----
   function setAuthMsg(t){ $('authMsg').textContent=t||''; }
-  function showLoggedIn(email){ $('loginView').style.display='none'; $('builderView').style.display='block'; $('whoami').textContent=email||''; $('logoutBtn').style.display='inline-block'; }
+  function showLoggedIn(email){ $('loginView').style.display='none'; $('builderView').style.display='block'; $('whoami').textContent=email||''; try{ var _tn=$('teamNameInput'); if(_tn && !_tn.value) _tn.value=deriveTeamName(); }catch(e){} $('logoutBtn').style.display='inline-block'; }
   function showLoggedOut(){ $('builderView').style.display='none'; $('loginView').style.display='block'; $('whoami').textContent=''; $('logoutBtn').style.display='none'; }
   async function doLogin(){
     if(!sb) return;
@@ -545,7 +546,7 @@
         if(prv.w!=null) pitcher.w=String(prv.w);
         if(prv.l!=null) pitcher.l=String(prv.l);
       }
-      var teamName=(CARDS.length&&deriveTeamName())||'DEPOT';
+      var _tnEl=$('teamNameInput'); var _typed=_tnEl?String(_tnEl.value||'').trim().toUpperCase().slice(0,12):''; var teamName=_typed || (CARDS.length&&deriveTeamName()) || 'DEPOT';
       return { name:teamName, code:'mudcats', lineup:lineup, pitcher:pitcher };
     }
     function deriveTeamName(){ var n=(USER&&USER.email||'').split('@')[0]; return (n||'DEPOT').toUpperCase().slice(0,12); }

@@ -734,7 +734,27 @@ function clearFlightLine() {
     }catch(e){}
   }
 
-  function highlightLineup(teamCode, batIdx) {
+  // ----- Depot: drive every USER-team (visitor/Mudcats) name display from MUDCATS.name -----
+// Replaces the hardcoded "MUDCATS" in the scoreboard linescore label and the big bottom
+// team name. Opponent (ACORNS/home) is left untouched. Size-to-fit keeps long names from
+// overflowing their boxes.
+function fitText(el, maxW, basePx, minPx){
+  if(!el) return;
+  el.style.fontSize = basePx + "px";
+  var px = basePx;
+  while(px > minPx && el.scrollWidth > maxW){ px -= 1; el.style.fontSize = px + "px"; }
+}
+function applyTeamName(){
+  try{
+    if(typeof window==="undefined" || !window.__DEPOT_TEAM_LOADED) return;
+    var nm = MUDCATS.name || "MUDCATS";
+    var lbl = $("team-mudcats");
+    if(lbl){ lbl.textContent = nm; lbl.style.whiteSpace="nowrap"; lbl.style.overflow="hidden"; fitText(lbl, 214, 22, 12); }
+    var big = $("bigname-mudcats");
+    if(big){ big.textContent = nm; big.style.whiteSpace="nowrap"; fitText(big, 560, 78, 30); }
+  }catch(e){}
+}
+function highlightLineup(teamCode, batIdx) {
     var cols = lineupColumns();
     if (!cols.length) return;
     // Clear name highlight on every row of every detected lineup column.
@@ -807,6 +827,7 @@ function clearFlightLine() {
     // Sync lineup-column highlight to the current batter (same source as AT BAT/ON DECK/IN THE HOLE)
     highlightLineup(ev.teamCode, ev.batterIdx);
     paintDepotVisitorNames();
+		applyTeamName();
 
     // Runners on base
     showRunners(ev.basesAfter);
