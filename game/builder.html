@@ -225,6 +225,8 @@
     // 8 fielding positions (no pitcher) + DH = 9 batting-order slots.
     var FIELD_POS=['C','1B','2B','3B','SS','LF','CF','RF'];
     var BAT_POS=['C','1B','2B','3B','SS','LF','CF','RF','DH']; // valid positions a batter can occupy
+    // Abbrev -> full position name, for plain-English dropdown labels ('Set to Shortstop')
+    var POS_FULL={C:'Catcher','1B':'First Base','2B':'Second Base','3B':'Third Base',SS:'Shortstop',LF:'Left Field',CF:'Center Field',RF:'Right Field',P:'Pitcher',DH:'Designated Hitter'};
     // ORDER[i] = { id: cardId, pos: 'C'|'1B'|...|'DH' } or null. Index = batting slot 0..8 (shown 1..9).
     var ORDER=new Array(9).fill(null);
     // Separately-chosen pitcher (pitching box). No hitting line required.
@@ -474,7 +476,7 @@
         var slot=ORDER[i];
         if(slot){
           var c=cardById(slot.id); var rv=RESOLVED[slot.id]||{};
-          var posSel='<select class="pos-sel" data-pos="'+i+'">'+BAT_POS.map(function(P){ var u=usedPositions(); var taken=(u[P]&&P!==slot.pos); return '<option value="'+P+'"'+(P===slot.pos?' selected':'')+(taken?' disabled':'')+'>'+P+'</option>'; }).join('')+'</select>';
+          var posSel='<select class="pos-sel" data-pos="'+i+'">'+BAT_POS.map(function(P){ var u=usedPositions(); var taken=(u[P]&&P!==slot.pos); return '<option value="'+P+'"'+(P===slot.pos?' selected':'')+(taken?' disabled':'')+'>Set to '+(POS_FULL[P]||P)+'</option>'; }).join('')+'</select>';
           html+='<div class="bat filled" draggable="true" data-slot="'+i+'">'
               +   '<div class="ord">'+(i+1)+'</div>'
               +   '<div class="who"><b>'+esc(c?c.player:'?')+'</b>'
