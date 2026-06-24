@@ -174,6 +174,20 @@
   #status .ok{color:#0c4a22;font-weight:bold;}
   #status .no{color:var(--red);font-weight:bold;}
   .muted{color:var(--dim);font-size:9px;line-height:1.8;}
+    /* ===== pitcher-aware presentation (UX/presentation only; underlying rules unchanged) ===== */
+    /* A card whose resolved pos is P, or that has no usable hitting line, reads as PITCHER (not broken/disabled). */
+    .card-row.pitcher-card, .ctile.pitcher-card{ opacity:1; }
+    .card-row.pitcher-card{ border-left:6px solid var(--gold); }
+    .ctile.pitcher-card .ctile-art{ border-color:var(--gold); }
+    /* Emphasized primary "Set as P" on pitcher-ready cards */
+    .pit-btn.pit-primary{ background:var(--gold); color:var(--frame); border:2px solid var(--frame); font-weight:bold; }
+    /* De-emphasized secondary "Set as P" on position players (still clickable) */
+    .pit-btn.pit-deemph{ background:transparent; color:var(--paper-dim); border:1px solid var(--paper-dim); padding:3px 6px; font-size:7px; opacity:.85; }
+    .pit-btn.pit-deemph:hover{ opacity:1; border-color:var(--field-dark); color:var(--field-dark); }
+    /* "Add to order" on a pitcher: disabled but labeled "can't bat" (not a generic grey-out) */
+    .add-btn.cantbat:disabled{ background:transparent; color:var(--paper-dim); border:2px dashed var(--paper-dim); cursor:default; }
+    .cantbat-note{ color:var(--paper-dim); font-size:8px; font-style:italic; letter-spacing:.3px; align-self:center; }
+    .ctile .cantbat-note{ width:100%; text-align:center; }
 </style>
 </head>
 <body>
@@ -474,29 +488,34 @@
         var sub=fmtMeta(c);
         var note=(st==='bad')?(rv.note||'no hitting line'):'';
         // status text (no MLB-API pill): just a tiny dim note when unusable as a hitter
-        var hitTag = usable ? '' : '<span class="hint-bad">no hitting line</span>';
+        var resPos = naturalPosFor(c.id);
+        // "pitcher-ready": resolved position P, or no usable hitting line (still resolving -> neutral)
+        var isPitcherCard = (resPos==='P') || (!usable && st!=='pending');
+        var hitTag = '';
         // Add-to-order button: disabled if already in order, or order full, or not a usable hitter
         var full=(firstEmptySlot()<0);
         var canAdd = usable && !inOrd && !full;
-        var addLbl = inOrd ? 'in order' : 'Add to order';
-        var addBtn = '<button class="add-btn" data-add="'+c.id+'"'+(canAdd?'':' disabled')+'>'+addLbl+'</button>';
+        var addLbl = inOrd ? 'in order' : (isPitcherCard ? "can't bat" : 'Add to order');
+        var addBtn = '<button class="add-btn'+(isPitcherCard?' cantbat':'')+'" data-add="'+c.id+'"'+(canAdd?'':' disabled')+(isPitcherCard?' title="Pitcher \u2014 use Set as P"':'')+'>'+addLbl+'</button>';
+        var cantBatNote = (isPitcherCard && !inOrd) ? '<span class="cantbat-note">pitcher \u00b7 can\u2019t bat</span>' : '';
         // Pitcher pick button: ANY card selectable by name, no hitting line needed
-        var pitBtn = '<button class="pit-btn'+(isPit?' on':'')+'" data-pit="'+c.id+'">'+(isPit?'\u2605 Pitcher':'Set as P')+'</button>';
+        var pitClass = isPit ? ' on' : (isPitcherCard ? ' pit-primary' : ' pit-deemph');
+        var pitBtn = '<button class="pit-btn'+pitClass+'" data-pit="'+c.id+'">'+(isPit?'\u2605 Pitcher':'Set as P')+'</button>';
         if(VIEW_MODE==='card'){
           // CARD VIEW: real card art (signed url cached on c._imgUrl); graceful no-image fallback.
           var _u=c._imgUrl;
           var _imgInner = _u ? '<img class="ctile-img" src="'+esc(_u)+'" alt="'+esc(c.player||'card')+'" loading="lazy" onerror="ctileImgFail(this)">' : '';
           var _ph = '<div class="ctile-ph"><b>'+esc(c.player||'(unnamed)')+'</b><small>'+esc(sub)+'</small></div>';
           var _hasImg = !!_u;
-          html+= '<div class="ctile'+(usable?'':' dim-row')+(_hasImg?'':' noimg')+'" title="'+esc(c.player||'')+'">'
+          html+= '<div class="ctile'+(isPitcherCard?' pitcher-card':(usable?'':' dim-row'))+(_hasImg?'':' noimg')+'" title="'+esc(c.player||'')+'">'
             +   '<div class="ctile-art">'+_imgInner+_ph+'</div>'
-            +   '<div class="ctile-actions row-actions">'+hitTag+pitBtn+addBtn+'</div>'
+            +   '<div class="ctile-actions row-actions">'+hitTag+pitBtn+addBtn+cantBatNote+'</div>'
             + '</div>';
         } else {
-        html+= '<div class="card-row'+(usable?'':' dim-row')+'">'
+        html+= '<div class="card-row'+(isPitcherCard?' pitcher-card':(usable?'':' dim-row'))+'">'
              +   '<div class="nm"><b>'+esc(c.player||'(unnamed)')+'</b>'
              +     '<small>'+esc(sub)+(note?(' \u00b7 '+esc(note)):'')+'</small></div>'
-             +   '<div class="row-actions">'+hitTag+pitBtn+addBtn+'</div>'
+             +   '<div class="row-actions">'+hitTag+pitBtn+addBtn+cantBatNote+'</div>'
              + '</div>';
         }
       });
