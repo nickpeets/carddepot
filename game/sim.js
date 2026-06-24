@@ -294,6 +294,91 @@
   // ======================================================================
   if (typeof document === 'undefined') return;
 
+  // ====================================================================
+  //  RETRO ANNOUNCER VOICE  (Option A: browser TTS, pitched + crunchy)
+  //  Text stays on screen; this is purely additive. Default OFF; the
+  //  player's choice persists in localStorage. Speech uses the Web Speech
+  //  API (speechSynthesis) pitched down + sped up for a robotic read, with
+  //  a short 8-bit square-wave "blip" burst layered in for NES crunch
+  //  (browsers don't expose the TTS stream to Web Audio, so the retro
+  //  texture is added via synthesized blips alongside the spoken line).
+  // ====================================================================
+  var __voiceOn = false;
+  try { __voiceOn = (localStorage.getItem("depot_voice") === "1"); } catch (e) {}
+  var __ac = null;
+  function __audioCtx() {
+    if (!__ac) { try { __ac = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { __ac = null; } }
+    return __ac;
+  }
+  function __pickVoice() {
+    try {
+      var vs = window.speechSynthesis.getVoices() || [];
+      var pref = vs.filter(function (v) { return /en[-_]/i.test(v.lang); });
+      return (pref[0] || vs[0] || null);
+    } catch (e) { return null; }
+  }
+  function __blip(nSyl) {
+    var ac = __audioCtx(); if (!ac) return;
+    try { if (ac.state === "suspended") ac.resume(); } catch (e) {}
+    var t0 = ac.currentTime, step = 0.045, n = Math.max(2, Math.min(8, nSyl || 4));
+    for (var i = 0; i < n; i++) {
+      var o = ac.createOscillator(), g = ac.createGain();
+      o.type = "square";
+      o.frequency.setValueAtTime(180 + ((i * 53) % 240), t0 + i * step);
+      g.gain.setValueAtTime(0.0001, t0 + i * step);
+      g.gain.exponentialRampToValueAtTime(0.05, t0 + i * step + 0.008);
+      g.gain.exponentialRampToValueAtTime(0.0001, t0 + i * step + step * 0.9);
+      o.connect(g); g.connect(ac.destination);
+      o.start(t0 + i * step); o.stop(t0 + i * step + step);
+    }
+  }
+  function __voiceSpeak(text) {
+    if (!__voiceOn || !text) return;
+    if (!("speechSynthesis" in window)) return;
+    try {
+      var say = String(text).replace(/--/g, ",").replace(/\s+/g, " ").trim();
+      window.speechSynthesis.cancel();
+      var u = new SpeechSynthesisUtterance(say);
+      u.pitch = 0.4;
+      u.rate = 1.35;
+      u.volume = 1.0;
+      var v = __pickVoice(); if (v) u.voice = v;
+      __blip((say.split(/\s+/).length) + 2);
+      window.speechSynthesis.speak(u);
+    } catch (e) {}
+  }
+  function __setVoice(on) {
+    __voiceOn = !!on;
+    try { localStorage.setItem("depot_voice", __voiceOn ? "1" : "0"); } catch (e) {}
+    var b = document.getElementById("voice-toggle");
+    if (b) {
+      b.textContent = __voiceOn ? "\uD83D\uDD0A SOUND: ON" : "\uD83D\uDD07 SOUND: OFF";
+      b.style.background = __voiceOn ? "#2b6b2b" : "#000";
+    }
+    if (!__voiceOn) { try { window.speechSynthesis.cancel(); } catch (e) {} }
+  }
+  function __ensureVoiceToggle() {
+    if (document.getElementById("voice-toggle")) return;
+    var box = document.getElementById("result-line");
+    var host = (box && box.parentNode) ? box.parentNode : document.body;
+    var b = document.createElement("button");
+    b.id = "voice-toggle";
+    b.type = "button";
+    b.textContent = __voiceOn ? "\uD83D\uDD0A SOUND: ON" : "\uD83D\uDD07 SOUND: OFF";
+    b.style.cssText = "position:absolute;left:50%;top:1335px;transform:translateX(-50%);" +
+      "font-family:'Press Start 2P',monospace;font-size:12px;color:#f6c81e;" +
+      "background:" + (__voiceOn ? "#2b6b2b" : "#000") + ";border:3px solid #f6c81e;" +
+      "padding:6px 12px;cursor:pointer;z-index:40;white-space:nowrap;";
+    b.addEventListener("click", function () {
+      try { var ac = __audioCtx(); if (ac && ac.state === "suspended") ac.resume(); } catch (e) {}
+      __setVoice(!__voiceOn);
+      if (__voiceOn) __voiceSpeak("Sound on. Try to keep up.");
+    });
+    host.appendChild(b);
+  }
+  try { if (window.speechSynthesis) window.speechSynthesis.onvoiceschanged = function () {}; } catch (e) {}
+
+
   // ---- DOM helpers ------------------------------------------------------
   function $(id) { return document.getElementById(id); }
   function setText(id, v) { var e = $(id); if (e) e.textContent = String(v); }
@@ -520,30 +605,177 @@ function clearFlightLine() {
     return { 'LEFT': 'LEFT', 'LEFT-CENTER': 'LEFT-CENTER', 'CENTER': 'CENTER',
              'RIGHT-CENTER': 'RIGHT-CENTER', 'RIGHT': 'RIGHT' }[loc] || 'CENTER';
   }
-  function resultText(ev, rng) {
-    var k = ev.outcome;
-    var who = ev.batter;
-    if (k === 'BB') return phrase('BB', rng) + ' — ' + who;
-    if (k === 'K')  return who + ' ' + phrase('K', rng);
-    if (k === 'OUT') {
-      // Verb matches batted-ball type so commentary agrees with the flight line.
-      if (ev.outType === 'GB') {
-      // Grounder fielded by an infielder, thrown out at first (no outfield zone).
-      var pos = ev.infielder || 'SS';
-      var gtxt = (pos === '1B') ? 'GROUNDS OUT TO FIRST'
-        : 'GROUNDS OUT, ' + (POS_WORD[pos] || pos) + ' TO FIRST';
-      return who + ' ' + gtxt + (ev.error ? ' (E!)' : '');
-    }
-    var verb = ['FLIES OUT', 'LINES OUT', 'POPS OUT'][Math.floor(rng() * 3)];
-    var loc = fieldWord(ev.location);
-    return who + ' ' + verb + ' TO ' + loc + (ev.error ? ' (E!)' : '');
-    }
-    // hits
-    var label = phrase(k, rng);
-    var locTxt = ev.location ? (' TO ' + fieldWord(ev.location)) : '';
-    var rbiTxt = ev.runs > 0 ? ('  +' + ev.runs + (ev.runs === 1 ? ' RUN' : ' RUNS')) : '';
-    return label + ' — ' + who + locTxt + rbiTxt;
+  // ====================================================================
+  //  MOOD-DRIVEN ANNOUNCER  (additive; sim math untouched)
+  //  Original character: "Chip Dungaree" -- a deadpan, dryly-disgusted,
+  //  comedically-underwhelmed old-school booth voice. NOT based on any
+  //  real broadcaster or film character. All lines original.
+  //  USER TEAM = mudcats (bats top). Opponent = acorns (home).
+  // ====================================================================
+  var ANNOUNCER_NAME = "Chip Dungaree";
+
+  var __lastLine = {};
+  function moodPick(key, pool, rng) {
+    if (!pool || !pool.length) return "";
+    if (pool.length === 1) return pool[0];
+    var idx = Math.floor(rng() * pool.length);
+    if (pool[idx] === __lastLine[key]) idx = (idx + 1) % pool.length;
+    __lastLine[key] = pool[idx];
+    return pool[idx];
   }
+
+  // Mood from live state: smug / weary / tense / restless / neutral.
+  function moodOf(ctx) {
+    var diff = ctx.us - ctx.them;
+    var late = ctx.inning >= 7;
+    var absd = Math.abs(diff);
+    if (late && absd <= 2) return "tense";
+    if (diff >= 6) return "smug";
+    if (diff <= -3) return "weary";
+    if (diff >= 3) return "smug";
+    if (ctx.dry >= 6) return "restless";
+    return "neutral";
+  }
+
+
+  var LINE = {
+    K_SWING: { smug:["Swing and a miss. Predictable.","Whiffs. Just being polite now.","Strike three swinging. Riveting."],
+      weary:["Swings through it. Of course.","Another whiff. Out of sighs.","Down swinging. Shocker."],
+      tense:["He FANS on it! Nothing there!","Strike three swinging!","Misses! Dead silence!"],
+      restless:["A swing! Nope, a miss.","Swung at air. Thrilling.","Whiff. Wake me later."],
+      any:["Swing and a miss, K.","Goes down hacking.","Whiffed clean."] },
+    K_LOOK: { smug:["Caught looking. Not even trying.","Watches strike three. Bold.","Frozen. Bat never moved."],
+      weary:["Takes strike three. Brutal.","Looking. Bat on his shoulder.","Rung up. He's stunned too."],
+      tense:["RUNG UP looking! Huge spot!","Frozen on strike three!","Caught staring -- dugout roars!"],
+      restless:["Stands there. K. Naturally.","Caught looking. Move along.","Watched it go. So did I."],
+      any:["Caught looking, strike three.","Rung up. Didn't budge.","Frozen for strike three."] },
+    BB: { smug:["Ball four. Giving 'em away.","Walk. Location's a rumor.","Free pass. Generous arm."],
+      weary:["Walk. Can't field a strike.","Ball four. Control's a theory.","Walk. Mound's a freebie."],
+      tense:["He walks him! No plate now!","Ball four -- tying run aboard!","Free pass, worst time!"],
+      restless:["Walk. Four nowhere near it.","Ball four. Aging out here.","Walk. Zone went unvisited."],
+      any:["Ball four. Take your base.","Walks him. Control's off.","Free pass, missed the zone."] },
+    H1: { smug:["Single. Padding the box score.","Base hit. Twisting the knife.","Single. Sure, pile it on."],
+      weary:["Single. One small dignity.","Base hit. Don't get used to it.","Single. We'll frame it."],
+      tense:["Base hit! Runner aboard!","Single drops -- rally lives!","Pokes one through! Big knock!"],
+      restless:["Single. Baseball exists!","Base hit. There's a pulse.","Single. Mark the calendar."],
+      any:["Base hit, drops in.","Singles it through.","A knock. Runner aboard."] },
+    H2: { smug:["Double. Showing off now.","Two bases. Cruelty continues.","Double. Rubbing it in."],
+      weary:["Double. Too little, too late.","Into the gap. A gesture.","Two-bagger. Cute. Scoreboard?"],
+      tense:["DOUBLE in the gap! Scoring spot!","Two bases! Tying run close!","Off the gap! Huge double!"],
+      restless:["A double! Something happened!","Into the gap. Pace thanks him.","Two-bagger. Nap's over."],
+      any:["Laces a double.","Two bases, stand-up.","Rips it for two."] },
+    H3: { smug:["Triple. Now he's theatrical.","Three bases. Loves attention.","Triple. Grandstanding, noted."],
+      weary:["Triple. Scoreboard yawns.","Off the wall. For what it's worth.","Triple. Effort's not the issue."],
+      tense:["TRIPLE! Ninety feet to tie!","Off the wall, CHURNING -- three!","Standing triple! Dugout up!"],
+      restless:["A triple! Live action!","Three bases, real running!","Off the wall -- earned my pay."],
+      any:["Legs out a triple.","Three bases, stands up.","Wheels for a triple."] },
+    HR: { smug:["Another's gone. Yawn. A clinic.","Home run. Past mercy now.","Gone. Trot at your leisure."],
+      weary:["A homer. Sandcastle, sinking beach.","Gone. Souvenir for a lost cause.","Over the wall. Deficit chuckles."],
+      tense:["IT IS GONE! He got ALL of it!","DEEP -- and OUTTA HERE!","He crushed it! GONE!"],
+      restless:["GONE! That woke 'em up!","Over the wall! Knew it!","A homer! Something happened!"],
+      any:["Crushed -- it's GONE!","Over the wall, home run!","Goodbye baseball!"] },
+    GO: { smug:["Grounder, routine out.","Two-hopper. Defense napped.","Rolls over. Thanks for coming."],
+      weary:["Grounds out. Of course.","Routine grounder. Thrill's gone.","Two hops, out. Riveting."],
+      tense:["Grounder -- they get him!","Chopped, one away!","Grounder out. Every one counts!"],
+      restless:["Grounds out. Another victim.","Two-hopper, out. We trudge on.","Rolls over weakly. More of this."],
+      any:["Grounds out to the infield.","Routine grounder, out.","Chops one, out at first."] },
+    AO: { smug:["Lazy fly, caught. Mailing it in.","Pops up. Nobody jogged.","Routine fly. Barely tested."],
+      weary:["Flies out. Why would it land.","Pop-up, caught. Agony goes on.","Lines right at someone."],
+      tense:["Flied out! They squeeze it!","Lined RIGHT at him! Ouch!","Pop-up, caught. Big exhale!"],
+      restless:["Lazy fly, caught. Nap resumes.","Pops up. Milking nine innings.","Flies out. Crowd checks phones."],
+      any:["Flies out, caught.","Pops it up, easy out.","Lines out, snagged."] },
+    DP: { smug:["Double play. Two for one. Cute.","Twin killing. Efficient.","Two outs, tidy."],
+      weary:["Double play. Rally dead. Typical.","Two on one swing. Artful cruelty.","Into two. Dugout files taxes."],
+      tense:["TWO! They turn it! Rally DEAD!","Double play -- air's gone!","Twin killing! Stunning turn!"],
+      restless:["Double play. Sped it up.","Two on one. Efficient.","Twin killing. Mercifully quick."],
+      any:["Grounds into a double play.","Twin killing, two away.","Two on one -- double play."] },
+    ERR: { smug:["ERROR. Gloves are decorative.","Boots it. New shame, up big.","Misplayed. Defense optional."],
+      weary:["Error. Can't catch a cold.","Boots it. Masterclass in tragedy.","Kicks it. Glove's an accessory."],
+      tense:["He BOOTS it! Worst time!","Error -- door swings open!","Misplayed! Can't give outs away!"],
+      restless:["An error. Something new.","Boots it. Blooper reel grows.","Kicks it. Variety, I guess."],
+      any:["He boots it -- error!","Misplayed, error charged.","Kicks it, all safe."] }
+  };
+
+
+  var SITU = {
+    NEW_INNING: { smug:["New inning, same massacre.","Fresh frame. Lead's safe.","Next inning. Wake me."],
+      weary:["New inning. Disappoint me again.","Fresh frame. Watch it crumble.","Next inning. Lower the bar."],
+      tense:["New inning -- white-knuckle!","Fresh frame, tight as a drum!","Next inning, every pitch counts!"],
+      restless:["New inning. Please, anything.","Fresh frame. Pace is brutal.","Next inning. Crowd's bored."],
+      any:["New inning, fresh ballgame.","Next frame coming up.","On to the next inning."] },
+    NEW_PITCHER: { smug:["New arm. Ship's already sunk.","Pitching change. Why bother.","Fresh arm, same scoreboard."],
+      weary:["New arm. Maybe THIS one. Doubt it.","Pitching change. Hope's gone.","Fresh arm. Lower expectations."],
+      tense:["To the pen -- huge call!","New arm in a knife-fight!","Pitching change, game's hanging!"],
+      restless:["New arm. More warm-ups. Joy.","Pitching change. Ten more minutes.","Fresh arm. Pace weeps."],
+      any:["A new arm to the hill.","Pitching change underway.","Fresh pitcher coming in."] },
+    LEADOFF: { smug:["Leads off. A formality.","Top of the order. Whatever.","Leadoff up. Lead naps."],
+      weary:["Leadoff. Rally attempt, again.","Top of the order. Surprise me.","Leads off. Hope, briefly."],
+      tense:["Leadoff -- rally starts NOW!","Top of the order, big spot!","Leads off, it's all on the line!"],
+      restless:["Leadoff. Make some drama.","Top of the order. Do something.","Leads off. Crowd dares to hope."],
+      any:["Leading off the inning.","Top of the order up.","Leadoff hitter steps in."] },
+    BASES_LOADED: { any:["Bases JUICED -- bust it open!","Bags full. Hero or goat.","Loaded house. Big spot!"] },
+    RISP: { any:["Runner in scoring spot.","Ducks on the pond. Pressure's on.","Man aboard. Time to hit."] },
+    BLOWOUT: { any:["This one's a laugher.","It's a rout. Yawn.","Blowout. Drama left early."] },
+    COMEBACK: { any:["They're CLAWING back!","Deficit's shrinking!","Here comes the comeback!"] },
+    TIE: { any:["All square -- a ballgame now!","Tied up! Now we care!","Knotted! Tension's thick!"] }
+  };
+
+
+  function bankLine(bank, mood, rng, key) {
+    if (!bank) return "";
+    var pool = bank[mood] || bank.any;
+    return moodPick(key + ":" + mood, pool, rng);
+  }
+  function situLine(bank, mood, rng, key) {
+    if (!bank) return "";
+    var pool = bank[mood] || bank.any;
+    return moodPick("S:" + key + ":" + mood, pool, rng);
+  }
+  function kFlavor(rng) { return rng() < 0.6 ? "K_SWING" : "K_LOOK"; }
+  function rbiTag(n) { if (!n) return ""; return n === 1 ? " (1 in)" : " (" + n + " in)"; }
+  function pickSitu(ctx, rng) {
+    if (ctx.newPitcher) return "NEW_PITCHER";
+    if (ctx.newInning && rng() < 0.7)  return "NEW_INNING";
+    if (ctx.justTied && rng() < 0.9)   return "TIE";
+    if (ctx.comeback && rng() < 0.5)   return "COMEBACK";
+    if (ctx.basesLoaded && rng() < 0.6) return "BASES_LOADED";
+    if (ctx.blowout && rng() < 0.18)   return "BLOWOUT";
+    if (ctx.leadoff && rng() < 0.4)    return "LEADOFF";
+    if (ctx.risp && rng() < 0.3)       return "RISP";
+    return null;
+  }
+  function resultText(ev, rng, ctx) {
+    ctx = ctx || { us:0, them:0, inning:1, half:"top", batting:"us",
+                   outs:0, bases:[null,null,null], runsOnPlay:ev.runs||0,
+                   leadoff:false, dry:0 };
+    var mood = moodOf(ctx);
+    var k = ev.outcome, who = ev.batter, call;
+    if (k === "BB")       call = bankLine(LINE.BB, mood, rng, "BB") + " -- " + who;
+    else if (k === "K")   call = who + " -- " + bankLine(LINE[kFlavor(rng)], mood, rng, "K");
+    else if (k === "OUT") {
+      if (ev.error)            call = who + " reaches -- " + bankLine(LINE.ERR, mood, rng, "ERR");
+      else if (ev.dp)          call = who + " -- " + bankLine(LINE.DP, mood, rng, "DP");
+      else if (ev.outType === "GB") call = who + " -- " + bankLine(LINE.GO, mood, rng, "GO");
+      else                     call = who + " -- " + bankLine(LINE.AO, mood, rng, "AO");
+    } else {
+      var hb = (k === "1B") ? LINE.H1 : (k === "2B") ? LINE.H2
+             : (k === "3B") ? LINE.H3 : LINE.HR;
+      var line = bankLine(hb, mood, rng, k);
+      var tail = (k === "HR") ? "" : (ev.error ? " (E!)" : "");
+      call = line + " -- " + who + rbiTag(ev.runs) + tail;
+    }
+    var s = pickSitu(ctx, rng);
+    if (s) {
+      var sb = situLine(SITU[s], mood, rng, s);
+      if (sb) {
+        var joined = sb + "  " + call;
+        if (joined.length <= 52) return joined;
+        return sb;
+      }
+    }
+    return call;
+  }
+
 
   // ---- Build an expanded, screen-ready event stream ---------------------
   // We re-run a seeded game but capture per-PA snapshots for stepping.
@@ -557,6 +789,10 @@ function clearFlightLine() {
       acorns:  { innings: [], r: 0, h: 0, e: 0 }
     };
     var stream = [];
+    // --- mood/announcer tracking (additive; no effect on sim math) ---
+    var __dry = 0;
+    var __prevPit = { top: null, bot: null };
+    var __firstOfHalf = { top: true, bot: true };
     for (var inning = 1; inning <= 9; inning++) {
       ['top', 'bot'].forEach(function (half) {
         if (half === 'bot' && inning === 9 && line.acorns.r > line.mudcats.r) return; // walk-off skip
@@ -566,13 +802,34 @@ function clearFlightLine() {
         while (outs < 3) {
           var bi = idx[half] % 9;
           var bat = team.lineup[bi];
+          var __basesBefore = bases.slice();
+          var __outsBefore = outs;
+          var __isLeadoff = (__firstOfHalf[half] && bi === 0) ||
+                            (__outsBefore === 0 && !__basesBefore[0] && !__basesBefore[1] && !__basesBefore[2]);
+          var __newInning = __firstOfHalf[half];
+          var __newPitcher = (__prevPit[half] !== null && __prevPit[half] !== pit);
+          __prevPit[half] = pit; __firstOfHalf[half] = false;
           var ev = simPA(bat, pit, bases, rng);
           if (ev.inPlay && !ev.hit && rng() < 0.02) { ev.error = true; errThisInning++; }
           if (ev.hit) hitsThisInning++;
           if (ev.outs) outs += ev.outs;
           runsThisInning += ev.runs;
+          var __usBefore = line.mudcats.r, __themBefore = line.acorns.r;
           // accumulate line totals
           line[code].r += ev.runs; line[code].h += (ev.hit ? 1 : 0);
+          var __us = line.mudcats.r, __them = line.acorns.r;
+          var __b = __basesBefore;
+          var __risp = !!(__b[1] || __b[2]);
+          var __loaded = !!(__b[0] && __b[1] && __b[2]);
+          var __diffBefore = __usBefore - __themBefore, __diffAfter = __us - __them;
+          var __justTied = (__diffBefore < 0 && __diffAfter === 0);
+          var __comeback = (__diffBefore <= -3 && __diffAfter > __diffBefore && __diffAfter < 0 && ev.runs > 0 && code === 'mudcats');
+          var __blowout = (Math.abs(__diffAfter) >= 8);
+          var __ctx = { us: __us, them: __them, inning: inning, half: half,
+            batting: (code === 'mudcats' ? 'us' : 'them'), outs: __outsBefore, bases: __b,
+            runsOnPlay: ev.runs, leadoff: __isLeadoff, newInning: __newInning, newPitcher: __newPitcher,
+            dry: __dry, risp: __risp, basesLoaded: __loaded, justTied: __justTied,
+            comeback: __comeback, blowout: __blowout };
           var snap = {
             inning: inning, half: half, teamCode: code, teamName: team.name,
             batterIdx: bi, batter: bat,
@@ -580,11 +837,12 @@ function clearFlightLine() {
             pitcher: pit,
             outcome: ev.outcome, location: ev.location, outType: ev.outType, infielder: ev.infielder, error: !!ev.error,
             runsOnPlay: ev.runs, basesAfter: (outs >= 3 ? [null, null, null] : bases.slice()), outsAfter: outs,
-            text: resultText(ev, rng),
+            text: resultText(ev, rng, __ctx),
             pitches: buildPitchSequence(ev.outcome, rng),
             lineSnapshot: null // filled below
           };
           stream.push(snap);
+          if (ev.hit || ev.runs > 0 || ev.error) __dry = 0; else __dry++;
           idx[half]++;
           if (outs >= 3) break;
         }
@@ -853,6 +1111,8 @@ function highlightLineup(teamCode, batIdx) {
 
   // Result line
     setResultLine(ev.text);
+    __ensureVoiceToggle();
+    __voiceSpeak(ev.text);
 
     // Linescore: recompute running totals up to this event
     updateLinescore(ev);
