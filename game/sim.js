@@ -365,7 +365,7 @@
     b.id = "voice-toggle";
     b.type = "button";
     b.textContent = __voiceOn ? "\uD83D\uDD0A SOUND: ON" : "\uD83D\uDD07 SOUND: OFF";
-    b.style.cssText = "position:absolute;left:50%;top:1335px;transform:translateX(-50%);" +
+    b.style.cssText = "position:absolute;left:auto;right:520px;top:1230px;" +
       "font-family:'Press Start 2P',monospace;font-size:12px;color:#f6c81e;" +
       "background:" + (__voiceOn ? "#2b6b2b" : "#000") + ";border:3px solid #f6c81e;" +
       "padding:6px 12px;cursor:pointer;z-index:40;white-space:nowrap;";
