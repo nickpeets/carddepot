@@ -103,8 +103,8 @@
   }
 
   // ---- Random distinct draw of n ids from the real-sponsor pool ------------
-  function drawN(n){
-    var avail = AD_IDS.filter(function(id){ return POOL[id]; });
+  function drawN(n, excludeId){
+    var avail = AD_IDS.filter(function(id){ return POOL[id] && id !== excludeId; });
     // shuffle (Fisher-Yates)
     for (var i = avail.length - 1; i > 0; i--){
       var j = Math.floor(Math.random() * (i + 1));
@@ -121,7 +121,12 @@
     if (!poolReady) return;
     if (!SLOTS.length) SLOTS = findSlots();
     if (SLOTS.length < 5) return;
-    var picks = drawN(5);
+    // FIX 1: pin ad-yantzen to the far-LEFT slot (slot 1) every inning;
+    // the other 4 slots rotate among the remaining ads (yantzen excluded so it never doubles).
+    var YANTZEN_ID = 'ad-yantzen';
+    var picks = (POOL[YANTZEN_ID])
+      ? [YANTZEN_ID].concat(drawN(4, YANTZEN_ID))
+      : drawN(5);
     for (var i = 0; i < 5 && i < SLOTS.length; i++){
       var screen = prepBoard(SLOTS[i]);
       screen.innerHTML = POOL[picks[i]] || '';
