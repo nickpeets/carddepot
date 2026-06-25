@@ -95,6 +95,8 @@
     border:2px solid var(--gold);font-size:10px;padding:4px 6px;
     margin-right:6px;font-family:inherit;}
   .pos-sel:disabled{opacity:.4}
+    .bat.outpos{ border-color:var(--red-bright); box-shadow:inset 0 0 0 1px var(--red-bright); }
+    .oop-flag{ display:inline-block; margin-left:6px; font-size:7px; color:var(--cream); background:var(--red-bright); border:1px solid var(--frame); padding:1px 4px; vertical-align:middle; letter-spacing:.5px; }
   .slot .who{flex:1;font-size:10px;color:var(--cream);line-height:1.5;}
   .slot .who small{color:var(--dim);display:block;font-size:8px;}
   /* ---- status line ---- */
@@ -502,12 +504,12 @@
         // Add-to-order button: disabled if already in order, or order full, or not a usable hitter
         var full=(firstEmptySlot()<0);
         var canAdd = usable && !inOrd && !full;
-        var addLbl = inOrd ? 'in order' : (isPitcherCard ? "can't bat" : 'Add to order');
-        var addBtn = '<button class="add-btn'+(isPitcherCard?' cantbat':'')+'" data-add="'+c.id+'"'+(canAdd?'':' disabled')+(isPitcherCard?' title="Pitcher \u2014 use Set as P"':'')+'>'+addLbl+'</button>';
-        var cantBatNote = (isPitcherCard && !inOrd) ? '<span class="cantbat-note">pitcher \u00b7 can\u2019t bat</span>' : '';
+        var addLbl = inOrd ? 'in order' : 'Add to order';
+        var addBtn = '<button class="add-btn'+'" data-add="'+c.id+'"'+(canAdd?'':' disabled')+'>'+addLbl+'</button>';
         // Pitcher pick button: ANY card selectable by name, no hitting line needed
         var pitClass = isPit ? ' on' : (isPitcherCard ? ' pit-primary' : ' pit-deemph');
         var pitBtn = '<button class="pit-btn'+pitClass+'" data-pit="'+c.id+'">'+(isPit?'\u2605 Pitcher':'Set as P')+'</button>';
+        var actions = isPitcherCard ? pitBtn : addBtn;
         if(VIEW_MODE==='card'){
           // CARD VIEW: real card art (signed url cached on c._imgUrl); graceful no-image fallback.
           var _u=c._imgUrl;
@@ -516,13 +518,13 @@
           var _hasImg = !!_u;
           html+= '<div class="ctile'+(isPitcherCard?' pitcher-card':(usable?'':' dim-row'))+(_hasImg?'':' noimg')+'" title="'+esc(c.player||'')+'">'
             +   '<div class="ctile-art">'+_imgInner+_ph+'</div>'
-            +   '<div class="ctile-actions row-actions">'+hitTag+pitBtn+addBtn+cantBatNote+'</div>'
+            +   '<div class="ctile-actions row-actions">'+hitTag+actions+'</div>'
             + '</div>';
         } else {
         html+= '<div class="card-row'+(isPitcherCard?' pitcher-card':(usable?'':' dim-row'))+'">'
              +   '<div class="nm"><b>'+esc(c.player||'(unnamed)')+'</b>'
              +     '<small>'+esc(sub)+(note?(' \u00b7 '+esc(note)):'')+'</small></div>'
-             +   '<div class="row-actions">'+hitTag+pitBtn+addBtn+cantBatNote+'</div>'
+             +   '<div class="row-actions">'+hitTag+actions+'</div>'
              + '</div>';
         }
       });
@@ -541,9 +543,9 @@
         if(slot){
           var c=cardById(slot.id); var rv=RESOLVED[slot.id]||{};
           var posSel='<select class="pos-sel" data-pos="'+i+'">'+BAT_POS.map(function(P){ var u=usedPositions(); var taken=(u[P]&&P!==slot.pos); return '<option value="'+P+'"'+(P===slot.pos?' selected':'')+(taken?' disabled':'')+'>Set to '+(POS_FULL[P]||P)+'</option>'; }).join('')+'</select>';
-          html+='<div class="bat filled" draggable="true" data-slot="'+i+'">'
+          html+='<div class="bat filled'+(slot.outOfPos?' outpos':'')+'" draggable="true" data-slot="'+i+'">'
               +   '<div class="ord">'+(i+1)+'</div>'
-              +   '<div class="who"><b>'+esc(c?c.player:'?')+'</b>'
+              +   '<div class="who"><b>'+esc(c?c.player:'?')+'</b>'+(slot.outOfPos?' <span class="oop-flag" title="Natural position taken \u2013 set a position below">OUT OF POS</span>':'')
               +     '<small>'+esc((rv.avg||'.000'))+' AVG \u00b7 '+(rv.hr||0)+' HR \u00b7 '+(rv.rbi||0)+' RBI</small></div>'
               +   posSel
               +   '<button class="rm-btn" data-rm="'+i+'">remove</button>'
@@ -590,9 +592,9 @@
       $('playHint').textContent=ready?'ready':('Need '+(9-filledCount)+' hitter(s)'+(hasPit?'':' + pitcher'));
     }
 
-    function addToOrder(id){ if(inOrder(id)>=0) return; if(!isUsableHitter(id)) return; var slot=firstEmptySlot(); if(slot<0) return; if(PITCHER===id) PITCHER=null; var pref=naturalPosFor(id); ORDER[slot]={ id:id, pos:nextFreePos(pref==='P'?'':pref) }; renderAll(); }
+    function addToOrder(id){ if(inOrder(id)>=0) return; if(!isUsableHitter(id)) return; var slot=firstEmptySlot(); if(slot<0) return; if(PITCHER===id) PITCHER=null; var nat=naturalPosFor(id); if(nat==='P') nat=''; var used=usedPositions(); var oop=false, assigned; if(nat && !used[nat]){ assigned=nat; } else if(nat && used[nat]){ assigned=nextFreePos(''); oop=true; } else { assigned=nextFreePos(''); } ORDER[slot]={ id:id, pos:assigned, outOfPos:oop, natPos:nat }; renderAll(); }
     function removeSlot(i){ ORDER[i]=null; renderAll(); }
-    function setSlotPos(i,pos){ if(!ORDER[i]) return; var u=usedPositions(); if(u[pos] && ORDER[i].pos!==pos){ /* swap with whoever holds it */ for(var k=0;k<9;k++){ if(k!==i && ORDER[k] && ORDER[k].pos===pos){ ORDER[k].pos=ORDER[i].pos; break; } } } ORDER[i].pos=pos; renderAll(); }
+    function setSlotPos(i,pos){ if(!ORDER[i]) return; var u=usedPositions(); if(u[pos] && ORDER[i].pos!==pos){ /* swap with whoever holds it */ for(var k=0;k<9;k++){ if(k!==i && ORDER[k] && ORDER[k].pos===pos){ ORDER[k].pos=ORDER[i].pos; break; } } } ORDER[i].pos=pos; ORDER[i].outOfPos=false; renderAll(); }
     function setPitcher(id){ if(PITCHER===id){ PITCHER=null; renderAll(); return; } var oi=inOrder(id); if(oi>=0) ORDER[oi]=null; PITCHER=id; renderAll(); }
     function moveSlot(from,to){ if(from<0||to<0||from===to||from>8||to>8) return; var arr=ORDER.slice(); var item=arr.splice(from,1)[0]; arr.splice(to,0,item); ORDER=arr; renderAll(); }
 
