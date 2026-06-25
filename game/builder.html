@@ -715,6 +715,105 @@
 
   // expose a couple internals for headless tests
   window.__DepotBuilder={ lineToRates:lineToRates, avgToRates:avgToRates, parseStatLine:parseStatLine, resolveCard:resolveCard, mlbFindPlayer:mlbFindPlayer, mlbSeasonHitting:mlbSeasonHitting, buildTeamPayload:function(){return buildTeamPayload();} };
+
+    // ===== MULTIPLAYER 1c: ACCEPT-VIA-LINK ===========================
+    // Detect ?match=<id>. If a valid pending+open match, enter accept mode.
+    (function mpAcceptInit(){
+      var MP={ mode:false, matchId:null, row:null };
+      function qp(name){ try{ return new URLSearchParams(window.location.search).get(name); }catch(e){ return null; } }
+      var matchId = qp('match');
+      if(!matchId) return; // no param -> normal builder, untouched
+
+      // --- UI helpers ---
+      function makeBanner(){
+        var b=document.getElementById('mpBanner'); if(b) return b;
+        b=document.createElement('div'); b.id='mpBanner';
+        b.style.cssText='margin:12px 0;padding:12px;border:2px solid var(--gold);background:var(--field-dark);color:var(--cream);border-radius:6px;font-size:13px;line-height:1.5;';
+        var host=document.getElementById('builderView')||document.body;
+        host.insertBefore(b, host.firstChild);
+        return b;
+      }
+      function banner(html){ makeBanner().innerHTML=html; }
+      function ensureAcceptBtn(){
+        var btn=document.getElementById('acceptChallengeBtn'); if(btn) return btn;
+        btn=document.createElement('button'); btn.id='acceptChallengeBtn'; btn.className='btn-primary';
+        btn.type='button'; btn.textContent='ACCEPT CHALLENGE'; btn.disabled=true;
+        btn.style.cssText='margin-left:8px;';
+        var play=document.getElementById('playBtn');
+        if(play && play.parentNode){ play.parentNode.insertBefore(btn, play.nextSibling); play.style.display='none'; }
+        else { (document.getElementById('builderView')||document.body).appendChild(btn); }
+        return btn;
+      }
+
+      // --- load match ---
+      (async function load(){
+        if(!sb){ banner('Multiplayer needs a connection. Please log in and reload to accept this challenge.'); return; }
+        var res;
+        try{ res = await sb.from('matches').select('*').eq('id', matchId).maybeSingle(); }
+        catch(e){ banner('Could not load this challenge (network error). The normal builder still works below.'); return; }
+        if(res.error){ banner('Could not load this challenge: '+(res.error.message||'unknown error')+'. The normal builder still works below.'); return; }
+        var row = res.data;
+        if(!row){ banner('This challenge is no longer available (not found). You can still build a lineup below.'); return; }
+        if(row.status==='accepted'){ banner('This challenge has already been accepted. You can still build a lineup below.'); return; }
+        if(row.status==='declined'){ banner('This challenge was declined and is no longer available.'); return; }
+        if(row.status!=='pending' || row.opponent_id!=null){ banner('This challenge is no longer available. You can still build a lineup below.'); return; }
+
+        // Valid pending + open -> ACCEPT MODE
+        MP.mode=true; MP.matchId=matchId; MP.row=row;
+        var cTeam=(row.challenger_lineup && row.challenger_lineup.teamName) ? String(row.challenger_lineup.teamName) : 'your opponent';
+        MP.challengerTeam=cTeam;
+        banner('<b style="color:var(--gold);letter-spacing:1px;">YOU\u2019VE BEEN CHALLENGED!</b><br>Facing: <b>'+escapeHtml(cTeam)+'</b><br>Build your lineup below, then click <b>ACCEPT CHALLENGE</b>.');
+        var hideC=document.getElementById('challengeBtn'); if(hideC) hideC.style.display='none';
+        var aBtn=ensureAcceptBtn();
+
+        // mirror ready-state from playBtn onto accept button
+        var play=document.getElementById('playBtn');
+        if(typeof renderStatus==='function'){
+          var _rs=renderStatus;
+          renderStatus=function(){ _rs.apply(this,arguments); try{ aBtn.disabled = play ? play.disabled : true; }catch(e){} };
+        }
+        try{ aBtn.disabled = play ? play.disabled : true; }catch(e){}
+
+        aBtn.addEventListener('click', onAccept);
+      })();
+
+      function escapeHtml(s){ return String(s).replace(/[&<>"']/g,function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]; }); }
+
+      async function onAccept(){
+        var aBtn=document.getElementById('acceptChallengeBtn'); if(!aBtn) return;
+        var lineup; try{ lineup=buildChallengeLineup(); }catch(e){ banner('Could not read your lineup. Please re-check your batting order and pitcher.'); return; }
+        if(!lineup || !lineup.pitcher || !lineup.batters || lineup.batters.indexOf(null)>=0){ banner('Your lineup is incomplete \u2014 fill all 9 batting slots and pick a pitcher, then Accept.'); return; }
+        if(!sb || !sb.auth){ banner('Not connected. Please log in and reload, then Accept.'); return; }
+        var _label=aBtn.innerHTML; aBtn.disabled=true; aBtn.innerHTML='ACCEPTING\u2026';
+        try{
+          var ures=await sb.auth.getUser();
+          if(ures.error) throw ures.error;
+          var user = ures.data ? ures.data.user : null;
+          if(!user || !user.id){ banner('You must be logged in to accept a challenge. Please log in and reload.'); aBtn.innerHTML=_label; aBtn.disabled=false; return; }
+          var selfChallenge = (user.id===MP.row.challenger_id);
+          var upd = await sb.from('matches')
+            .update({ opponent_lineup: lineup, opponent_id: user.id, status: 'accepted' })
+            .eq('id', MP.matchId).eq('status','pending').is('opponent_id', null)
+            .select();
+          if(upd.error) throw upd.error;
+          if(!upd.data || !upd.data.length){ banner('This challenge could not be accepted \u2014 it may have just been taken or is no longer open.'); aBtn.innerHTML=_label; aBtn.disabled=false; return; }
+          // notify the challenger
+          var noteWarn='';
+          try{
+            var nres=await sb.from('notifications').insert([{ user_id: MP.row.challenger_id, type:'challenge_accepted', match_id: MP.matchId }]);
+            if(nres.error) noteWarn=' (Note: challenger notification could not be created: '+(nres.error.message||'error')+'.)';
+          }catch(e){ noteWarn=' (Note: challenger notification could not be created.)'; }
+          var yourTeam=(lineup.teamName||'YOUR TEAM');
+          banner('<b style="color:var(--gold);">CHALLENGE ACCEPTED!</b><br>'+escapeHtml(MP.challengerTeam)+' vs '+escapeHtml(yourTeam)+' is ready.'+(selfChallenge?'<br><span style="color:var(--gold)">Heads up: you accepted your own challenge (same user) \u2014 allowed for testing.</span>':'')+noteWarn);
+          aBtn.textContent='ACCEPTED'; aBtn.disabled=true;
+        }catch(err){
+          var msg=(err && (err.message||err.error_description||err.hint))||'Could not accept challenge.';
+          banner('Accept failed: '+escapeHtml(msg)+' The match was not changed.');
+          aBtn.innerHTML=_label; aBtn.disabled=false;
+        }
+      }
+    })();
+
 })();
 </script>
 </body>
