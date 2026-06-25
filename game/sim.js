@@ -308,7 +308,6 @@
   var __ac = null;
   // commentary speech-gate state (Change 1: pacing waits for speech)
   var __speechActive = false;
-  var __onSpeechDone = null;
   function __audioCtx() {
     if (!__ac) { try { __ac = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { __ac = null; } }
     return __ac;
@@ -343,7 +342,7 @@
       window.speechSynthesis.cancel();
       var u = new SpeechSynthesisUtterance(say);
       // Change 2: lighter register (was pitch 0.4 ~ heavy smoker). Tunable.
-      var VOICE_PITCH = 0.9;  // ~an octave up from old 0.4
+      var VOICE_PITCH = 0.4; // low register (smoky), per Nick  // ~an octave up from old 0.4
       var VOICE_RATE  = 1.3;  // reads clearly (1.2-1.35 band)
       u.pitch = VOICE_PITCH;
       u.rate = VOICE_RATE;
@@ -351,11 +350,8 @@
       var v = __pickVoice(); if (v) u.voice = v;
       __blip((say.split(/\s+/).length) + 2);
       __speechActive = true;
-      u.onend = u.onerror = function () {
-        __speechActive = false;
-        var f = __onSpeechDone; __onSpeechDone = null;
-        if (f) f();
-      };
+      u.onend = u.onerror = function () { __speechActive = false; };
+      try { window.speechSynthesis.cancel(); } catch (e2) {}
       window.speechSynthesis.speak(u);
     } catch (e) {}
   }
@@ -651,85 +647,29 @@ function clearFlightLine() {
 
 
   var LINE = {
-    K_SWING: { smug:["Swing and a miss. Predictable.","Whiffs. Just being polite now.","Strike three swinging. Riveting."],
-      weary:["Swings through it. Of course.","Another whiff. Out of sighs.","Down swinging. Shocker."],
-      tense:["He FANS on it! Nothing there!","Strike three swinging!","Misses! Dead silence!"],
-      restless:["A swing! Nope, a miss.","Swung at air. Thrilling.","Whiff. Wake me later."],
-      any:["Swing and a miss, K.","Goes down hacking.","Whiffed clean."] },
-    K_LOOK: { smug:["Caught looking. Not even trying.","Watches strike three. Bold.","Frozen. Bat never moved."],
-      weary:["Takes strike three. Brutal.","Looking. Bat on his shoulder.","Rung up. He's stunned too."],
-      tense:["RUNG UP looking! Huge spot!","Frozen on strike three!","Caught staring -- dugout roars!"],
-      restless:["Stands there. K. Naturally.","Caught looking. Move along.","Watched it go. So did I."],
-      any:["Caught looking, strike three.","Rung up. Didn't budge.","Frozen for strike three."] },
-    BB: { smug:["Ball four. Giving 'em away.","Walk. Location's a rumor.","Free pass. Generous arm."],
-      weary:["Walk. Can't field a strike.","Ball four. Control's a theory.","Walk. Mound's a freebie."],
-      tense:["He walks him! No plate now!","Ball four -- tying run aboard!","Free pass, worst time!"],
-      restless:["Walk. Four nowhere near it.","Ball four. Aging out here.","Walk. Zone went unvisited."],
-      any:["Ball four. Take your base.","Walks him. Control's off.","Free pass, missed the zone."] },
-    H1: { smug:["Single. Padding the box score.","Base hit. Twisting the knife.","Single. Sure, pile it on."],
-      weary:["Single. One small dignity.","Base hit. Don't get used to it.","Single. We'll frame it."],
-      tense:["Base hit! Runner aboard!","Single drops -- rally lives!","Pokes one through! Big knock!"],
-      restless:["Single. Baseball exists!","Base hit. There's a pulse.","Single. Mark the calendar."],
-      any:["Base hit, drops in.","Singles it through.","A knock. Runner aboard."] },
-    H2: { smug:["Double. Showing off now.","Two bases. Cruelty continues.","Double. Rubbing it in."],
-      weary:["Double. Too little, too late.","Into the gap. A gesture.","Two-bagger. Cute. Scoreboard?"],
-      tense:["DOUBLE in the gap! Scoring spot!","Two bases! Tying run close!","Off the gap! Huge double!"],
-      restless:["A double! Something happened!","Into the gap. Pace thanks him.","Two-bagger. Nap's over."],
-      any:["Laces a double.","Two bases, stand-up.","Rips it for two."] },
-    H3: { smug:["Triple. Now he's theatrical.","Three bases. Loves attention.","Triple. Grandstanding, noted."],
-      weary:["Triple. Scoreboard yawns.","Off the wall. For what it's worth.","Triple. Effort's not the issue."],
-      tense:["TRIPLE! Ninety feet to tie!","Off the wall, CHURNING -- three!","Standing triple! Dugout up!"],
-      restless:["A triple! Live action!","Three bases, real running!","Off the wall -- earned my pay."],
-      any:["Legs out a triple.","Three bases, stands up.","Wheels for a triple."] },
-    HR: { smug:["Another's gone. Yawn. A clinic.","Home run. Past mercy now.","Gone. Trot at your leisure."],
-      weary:["A homer. Sandcastle, sinking beach.","Gone. Souvenir for a lost cause.","Over the wall. Deficit chuckles."],
-      tense:["IT IS GONE! He got ALL of it!","DEEP -- and OUTTA HERE!","He crushed it! GONE!"],
-      restless:["GONE! That woke 'em up!","Over the wall! Knew it!","A homer! Something happened!"],
-      any:["Crushed -- it's GONE!","Over the wall, home run!","Goodbye baseball!"] },
-    GO: { smug:["Grounder, routine out.","Two-hopper. Defense napped.","Rolls over. Thanks for coming."],
-      weary:["Grounds out. Of course.","Routine grounder. Thrill's gone.","Two hops, out. Riveting."],
-      tense:["Grounder -- they get him!","Chopped, one away!","Grounder out. Every one counts!"],
-      restless:["Grounds out. Another victim.","Two-hopper, out. We trudge on.","Rolls over weakly. More of this."],
-      any:["Grounds out to the infield.","Routine grounder, out.","Chops one, out at first."] },
-    AO: { smug:["Lazy fly, caught. Mailing it in.","Pops up. Nobody jogged.","Routine fly. Barely tested."],
-      weary:["Flies out. Why would it land.","Pop-up, caught. Agony goes on.","Lines right at someone."],
-      tense:["Flied out! They squeeze it!","Lined RIGHT at him! Ouch!","Pop-up, caught. Big exhale!"],
-      restless:["Lazy fly, caught. Nap resumes.","Pops up. Milking nine innings.","Flies out. Crowd checks phones."],
-      any:["Flies out, caught.","Pops it up, easy out.","Lines out, snagged."] },
-    DP: { smug:["Double play. Two for one. Cute.","Twin killing. Efficient.","Two outs, tidy."],
-      weary:["Double play. Rally dead. Typical.","Two on one swing. Artful cruelty.","Into two. Dugout files taxes."],
-      tense:["TWO! They turn it! Rally DEAD!","Double play -- air's gone!","Twin killing! Stunning turn!"],
-      restless:["Double play. Sped it up.","Two on one. Efficient.","Twin killing. Mercifully quick."],
-      any:["Grounds into a double play.","Twin killing, two away.","Two on one -- double play."] },
-    ERR: { smug:["ERROR. Gloves are decorative.","Boots it. New shame, up big.","Misplayed. Defense optional."],
-      weary:["Error. Can't catch a cold.","Boots it. Masterclass in tragedy.","Kicks it. Glove's an accessory."],
-      tense:["He BOOTS it! Worst time!","Error -- door swings open!","Misplayed! Can't give outs away!"],
-      restless:["An error. Something new.","Boots it. Blooper reel grows.","Kicks it. Variety, I guess."],
-      any:["He boots it -- error!","Misplayed, error charged.","Kicks it, all safe."] }
+    K_SWING: { smug:["Swung right through it. Bless him.","He swung at a rumor.","Big hack, no contact. Classic.","Whiff. He'll feel that one tomorrow."], weary:["Strike three swinging. Sure.","He swung. I'd have ducked.","Another swing-and-miss. Of course.","Down on strikes. We move on."], tense:["He chases ball four! Oh no.","Swings through it! Big spot, big miss.","Strikeout swinging. That stings.","He went fishing. Tough inning."], restless:["Swing, miss, yawn. Next.","Whiff. Wake me up.","He swung. Riveting stuff.","Strike three. I've seen paint dry."], any:["Swinging strike three.","He missed. Badly.","Whiff for the third strike."] },
+    K_LOOK: { smug:["Caught looking. Bold strategy.","Watched it go by. Lovely.","He let strike three visit.","Frozen. Just admiring the seams."], weary:["Called strike three. Walk it off.","He took it. Of course he did.","Looking. Bat never left his shoulder.","Punched out watching. Sigh."], tense:["Caught looking in a huge spot!","He froze! That's brutal.","Strike three, didn't swing. Ouch.","Took the pitch. Inning over."], restless:["Stood there. Strike three.","He watched it. Thrilling.","Called out looking. Cinema.","Bat on shoulder, walking back."], any:["Called strike three.","He watched it for strike three.","Frozen on the corner."] },
+    BB: { smug:["Four pitches near the zone, none in it.","A walk. The pitcher's gift.","Free pass. How generous.","He walks. Effort: minimal."], weary:["Ball four. We're here a while.","A walk. Naturally.","Free base. Sure, why not.","Walk. The pitcher's losing it."], tense:["Walk puts the go-ahead on!","Ball four in a spot like this. Yikes.","He walks him. Dangerous.","Free pass at the worst time."], restless:["Walk. Riveting television.","Ball four. Stretch your legs.","A walk. The crowd checks phones.","Free base. Nobody cares."], any:["Ball four, take your base.","A walk.","He draws the walk."] },
+    H1: { smug:["A single. They'll throw a parade.","Bloop falls in. Skill, surely.","Found a hole. Even he's surprised.","A knock. Mark the calendar."], weary:["Single. Fine. It counts.","Base hit. Sure.","He singles. The game continues.","A hit. We acknowledge it."], tense:["Single, and here come the runners!","Base knock in a big spot!","He punches one through! Trouble.","Single keeps the line moving."], restless:["A single. Be still my heart.","Base hit. Wow. A whole base.","Single. The plot thickens slightly.","He reaches first. Slow news day."], any:["Base hit, into the outfield.","A single.","He lines one for a hit."] },
+    H2: { smug:["A double. He's quite proud.","Into the gap. Look at him chug.","Two bases. He's winded already.","Stand-up double. Practically jogged."], weary:["Double. Good for him.","Two bases. Sure, why not.","Into the gap. We allow it.","He doubles. The day drags on."], tense:["Double, and that's a run scoring!","Gapper! This could get ugly.","Two bases in a huge spot!","He rips a double. Here we go."], restless:["A double. Now we're slightly awake.","Two bases. Stop the presses.","Gap double. Mild applause.","He chugs into second. Adorable."], any:["A double into the gap.","Two-bagger.","He doubles to the wall."] },
+    H3: { smug:["A triple. Someone misplayed it.","Three bases. He may need oxygen.","Triple. The outfield apologizes.","He's at third, gasping. Worth it."], weary:["Triple. Rare. Anyway.","Three bases. Long way to run.","He triples. Lungs permitting.","A triple. Don't see those much."], tense:["Triple! That clears the bases!","Three bases and the crowd's up!","He rips it to the corner! Huge!","Triple in a spot like this. Wow."], restless:["A triple. Now THIS is something.","Three whole bases. Finally.","Triple. I felt a pulse.","He's gassed at third. Cute."], any:["A triple to the corner.","Three bases.","He legs out a triple."] },
+    HR: { smug:["Gone. The pitcher hates that one.","See ya. Hang it, pay for it.","Out of here. Predictable, really.","A homer. He'll be insufferable now."], weary:["Home run. Add it to the pile.","Gone. Of course it is.","That'll leave. Naturally.","Over the wall. The day continues."], tense:["GONE! That's a back-breaker!","Home run! The roof comes off!","He crushes it! Game-changer!","Out of here in a massive spot!"], restless:["A homer. Finally, content.","Gone. Now we're talking.","Over the wall. I'm awake.","Souvenir for somebody. Lucky them."], any:["Home run, way back and gone.","That ball is gone.","He goes deep."] },
+    GO: { smug:["Routine grounder. Thrilling.","Chopper, easy out. He tried.","Grounder. Defense barely woke up.","Rolls over. Thanks for coming."], weary:["Groundout. Of course.","Grounder, one away. Onward.","He grounds out. We trudge on.","Two hops, out. Riveting."], tense:["Grounder, they get him! Whew.","Chopped, one away in a big spot.","Groundout. Every out counts now.","He grounds it. Dodged one."], restless:["Groundout. Another victim.","Two-hopper, out. More of this.","Rolls over weakly. Sigh.","Grounder. Wake me at the homer."], any:["Grounds out to the infield.","Routine groundout.","Chopped, out at first."] },
+    AO: { smug:["Lazy fly, caught. Mailing it in.","Pops up. Nobody jogged.","Routine fly. Barely tested the glove.","Can of corn. He'll take credit."], weary:["Flies out. Why would I lie.","Pop-up, caught. Agony goes on.","Lined right at someone. Sure.","Fly ball, out. The day endures."], tense:["Flied out! They squeeze it!","Lined right at him! Close one!","Pop-up, caught. Big exhale.","Fly out in a tense spot. Phew."], restless:["Lazy fly, caught. Nap resumes.","Pop-up. Milking nine innings.","Flies out. Crowd checks phones.","Routine fly. I've aged a year."], any:["Fly ball, caught.","Pops it up, easy out.","Flies out to the outfield."] },
+    DP: { smug:["Two for the price of one. Tidy.","Double play. He hit into help.","Around the horn, double dip.","Twin killing. Defense says thanks."], weary:["Double play. Rally over. Typical.","Two outs, one swing. Of course.","He grounds into two. Sigh.","Double play wipes it out."], tense:["Double play! Escapes the jam!","Two on one play in a huge spot!","Turned two! Crisis averted!","DP ends the threat. Massive."], restless:["Double play. Twice the boredom.","Two outs in a blink. Onward.","He hits into two. Efficient, I guess.","Twin killing. Back to napping."], any:["Grounds into a double play.","Two on one play.","They turn two."] },
+    ERR: { smug:["Boots it. Use a glove, friend.","Error. The glove was decorative.","Kicks it around. Marvelous.","Misplays it. That's a choice."], weary:["Error. Of course. This defense. Lord.","He drops it. Naturally.","Misplay. We expected nothing less.","Error. Same old story."], tense:["Error in a huge spot! Costly!","He kicks it! That could hurt!","Misplay opens the door! Yikes!","Error, and the runner's moving!"], restless:["Error. New ways to lose.","He boots it. Creative.","Misplay. At least it's different.","Drops it. Something happened, finally."], any:["Reaches on an error.","The ball is misplayed.","Error on the play."] }
   };
 
 
   var SITU = {
-    NEW_INNING: { smug:["New inning, same massacre.","Fresh frame. Lead's safe.","Next inning. Wake me."],
-      weary:["New inning. Disappoint me again.","Fresh frame. Watch it crumble.","Next inning. Lower the bar."],
-      tense:["New inning -- white-knuckle!","Fresh frame, tight as a drum!","Next inning, every pitch counts!"],
-      restless:["New inning. Please, anything.","Fresh frame. Pace is brutal.","Next inning. Crowd's bored."],
-      any:["New inning, fresh ballgame.","Next frame coming up.","On to the next inning."] },
-    NEW_PITCHER: { smug:["New arm. Ship's already sunk.","Pitching change. Why bother.","Fresh arm, same scoreboard."],
-      weary:["New arm. Maybe THIS one. Doubt it.","Pitching change. Hope's gone.","Fresh arm. Lower expectations."],
-      tense:["To the pen -- huge call!","New arm in a knife-fight!","Pitching change, game's hanging!"],
-      restless:["New arm. More warm-ups. Joy.","Pitching change. Ten more minutes.","Fresh arm. Pace weeps."],
-      any:["A new arm to the hill.","Pitching change underway.","Fresh pitcher coming in."] },
-    LEADOFF: { smug:["Leads off. A formality.","Top of the order. Whatever.","Leadoff up. Lead naps."],
-      weary:["Leadoff. Rally attempt, again.","Top of the order. Surprise me.","Leads off. Hope, briefly."],
-      tense:["Leadoff -- rally starts NOW!","Top of the order, big spot!","Leads off, it's all on the line!"],
-      restless:["Leadoff. Make some drama.","Top of the order. Do something.","Leads off. Crowd dares to hope."],
-      any:["Leading off the inning.","Top of the order up.","Leadoff hitter steps in."] },
-    BASES_LOADED: { any:["Bases JUICED -- bust it open!","Bags full. Hero or goat.","Loaded house. Big spot!"] },
-    RISP: { any:["Runner in scoring spot.","Ducks on the pond. Pressure's on.","Man aboard. Time to hit."] },
-    BLOWOUT: { any:["This one's a laugher.","It's a rout. Yawn.","Blowout. Drama left early."] },
-    COMEBACK: { any:["They're CLAWING back!","Deficit's shrinking!","Here comes the comeback!"] },
-    TIE: { any:["All square -- a ballgame now!","Tied up! Now we care!","Knotted! Tension's thick!"] }
+    NEW_INNING: { any:["Fresh inning. New chances to disappoint.","New frame. Same heroes, sadly.","Inning flips. Hope springs, briefly."] },
+    NEW_PITCHER: { any:["New arm in. We'll see, I guess.","Pitching change. Stretch your legs.","Fresh pitcher. Same strike zone, hopefully."] },
+    LEADOFF: { any:["Leadoff man up. Set the table or don't.","Top of the order. Try to start something.","Leadoff. A man, a bat, low expectations."] },
+    BASES_LOADED: { any:["Bases juiced. Don't waste it. Please.","Loaded up. This is the part they fumble.","Sacks full. A grand chance to strand them."] },
+    RISP: { any:["Runner in scoring spot. Cue the strikeout.","Ducks on the pond. Bring 'em home, maybe.","Runner in scoring position. Don't strand him."] },
+    BLOWOUT: { any:["This is a massacre. Mercy, please.","It's a blowout. I'm billing overtime.","Lopsided. The hot dog line is the real game."] },
+    COMEBACK: { any:["A comeback brewing? I don't believe it.","They're crawling back. Suspicious.","Rally afoot. Don't get my hopes up."] },
+    TIE: { any:["All knotted up. Now it gets interesting.","Tie game. Somebody do something.","Even score. The drama nobody asked for."] }
   };
 
 
@@ -737,95 +677,8 @@ function clearFlightLine() {
   // Crude & savage about BASEBALL and the fictional players/teams only.
   // No slurs, nothing sexual/explicit, no punching down at protected groups,
   // no real-person names, no verbatim copyrighted catchphrases. Mild profanity ok.
-  var EDGE_LINE = {
-    K_SWING: {
-      smug:["Hacks at air. Embarrassing.","Swung at a rumor. Sit down.","Strike three. Go think about it."],
-      weary:["Another flail. God, why.","Whiffs again. I need a drink.","Swing and pray. Pray harder."],
-      tense:["He waved at it! Damn it!","Big spot, big whiff. Choke city.","Swings out of his shoes. Nothing."],
-      restless:["Garbage swing. Wake me up.","Whiff. This crap again.","Hacks like he hates the bat."],
-      any:["That swing was an insult to bats."]
-    },
-    K_LOOK: {
-      smug:["Frozen solid. Pathetic.","Watches it. A statue with a bat.","Caught looking. Bring a glove?"],
-      weary:["Stares it down. Out. Of course.","Took strike three napping.","Just watched it. Tragic stuff."],
-      tense:["Rung up looking! What a disgrace!","Frozen in the big spot. Gutless.","Caught napping. Hell of a time."],
-      restless:["Statue at the plate. Garbage.","Watches it sail by. Useless.","Caught looking. Swing the damn bat."],
-      any:["Took a fastball to the face value. Out."]
-    },
-    BB: {
-      smug:["A walk. Couldn't find the zone? Sad.","Free pass. Pitcher's an absolute mess.","Ball four. That arm is garbage today."],
-      weary:["Walk. This pitcher is hopeless.","Four wide ones. Why am I here.","Another free pass. Disgraceful command."],
-      tense:["Walks him! Pile it on, idiots!","Free runner in a tight one. Damn.","Ball four. The wheels are coming off."],
-      restless:["A walk. Riveting. Truly.","Free pass. Snore.","Four balls. This crew can't aim."],
-      any:["Couldn't throw it in the ocean. Walk."]
-    },
-    H1: {
-      smug:["A bloop. Even a blind squirrel.","Cheap single. Take your gift.","Found a hole. Lucky little knock."],
-      weary:["Single. Wake me when it matters.","A knock. Whoop-de-damn-do.","Base hit. Thrilling. Not."],
-      tense:["Single in a knife fight! Here we go!","Base knock with the heat on. Damn.","Finds grass at the worst time."],
-      restless:["A single. Move it along.","Bloop hit. Garbage baseball.","Squeaks one through. Meh."],
-      any:["Not pretty, but it counts. Single."]
-    },
-    H2: {
-      smug:["Double. The outfield's asleep.","Gap shot. Defense was a no-show.","Two bases off a brutal route."],
-      weary:["Double. Sure. Why not. Whatever.","Into the gap. Of course it is.","Two-bagger. I've seen enough.","A double. Drag me to the ninth."],
-      tense:["Double in the gap! This is unraveling!","Two bases, big spot. Hell.","Splits the gap. Panic stations."],
-      restless:["A double. Finally, a pulse.","Gapper. About damn time.","Two bases. Stay awake out there."],
-      any:["Outfielders took the scenic route. Double."]
-    },
-    H3: {
-      smug:["Triple. That fielder quit on it.","Three bases, zero effort by defense.","Legs it out. Defense was a disgrace."],
-      weary:["Triple. Somebody loaf out there. Yep.","Three bags. The defense is a crime.","A triple. Heaven help these fielders."],
-      tense:["Triple in the clutch! Chaos!","Three bases, huge spot. Damn it all!","Wheels into third. This is bedlam."],
-      restless:["A triple. Now we're talking.","Three bags. Wake up, defense.","Triple. The outfield should be ashamed."],
-      any:["He ran. They jogged. Triple."]
-    },
-    HR: {
-      smug:["Gone. The pitcher should apologize.","Crushed. That meatball had it coming.","See ya. Absolute batting practice."],
-      weary:["Homer. Hang your head, pitcher.","Gone. This staff is a dumpster fire.","Over the wall. I give up on them."],
-      tense:["GONE! That's a dagger! Brutal!","Bomb in the big spot! Damn it!","Crushed when it hurt most. Disaster."],
-      restless:["Yanked into orbit. About time.","Gone. Finally something happened.","Tattooed it. Serves that meatball right."],
-      any:["That ball owed nobody rent. Gone."]
-    },
-    GO: {
-      smug:["Groundout. Weak. Just weak.","Rolls over. Nice try, slugger.","Chopper to short. Garbage swing."],
-      weary:["Grounder. Out. Stop the presses.","Routine grounder. Yawn. Out.","Beats it into the dirt. Typical."],
-      tense:["Grounder, big out! Heart attack avoided.","Rolls into a out in a tight one. Phew.","Chopper handled. Don't kick it, please."],
-      restless:["Groundout. Riveting cinema.","Rolls one over. Snore.","Weak chopper. This is garbage ball."],
-      any:["Pounded it into the dirt. Out."]
-    },
-    AO: {
-      smug:["Lazy fly. Bring a lawn chair.","Pop fly. The wind did the work.","Routine can of corn. Pitiful."],
-      weary:["Flyout. Wake me up. Out.","Drifts under it. Out. Whatever.","Easy fly. I'm aging out here."],
-      tense:["Flyout, huge out! Gut check survived.","Tracks it down with the heat on. Phew.","Fly ball, caught. Don't drop it, clown."],
-      restless:["Flyout. Stop boring me.","Can of corn. Garbage at-bat.","Lazy fly. Move it along."],
-      any:["Popped it sky high. Easy out."]
-    },
-    DP: {
-      smug:["Double play. Two for the price of awful.","Twin killing. Rally? Dead on arrival.","Around the horn. Brutal for the hitter."],
-      weary:["Double play. Rally's a corpse. Typical.","Two for one. This lineup is cursed.","Turn two. I've seen funerals livelier."],
-      tense:["Double play! Backbreaker! Savage!","Twin killing kills the threat. Damn.","Two outs, one swing. Crushing stuff."],
-      restless:["Double play. Tidy little disaster.","Two for one. About time something happened.","Turn two. Rally? Garbage."],
-      any:["One swing, two outs. Rough day to be them."]
-    },
-    ERR: {
-      smug:["Boots it! Use a glove, genius!","Error! That was a disgrace!","Kicks it around. Little-league stuff."],
-      weary:["Error. Of course. This defense. Lord.","Throws it away. I quit. Truly.","Misplays it. Embarrassing for everyone."],
-      tense:["ERROR in the clutch! Unforgivable!","Boots it with the game on the line! Damn!","Throws it away in a tight one. Disaster!"],
-      restless:["An error. Garbage glove work.","Kicks it. This crew is a clown show.","Boots it. Hell of a way to play defense."],
-      any:["That glove is a crime scene. Error."]
-    }
-  };
-  var EDGE_SITU = {
-    NEW_INNING: { any:["New inning. Same garbage, fresh outs.","Flip it over. Try not to embarrass us.","Next frame. Low bar, gentlemen."] },
-    NEW_PITCHER: { any:["New arm. Let's see fresh disappointment.","New arm. Hope, however brief.","Fresh meat on the mound."] },
-    LEADOFF: { any:["Top of the order. The good garbage.","Leadoff man up. Set the tone or don't.","Here come the so-called hitters."] },
-    BASES_LOADED: { any:["Bases juiced! Don't blow this, clowns!","Loaded! A whole inning on one swing!","Sacks full. Time to choke or shine!"] },
-    RISP: { any:["Ducks on the pond. Cash in or sulk.","RISP. No pressure, hero. None at all.","Men aboard. Quit stranding them, damn it."] },
-    BLOWOUT: { any:["This is a massacre. Mercy, please.","Absolute blowout. An embarrassment.","It's garbage time. Hit the showers."] },
-    COMEBACK: { any:["They're clawing back! The audacity!","Comeback's alive! Don't choke now!","Deficit's shrinking! Sweat, you cowards!"] },
-    TIE: { any:["All square. Now somebody do something.","Tied up. Finally a damn ballgame.","Knotted. Tension you can taste."] }
-  };
+  var EDGE_LINE = {};
+  var EDGE_SITU = {};
   (function mergeEdge(){
     function merge(dst, src){
       for (var ev in src){ if(!dst[ev]) dst[ev]={};
@@ -1053,9 +906,10 @@ function clearFlightLine() {
   // pitch : play each pitch; perPitch delay between pitches, postPA after a PA resolves
   // batter: resolve whole PA at once (the medium tier), perPA delay
   // rapid : whole PA at once, minimal delay
+  var BATTER_PACE_MS = 2200; // fixed consistent beat between plays (batter/play mode); same on or off
   var PACE = {
     pitch:  { perPitch: 1000, postPA: 650 }, // ~1.0s per pitch, brief beat after the PA
-    batter: { perPA: 1800 },                 // ~1.8s per at-bat
+    batter: { perPA: BATTER_PACE_MS },                 // ~1.8s per at-bat
     rapid:  { perPA: 400 }                   // ~0.4s per at-bat
   };
   var GAME = {
@@ -1372,28 +1226,13 @@ function highlightLineup(teamCode, batIdx) {
       if (GAME.playing) {
         clearTimeout(GAME.timer);
         var __base = nextDelay(resolvedPA);
-        if (__voiceOn && __speechActive) {
-          // wait max(pace delay, speech end). Pace is the floor.
-          var __fired = false;
-          var __go = function () {
-            if (__fired || !GAME.playing) return;
-            __fired = true; __onSpeechDone = null;
-            GAME.timer = setTimeout(tick, 0);
-          };
-          GAME.timer = setTimeout(function () {
-            if (!__voiceOn || !__speechActive) { __go(); }
-            else { __onSpeechDone = __go; }
-          }, __base);
-        } else {
-          GAME.timer = setTimeout(tick, __base);
-        }
+        GAME.timer = setTimeout(tick, __base); // fixed consistent beat; not gated on speech
       }
     };
     GAME.timer = setTimeout(tick, 60);
   }
   function stopAuto() {
     GAME.playing = false;
-    __onSpeechDone = null;
     if (GAME.timer) { clearTimeout(GAME.timer); clearInterval(GAME.timer); GAME.timer = null; }
     setBtnLabel();
   }
