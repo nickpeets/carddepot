@@ -229,7 +229,14 @@
       <div style="margin-top:14px;display:flex;gap:8px;align-items:center;">
         <button class="btn-primary" id="playBtn" disabled>PLAY BALL &#9654;</button>
         <button class="btn-ghost" id="clearBtn">Clear</button>
+        <button class="btn-ghost" id="challengeBtn" disabled>CHALLENGE &#9876;</button>
         <span class="muted" id="playHint"></span>
+        <div id="challengePanel" style="display:none;margin-top:14px;padding:12px;border:2px solid var(--gold);background:var(--field-dark);">
+          <div style="font-size:9px;letter-spacing:1px;color:var(--gold);margin-bottom:8px;">CHALLENGE CREATED &mdash; SEND THIS LINK TO YOUR OPPONENT</div>
+          <input type="text" id="challengeLink" readonly style="width:100%;max-width:520px;box-sizing:border-box;font-family:inherit;font-size:10px;padding:8px;background:#0d1f12;color:var(--cream);border:1px solid var(--gold);" value="">
+          <div style="margin-top:8px;"><button class="btn-ghost" id="copyChallengeBtn" type="button">Copy link</button> <span class="muted" id="copyMsg" style="font-size:9px;margin-left:6px;"></span></div>
+        </div>
+        <div id="challengeError" style="display:none;margin-top:10px;font-size:10px;color:var(--red-bright);"></div>
       </div>
     </div>
   </div>
@@ -579,6 +586,7 @@
       msg+= ready ? ' <span class="ok">Ready to play.</span>' : ' <span class="no">'+(9-filledCount)+' more hitter(s)'+(hasPit?'':' and a pitcher')+' needed.</span>';
       $('status').innerHTML=msg;
       $('playBtn').disabled=!ready;
+      { var _cb=$('challengeBtn'); if(_cb) _cb.disabled=!ready; }
       $('playHint').textContent=ready?'ready':('Need '+(9-filledCount)+' hitter(s)'+(hasPit?'':' + pitcher'));
     }
 
@@ -617,6 +625,79 @@
       try{ sessionStorage.setItem('depot_user_team', JSON.stringify(buildTeamPayload())); }catch(e){}
       window.location.href='./?from=builder';
     });
+
+        // ===== MULTIPLAYER: CHALLENGE (create match row + shareable link) =====
+        // Builds the challenger lineup from the SAME data the sim hand-off uses
+        // (ORDER / PITCHER / RESOLVED / cardById), in the match-row JSON shape.
+        function buildChallengeLineup(){
+          var batters=ORDER.map(function(slot){
+            var id=slot.id; var c=cardById(id)||{}; var rv=RESOLVED[id]||{};
+            return { cardId:id, name:(c.player||'PLAYER').toUpperCase(), pos:slot.pos,
+                     avg:rv.avg, hr:rv.hr, rbi:rv.rbi, tendency:rv.tendency||'spray', rates:rv.rates };
+          });
+          var pitcher=null;
+          if(PITCHER){
+            var pc=cardById(PITCHER)||{}; var prv=RESOLVED[PITCHER]||{};
+            pitcher={ cardId:PITCHER, name:(pc.player||'PITCHER').toUpperCase() };
+            if(prv.era!=null && prv.era!=='') pitcher.era=String(prv.era);
+            if(prv.w!=null) pitcher.w=String(prv.w);
+            if(prv.l!=null) pitcher.l=String(prv.l);
+          }
+          var _tnEl=$('teamNameInput');
+          var _typed=_tnEl?String(_tnEl.value||'').trim().toUpperCase().slice(0,12):'';
+          var teamName=_typed || (CARDS.length&&deriveTeamName()) || 'DEPOT';
+          return { teamName:teamName, batters:batters, pitcher:pitcher };
+        }
+        function showChallengeError(m){
+          var e=$('challengeError'); if(!e) return;
+          e.textContent=m; e.style.display='block';
+          var pnl=$('challengePanel'); if(pnl) pnl.style.display='none';
+        }
+        $('challengeBtn').addEventListener('click',function(){
+          var btn=this;
+          var usable=ORDER.every(function(slot){ return slot && isUsableHitter(slot.id); });
+          if(!usable || ORDER.indexOf(null)>=0 || !PITCHER) return;
+          var ce=$('challengeError'); if(ce) ce.style.display='none';
+          if(!sb || !sb.auth){ showChallengeError('Not connected. Please log in and reload.'); return; }
+          btn.disabled=true; var _label=btn.innerHTML; btn.innerHTML='CREATING&hellip;';
+          var lineup=buildChallengeLineup();
+          // Seed: random positive 32-bit integer (1 .. 2147483647)
+          var seed=Math.floor(Math.random()*2147483647)+1;
+          (async function(){
+            try{
+              var ures=await sb.auth.getUser();
+              if(ures && ures.error) throw ures.error;
+              var user=ures && ures.data ? ures.data.user : null;
+              if(!user || !user.id){ showChallengeError('You must be logged in to create a challenge.'); return; }
+              var ins=await sb.from('matches').insert([{ challenger_id:user.id, challenger_lineup:lineup, seed:seed }]).select();
+              if(ins.error) throw ins.error;
+              var row=ins.data && ins.data[0];
+              if(!row || !row.id){ showChallengeError('Match created but no id was returned.'); return; }
+              var link='https://nickpeets.github.io/carddepot/game/builder.html?match='+row.id;
+              var li=$('challengeLink'); if(li) li.value=link;
+              var pnl=$('challengePanel'); if(pnl) pnl.style.display='block';
+              var cm=$('copyMsg'); if(cm) cm.textContent='';
+            }catch(err){
+              var msg=(err && (err.message||err.error_description||err.hint))||'Could not create challenge.';
+              showChallengeError('Challenge failed: '+msg);
+            }finally{
+              btn.innerHTML=_label; btn.disabled=false;
+            }
+          })();
+        });
+        $('copyChallengeBtn').addEventListener('click',function(){
+          var li=$('challengeLink'); var cm=$('copyMsg');
+          if(!li) return;
+          var txt=li.value||'';
+          function ok(){ if(cm) cm.textContent='Copied!'; }
+          function fallback(){
+            try{ li.focus(); li.select(); var d=document.execCommand('copy'); if(cm) cm.textContent=d?'Copied!':'Press Cmd+C to copy.'; }
+            catch(e){ if(cm) cm.textContent='Press Cmd+C to copy.'; }
+          }
+          if(navigator.clipboard && navigator.clipboard.writeText){
+            navigator.clipboard.writeText(txt).then(ok, fallback);
+          } else { fallback(); }
+        });
     
     // ===== Resolve all cards after load (sequential, gentle on the API) =====
   async function resolveAll(){
