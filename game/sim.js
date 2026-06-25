@@ -306,6 +306,9 @@
   var __voiceOn = false;
   try { __voiceOn = (localStorage.getItem("depot_voice") === "1"); } catch (e) {}
   var __ac = null;
+  // commentary speech-gate state (Change 1: pacing waits for speech)
+  var __speechActive = false;
+  var __onSpeechDone = null;
   function __audioCtx() {
     if (!__ac) { try { __ac = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { __ac = null; } }
     return __ac;
@@ -339,11 +342,20 @@
       var say = String(text).replace(/--/g, ",").replace(/\s+/g, " ").trim();
       window.speechSynthesis.cancel();
       var u = new SpeechSynthesisUtterance(say);
-      u.pitch = 0.4;
-      u.rate = 1.35;
+      // Change 2: lighter register (was pitch 0.4 ~ heavy smoker). Tunable.
+      var VOICE_PITCH = 0.9;  // ~an octave up from old 0.4
+      var VOICE_RATE  = 1.3;  // reads clearly (1.2-1.35 band)
+      u.pitch = VOICE_PITCH;
+      u.rate = VOICE_RATE;
       u.volume = 1.0;
       var v = __pickVoice(); if (v) u.voice = v;
       __blip((say.split(/\s+/).length) + 2);
+      __speechActive = true;
+      u.onend = u.onerror = function () {
+        __speechActive = false;
+        var f = __onSpeechDone; __onSpeechDone = null;
+        if (f) f();
+      };
       window.speechSynthesis.speak(u);
     } catch (e) {}
   }
@@ -721,6 +733,110 @@ function clearFlightLine() {
   };
 
 
+  // ---- Change 3: edgier / cruder / funnier variants (additive merge) -----
+  // Crude & savage about BASEBALL and the fictional players/teams only.
+  // No slurs, nothing sexual/explicit, no punching down at protected groups,
+  // no real-person names, no verbatim copyrighted catchphrases. Mild profanity ok.
+  var EDGE_LINE = {
+    K_SWING: {
+      smug:["Hacks at air. Embarrassing.","Swung at a rumor. Sit down.","Strike three. Go think about it."],
+      weary:["Another flail. God, why.","Whiffs again. I need a drink.","Swing and pray. Pray harder."],
+      tense:["He waved at it! Damn it!","Big spot, big whiff. Choke city.","Swings out of his shoes. Nothing."],
+      restless:["Garbage swing. Wake me up.","Whiff. This crap again.","Hacks like he hates the bat."],
+      any:["That swing was an insult to bats."]
+    },
+    K_LOOK: {
+      smug:["Frozen solid. Pathetic.","Watches it. A statue with a bat.","Caught looking. Bring a glove?"],
+      weary:["Stares it down. Out. Of course.","Took strike three napping.","Just watched it. Tragic stuff."],
+      tense:["Rung up looking! What a disgrace!","Frozen in the big spot. Gutless.","Caught napping. Hell of a time."],
+      restless:["Statue at the plate. Garbage.","Watches it sail by. Useless.","Caught looking. Swing the damn bat."],
+      any:["Took a fastball to the face value. Out."]
+    },
+    BB: {
+      smug:["A walk. Couldn't find the zone? Sad.","Free pass. Pitcher's an absolute mess.","Ball four. That arm is garbage today."],
+      weary:["Walk. This pitcher is hopeless.","Four wide ones. Why am I here.","Another free pass. Disgraceful command."],
+      tense:["Walks him! Pile it on, idiots!","Free runner in a tight one. Damn.","Ball four. The wheels are coming off."],
+      restless:["A walk. Riveting. Truly.","Free pass. Snore.","Four balls. This crew can't aim."],
+      any:["Couldn't throw it in the ocean. Walk."]
+    },
+    H1: {
+      smug:["A bloop. Even a blind squirrel.","Cheap single. Take your gift.","Found a hole. Lucky little knock."],
+      weary:["Single. Wake me when it matters.","A knock. Whoop-de-damn-do.","Base hit. Thrilling. Not."],
+      tense:["Single in a knife fight! Here we go!","Base knock with the heat on. Damn.","Finds grass at the worst time."],
+      restless:["A single. Move it along.","Bloop hit. Garbage baseball.","Squeaks one through. Meh."],
+      any:["Not pretty, but it counts. Single."]
+    },
+    H2: {
+      smug:["Double. The outfield's asleep.","Gap shot. Defense was a no-show.","Two bases off a brutal route."],
+      weary:["Double. Sure. Why not. Whatever.","Into the gap. Of course it is.","Two-bagger. I've seen enough.","A double. Drag me to the ninth."],
+      tense:["Double in the gap! This is unraveling!","Two bases, big spot. Hell.","Splits the gap. Panic stations."],
+      restless:["A double. Finally, a pulse.","Gapper. About damn time.","Two bases. Stay awake out there."],
+      any:["Outfielders took the scenic route. Double."]
+    },
+    H3: {
+      smug:["Triple. That fielder quit on it.","Three bases, zero effort by defense.","Legs it out. Defense was a disgrace."],
+      weary:["Triple. Somebody loaf out there. Yep.","Three bags. The defense is a crime.","A triple. Heaven help these fielders."],
+      tense:["Triple in the clutch! Chaos!","Three bases, huge spot. Damn it all!","Wheels into third. This is bedlam."],
+      restless:["A triple. Now we're talking.","Three bags. Wake up, defense.","Triple. The outfield should be ashamed."],
+      any:["He ran. They jogged. Triple."]
+    },
+    HR: {
+      smug:["Gone. The pitcher should apologize.","Crushed. That meatball had it coming.","See ya. Absolute batting practice."],
+      weary:["Homer. Hang your head, pitcher.","Gone. This staff is a dumpster fire.","Over the wall. I give up on them."],
+      tense:["GONE! That's a dagger! Brutal!","Bomb in the big spot! Damn it!","Crushed when it hurt most. Disaster."],
+      restless:["Yanked into orbit. About time.","Gone. Finally something happened.","Tattooed it. Serves that meatball right."],
+      any:["That ball owed nobody rent. Gone."]
+    },
+    GO: {
+      smug:["Groundout. Weak. Just weak.","Rolls over. Nice try, slugger.","Chopper to short. Garbage swing."],
+      weary:["Grounder. Out. Stop the presses.","Routine grounder. Yawn. Out.","Beats it into the dirt. Typical."],
+      tense:["Grounder, big out! Heart attack avoided.","Rolls into a out in a tight one. Phew.","Chopper handled. Don't kick it, please."],
+      restless:["Groundout. Riveting cinema.","Rolls one over. Snore.","Weak chopper. This is garbage ball."],
+      any:["Pounded it into the dirt. Out."]
+    },
+    AO: {
+      smug:["Lazy fly. Bring a lawn chair.","Pop fly. The wind did the work.","Routine can of corn. Pitiful."],
+      weary:["Flyout. Wake me up. Out.","Drifts under it. Out. Whatever.","Easy fly. I'm aging out here."],
+      tense:["Flyout, huge out! Gut check survived.","Tracks it down with the heat on. Phew.","Fly ball, caught. Don't drop it, clown."],
+      restless:["Flyout. Stop boring me.","Can of corn. Garbage at-bat.","Lazy fly. Move it along."],
+      any:["Popped it sky high. Easy out."]
+    },
+    DP: {
+      smug:["Double play. Two for the price of awful.","Twin killing. Rally? Dead on arrival.","Around the horn. Brutal for the hitter."],
+      weary:["Double play. Rally's a corpse. Typical.","Two for one. This lineup is cursed.","Turn two. I've seen funerals livelier."],
+      tense:["Double play! Backbreaker! Savage!","Twin killing kills the threat. Damn.","Two outs, one swing. Crushing stuff."],
+      restless:["Double play. Tidy little disaster.","Two for one. About time something happened.","Turn two. Rally? Garbage."],
+      any:["One swing, two outs. Rough day to be them."]
+    },
+    ERR: {
+      smug:["Boots it! Use a glove, genius!","Error! That was a disgrace!","Kicks it around. Little-league stuff."],
+      weary:["Error. Of course. This defense. Lord.","Throws it away. I quit. Truly.","Misplays it. Embarrassing for everyone."],
+      tense:["ERROR in the clutch! Unforgivable!","Boots it with the game on the line! Damn!","Throws it away in a tight one. Disaster!"],
+      restless:["An error. Garbage glove work.","Kicks it. This crew is a clown show.","Boots it. Hell of a way to play defense."],
+      any:["That glove is a crime scene. Error."]
+    }
+  };
+  var EDGE_SITU = {
+    NEW_INNING: { any:["New inning. Same garbage, fresh outs.","Flip it over. Try not to embarrass us.","Next frame. Low bar, gentlemen."] },
+    NEW_PITCHER: { any:["New arm. Let's see fresh disappointment.","New arm. Hope, however brief.","Fresh meat on the mound."] },
+    LEADOFF: { any:["Top of the order. The good garbage.","Leadoff man up. Set the tone or don't.","Here come the so-called hitters."] },
+    BASES_LOADED: { any:["Bases juiced! Don't blow this, clowns!","Loaded! A whole inning on one swing!","Sacks full. Time to choke or shine!"] },
+    RISP: { any:["Ducks on the pond. Cash in or sulk.","RISP. No pressure, hero. None at all.","Men aboard. Quit stranding them, damn it."] },
+    BLOWOUT: { any:["This is a massacre. Mercy, please.","Absolute blowout. An embarrassment.","It's garbage time. Hit the showers."] },
+    COMEBACK: { any:["They're clawing back! The audacity!","Comeback's alive! Don't choke now!","Deficit's shrinking! Sweat, you cowards!"] },
+    TIE: { any:["All square. Now somebody do something.","Tied up. Finally a damn ballgame.","Knotted. Tension you can taste."] }
+  };
+  (function mergeEdge(){
+    function merge(dst, src){
+      for (var ev in src){ if(!dst[ev]) dst[ev]={};
+        for (var m in src[ev]){
+          var add = src[ev][m] || [];
+          dst[ev][m] = (dst[ev][m] || []).concat(add);
+        }
+      }
+    }
+    try { merge(LINE, EDGE_LINE); merge(SITU, EDGE_SITU); } catch(e){}
+  })();
   function bankLine(bank, mood, rng, key) {
     if (!bank) return "";
     var pool = bank[mood] || bank.any;
@@ -1255,13 +1371,29 @@ function highlightLineup(teamCode, batIdx) {
       }
       if (GAME.playing) {
         clearTimeout(GAME.timer);
-        GAME.timer = setTimeout(tick, nextDelay(resolvedPA));
+        var __base = nextDelay(resolvedPA);
+        if (__voiceOn && __speechActive) {
+          // wait max(pace delay, speech end). Pace is the floor.
+          var __fired = false;
+          var __go = function () {
+            if (__fired || !GAME.playing) return;
+            __fired = true; __onSpeechDone = null;
+            GAME.timer = setTimeout(tick, 0);
+          };
+          GAME.timer = setTimeout(function () {
+            if (!__voiceOn || !__speechActive) { __go(); }
+            else { __onSpeechDone = __go; }
+          }, __base);
+        } else {
+          GAME.timer = setTimeout(tick, __base);
+        }
       }
     };
     GAME.timer = setTimeout(tick, 60);
   }
   function stopAuto() {
     GAME.playing = false;
+    __onSpeechDone = null;
     if (GAME.timer) { clearTimeout(GAME.timer); clearInterval(GAME.timer); GAME.timer = null; }
     setBtnLabel();
   }
