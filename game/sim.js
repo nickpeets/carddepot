@@ -713,6 +713,45 @@ function clearFlightLine() {
     if (ctx.risp && rng() < 0.3)       return "RISP";
     return null;
   }
+  var __lastIntro = '';
+  var __situOnly = false;
+  function dedupeName(introTxt, txt, b) {
+    if (!b || !b.name || !introTxt || !txt) return txt;
+    var nm = b.name; var last = nm.split(/\s+/).pop();
+    if (introTxt.toLowerCase().indexOf(last.toLowerCase()) < 0) return txt;
+    var out = txt; var DASH = " -- ";
+    if (out.indexOf(nm + DASH) === 0) out = out.slice((nm + DASH).length);
+    else if (out.indexOf(DASH + nm) >= 0) out = out.replace(DASH + nm, '');
+    else if (out.indexOf(nm + ' ') === 0) out = out.slice((nm + ' ').length);
+    out = out.replace(/^\s+/, '');
+    if (out && /^[a-z]/.test(out)) out = out.charAt(0).toUpperCase() + out.slice(1);
+    return out;
+  }
+  // Conversational batter intro: name + a stat or two, dry voice, varied.
+  function introTag(b, rng) {
+    if (!b || !b.name) return '';
+    var r = (typeof rng === 'function') ? rng : Math.random;
+    var nm = b.name; var avg = b.avg || ''; var hr = (b.hr|0); var rbi = (b.rbi|0);
+    // short last name for snappier reads
+    var parts = nm.split(/\s+/); var last = parts[parts.length-1];
+    var hot = (parseFloat(avg) >= 0.300); var cold = (parseFloat(avg) > 0 && parseFloat(avg) < 0.235);
+    var pop = (hr >= 25);
+    var opts = [];
+    opts.push(last + '.');
+    opts.push(last + ' up.');
+    opts.push('Here\u2019s ' + last + '.');
+    opts.push('Now ' + last + '.');
+    opts.push(last + ' digs in.');
+    if (pop) { opts.push(last + ', ' + hr + ' bombs.'); opts.push('Big bopper ' + last + '.'); }
+    if (rbi >= 40) { opts.push(last + ', ' + rbi + ' RBI.'); }
+    if (hot) { opts.push(last + ', hot.'); }
+    if (cold) { opts.push(last + ', cold.'); }
+    // pick, avoiding immediate repeat
+    var pick = opts[(r() * opts.length) | 0];
+    if (pick === __lastIntro && opts.length > 1) pick = opts[((r() * opts.length) | 0)];
+    __lastIntro = pick;
+    return pick + ' ';
+  }
   function resultText(ev, rng, ctx) {
     ctx = ctx || { us:0, them:0, inning:1, half:"top", batting:"us",
                    outs:0, bases:[null,null,null], runsOnPlay:ev.runs||0,
@@ -738,11 +777,11 @@ function clearFlightLine() {
       var sb = situLine(SITU[s], mood, rng, s);
       if (sb) {
         var joined = sb + "  " + call;
-        if (joined.length <= 52) return joined;
-        return sb;
+        if (joined.length <= 52) { __situOnly = false; return joined; }
+        __situOnly = true; return sb;
       }
     }
-    return call;
+    __situOnly = false; return call;
   }
 
 
@@ -807,6 +846,7 @@ function clearFlightLine() {
             outcome: ev.outcome, location: ev.location, outType: ev.outType, infielder: ev.infielder, error: !!ev.error,
             runsOnPlay: ev.runs, basesAfter: (outs >= 3 ? [null, null, null] : bases.slice()), outsAfter: outs,
             text: resultText(ev, rng, __ctx),
+            situOnly: __situOnly,
             pitches: buildPitchSequence(ev.outcome, rng),
             lineSnapshot: null // filled below
           };
@@ -906,7 +946,7 @@ function clearFlightLine() {
   // pitch : play each pitch; perPitch delay between pitches, postPA after a PA resolves
   // batter: resolve whole PA at once (the medium tier), perPA delay
   // rapid : whole PA at once, minimal delay
-  var BATTER_PACE_MS = 2200; // fixed consistent beat between plays (batter/play mode); same on or off
+  var BATTER_PACE_MS = 3300; // fixed consistent beat between plays (batter/play mode); same on or off
   var PACE = {
     pitch:  { perPitch: 1000, postPA: 650 }, // ~1.0s per pitch, brief beat after the PA
     batter: { perPA: BATTER_PACE_MS },                 // ~1.8s per at-bat
@@ -1079,10 +1119,19 @@ function highlightLineup(teamCode, batIdx) {
   if (ev.location && ev.outcome !== 'BB' && ev.outcome !== 'K') showFlightLine(ev.location, ev.outType);
   else clearFlightLine();
 
-  // Result line
-    setResultLine(ev.text);
+  // Result line (lead with a conversational batter intro + stats)
+    var __said;
+    if (ev.situOnly) {
+      __said = ev.text;
+    } else if (ev.batter) {
+      var __intro = introTag(ev.batter);
+      __said = __intro + dedupeName(__intro, ev.text, ev.batter);
+    } else {
+      __said = ev.text;
+    }
+    setResultLine(__said);
     __ensureVoiceToggle();
-    __voiceSpeak(ev.text);
+    __voiceSpeak(__said);
 
     // Linescore: recompute running totals up to this event
     updateLinescore(ev);
