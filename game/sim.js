@@ -1306,6 +1306,7 @@ function highlightLineup(teamCode, batIdx) {
     var L = GAME.line;
     var msg = 'FINAL — MUDCATS ' + L.mudcats.r + ', ACORNS ' + L.acorns.r;
     setResultLine(msg);
+    try{ if(typeof window!=="undefined" && typeof window.__onMatchComplete==="function"){ window.__onMatchComplete(GAME.line); } }catch(__e){}
   }
 
   // ---- Control panel (fixed, outside the scaled stage) ------------------
@@ -1364,7 +1365,7 @@ function highlightLineup(teamCode, batIdx) {
       return setTimeout(attach, 120); // wait for framework to finish
     }
     buildControls();
-    resetGame(Math.floor(Math.random() * 1e9));
+    var __ms=(typeof window!=="undefined"&&window.__DEPOT_MATCH_SEED!=null)?(window.__DEPOT_MATCH_SEED>>>0):Math.floor(Math.random()*1e9); resetGame(__ms);
   }
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', function () { setTimeout(attach, 200); });
@@ -1373,6 +1374,63 @@ function highlightLineup(teamCode, batIdx) {
   }
 
   // expose for headless / debugging
-  window.__simEngine = { GAME: GAME, step: step, startAuto: startAuto, stopAuto: stopAuto, resetGame: resetGame, buildPlayStream: buildPlayStream };
+
+  // ===== MULTIPLAYER ASYNC PLAY: apply both lineups + match seed ============
+  // Reuses the same batter()/R() mapping the solo hand-off uses. A match lineup
+  // is {teamName|name, batters|lineup:[9], pitcher}. Maps either side onto a
+  // team object (MUDCATS = challenger slot, ACORNS = opponent slot).
+
+  // ===== MULTIPLAYER ASYNC PLAY: repaint BOTH teams (visitor=challenger, home=opponent) =====
+  // Solo wiring only renames the visitor; for a match we also rename the home side.
+  function repaintMatchTeams(){
+    try {
+      var cols = lineupColumns(); if(!cols || !cols.length) return;
+      var ordered = cols.slice().sort(function(a,b){ return a.getBoundingClientRect().left - b.getBoundingClientRect().left; });
+      var visCol = ordered[0];
+      var homeCol = ordered[ordered.length-1];
+      function paintCol(col, team){
+        if(!col || !team || !team.lineup) return;
+        for(var i=0;i<9 && i<col.children.length;i++){
+          var row=col.children[i]; var ld=team.lineup[i]; if(!ld) continue;
+          var sp=nameSpanOf(row); if(sp) sp.textContent=fmtLineupName(ld.name);
+          var pc=posCellOf(row); if(pc && ld.pos) pc.textContent=ld.pos;
+        }
+      }
+      paintCol(visCol, MUDCATS);
+      if(homeCol!==visCol) paintCol(homeCol, ACORNS);
+      // scoreboard linescore labels
+      var tm=$("team-mudcats"); if(tm){ tm.textContent=MUDCATS.name; tm.style.whiteSpace="nowrap"; tm.style.overflow="hidden"; fitText(tm,214,22,12); }
+      var ta=$("team-acorns"); if(ta){ ta.textContent=ACORNS.name; ta.style.whiteSpace="nowrap"; ta.style.overflow="hidden"; fitText(ta,214,22,12); }
+      // bottom big visitor name (home big name is static markup; leave as-is)
+      var bm=$("bigname-mudcats"); if(bm){ bm.textContent=MUDCATS.name; bm.style.whiteSpace="nowrap"; fitText(bm,560,78,30); }
+    } catch(e){ if(typeof console!=="undefined") console.warn("[MatchPlay] repaintMatchTeams failed:", e); }
+  }
+  function applyDepotTeam(team, raw){
+    try {
+      if(!team || !raw) return false;
+      var bl = raw.lineup || raw.batters;
+      if(!bl || bl.length!==9) return false;
+      var lu = bl.map(function(p){
+        var r = p.rates || {};
+        var b = batter(p.name||"PLAYER", p.avg||".000", p.hr||0, p.rbi||0,
+                       R(r.BB, r.K, r.HR, r._2B, r._3B, r._1B), p.tendency||"spray");
+        b.pos = p.pos || "\u2014";
+        return b;
+      });
+      team.lineup = lu;
+      var nm = raw.teamName || raw.name;
+      if(nm) team.name = String(nm).toUpperCase().slice(0,12);
+      if(raw.pitcher){
+        var pp = raw.pitcher;
+        team.pitcher = { name: pp.name||team.pitcher.name, era: pp.era||team.pitcher.era,
+                         w: (pp.w!=null?pp.w:team.pitcher.w), l: (pp.l!=null?pp.l:team.pitcher.l),
+                         BB:(pp.BB!=null?pp.BB:team.pitcher.BB), K:(pp.K!=null?pp.K:team.pitcher.K),
+                         HR:(pp.HR!=null?pp.HR:team.pitcher.HR), _2B:(pp._2B!=null?pp._2B:team.pitcher._2B),
+                         _3B:(pp._3B!=null?pp._3B:team.pitcher._3B), _1B:(pp._1B!=null?pp._1B:team.pitcher._1B) };
+      }
+      return true;
+    } catch(e){ if(typeof console!=="undefined") console.warn("[MatchPlay] applyDepotTeam failed:", e); return false; }
+  }
+  window.__simEngine = { GAME: GAME, step: step, startAuto: startAuto, stopAuto: stopAuto, resetGame: resetGame, buildPlayStream: buildPlayStream, applyDepotTeam: applyDepotTeam, repaintMatchTeams: repaintMatchTeams, MUDCATS: MUDCATS, ACORNS: ACORNS };
 
 })();
