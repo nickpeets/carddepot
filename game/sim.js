@@ -304,6 +304,9 @@
   //  texture is added via synthesized blips alongside the spoken line).
   // ====================================================================
   var __voiceOn = false;
+  // FIX 3: becomes true once the user DELIBERATELY toggles the sound button,
+  // so fast/rapid pace will not auto-mute a user who explicitly turned sound ON.
+  var __voiceUserChose = false;
   try { __voiceOn = (localStorage.getItem("depot_voice") === "1"); } catch (e) {}
   var __ac = null;
   // commentary speech-gate state (Change 1: pacing waits for speech)
@@ -379,6 +382,7 @@
       "padding:6px 12px;cursor:pointer;z-index:40;white-space:nowrap;";
     b.addEventListener("click", function () {
       try { var ac = __audioCtx(); if (ac && ac.state === "suspended") ac.resume(); } catch (e) {}
+      __voiceUserChose = true; // FIX 3: user made a deliberate sound choice
       __setVoice(!__voiceOn);
       if (__voiceOn) __voiceSpeak("Sound on. Try to keep up.");
     });
@@ -604,7 +608,10 @@ function clearFlightLine() {
   // ---- Linescore --------------------------------------------------------
   function setLinescoreCell(team, key, val) { setText('cell-' + team + '-' + key, val); }
   function clearLinescore() {
-    for (var i = 1; i <= 9; i++) { setLinescoreCell('mudcats', i, '0'); setLinescoreCell('acorns', i, '0'); }
+    // FIX 2: leave per-inning run cells BLANK until that inning is actually played.
+    // updateLinescore() fills them left-to-right as play reaches each half-inning;
+    // a played inning with no runs still shows '0' (it gets repainted there).
+    for (var i = 1; i <= 9; i++) { setLinescoreCell('mudcats', i, ''); setLinescoreCell('acorns', i, ''); }
     ['r', 'h', 'e'].forEach(function (k) { setLinescoreCell('mudcats', k, '0'); setLinescoreCell('acorns', k, '0'); });
   }
 
@@ -1350,6 +1357,9 @@ function highlightLineup(teamCode, batIdx) {
       var wasPlaying = GAME.playing;
       stopAuto();
       GAME.mode = pace.value;
+      // FIX 3: the fast/rapid pace tier garbles TTS, so default sound OFF when
+      // the selected pace is 'rapid' -- unless the user has deliberately turned it ON.
+      if (GAME.mode === 'rapid' && !__voiceUserChose && __voiceOn) { __setVoice(false); }
       GAME.pitchIdx = -1;           // reset any partial PA so the new mode starts clean
       if (wasPlaying) startAuto();
     };
