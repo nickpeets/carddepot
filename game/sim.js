@@ -122,19 +122,22 @@
     ]
   };
 
-  // ----- Depot lineup-builder hand-off: override visitor (top) team with user lineup -----
-(function(){
-  try {
-    var raw = (typeof window!=="undefined" && window.__DEPOT_USER_TEAM) || null;
-    if(!raw && typeof sessionStorage!=="undefined"){ var j=sessionStorage.getItem("depot_user_team"); if(j) raw=JSON.parse(j); }
-    if(!raw || !raw.lineup || raw.lineup.length!==9) return;
-    var lu = raw.lineup.map(function(p){ var b=batter(p.name||"PLAYER", p.avg||".000", p.hr||0, p.rbi||0, R(p.rates.BB,p.rates.K,p.rates.HR,p.rates._2B,p.rates._3B,p.rates._1B), p.tendency||"spray"); b.pos=p.pos||'\u2014'; return b; });
-    MUDCATS.lineup = lu;
-    if(raw.name) MUDCATS.name = String(raw.name).toUpperCase().slice(0,12);
-    if(raw.pitcher){ var pp=raw.pitcher; MUDCATS.pitcher = { name: pp.name||MUDCATS.pitcher.name, era: pp.era||MUDCATS.pitcher.era, w: pp.w||MUDCATS.pitcher.w, l: pp.l||MUDCATS.pitcher.l, BB:(pp.BB!=null?pp.BB:MUDCATS.pitcher.BB), K:(pp.K!=null?pp.K:MUDCATS.pitcher.K), HR:(pp.HR!=null?pp.HR:MUDCATS.pitcher.HR), _2B:(pp._2B!=null?pp._2B:MUDCATS.pitcher._2B), _3B:(pp._3B!=null?pp._3B:MUDCATS.pitcher._3B), _1B:(pp._1B!=null?pp._1B:MUDCATS.pitcher._1B) }; }
-    if(typeof window!=="undefined") window.__DEPOT_TEAM_LOADED = MUDCATS.name;
-  } catch(e){ if(typeof console!=="undefined") console.warn("[DepotLineup] hand-off failed, using demo team:", e); }
-})();
+  // ----- Depot lineup-builder hand-off: route the solo (visitor) team through the
+  // SAME robust applyDepotTeam loader the ?match path uses (tolerates null rates). -----
+  (function(){
+    try {
+      var raw = (typeof window!=="undefined" && window.__DEPOT_USER_TEAM) || null;
+      if(!raw && typeof sessionStorage!=="undefined"){ var j=sessionStorage.getItem("depot_user_team"); if(j) raw=JSON.parse(j); }
+      if(!raw || !raw.lineup || raw.lineup.length!==9) return; // no user team built -> demo team is correct
+      var ok = applyDepotTeam(MUDCATS, raw); // identical loader to the match path; null/un-modelable rates are tolerated
+      if(ok){
+        if(typeof window!=="undefined") window.__DEPOT_TEAM_LOADED = MUDCATS.name;
+      } else if(typeof console!=="undefined"){
+        // NOT the null-rates case (applyDepotTeam handles that). Only a structurally invalid payload lands here.
+        console.warn("[DepotLineup] solo hand-off: payload rejected by applyDepotTeam (invalid structure), using demo team");
+      }
+    } catch(e){ if(typeof console!=="undefined") console.warn("[DepotLineup] solo hand-off failed (unexpected error), using demo team:", e); }
+  })();
 
 // ---- Seeded RNG (mulberry32) so headless runs are reproducible-ish ----
   function makeRng(seed) {
@@ -1421,7 +1424,8 @@ function highlightLineup(teamCode, batIdx) {
       var bl = raw.lineup || raw.batters;
       if(!bl || bl.length!==9) return false;
       var lu = bl.map(function(p){
-        var r = p.rates || {};
+        // null / un-modelable rates (low-PA or out-of-range AVG hitters) -> league-average so the batter is PLAYABLE
+        var r = (p.rates && typeof p.rates === 'object') ? p.rates : { BB:LG.BB, K:LG.K, HR:LG.HR, _2B:LG._2B, _3B:LG._3B, _1B:LG._1B };
         var b = batter(p.name||"PLAYER", p.avg||".000", p.hr||0, p.rbi||0,
                        R(r.BB, r.K, r.HR, r._2B, r._3B, r._1B), p.tendency||"spray");
         b.pos = p.pos || "\u2014";
