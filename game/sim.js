@@ -785,10 +785,14 @@ function clearFlightLine() {
     var s = pickSitu(ctx, rng);
     if (s) {
       var sb = situLine(SITU[s], mood, rng, s);
+      // FIX(commentary-sync): gate side-change flavor to a clean state so it can never
+      // contradict the displayed outs/count. NEW_INNING ("inning flips") may only show on a
+      // genuine leadoff PA with no outs before and no out recorded this PA (O will read 0).
+      if (sb && s === "NEW_INNING" && (ctx.outs > 0 || ev.outs)) sb = "";
       if (sb) {
         var joined = sb + "  " + call;
+        // Only PREPEND flavor when it fits; never discard the authoritative outcome line.
         if (joined.length <= 52) { __situOnly = false; return joined; }
-        __situOnly = true; return sb;
       }
     }
     __situOnly = false; return call;
