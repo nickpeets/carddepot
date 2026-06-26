@@ -1325,7 +1325,7 @@ function highlightLineup(teamCode, batIdx) {
   function makeBtn(label) {
     var b = document.createElement('button');
     b.textContent = label;
-    b.style.cssText = 'font-family:monospace;font-size:13px;font-weight:bold;color:#fff;' +
+    b.style.cssText = 'font-family:monospace;font-size:18px;font-weight:bold;color:#fff;' +
       'background:#1c7a34;border:2px solid #0d3f1b;border-radius:6px;padding:7px 12px;' +
       'cursor:pointer;letter-spacing:1px;';
     return b;
@@ -1334,9 +1334,9 @@ function highlightLineup(teamCode, batIdx) {
     if ($('sim-controls')) return;
     var bar = document.createElement('div');
     bar.id = 'sim-controls';
-    bar.style.cssText = 'position:fixed;bottom:12px;left:12px;' +
-      'z-index:100000;display:flex;gap:10px;align-items:center;background:rgba(10,10,20,0.88);' +
-      'padding:8px 12px;border-radius:10px;border:2px solid #f6c81e;box-shadow:0 4px 14px rgba(0,0,0,0.5);';
+    bar.style.cssText = 'position:absolute;left:50%;transform:translateX(-50%);bottom:14px;' +
+      'z-index:60000;display:flex;gap:14px;align-items:center;justify-content:center;background:rgba(10,10,20,0.92);' +
+      'padding:12px 22px;border-radius:14px;border:3px solid #f6c81e;box-shadow:0 6px 20px rgba(0,0,0,0.55);';
     playBtn = makeBtn('▶ PLAY');
     playBtn.onclick = toggleAuto;
     var stepBtn = makeBtn('STEP ▶');
@@ -1369,7 +1369,7 @@ function highlightLineup(teamCode, batIdx) {
     };
     bar.appendChild(playBtn); bar.appendChild(stepBtn); bar.appendChild(resetBtn);
     bar.appendChild(paceLbl); bar.appendChild(pace);
-    document.body.appendChild(bar);
+    (document.getElementById('stage') || document.body).appendChild(bar);
   }
 
   // ---- Attach after the screen's framework has built the DOM -----------
