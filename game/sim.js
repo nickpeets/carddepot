@@ -1185,6 +1185,8 @@ function highlightLineup(teamCode, batIdx) {
     setPanel('panel-ondeck', ev.onDeck.name, ev.onDeck.avg, ev.onDeck.hr, ev.onDeck.rbi);
     setPanel('panel-inhole', ev.inHole.name, ev.inHole.avg, ev.inHole.hr, ev.inHole.rbi);
     setPanel('pitching-box', ev.pitcher.name, ev.pitcher.era, ev.pitcher.w, ev.pitcher.l);
+  // Sync lineup-column highlight to the current batter EVERY pitch (same source as AT BAT) so it never lags until the PA resolves
+  highlightLineup(ev.teamCode, ev.batterIdx);
   setPitchSpeed(pitch.speed);
   setText('last-pitch-type', pitch.type);
   incPC(1);            // count this pitch
