@@ -734,6 +734,26 @@
         return b;
       }
       function banner(html){ makeBanner().innerHTML=html; }
+      // PLAY MATCH launcher: navigate to the seeded match-play engine (index.html?match=<id>).
+      // Shown for an accepted match (either party) or a played match (replay).
+      function showPlayMatchButton(id, status){
+        if(!id) return;
+        var played = (status==='played');
+        var btn = document.getElementById('playMatchBtn');
+        if(!btn){
+          btn = document.createElement('button'); btn.id='playMatchBtn'; btn.className='btn-primary'; btn.type='button';
+          btn.style.cssText='margin:12px 0;display:block;width:100%;font-size:16px;letter-spacing:1px;';
+          var host = document.getElementById('mpBanner') || document.getElementById('builderView') || document.body;
+          if(host && host.parentNode){ host.parentNode.insertBefore(btn, host.nextSibling); } else { (document.getElementById('builderView')||document.body).appendChild(btn); }
+        }
+        btn.textContent = played ? 'VIEW MATCH / REPLAY \u25B6' : 'PLAY MATCH \u25B6';
+        btn.disabled = false;
+        btn.onclick = function(){ window.location.href = 'index.html?match=' + encodeURIComponent(id); };
+        var aBtn = document.getElementById('acceptChallengeBtn'); if(aBtn) aBtn.style.display='none';
+        var pBtn = document.getElementById('playBtn'); if(pBtn) pBtn.style.display='none';
+        var cBtn = document.getElementById('challengeBtn'); if(cBtn) cBtn.style.display='none';
+        return btn;
+      }
       function ensureAcceptBtn(){
         var btn=document.getElementById('acceptChallengeBtn'); if(btn) return btn;
         btn=document.createElement('button'); btn.id='acceptChallengeBtn'; btn.className='btn-primary';
@@ -754,7 +774,20 @@
         if(res.error){ banner('Could not load this challenge: '+(res.error.message||'unknown error')+'. The normal builder still works below.'); return; }
         var row = res.data;
         if(!row){ banner('This challenge is no longer available (not found). You can still build a lineup below.'); return; }
-        if(row.status==='accepted'){ banner('This challenge has already been accepted. You can still build a lineup below.'); return; }
+        if(row.status==='accepted'){
+          var cN=(row.challenger_lineup && row.challenger_lineup.teamName)?String(row.challenger_lineup.teamName):'Challenger';
+          var oN=(row.opponent_lineup && row.opponent_lineup.teamName)?String(row.opponent_lineup.teamName):'Opponent';
+          banner('<b style="color:var(--gold);">CHALLENGE ACCEPTED!</b><br>'+escapeHtml(cN)+' vs '+escapeHtml(oN)+' is ready.<br>Click <b>PLAY MATCH</b> to launch the game.');
+          showPlayMatchButton(matchId, 'accepted');
+          return;
+        }
+        if(row.status==='played'){
+          var pcN=(row.challenger_lineup && row.challenger_lineup.teamName)?String(row.challenger_lineup.teamName):'Challenger';
+          var poN=(row.opponent_lineup && row.opponent_lineup.teamName)?String(row.opponent_lineup.teamName):'Opponent';
+          banner('<b style="color:var(--gold);">MATCH COMPLETE</b><br>'+escapeHtml(pcN)+' vs '+escapeHtml(poN)+'.<br>Click <b>VIEW MATCH / REPLAY</b> to watch it.');
+          showPlayMatchButton(matchId, 'played');
+          return;
+        }
         if(row.status==='declined'){ banner('This challenge was declined and is no longer available.'); return; }
         if(row.status!=='pending' || row.opponent_id!=null){ banner('This challenge is no longer available. You can still build a lineup below.'); return; }
 
@@ -806,6 +839,7 @@
           var yourTeam=(lineup.teamName||'YOUR TEAM');
           banner('<b style="color:var(--gold);">CHALLENGE ACCEPTED!</b><br>'+escapeHtml(MP.challengerTeam)+' vs '+escapeHtml(yourTeam)+' is ready.'+(selfChallenge?'<br><span style="color:var(--gold)">Heads up: you accepted your own challenge (same user) \u2014 allowed for testing.</span>':'')+noteWarn);
           aBtn.textContent='ACCEPTED'; aBtn.disabled=true;
+          showPlayMatchButton(MP.matchId, 'accepted');
         }catch(err){
           var msg=(err && (err.message||err.error_description||err.hint))||'Could not accept challenge.';
           banner('Accept failed: '+escapeHtml(msg)+' The match was not changed.');
