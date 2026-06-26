@@ -1,22 +1,28 @@
 <!DOCTYPE html>
-<html lang="en"><head><meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1">
+<html lang="en">
+<head>
+<meta charset="utf-8">
 <title>ad-gobytrain</title>
-<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
-<style>html,body{margin:0;display:flex;align-items:center;justify-content:center;min-height:100vh;background:#e7e5df;font-family:'Press Start 2P',monospace;image-rendering:pixelated;}*{box-sizing:border-box;}</style>
-</head><body>
-<div id="ad-gobytrain" style="width:290px;height:96px;position:relative;display:flex;align-items:center;justify-content:center;gap:16px;padding:0 22px;background:#14181d;border:4px solid #d97a3a;box-shadow:inset 0 0 0 2px rgba(255,255,255,.06),0 3px 0 rgba(0,0,0,.30);overflow:hidden;">
-        <div style="flex:none;width:46px;height:52px;position:relative;">
-          <div style="position:absolute;left:20px;top:-2px;width:2px;height:8px;background:#cfd6dd;"></div>
-          <div style="position:absolute;left:22px;top:-2px;width:10px;height:6px;background:#cc2122;"></div>
-          <div style="position:absolute;left:6px;top:8px;width:34px;height:34px;border-radius:50%;background:#f4f1e6;box-shadow:inset 0 0 0 3px #14181d;"></div>
-          <div style="position:absolute;left:22px;top:14px;width:2px;height:12px;background:#14181d;"></div>
-          <div style="position:absolute;left:22px;top:24px;width:9px;height:2px;background:#14181d;"></div>
+<style>html,body{margin:0}</style>
+</head>
+<body>
+<div id="ad-gobytrain" style="width:290px;height:96px;position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;background:#14181d;border:4px solid #d97a3a;box-shadow:inset 0 0 0 2px rgba(255,255,255,.06),0 3px 0 rgba(0,0,0,.30);overflow:hidden;"><style>@keyframes bbSteam{0%{transform:translateY(0) scale(.5);opacity:.85}100%{transform:translateY(-13px) scale(1.3);opacity:0}}</style>
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div style="flex:none;width:36px;height:26px;position:relative;">
+            <div style="position:absolute;left:7px;top:1px;width:6px;height:9px;background:#f4f1e6;"></div>
+            <div style="position:absolute;left:0;bottom:6px;width:26px;height:13px;background:#f4f1e6;border-radius:2px;"></div>
+            <div style="position:absolute;left:22px;bottom:6px;width:11px;height:15px;background:#f4f1e6;border-radius:3px 3px 0 0;"></div>
+            <div style="position:absolute;left:3px;bottom:0;width:8px;height:8px;border-radius:50%;background:#d97a3a;"></div>
+            <div style="position:absolute;left:16px;bottom:0;width:8px;height:8px;border-radius:50%;background:#d97a3a;"></div>
+            <div style="position:absolute;left:24px;bottom:0;width:7px;height:7px;border-radius:50%;background:#d97a3a;"></div>
+            <div style="position:absolute;left:7px;top:-3px;width:6px;height:6px;border-radius:50%;background:#cdd6de;animation:bbSteam 1.4s ease-out infinite;"></div>
+            <div style="position:absolute;left:9px;top:-3px;width:5px;height:5px;border-radius:50%;background:#cdd6de;animation:bbSteam 1.4s ease-out infinite;animation-delay:.7s;"></div>
+          </div>
+          <div style="font-size:18px;color:#f4f1e6;letter-spacing:2px;text-shadow:0 0 8px #9fd0ff;">GO BY TRAIN</div>
         </div>
-        <div style="display:flex;flex-direction:column;gap:7px;align-items:flex-start;">
-          <div style="font-size:14px;color:#f4f1e6;letter-spacing:1px;line-height:1.25;text-shadow:0 0 8px #9fd0ff;">GO BY<br>TRAIN</div>
-          <div style="font-size:6px;color:#d97a3a;letter-spacing:2px;">UNION STATION · PORTLAND</div>
-        </div>
+        <div style="font-size:7px;color:#d97a3a;letter-spacing:3px;">UNION STATION · PORTLAND</div>
+        <div style="width:210px;border-top:3px dashed #d97a3a;opacity:.65;"></div>
         <div style="position:absolute;inset:0;pointer-events:none;background:repeating-linear-gradient(0deg,rgba(0,0,0,.13) 0 1px,transparent 1px 3px);"></div>
       </div>
-</body></html>
+</body>
+</html>
