@@ -776,8 +776,8 @@ function clearFlightLine() {
       else if (ev.outType === "GB") call = who + " -- " + bankLine(LINE.GO, mood, rng, "GO");
       else                     call = who + " -- " + bankLine(LINE.AO, mood, rng, "AO");
     } else {
-      var hb = (k === "1B") ? LINE.H1 : (k === "2B") ? LINE.H2
-             : (k === "3B") ? LINE.H3 : LINE.HR;
+      var hb = (k === "_1B") ? LINE.H1 : (k === "_2B") ? LINE.H2
+             : (k === "_3B") ? LINE.H3 : LINE.HR;
       var line = bankLine(hb, mood, rng, k);
       var tail = (k === "HR") ? "" : (ev.error ? " (E!)" : "");
       call = line + " -- " + who + rbiTag(ev.runs) + tail;
