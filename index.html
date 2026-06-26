@@ -1833,11 +1833,11 @@ async function ensurePlayerList(){
   roloCache={};
   const box=document.getElementById('rolo-players');
   box.innerHTML=people.slice(0,15).map((p,i)=>{
-    const pos=(p.primaryPosition&&p.primaryPosition.name)||'';
+    const pos=(p.primaryPosition&&p.primaryPosition.abbreviation)||'';
     const yrs=[p.mlbDebutDate?p.mlbDebutDate.slice(0,4):'',p.lastPlayedDate?p.lastPlayedDate.slice(0,4):''].filter(Boolean).join('–');
     roloCache[i]=p;
     return `<div class="rolo-player" onclick="roloPick(${i})">
-      <span>${p.fullName||p.nameFirstLast||'(unknown)'}</span><span class="meta">${pos}${yrs?' · '+yrs:''}</span></div>`;
+      <span>${p.fullName||p.nameFirstLast||'(unknown)'}</span><span class="meta">${[pos,yrs].filter(Boolean).join(' · ')}</span></div>`;
   }).join('');
   box.style.display='block';
   roloStatus(`${people.length} match${people.length>1?'es':''} — pick one.`);
