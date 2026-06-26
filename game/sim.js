@@ -1311,7 +1311,7 @@ function highlightLineup(teamCode, batIdx) {
 
   function flashDone() {
     var L = GAME.line;
-    var msg = 'FINAL — MUDCATS ' + L.mudcats.r + ', ACORNS ' + L.acorns.r;
+    var msg = 'FINAL — ' + MUDCATS.name + ' ' + L.mudcats.r + ', ' + ACORNS.name + ' ' + L.acorns.r;
     setResultLine(msg);
     try{ if(typeof window!=="undefined" && typeof window.__onMatchComplete==="function"){ window.__onMatchComplete(GAME.line); } }catch(__e){}
   }
