@@ -194,12 +194,15 @@
 </head>
 <body>
 <header>
-  <h1>THE DEPOT &mdash; LINEUP BUILDER</h1>
+  <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;">
+    <a href="../index.html" id="backToDepot" class="btn-ghost" role="button" style="text-decoration:none;white-space:nowrap;">&larr; BACK TO DEPOT</a>
+    <h1>THE DEPOT &mdash; LINEUP BUILDER</h1>
+  </div>
   <div><span class="who" id="whoami"></span> <button class="btn-ghost" id="logoutBtn" style="display:none">Log out</button></div>
 </header>
 
 <!-- Logged-out: login prompt, no builder -->
-<div id="loginView">
+<div id="loginView" style="display:none">
   <h2>Log in</h2>
   <p>Sign in to load your Depot collection and build a lineup.</p>
   <label for="email">Email</label>
@@ -324,6 +327,13 @@
   $('loginBtn').addEventListener('click',doLogin);
   $('pass').addEventListener('keydown',function(e){ if(e.key==='Enter') doLogin(); });
   $('logoutBtn').addEventListener('click',doLogout);
+  // Back to Depot: warn only if a lineup is mid-build (any batting slot filled or a pitcher chosen).
+  (function(){ var b=document.getElementById('backToDepot'); if(!b) return;
+    b.addEventListener('click', function(e){
+      try{ var inProgress=(typeof ORDER!=='undefined' && ORDER.some(function(x){return x;})) || (typeof PITCHER!=='undefined' && PITCHER);
+        if(inProgress && !confirm('Leave the lineup builder? Your in-progress lineup will be lost.')){ e.preventDefault(); } }catch(_){ }
+    });
+  })();
 
   // ----- Notes sidecar (mirrors main app unpackNotes) -----
   function unpackNotes(notes){
