@@ -1334,7 +1334,7 @@ function highlightLineup(teamCode, batIdx) {
     if ($('sim-controls')) return;
     var bar = document.createElement('div');
     bar.id = 'sim-controls';
-    bar.style.cssText = 'position:fixed;bottom:12px;left:12px;' +
+    bar.style.cssText = 'position:fixed;bottom:22px;left:50%;transform:translateX(-50%);' +
       'z-index:100000;display:flex;gap:10px;align-items:center;background:rgba(10,10,20,0.88);' +
       'padding:8px 12px;border-radius:10px;border:2px solid #f6c81e;box-shadow:0 4px 14px rgba(0,0,0,0.5);';
     playBtn = makeBtn('▶ PLAY');
