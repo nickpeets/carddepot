@@ -190,6 +190,24 @@
     .add-btn.cantbat:disabled{ background:transparent; color:var(--paper-dim); border:2px dashed var(--paper-dim); cursor:default; }
     .cantbat-note{ color:var(--paper-dim); font-size:8px; font-style:italic; letter-spacing:.3px; align-self:center; }
     .ctile .cantbat-note{ width:100%; text-align:center; }
+    /* ---- notifications (challenge_accepted / challenge_received / match_played) ---- */
+    #notifWrap{position:relative;display:inline-block;vertical-align:middle;margin-right:10px;}
+    #notifBell{background:transparent;border:2px solid var(--cream-dim);color:var(--cream);padding:6px 8px;font-size:11px;cursor:pointer;line-height:1;position:relative;font-family:inherit;}
+    #notifBell:hover{border-color:var(--gold);color:var(--gold);}
+    #notifBell .bell-ico{font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",system-ui,sans-serif;font-size:13px;display:inline-block;line-height:1;}
+    #notifBadge{position:absolute;top:-8px;right:-8px;background:var(--red);color:var(--paper);font-size:8px;min-width:15px;height:15px;line-height:15px;text-align:center;border-radius:8px;padding:0 3px;display:none;}
+    #notifPanel{display:none;position:absolute;right:0;top:calc(100% + 6px);width:300px;max-width:82vw;max-height:60vh;overflow-y:auto;background:var(--field);border:3px solid var(--gold);box-shadow:0 0 0 4px var(--frame);z-index:60;text-align:left;padding:8px;}
+    #notifPanel.open{display:block;}
+    #notifPanel h3{font-size:9px;color:var(--gold);margin:0 0 8px 0;letter-spacing:1px;text-shadow:1px 1px 0 var(--frame);}
+    .notif-empty{font-size:9px;color:var(--cream-dim);padding:12px 6px;text-align:center;line-height:1.7;}
+    .notif-item{border:2px solid var(--field-dark);background:var(--field-dark);padding:8px;margin-bottom:8px;font-size:9px;line-height:1.6;color:var(--cream);position:relative;}
+    .notif-item:last-child{margin-bottom:0;}
+    .notif-item .nx{position:absolute;top:4px;right:5px;cursor:pointer;color:var(--cream-dim);font-size:11px;background:none;border:none;padding:2px;font-family:inherit;line-height:1;}
+    .notif-item .nx:hover{color:var(--red);}
+    .notif-msg{margin:0 16px 8px 0;color:var(--cream);}
+    .notif-msg b{color:var(--gold);}
+    .notif-act{background:var(--gold);color:var(--frame);border:none;padding:6px 9px;font-size:8px;letter-spacing:1px;cursor:pointer;text-decoration:none;display:inline-block;font-family:inherit;}
+    .notif-act:hover{filter:brightness(1.12);}
 </style>
 </head>
 <body>
@@ -198,7 +216,7 @@
     <a href="../index.html" id="backToDepot" class="btn-ghost" role="button" style="text-decoration:none;white-space:nowrap;">&larr; BACK TO DEPOT</a>
     <h1>THE DEPOT &mdash; LINEUP BUILDER</h1>
   </div>
-  <div><span class="who" id="whoami"></span> <button class="btn-ghost" id="logoutBtn" style="display:none">Log out</button></div>
+  <div><span id="notifWrap"><button id="notifBell" type="button" title="Notifications" aria-label="Notifications" style="display:none"><span class="bell-ico">🔔</span><span id="notifBadge">0</span></button><div id="notifPanel"><h3>NOTIFICATIONS</h3><div id="notifList"></div></div></span> <span class="who" id="whoami"></span> <button class="btn-ghost" id="logoutBtn" style="display:none">Log out</button></div>
 </header>
 
 <!-- Logged-out: login prompt, no builder -->
@@ -321,7 +339,7 @@
     sb.auth.getSession().then(function(r){ onSession(r&&r.data?r.data.session:null); });
   }
   function onSession(session){
-    if(session&&session.user){ USER=session.user; showLoggedIn(USER.email); loadCards(); }
+    if(session&&session.user){ USER=session.user; showLoggedIn(USER.email); loadCards(); try{ if(window.loadNotifications) loadNotifications(); }catch(e){} }
     else { USER=null; showLoggedOut(); }
   }
   $('loginBtn').addEventListener('click',doLogin);
@@ -857,6 +875,135 @@
         }
       }
     })();
+
+  // ===== Notifications UI (challenge_accepted / challenge_received / match_played) =====
+  // Fails quietly: never throws into the builder. Surfaces unread notifications in a
+  // header bell+badge that expands to a NES/Depot-styled panel; dismiss marks read=true.
+  (function(){
+    var NOTIF = [];
+    function nesc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c];}); }
+    function $n(id){ return document.getElementById(id); }
+
+    function currentUserId(){
+      try{ if(typeof USER!=='undefined' && USER && USER.id) return USER.id; }catch(e){}
+      return null;
+    }
+
+    function teamFromLineup(L){
+      try{ if(L && L.teamName) return String(L.teamName); }catch(e){}
+      return null;
+    }
+
+    // Build the friendly message + action for a single notification (match row optional).
+    function describe(n, match){
+      var mid = n.match_id;
+      var href, label, msg;
+      if(n.type==='challenge_accepted'){
+        var opp = match ? (teamFromLineup(match.opponent_lineup) || 'Your opponent') : 'Your opponent';
+        msg = 'Your challenge was accepted! <b>'+nesc(opp)+'</b> is ready.';
+        label = 'PLAY MATCH \u25B6'; href = 'index.html?match=' + encodeURIComponent(mid);
+      } else if(n.type==='challenge_received'){
+        var chal = match ? (teamFromLineup(match.challenger_lineup) || 'A challenger') : 'A challenger';
+        msg = "You've been challenged! <b>"+nesc(chal)+"</b>.";
+        label = 'OPEN \u25B6'; href = 'builder.html?match=' + encodeURIComponent(mid);
+      } else if(n.type==='match_played'){
+        var other = null;
+        if(match){ other = teamFromLineup(match.opponent_lineup) || teamFromLineup(match.challenger_lineup); }
+        msg = 'Your match was played &mdash; see the result'+(other?(' vs <b>'+nesc(other)+'</b>'):'')+'.';
+        label = 'VIEW \u25B6'; href = 'index.html?match=' + encodeURIComponent(mid);
+      } else {
+        msg = 'You have a new notification.';
+        label = mid ? 'OPEN \u25B6' : ''; href = mid ? ('index.html?match=' + encodeURIComponent(mid)) : null;
+      }
+      return { msg: msg, label: label, href: href };
+    }
+
+    function render(){
+      var list = $n('notifList'); var badge = $n('notifBadge'); var bell = $n('notifBell');
+      if(!list || !badge || !bell) return;
+      var count = NOTIF.length;
+      if(count>0){ badge.textContent = count>9 ? '9+' : String(count); badge.style.display='block'; }
+      else { badge.style.display='none'; }
+      bell.style.display='inline-block';
+      if(count===0){
+        list.innerHTML = '<div class="notif-empty">No new notifications.<br>You\'re all caught up.</div>';
+        return;
+      }
+      var html = '';
+      for(var i=0;i<NOTIF.length;i++){
+        var n = NOTIF[i]; var d = describe(n, n._match);
+        html += '<div class="notif-item" data-nid="'+nesc(n.id)+'">'
+              +   '<button class="nx" data-dismiss="'+nesc(n.id)+'" title="Dismiss" aria-label="Dismiss">\u2715</button>'
+              +   '<div class="notif-msg">'+d.msg+'</div>'
+              +   (d.href ? ('<a class="notif-act" href="'+nesc(d.href)+'" data-act="'+nesc(n.id)+'">'+d.label+'</a>') : '')
+              + '</div>';
+      }
+      list.innerHTML = html;
+    }
+
+    async function dismiss(id, removeOnly){
+      // Remove from local list immediately, then mark read=true (best effort).
+      NOTIF = NOTIF.filter(function(n){ return String(n.id)!==String(id); });
+      render();
+      if(removeOnly) return;
+      try{ if(sb && sb.from){ await sb.from('notifications').update({read:true}).eq('id', id); } }catch(e){}
+    }
+
+    function wirePanel(){
+      var bell = $n('notifBell'); var panel = $n('notifPanel'); var list = $n('notifList');
+      if(!bell || !panel || bell._wired) return; bell._wired = true;
+      bell.addEventListener('click', function(e){ e.stopPropagation(); panel.classList.toggle('open'); });
+      document.addEventListener('click', function(e){
+        if(!panel.classList.contains('open')) return;
+        var w = $n('notifWrap'); if(w && !w.contains(e.target)) panel.classList.remove('open');
+      });
+      // Dismiss (X) and "open action then mark read".
+      list.addEventListener('click', function(e){
+        var x = e.target.closest ? e.target.closest('[data-dismiss]') : null;
+        if(x){ e.preventDefault(); dismiss(x.getAttribute('data-dismiss')); return; }
+        var a = e.target.closest ? e.target.closest('[data-act]') : null;
+        if(a){ dismiss(a.getAttribute('data-act')); /* let the link navigate */ }
+      });
+    }
+
+    async function loadNotifications(){
+      try{
+        wirePanel();
+        if(!sb || !sb.from){ return; }
+        var uid = currentUserId();
+        if(!uid){
+          try{ var ur = await sb.auth.getUser(); uid = ur && ur.data && ur.data.user ? ur.data.user.id : null; }catch(e){}
+        }
+        if(!uid){ return; }
+        var res = await sb.from('notifications').select('*')
+          .eq('user_id', uid).eq('read', false)
+          .order('created_at', { ascending:false });
+        if(res.error || !res.data){ return; }
+        NOTIF = res.data.slice();
+        // Hydrate match info for accepted / played notifications (opponent team name + status).
+        var ids = [];
+        for(var i=0;i<NOTIF.length;i++){
+          var t = NOTIF[i].type;
+          if((t==='challenge_accepted'||t==='match_played'||t==='challenge_received') && NOTIF[i].match_id){ ids.push(NOTIF[i].match_id); }
+        }
+        if(ids.length){
+          try{
+            var m = await sb.from('matches').select('*').in('id', ids);
+            if(m && !m.error && m.data){
+              var byId = {}; for(var j=0;j<m.data.length;j++){ byId[String(m.data[j].id)] = m.data[j]; }
+              for(var k=0;k<NOTIF.length;k++){ NOTIF[k]._match = byId[String(NOTIF[k].match_id)] || null; }
+            }
+          }catch(e){}
+        }
+        render();
+      }catch(e){ /* fail quietly: never break the builder */ }
+    }
+
+    window.loadNotifications = loadNotifications;
+    // In case auth already resolved before this ran, attempt a load on DOM ready.
+    if(document.readyState!=='loading'){ try{ wirePanel(); }catch(e){} }
+    else { document.addEventListener('DOMContentLoaded', function(){ try{ wirePanel(); }catch(e){} }); }
+  })();
 
 })();
 </script>
