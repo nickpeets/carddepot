@@ -126,6 +126,7 @@
   // SAME robust applyDepotTeam loader the ?match path uses (tolerates null rates). -----
   (function(){
     try {
+      if(typeof window!=="undefined" && window.__DEPOT_MATCH_MODE) return; // match mode: skip the solo hand-off; applied lineups are the source of truth
       var raw = (typeof window!=="undefined" && window.__DEPOT_USER_TEAM) || null;
       if(!raw && typeof sessionStorage!=="undefined"){ var j=sessionStorage.getItem("depot_user_team"); if(j) raw=JSON.parse(j); }
       if(!raw || !raw.lineup || raw.lineup.length!==9) return; // no user team built -> demo team is correct
@@ -1006,7 +1007,7 @@ function clearFlightLine() {
   function paintDepotVisitorNames(){
     try{
       if(_depotNamesPainted) return;
-      if(typeof window==="undefined" || !window.__DEPOT_TEAM_LOADED) return; // only when user team loaded
+      if(typeof window==="undefined" || !window.__DEPOT_TEAM_LOADED || window.__DEPOT_MATCH_MODE) return; // only when user team loaded; never in a match
       var cols=lineupColumns(); if(!cols.length) return;
       var ordered=cols.slice().sort(function(a,b){ return a.getBoundingClientRect().left-b.getBoundingClientRect().left; });
       var col=ordered[0]; // visitor = left column = Mudcats
@@ -1028,7 +1029,7 @@ function fitText(el, maxW, basePx, minPx){
 }
 function applyTeamName(){
   try{
-    if(typeof window==="undefined" || !window.__DEPOT_TEAM_LOADED) return;
+    if(typeof window==="undefined" || !window.__DEPOT_TEAM_LOADED || window.__DEPOT_MATCH_MODE) return; // never in a match
     var nm = MUDCATS.name || "MUDCATS";
     var lbl = $("team-mudcats");
     if(lbl){ lbl.textContent = nm; lbl.style.whiteSpace="nowrap"; lbl.style.overflow="hidden"; fitText(lbl, 214, 22, 12); }
@@ -1567,7 +1568,7 @@ function highlightLineup(teamCode, batIdx) {
       var tm=$("team-mudcats"); if(tm){ tm.textContent=MUDCATS.name; tm.style.whiteSpace="nowrap"; tm.style.overflow="hidden"; fitText(tm,214,22,12); }
       var ta=$("team-acorns"); if(ta){ ta.textContent=ACORNS.name; ta.style.whiteSpace="nowrap"; ta.style.overflow="hidden"; fitText(ta,214,22,12); }
       // bottom big visitor name (home big name is static markup; leave as-is)
-      var bm=$("bigname-mudcats"); if(bm){ bm.textContent=MUDCATS.name; bm.style.whiteSpace="nowrap"; fitText(bm,560,78,30); }
+      var bm=$("bigname-mudcats"); if(bm){ bm.textContent=MUDCATS.name; bm.style.whiteSpace="nowrap"; fitText(bm,560,78,30); } /* home big wordmark has no id in the static markup; find the matching large-font sibling on the home (right) side and drive it from ACORNS.name so the field name matches the applied opponent (single source of truth). */ var hb=null; if(bm && bm.parentElement){ var bl=bm.getBoundingClientRect(); var kids=bm.parentElement.children; for(var hi=0;hi<kids.length;hi++){ var k=kids[hi]; if(k===bm) continue; if(k.children && k.children.length) continue; var fs=parseFloat((k.currentStyle||window.getComputedStyle(k)).fontSize)||0; var kr=k.getBoundingClientRect(); if(fs>=40 && kr.left>bl.left){ hb=k; break; } } } if(hb){ hb.textContent=ACORNS.name; hb.style.whiteSpace="nowrap"; fitText(hb,560,78,30); }
     } catch(e){ if(typeof console!=="undefined") console.warn("[MatchPlay] repaintMatchTeams failed:", e); }
   }
   function applyDepotTeam(team, raw){
