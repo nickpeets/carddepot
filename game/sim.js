@@ -514,7 +514,7 @@ function clearFlightLine() {
   var FACE_FILES = ["assets/faces/face_01_light_clean_blonde.png", "assets/faces/face_02_light_mustache_brown.png", "assets/faces/face_03_light_beard_red.png", "assets/faces/face_04_light_stubble_black.png", "assets/faces/face_05_light_goatee_auburn.png", "assets/faces/face_06_medlight_clean_sandy.png", "assets/faces/face_07_medlight_full_brown.png", "assets/faces/face_08_medlight_mustache_black.png", "assets/faces/face_09_med_beard_black.png", "assets/faces/face_10_med_clean_dkbrown.png", "assets/faces/face_11_med_goatee_black.png", "assets/faces/face_12_medtan_stubble_black.png", "assets/faces/face_13_medtan_full_black.png", "assets/faces/face_14_medtan_clean_black.png", "assets/faces/face_15_brown_beard_black.png", "assets/faces/face_16_brown_mustache_black.png", "assets/faces/face_17_brown_clean_black.png", "assets/faces/face_18_dkbrown_goatee_black.png", "assets/faces/face_19_dkbrown_full_black.png", "assets/faces/face_20_dark_clean_black.png", "assets/faces/face_21_dark_beard_gray.png", "assets/faces/face_22_med_clean_gray.png"];
   function faceHash(name) { var h = 0; name = String(name || ""); for (var i = 0; i < name.length; i++) { h = (h * 31 + name.charCodeAt(i)) >>> 0; } return h; }
   function faceForPlayer(name) { /* Tone-aware, deterministic, self-contained. The cards carry no skin-tone/photo field, so we group the face library by the tone token in each filename and use two independent name-hashes: one picks a tone bucket (realistic spread across the lineup), the other picks a face within it. Same name => same face (consistent), varied across the lineup, and no individual's real appearance is fabricated. */ if (!faceForPlayer._buckets) { var ORDER = ["light","medlight","med","medtan","brown","dkbrown","dark"]; var byTone = {}; for (var t = 0; t < ORDER.length; t++) byTone[ORDER[t]] = []; for (var i = 0; i < FACE_FILES.length; i++) { var m = FACE_FILES[i].match(/face_\d+_([a-z]+)_/); var tone = (m && byTone[m[1]]) ? m[1] : "med"; byTone[tone].push(FACE_FILES[i]); } var buckets = []; for (var k = 0; k < ORDER.length; k++) { if (byTone[ORDER[k]].length) buckets.push(byTone[ORDER[k]]); } faceForPlayer._buckets = buckets; } var B = faceForPlayer._buckets; if (!B.length) return FACE_FILES[faceHash(name) % FACE_FILES.length]; var s = String(name || ""), th = 5381; for (var j = 0; j < s.length; j++) { th = (th * 33 + s.charCodeAt(j)) >>> 0; } var bucket = B[th % B.length]; return bucket[faceHash(name) % bucket.length]; }
-  function setFace(panelId, name) { var p = $(panelId); if (!p) return; var img = p.querySelector("img"); if (img && name) img.src = faceForPlayer(name); }
+  function dcShade(hex,amt){var m=/^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(String(hex).trim());if(!m)return hex;var r=parseInt(m[1],16),g=parseInt(m[2],16),b=parseInt(m[3],16);function f(c){if(amt>=0)return Math.round(c+(255-c)*amt);return Math.round(c*(1+amt));}function h(c){c=Math.max(0,Math.min(255,c)).toString(16);return c.length<2?"0"+c:c;}return "#"+h(f(r))+h(f(g))+h(f(b));}function dcTeamAccent(code){var M={mudcats:"#2a9d4a",acorns:"#c8772a"};return (code&&M[code])||"#3a72d6";}function dcCleanName(name){return String(name==null?"":name).replace(/\s*\([^)]*\)\s*$/,"").trim();}function dcInitials(name){var n=dcCleanName(name);if(!n)return "--";var p=n.split(/[\s.]+/).filter(Boolean);if(p.length>=2)return (p[0].charAt(0)+p[p.length-1].charAt(0)).toUpperCase();return n.replace(/[^A-Za-z]/g,"").slice(0,2).toUpperCase()||"--";}function dcCardLast(name){var n=dcCleanName(name);if(!n)return " ";var p=n.split(/\s+/);var last=p[p.length-1]||n;return last.toUpperCase();}function setFace(panelId, name, teamCode){var p=$(panelId);if(!p)return;var card=p.querySelector(".dc-card");if(!card){var img0=p.querySelector("img");if(img0&&name)img0.src=faceForPlayer(name);return;}var acc=dcTeamAccent(teamCode);var dark=dcShade(acc,-0.55);card.style.borderColor=acc;card.style.background=dcShade(acc,-0.82);var art=card.querySelector(".dc-card-art");if(art)art.style.background="radial-gradient(circle at 50% 38%,"+dcShade(acc,0.45)+" 0%,"+acc+" 58%,"+dark+" 100%)";var g=card.querySelector(".dc-card-glyph");if(g)g.textContent=dcInitials(name);var np=card.querySelector(".dc-card-name");if(np){np.style.background=acc;np.textContent=dcCardLast(name);}var img=card.querySelector("img.dc-card-img");if(img){img.style.display="none";img.removeAttribute("src");}}
   // ---- Display name formatter: fit names into narrow NES boxes ----
   // Keep short names as-is; otherwise render first-initial + FULL last name
   // (e.g. CARNEY LANSFORD -> C. LANSFORD). Only ellipsis-truncate if even that
@@ -549,11 +549,11 @@ function clearFlightLine() {
     if (room < 1) return abbr.slice(0, max - 1) + '\u2026';
     return parts[0].charAt(0) + '. ' + last.slice(0, room - 1) + '\u2026';
   }
-  function setPanel(panelId, name, s1, s2, s3) {
+  function setPanel(panelId, name, s1, s2, s3, teamCode) {
     var L = panelLeaves(panelId);
     if (!L || L.length < 4) return;
     L[0].textContent = fmtName(name);
-    setFace(panelId, name);
+    setFace(panelId, name, teamCode);
     if (panelId === "atbat-box") { L[0].style.color = "#ffffff"; L[0].style.fontWeight = "normal"; L[0].style.textShadow = "none"; }
     L[1].textContent = s1;
     L[2].textContent = s2;
@@ -1107,11 +1107,11 @@ function highlightLineup(teamCode, batIdx) {
     else setText('count-o', ev.outsAfter % 3);
 
     // Panels: AT BAT / ON DECK / IN THE HOLE
-    setPanel('atbat-box', ev.batter.name, ev.batter.avg, ev.batter.hr, ev.batter.rbi);
-    setPanel('panel-ondeck', ev.onDeck.name, ev.onDeck.avg, ev.onDeck.hr, ev.onDeck.rbi);
-    setPanel('panel-inhole', ev.inHole.name, ev.inHole.avg, ev.inHole.hr, ev.inHole.rbi);
+    setPanel('atbat-box', ev.batter.name, ev.batter.avg, ev.batter.hr, ev.batter.rbi, ev.teamCode);
+    setPanel('panel-ondeck', ev.onDeck.name, ev.onDeck.avg, ev.onDeck.hr, ev.onDeck.rbi, ev.teamCode);
+    setPanel('panel-inhole', ev.inHole.name, ev.inHole.avg, ev.inHole.hr, ev.inHole.rbi, ev.teamCode);
     // Pitching box
-    setPanel('pitching-box', ev.pitcher.name, ev.pitcher.era, ev.pitcher.w, ev.pitcher.l); setActivePitcher(ev.half === 'top' ? 'home' : 'away', ev.pitcher); /* PC box keyed on the defensive SIDE (collision-proof), label uses pitcher name */
+    setPanel('pitching-box', ev.pitcher.name, ev.pitcher.era, ev.pitcher.w, ev.pitcher.l, (ev.teamCode==='mudcats'?'acorns':'mudcats')); setActivePitcher(ev.half === 'top' ? 'home' : 'away', ev.pitcher); /* PC box keyed on the defensive SIDE (collision-proof), label uses pitcher name */
     // Sync lineup-column highlight to the current batter (same source as AT BAT/ON DECK/IN THE HOLE)
     highlightLineup(ev.teamCode, ev.batterIdx);
     paintDepotVisitorNames();
@@ -1187,10 +1187,10 @@ function highlightLineup(teamCode, batIdx) {
     setText('count-s', pitch.strikes);
     setText('count-o', (ev.outsAfter - (ev.terminalOuts || 0)) % 3 < 0 ? 0 : ((ev.outsBefore != null ? ev.outsBefore : 0) % 3));
     // keep the at-bat panels current while pitches tick
-    setPanel('atbat-box', ev.batter.name, ev.batter.avg, ev.batter.hr, ev.batter.rbi);
-    setPanel('panel-ondeck', ev.onDeck.name, ev.onDeck.avg, ev.onDeck.hr, ev.onDeck.rbi);
-    setPanel('panel-inhole', ev.inHole.name, ev.inHole.avg, ev.inHole.hr, ev.inHole.rbi);
-    setPanel('pitching-box', ev.pitcher.name, ev.pitcher.era, ev.pitcher.w, ev.pitcher.l); setActivePitcher(ev.half === 'top' ? 'home' : 'away', ev.pitcher); /* PC box keyed on the defensive SIDE (collision-proof), label uses pitcher name */
+    setPanel('atbat-box', ev.batter.name, ev.batter.avg, ev.batter.hr, ev.batter.rbi, ev.teamCode);
+    setPanel('panel-ondeck', ev.onDeck.name, ev.onDeck.avg, ev.onDeck.hr, ev.onDeck.rbi, ev.teamCode);
+    setPanel('panel-inhole', ev.inHole.name, ev.inHole.avg, ev.inHole.hr, ev.inHole.rbi, ev.teamCode);
+    setPanel('pitching-box', ev.pitcher.name, ev.pitcher.era, ev.pitcher.w, ev.pitcher.l, (ev.teamCode==='mudcats'?'acorns':'mudcats')); setActivePitcher(ev.half === 'top' ? 'home' : 'away', ev.pitcher); /* PC box keyed on the defensive SIDE (collision-proof), label uses pitcher name */
   // Sync lineup-column highlight to the current batter EVERY pitch (same source as AT BAT) so it never lags until the PA resolves
   highlightLineup(ev.teamCode, ev.batterIdx);
   setPitchSpeed(pitch.speed);
