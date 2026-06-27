@@ -1755,6 +1755,44 @@ async function ensurePlayerList(){
 /* ---------- static autocomplete (uses the already-loaded players.json) ---------- */
     let ROLO_SUGG=[];
     function cleanPlayerName(s){ s=String(s||""); s=s.split(/[:\/]/)[0]; var SUF={"Jr":1,"Jr.":1,"Sr":1,"Sr.":1,"II":1,"III":1,"IV":1,"V":1}; function isName(w){ if(SUF[w])return true; if(/^(?:[A-Z]\.){1,3}$/.test(w))return true; if(/^[A-Za-z'\u2019.\-]+$/.test(w)&&/^[A-Z]/.test(w)&&/[a-z]/.test(w))return true; return false; } var toks=s.trim().split(/\s+/),out=[],core=0; for(var i=0;i<toks.length;i++){ var w=toks[i].replace(/^[ ,;()]+|[ ,;()]+$/g,""); if(!w)continue; if(!isName(w))break; if(core>=2){ if(SUF[w])out.push(w); break; } out.push(w); if(!SUF[w])core++; } return out.join(" ").trim()||String(s).trim(); }
+    let ROLO_POS_CACHE = {};        /* normName -> position abbr (e.g. RF), filled lazily from MLB */
+    let _roloPosTimer = null;
+    /* After the type-ahead dropdown renders, fetch each visible player's primary position
+       from the MLB Stats API (one lookup per uncached name, debounced, never per-keystroke),
+       then patch the meta label in place to read "POS · span · N yrs". Graceful if offline
+       or no position is found. */
+    async function roloFillPositions(sugg, qWhenIssued){
+      if(!sugg || !sugg.length) return;
+      clearTimeout(_roloPosTimer);
+      _roloPosTimer = setTimeout(async function(){
+        for(let i=0;i<sugg.length;i++){
+          const h = sugg[i]; if(!h) continue;
+          const cnm = normName(cleanPlayerName(h.d));
+          const cell = document.getElementById('rolo-meta-'+i);
+          if(!cell || cell.getAttribute('data-cnm')!==cnm) continue;  /* dropdown changed */
+          let pos = ROLO_POS_CACHE[cnm];
+          if(pos===undefined){
+            pos = '';
+            try{
+              const nm = cleanPlayerName(h.d);
+              let r = await fetch(MLB_BASE+'/people/search?names='+encodeURIComponent(nm));
+              let people = r.ok ? ((await r.json()).people||[]) : [];
+              if(!people.length){ r = await fetch(MLB_BASE+'/people/search?q='+encodeURIComponent(nm)); people = r.ok ? ((await r.json()).people||[]) : []; }
+              const hit = people.find(function(pp){ return normName(cleanPlayerName(pp.fullName||pp.nameFirstLast||'')) === cnm; }) || people[0];
+              if(hit && hit.primaryPosition && hit.primaryPosition.abbreviation) pos = hit.primaryPosition.abbreviation;
+            }catch(e){ /* offline / blocked -> leave years-only meta */ }
+            ROLO_POS_CACHE[cnm] = pos;
+          }
+          if(!pos) continue;
+          /* re-find the cell (dropdown may have re-rendered) and prepend the position once */
+          const live = document.getElementById('rolo-meta-'+i);
+          if(!live || live.getAttribute('data-cnm')!==cnm) continue;
+          if(live.getAttribute('data-pos')==='1') continue;
+          live.textContent = [pos, live.textContent].filter(Boolean).join(' · ');
+          live.setAttribute('data-pos','1');
+        }
+      }, 320);
+    }
     async function roloSuggest(){
       const inp=document.getElementById('rolo-name');
       const box=document.getElementById('rolo-players');
@@ -1769,8 +1807,9 @@ async function ensurePlayerList(){
       hits.sort((a,b)=>{ const as=(a.cd||"").startsWith(q)?0:1, bs=(b.cd||"").startsWith(q)?0:1; return as-bs || a.d.localeCompare(b.d); });
       const _seen=new Map(); for(const it of hits){ const cn=cleanPlayerName(it.d); const prev=_seen.get(cn); if(!prev){ _seen.set(cn,it); } else { const pscore=(prev.d===cn?0:1)*1e6+prev.d.length, iscore=(it.d===cn?0:1)*1e6+it.d.length; if(iscore<pscore) _seen.set(cn,it); } } ROLO_SUGG=Array.from(_seen.values()).slice(0,8);
       if(!ROLO_SUGG.length){ box.style.display='none'; box.innerHTML=''; return; }
-      box.innerHTML=ROLO_SUGG.map((h,i)=>{ const _cnm=normName(cleanPlayerName(h.d)); const _yset=new Set(); for(const _k in idx){ if(normName(cleanPlayerName(idx[_k].display||_k))===_cnm){ (idx[_k].years||[]).forEach(_y=>{var _n=Number(_y); if(_n) _yset.add(_n);}); } } const yrs=[..._yset].sort((a,b)=>a-b); const span=yrs.length?(yrs[0]===yrs[yrs.length-1]?String(yrs[0]):yrs[0]+'-'+yrs[yrs.length-1]):''; const meta=yrs.length?(span+' \u00b7 '+yrs.length+' yr'+(yrs.length>1?'s':'')):'not in checklist'; return `<div class="rolo-player" onclick="roloPickName(${i})"><span>${cleanPlayerName(h.d)}</span><span class="meta">${meta}</span></div>`; }).join('');
+      box.innerHTML=ROLO_SUGG.map((h,i)=>{ const _cnm=normName(cleanPlayerName(h.d)); const _yset=new Set(); for(const _k in idx){ if(normName(cleanPlayerName(idx[_k].display||_k))===_cnm){ (idx[_k].years||[]).forEach(_y=>{var _n=Number(_y); if(_n) _yset.add(_n);}); } } const yrs=[..._yset].sort((a,b)=>a-b); const span=yrs.length?(yrs[0]===yrs[yrs.length-1]?String(yrs[0]):yrs[0]+'-'+yrs[yrs.length-1]):''; const meta=yrs.length?(span+' \u00b7 '+yrs.length+' yr'+(yrs.length>1?'s':'')):'not in checklist'; return `<div class="rolo-player" onclick="roloPickName(${i})"><span>${cleanPlayerName(h.d)}</span><span class="meta" id="rolo-meta-${i}" data-cnm="${escAttr(_cnm)}">${[(ROLO_POS_CACHE[_cnm]||''),meta].filter(Boolean).join(' \u00b7 ')}</span></div>`; }).join('');
       box.style.display='block';
+      roloFillPositions(ROLO_SUGG, q);
     }
     async function roloPickName(i){
       const h=ROLO_SUGG[i]; if(!h)return;
