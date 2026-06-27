@@ -872,7 +872,7 @@
         var btn = document.getElementById('playMatchBtn');
         if(!btn){
           btn = document.createElement('button'); btn.id='playMatchBtn'; btn.className='btn-primary'; btn.type='button';
-          btn.style.cssText='margin:12px 0;display:block;width:100%;font-size:16px;letter-spacing:1px;';
+          btn.style.cssText='position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:9000;margin:0;display:block;width:auto;min-width:280px;max-width:92vw;font-size:16px;letter-spacing:1px;box-shadow:0 6px 22px rgba(0,0,0,.55);';
           var host = document.getElementById('mpBanner') || document.getElementById('builderView') || document.body;
           if(host && host.parentNode){ host.parentNode.insertBefore(btn, host.nextSibling); } else { (document.getElementById('builderView')||document.body).appendChild(btn); }
         }
