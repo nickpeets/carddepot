@@ -194,6 +194,7 @@
     #notifWrap{position:relative;display:inline-block;vertical-align:middle;margin-right:10px;}
     #notifBell{background:transparent;border:2px solid var(--cream-dim);color:var(--cream);padding:6px 8px;font-size:11px;cursor:pointer;line-height:1;position:relative;font-family:inherit;}
     #notifBell:hover{border-color:var(--gold);color:var(--gold);}
+    #notifBell .bell-ico{font-family:"Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",system-ui,sans-serif;font-size:13px;display:inline-block;line-height:1;}
     #notifBadge{position:absolute;top:-8px;right:-8px;background:var(--red);color:var(--paper);font-size:8px;min-width:15px;height:15px;line-height:15px;text-align:center;border-radius:8px;padding:0 3px;display:none;}
     #notifPanel{display:none;position:absolute;right:0;top:calc(100% + 6px);width:300px;max-width:82vw;max-height:60vh;overflow-y:auto;background:var(--field);border:3px solid var(--gold);box-shadow:0 0 0 4px var(--frame);z-index:60;text-align:left;padding:8px;}
     #notifPanel.open{display:block;}
@@ -215,7 +216,7 @@
     <a href="../index.html" id="backToDepot" class="btn-ghost" role="button" style="text-decoration:none;white-space:nowrap;">&larr; BACK TO DEPOT</a>
     <h1>THE DEPOT &mdash; LINEUP BUILDER</h1>
   </div>
-  <div><span id="notifWrap"><button id="notifBell" type="button" title="Notifications" aria-label="Notifications" style="display:none">✉<span id="notifBadge">0</span></button><div id="notifPanel"><h3>NOTIFICATIONS</h3><div id="notifList"></div></div></span> <span class="who" id="whoami"></span> <button class="btn-ghost" id="logoutBtn" style="display:none">Log out</button></div>
+  <div><span id="notifWrap"><button id="notifBell" type="button" title="Notifications" aria-label="Notifications" style="display:none"><span class="bell-ico">🔔</span><span id="notifBadge">0</span></button><div id="notifPanel"><h3>NOTIFICATIONS</h3><div id="notifList"></div></div></span> <span class="who" id="whoami"></span> <button class="btn-ghost" id="logoutBtn" style="display:none">Log out</button></div>
 </header>
 
 <!-- Logged-out: login prompt, no builder -->
@@ -875,8 +876,6 @@
       }
     })();
 
-})();
-
   // ===== Notifications UI (challenge_accepted / challenge_received / match_played) =====
   // Fails quietly: never throws into the builder. Surfaces unread notifications in a
   // header bell+badge that expands to a NES/Depot-styled panel; dismiss marks read=true.
@@ -1005,6 +1004,8 @@
     if(document.readyState!=='loading'){ try{ wirePanel(); }catch(e){} }
     else { document.addEventListener('DOMContentLoaded', function(){ try{ wirePanel(); }catch(e){} }); }
   })();
+
+})();
 </script>
 </body>
 </html>
