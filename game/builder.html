@@ -208,6 +208,18 @@
     .notif-msg b{color:var(--gold);}
     .notif-act{background:var(--gold);color:var(--frame);border:none;padding:6px 9px;font-size:8px;letter-spacing:1px;cursor:pointer;text-decoration:none;display:inline-block;font-family:inherit;}
     .notif-act:hover{filter:brightness(1.12);}
+    /* ---- match status panel (challenger<->accepter progress) ---- */
+    #matchStatus{margin:12px 0;padding:12px;border:3px solid var(--gold);background:var(--field-dark);color:var(--cream);box-shadow:0 0 0 4px var(--frame);font-size:9px;line-height:1.7;}
+    #matchStatus h3{font-size:9px;color:var(--gold);margin:0 0 8px 0;letter-spacing:1px;text-shadow:1px 1px 0 var(--frame);}
+    #matchStatus .ms-row{display:flex;justify-content:space-between;gap:10px;padding:3px 0;}
+    #matchStatus .ms-row .ms-team{color:var(--cream);}
+    #matchStatus .ms-state{color:var(--cream-dim);}
+    #matchStatus .ms-ok{color:var(--green-bright);}
+    #matchStatus .ms-wait{color:var(--gold);}
+    #matchStatus .ms-overall{margin-top:8px;padding-top:8px;border-top:2px solid var(--frame);color:var(--cream-dim);}
+    #matchStatus .ms-overall b{color:var(--gold);}
+    #matchStatus .ms-next{margin-top:6px;color:var(--cream);}
+    #matchStatus .ms-next b{color:var(--green-bright);}
 </style>
 </head>
 <body>
@@ -377,6 +389,7 @@
       var res=await sb.from('cards').select('*').eq('collection_id',collectionId).order('created_at',{ascending:true});
       if(res.error) throw res.error;
       CARDS=(res.data||[]).map(rowToCard).filter(function(c){ return c.type!=='pitching'; });
+        try{ restoreDraft(); }catch(e){}
       renderAll();
     }catch(e){
       $('cardList').innerHTML='<div class="muted">Could not load your cards: '+(e&&e.message||e)+'</div>';
@@ -604,7 +617,7 @@
       } else { box.innerHTML='<span class="muted">No pitcher chosen \u2014 pick one from your collection (\u201cSet as P\u201d).</span>'; }
     }
 
-    function renderAll(){ renderCards(); renderOrder(); renderPitcher(); renderStatus(); }
+    function renderAll(){ renderCards(); renderOrder(); renderPitcher(); renderStatus(); try{ saveDraft(); }catch(e){} }
 
     function renderStatus(){
       var filledCount=0, usableCount=0;
@@ -627,11 +640,99 @@
     function moveSlot(from,to){ if(from<0||to<0||from===to||from>8||to>8) return; var arr=ORDER.slice(); var item=arr.splice(from,1)[0]; arr.splice(to,0,item); ORDER=arr; renderAll(); }
 
     $('clearBtn').addEventListener('click',function(){ ORDER=new Array(9).fill(null); PITCHER=null; renderAll(); });
+      try{ var _tnEl=$('teamNameInput'); if(_tnEl){ _tnEl.addEventListener('input', function(){ try{ saveDraft(); }catch(e){} }); } }catch(e){}
       var _sortBtn=$('sortPosBtn'); if(_sortBtn){ _sortBtn.addEventListener('click',function(){ SORT_BY_POS=!SORT_BY_POS; _sortBtn.classList.toggle('on',SORT_BY_POS); _sortBtn.setAttribute('aria-pressed',SORT_BY_POS?'true':'false'); _sortBtn.textContent=SORT_BY_POS?'Sorted by position':'Sort by position'; renderCards(); }); }
       var _viewBtn=$('viewBtn'); if(_viewBtn){ _viewBtn.addEventListener('click',function(){ VIEW_MODE=(VIEW_MODE==='card')?'list':'card'; var on=(VIEW_MODE==='card'); _viewBtn.classList.toggle('on',on); _viewBtn.setAttribute('aria-pressed',on?'true':'false'); _viewBtn.textContent=on?'View: Card':'View: List'; if(on) resolveCardImages(); renderCards(); }); } // view-only toggle; never touches lineup/sort
     function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
 
     
+      // ===== DRAFT DURABILITY: auto-save the in-progress lineup so a reload/leave restores it =====
+      // Key: depot_draft for a fresh solo build; depot_draft_<matchId> when on builder.html?match=<id>
+      // (so the accept-flow draft is tied to that match and never collides with a solo build).
+      var DRAFT_RESTORED = false;     // guard: only restore once, on initial load
+      function draftKey(){ var m=null; try{ m = new URLSearchParams(window.location.search).get('match'); }catch(e){ m=null; } return m ? ('depot_draft_'+m) : 'depot_draft'; }
+      function draftStore(){ try{ return window.localStorage; }catch(e){ return null; } }
+      function draftIsEmpty(){
+        try{
+          var anyBat = (typeof ORDER!=='undefined') && ORDER.some(function(x){ return x && x.id; });
+          var hasPit = (typeof PITCHER!=='undefined') && !!PITCHER;
+          var t=''; try{ var el=$('teamNameInput'); t = el ? String(el.value||'').trim() : ''; }catch(e){}
+          return !anyBat && !hasPit && !t;
+        }catch(e){ return true; }
+      }
+      function saveDraft(){
+        // Called after every lineup mutation (via renderAll) + on team-name edits.
+        if(DRAFT_RESTORING) return;   // don't echo a restore back to storage mid-restore
+        var st=draftStore(); if(!st) return;
+        try{
+          if(draftIsEmpty()){ st.removeItem(draftKey()); return; }   // empty/cleared draft -> drop the key
+          var t=''; try{ var el=$('teamNameInput'); t = el ? String(el.value||'') : ''; }catch(e){}
+          var data={ v:1, ts:Date.now(),
+                     order:(typeof ORDER!=='undefined'?ORDER:null),
+                     pitcher:(typeof PITCHER!=='undefined'?PITCHER:null),
+                     team:t };
+          st.setItem(draftKey(), JSON.stringify(data));
+        }catch(e){ /* storage full / disabled -> ignore, never break the builder */ }
+      }
+      var DRAFT_RESTORING=false;
+      function restoreDraft(){
+        // Restore once, on initial load, into THIS context (solo key vs this match's key).
+        if(DRAFT_RESTORED) return; DRAFT_RESTORED=true;
+        var st=draftStore(); if(!st) return;
+        var raw; try{ raw=st.getItem(draftKey()); }catch(e){ return; }
+        if(!raw) return;
+        var d; try{ d=JSON.parse(raw); }catch(e){ try{ st.removeItem(draftKey()); }catch(_){} return; }   // corrupt -> drop + ignore
+        if(!d || typeof d!=='object'){ return; }
+        try{
+          DRAFT_RESTORING=true;
+          if(Array.isArray(d.order) && typeof ORDER!=='undefined'){
+            var arr=new Array(9).fill(null);
+            for(var i=0;i<9;i++){ var x=d.order[i]; if(x && x.id){ arr[i]={ id:x.id, pos:(x.pos||''), outOfPos:!!x.outOfPos, natPos:(x.natPos||'') }; } }
+            ORDER=arr;
+          }
+          if(typeof PITCHER!=='undefined'){ PITCHER = (d.pitcher!=null ? d.pitcher : null); }
+          try{ var el=$('teamNameInput'); if(el && typeof d.team==='string' && d.team) el.value=d.team; }catch(e){}
+          if(typeof renderAll==='function') renderAll();
+        }catch(e){ /* bad data -> ignore */ }
+        finally{ DRAFT_RESTORING=false; }
+      }
+      function clearDraft(){ var st=draftStore(); if(!st) return; try{ st.removeItem(draftKey()); }catch(e){} }
+
+      // ===== MATCH STATUS PANEL (challenger<->accepter progress) =====
+      function ensureMatchStatusEl(){
+        var el=document.getElementById('matchStatus'); if(el) return el;
+        el=document.createElement('div'); el.id='matchStatus';
+        var host=document.getElementById('mpBanner') || document.getElementById('builderView') || document.body;
+        if(host && host.parentNode){ host.parentNode.insertBefore(el, host); } else { (document.getElementById('builderView')||document.body).insertBefore ? (document.getElementById('builderView')||document.body).insertBefore(el, (document.getElementById('builderView')||document.body).firstChild) : document.body.appendChild(el); }
+        return el;
+      }
+      function teamName(L, fb){ try{ if(L && L.teamName) return String(L.teamName); }catch(e){} return fb; }
+      function renderMatchStatus(row){
+        try{
+          if(!row) return;
+          var el=ensureMatchStatusEl();
+          var cT=teamName(row.challenger_lineup, 'Challenger');
+          var status=row.status||'pending';
+          var oppSet=!!row.opponent_id || (row.opponent_lineup && row.opponent_lineup.teamName);
+          var oT=teamName(row.opponent_lineup, oppSet?'Opponent':null);
+          var chalLine='<span class="ms-team">'+esc(cT)+'</span><span class="ms-ok">lineup set \u2713</span>';
+          var oppState, oppCls;
+          if(status==='played'){ oppState='played \u2713'; oppCls='ms-ok'; }
+          else if(status==='accepted' || oppSet){ oppState='accepted \u2713'; oppCls='ms-ok'; }
+          else { oppState='building\u2026'; oppCls='ms-wait'; }
+          var oppLine='<span class="ms-team">'+esc(oT||'Opponent')+'</span><span class="'+oppCls+'">'+oppState+'</span>';
+          var overall = status==='played' ? 'PLAYED' : (status==='accepted' ? 'ACCEPTED' : (status==='declined' ? 'DECLINED' : 'PENDING'));
+          var nextHtml='';
+          if(status==='accepted' || status==='played'){ nextHtml='<div class="ms-next">Next: <b>'+(status==='played'?'VIEW MATCH':'PLAY MATCH')+'</b></div>'; }
+          else if(status==='pending' && !oppSet){ nextHtml='<div class="ms-next">Next: opponent builds a lineup &amp; accepts.</div>'; }
+          el.innerHTML='<h3>MATCH STATUS</h3>'
+            + '<div class="ms-row">'+chalLine+'</div>'
+            + '<div class="ms-row">'+oppLine+'</div>'
+            + '<div class="ms-overall">Status: <b>'+overall+'</b></div>'
+            + nextHtml;
+        }catch(e){ /* informational only -> never break the builder */ }
+      }
+
     // ===== HAND-OFF TO SIM =====
     // Batting order = 9 hitters (8 fielders + DH), NO pitcher. Pitcher sent separately.
     function buildTeamPayload(){
@@ -705,6 +806,7 @@
               if(!row || !row.id){ showChallengeError('Match created but no id was returned.'); return; }
               var link='https://nickpeets.github.io/carddepot/game/builder.html?match='+row.id;
               var li=$('challengeLink'); if(li) li.value=link;
+                  try{ clearDraft(); }catch(e){}
               var pnl=$('challengePanel'); if(pnl) pnl.style.display='block';
               var cm=$('copyMsg'); if(cm) cm.textContent='';
             }catch(err){
@@ -801,6 +903,7 @@
         catch(e){ banner('Could not load this challenge (network error). The normal builder still works below.'); return; }
         if(res.error){ banner('Could not load this challenge: '+(res.error.message||'unknown error')+'. The normal builder still works below.'); return; }
         var row = res.data;
+          try{ if(row) renderMatchStatus(row); }catch(e){}
         if(!row){ banner('This challenge is no longer available (not found). You can still build a lineup below.'); return; }
         if(row.status==='accepted'){
           var cN=(row.challenger_lineup && row.challenger_lineup.teamName)?String(row.challenger_lineup.teamName):'Challenger';
@@ -868,6 +971,7 @@
           banner('<b style="color:var(--gold);">CHALLENGE ACCEPTED!</b><br>'+escapeHtml(MP.challengerTeam)+' vs '+escapeHtml(yourTeam)+' is ready.'+(selfChallenge?'<br><span style="color:var(--gold)">Heads up: you accepted your own challenge (same user) \u2014 allowed for testing.</span>':'')+noteWarn);
           aBtn.textContent='ACCEPTED'; aBtn.disabled=true;
           showPlayMatchButton(MP.matchId, 'accepted');
+                  try{ clearDraft(); }catch(e){}
         }catch(err){
           var msg=(err && (err.message||err.error_description||err.hint))||'Could not accept challenge.';
           banner('Accept failed: '+escapeHtml(msg)+' The match was not changed.');
