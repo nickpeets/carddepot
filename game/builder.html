@@ -742,6 +742,7 @@
       var pitcher=null;
       if(PITCHER){ var pc=cardById(PITCHER); var prv=RESOLVED[PITCHER]||{};
         pitcher={ name:(pc.player||'PITCHER').toUpperCase() };
+            if(prv.rates){ pitcher.rates=prv.rates; pitcher.BB=prv.rates.BB; pitcher.K=prv.rates.K; pitcher.HR=prv.rates.HR; pitcher._2B=prv.rates._2B; pitcher._3B=prv.rates._3B; pitcher._1B=prv.rates._1B; }
         if(prv.era!=null && prv.era!=='') pitcher.era=String(prv.era);
         if(prv.w!=null) pitcher.w=String(prv.w);
         if(prv.l!=null) pitcher.l=String(prv.l);
@@ -770,6 +771,7 @@
           if(PITCHER){
             var pc=cardById(PITCHER)||{}; var prv=RESOLVED[PITCHER]||{};
             pitcher={ cardId:PITCHER, name:(pc.player||'PITCHER').toUpperCase() };
+            if(prv.rates){ pitcher.rates=prv.rates; pitcher.BB=prv.rates.BB; pitcher.K=prv.rates.K; pitcher.HR=prv.rates.HR; pitcher._2B=prv.rates._2B; pitcher._3B=prv.rates._3B; pitcher._1B=prv.rates._1B; }
             if(prv.era!=null && prv.era!=='') pitcher.era=String(prv.era);
             if(prv.w!=null) pitcher.w=String(prv.w);
             if(prv.l!=null) pitcher.l=String(prv.l);
