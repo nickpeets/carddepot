@@ -437,7 +437,7 @@ function setPitchSpeed(mph) {
 function __pitchKey(p) { return (p && p.name) ? String(p.name) : "__unknown__"; }
 function __pitchRec(key) { if (!PITCH.byPitcher[key]) PITCH.byPitcher[key] = { pc: 0, k: 0, bb: 0 }; return PITCH.byPitcher[key]; }
 // Point the live PC box at a specific pitcher (by identity). A new (relief) pitcher naturally starts at 0.
-function setActivePitcher(p) { var key = __pitchKey(p); PITCH.active = key; var r = __pitchRec(key); PITCH.pc = r.pc; PITCH.k = r.k; PITCH.bb = r.bb; renderPitchStats(); }
+function setActivePitcher(sideKey, p) { var key = String(sideKey == null ? '__noside__' : sideKey); PITCH.active = key; var r = __pitchRec(key); var id = __pitchKey(p); if (r.id !== undefined && r.id !== id) { r.pc = 0; r.k = 0; r.bb = 0; } r.id = id; PITCH.pc = r.pc; PITCH.k = r.k; PITCH.bb = r.bb; renderPitchStats(); }
 function __activeRec() { return __pitchRec(PITCH.active == null ? "__unknown__" : PITCH.active); }
 function incPC(n) { var r = __activeRec(); r.pc += (n || 1); PITCH.pc = r.pc; renderPitchStats(); }
 function addK() { var r = __activeRec(); r.k += 1; PITCH.k = r.k; renderPitchStats(); }
@@ -1111,7 +1111,7 @@ function highlightLineup(teamCode, batIdx) {
     setPanel('panel-ondeck', ev.onDeck.name, ev.onDeck.avg, ev.onDeck.hr, ev.onDeck.rbi);
     setPanel('panel-inhole', ev.inHole.name, ev.inHole.avg, ev.inHole.hr, ev.inHole.rbi);
     // Pitching box
-    setPanel('pitching-box', ev.pitcher.name, ev.pitcher.era, ev.pitcher.w, ev.pitcher.l); setActivePitcher(ev.pitcher); /* PC box follows the pitcher on the mound (per-pitcher tally) */
+    setPanel('pitching-box', ev.pitcher.name, ev.pitcher.era, ev.pitcher.w, ev.pitcher.l); setActivePitcher(ev.half === 'top' ? 'home' : 'away', ev.pitcher); /* PC box keyed on the defensive SIDE (collision-proof), label uses pitcher name */
     // Sync lineup-column highlight to the current batter (same source as AT BAT/ON DECK/IN THE HOLE)
     highlightLineup(ev.teamCode, ev.batterIdx);
     paintDepotVisitorNames();
@@ -1190,7 +1190,7 @@ function highlightLineup(teamCode, batIdx) {
     setPanel('atbat-box', ev.batter.name, ev.batter.avg, ev.batter.hr, ev.batter.rbi);
     setPanel('panel-ondeck', ev.onDeck.name, ev.onDeck.avg, ev.onDeck.hr, ev.onDeck.rbi);
     setPanel('panel-inhole', ev.inHole.name, ev.inHole.avg, ev.inHole.hr, ev.inHole.rbi);
-    setPanel('pitching-box', ev.pitcher.name, ev.pitcher.era, ev.pitcher.w, ev.pitcher.l); setActivePitcher(ev.pitcher); /* PC box follows the pitcher on the mound (per-pitcher tally) */
+    setPanel('pitching-box', ev.pitcher.name, ev.pitcher.era, ev.pitcher.w, ev.pitcher.l); setActivePitcher(ev.half === 'top' ? 'home' : 'away', ev.pitcher); /* PC box keyed on the defensive SIDE (collision-proof), label uses pitcher name */
   // Sync lineup-column highlight to the current batter EVERY pitch (same source as AT BAT) so it never lags until the PA resolves
   highlightLineup(ev.teamCode, ev.batterIdx);
   setPitchSpeed(pitch.speed);
