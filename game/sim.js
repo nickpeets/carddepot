@@ -400,7 +400,7 @@
   function setText(id, v) { var e = $(id); if (e) e.textContent = String(v); }
 
 // ---- Pitch-stat tracking (PC / K / BB) + pitch speed unit ------------
-var PITCH = { pc: 0, k: 0, bb: 0, pcSpan: null, kSpan: null, bbSpan: null, speedSpan: null, resolved: false };
+var PITCH = { pc: 0, k: 0, bb: 0, byPitcher: {}, active: null, pcSpan: null, kSpan: null, bbSpan: null, speedSpan: null, resolved: false };
 function resolvePitchSpans() {
   if (PITCH.resolved) return;
   var speedLine = $('last-pitch-speed');
@@ -434,10 +434,15 @@ function setPitchSpeed(mph) {
   if (PITCH.speedSpan) { PITCH.speedSpan.textContent = mph; }
   else { setText('last-pitch-speed', mph + ' MPH'); }
 }
-function incPC(n) { PITCH.pc += (n || 1); renderPitchStats(); }
-function addK() { PITCH.k += 1; renderPitchStats(); }
-function addBB() { PITCH.bb += 1; renderPitchStats(); }
-function resetPitchStats() { PITCH.pc = 0; PITCH.k = 0; PITCH.bb = 0; renderPitchStats(); }
+function __pitchKey(p) { return (p && p.name) ? String(p.name) : "__unknown__"; }
+function __pitchRec(key) { if (!PITCH.byPitcher[key]) PITCH.byPitcher[key] = { pc: 0, k: 0, bb: 0 }; return PITCH.byPitcher[key]; }
+// Point the live PC box at a specific pitcher (by identity). A new (relief) pitcher naturally starts at 0.
+function setActivePitcher(p) { var key = __pitchKey(p); PITCH.active = key; var r = __pitchRec(key); PITCH.pc = r.pc; PITCH.k = r.k; PITCH.bb = r.bb; renderPitchStats(); }
+function __activeRec() { return __pitchRec(PITCH.active == null ? "__unknown__" : PITCH.active); }
+function incPC(n) { var r = __activeRec(); r.pc += (n || 1); PITCH.pc = r.pc; renderPitchStats(); }
+function addK() { var r = __activeRec(); r.k += 1; PITCH.k = r.k; renderPitchStats(); }
+function addBB() { var r = __activeRec(); r.bb += 1; PITCH.bb = r.bb; renderPitchStats(); }
+function resetPitchStats() { PITCH.byPitcher = {}; PITCH.active = null; PITCH.pc = 0; PITCH.k = 0; PITCH.bb = 0; renderPitchStats(); }
 function pitchesInPA(ev) { return (ev && ev.pitches && ev.pitches.length) ? ev.pitches.length : 1; }
 // ---- Ball-flight line overlay (static dotted line: home -> hit field) -
 var HOME_PT = { x: 1000, y: 1180 };
@@ -1106,7 +1111,7 @@ function highlightLineup(teamCode, batIdx) {
     setPanel('panel-ondeck', ev.onDeck.name, ev.onDeck.avg, ev.onDeck.hr, ev.onDeck.rbi);
     setPanel('panel-inhole', ev.inHole.name, ev.inHole.avg, ev.inHole.hr, ev.inHole.rbi);
     // Pitching box
-    setPanel('pitching-box', ev.pitcher.name, ev.pitcher.era, ev.pitcher.w, ev.pitcher.l);
+    setPanel('pitching-box', ev.pitcher.name, ev.pitcher.era, ev.pitcher.w, ev.pitcher.l); setActivePitcher(ev.pitcher); /* PC box follows the pitcher on the mound (per-pitcher tally) */
     // Sync lineup-column highlight to the current batter (same source as AT BAT/ON DECK/IN THE HOLE)
     highlightLineup(ev.teamCode, ev.batterIdx);
     paintDepotVisitorNames();
@@ -1185,7 +1190,7 @@ function highlightLineup(teamCode, batIdx) {
     setPanel('atbat-box', ev.batter.name, ev.batter.avg, ev.batter.hr, ev.batter.rbi);
     setPanel('panel-ondeck', ev.onDeck.name, ev.onDeck.avg, ev.onDeck.hr, ev.onDeck.rbi);
     setPanel('panel-inhole', ev.inHole.name, ev.inHole.avg, ev.inHole.hr, ev.inHole.rbi);
-    setPanel('pitching-box', ev.pitcher.name, ev.pitcher.era, ev.pitcher.w, ev.pitcher.l);
+    setPanel('pitching-box', ev.pitcher.name, ev.pitcher.era, ev.pitcher.w, ev.pitcher.l); setActivePitcher(ev.pitcher); /* PC box follows the pitcher on the mound (per-pitcher tally) */
   // Sync lineup-column highlight to the current batter EVERY pitch (same source as AT BAT) so it never lags until the PA resolves
   highlightLineup(ev.teamCode, ev.batterIdx);
   setPitchSpeed(pitch.speed);
@@ -1360,7 +1365,7 @@ function highlightLineup(teamCode, batIdx) {
     };
     // R (runs scored) is credited by scorer NAME; tally a name->team+count first.
     function batRec(t, idx, b){
-      if (!t.bat[idx]) { t.bat[idx] = { idx:idx, name:b.name, pos:(b.pos||''), ab:0, r:0, h:0, rbi:0, hr:0, bb:0, k:0 }; t.order.push(idx); }
+      if (!t.bat[idx]) { t.bat[idx] = { idx:idx, name:b.name, pos:(b.pos||''), ab:0, r:0, h:0, rbi:0, hr:0, _2B:0, _3B:0, bb:0, k:0 }; t.order.push(idx); }
       return t.bat[idx];
     }
     var scorers = {}; // name -> count (across whole game)
@@ -1374,7 +1379,7 @@ function highlightLineup(teamCode, batIdx) {
       var isOutPA = (oc==='K'||oc==='OUT');
       if (oc==='BB'){ rec.bb++; oppPit.bb++; }
       else { rec.ab++; }              // K, OUT, and all hits count as AB
-      if (isHit){ rec.h++; oppPit.h++; if(oc==='HR') rec.hr++; }
+      if (isHit){ rec.h++; oppPit.h++; if(oc==='HR') rec.hr++; else if(oc==='_2B') rec._2B++; else if(oc==='_3B') rec._3B++; }
       if (oc==='K'){ rec.k++; oppPit.k++; }
       rec.rbi += (ev.runsOnPlay||0);
       oppPit.r += (ev.runsOnPlay||0);
@@ -1393,16 +1398,16 @@ function highlightLineup(teamCode, batIdx) {
   function __bxIP(outs){ return Math.floor(outs/3) + '.' + (outs%3); }
   function __bxBatTable(t){
     var rows = '';
-    var tot = { ab:0, r:0, h:0, rbi:0, hr:0, bb:0, k:0 };
+    var tot = { ab:0, r:0, h:0, _2B:0, _3B:0, rbi:0, hr:0, bb:0, k:0 };
     t.order.sort(function(a,b){ return a-b; }).forEach(function(idx){
       var p = t.bat[idx];
-      tot.ab+=p.ab; tot.r+=p.r; tot.h+=p.h; tot.rbi+=p.rbi; tot.hr+=p.hr; tot.bb+=p.bb; tot.k+=p.k;
+      tot.ab+=p.ab; tot.r+=p.r; tot.h+=p.h; tot._2B+=(p._2B||0); tot._3B+=(p._3B||0); tot.rbi+=p.rbi; tot.hr+=p.hr; tot.bb+=p.bb; tot.k+=p.k;
       rows += '<tr><td class="bx-name">'+__bxEsc(p.name)+' <span class="bx-pos">'+__bxEsc(p.pos||'')+'</span></td>'+
-        '<td>'+p.ab+'</td><td>'+p.r+'</td><td>'+p.h+'</td><td>'+p.rbi+'</td><td>'+p.hr+'</td><td>'+p.bb+'</td><td>'+p.k+'</td></tr>';
+        '<td>'+p.ab+'</td><td>'+p.r+'</td><td>'+p.h+'</td><td>'+(p._2B||0)+'</td><td>'+(p._3B||0)+'</td><td>'+p.hr+'</td><td>'+p.rbi+'</td><td>'+p.bb+'</td><td>'+p.k+'</td></tr>';
     });
-    rows += '<tr class="bx-tot"><td class="bx-name">TOTALS</td><td>'+tot.ab+'</td><td>'+tot.r+'</td><td>'+tot.h+'</td><td>'+tot.rbi+'</td><td>'+tot.hr+'</td><td>'+tot.bb+'</td><td>'+tot.k+'</td></tr>';
+    rows += '<tr class="bx-tot"><td class="bx-name">TOTALS</td><td>'+tot.ab+'</td><td>'+tot.r+'</td><td>'+tot.h+'</td><td>'+tot._2B+'</td><td>'+tot._3B+'</td><td>'+tot.hr+'</td><td>'+tot.rbi+'</td><td>'+tot.bb+'</td><td>'+tot.k+'</td></tr>';
     return '<div class="bx-sec">'+__bxEsc(t.name)+' \u2014 BATTING</div>'+
-      '<table><thead><tr><th class="bx-name">BATTER</th><th>AB</th><th>R</th><th>H</th><th>RBI</th><th>HR</th><th>BB</th><th>K</th></tr></thead><tbody>'+rows+'</tbody></table>';
+      '<table><thead><tr><th class="bx-name">BATTER</th><th>AB</th><th>R</th><th>H</th><th>2B</th><th>3B</th><th>HR</th><th>RBI</th><th>BB</th><th>K</th></tr></thead><tbody>'+rows+'</tbody></table>';
   }
   function __bxPitTable(t){
     var p = t.pitcher;
