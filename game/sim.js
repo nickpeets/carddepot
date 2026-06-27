@@ -858,7 +858,7 @@ function clearFlightLine() {
             onDeck: team.lineup[(bi + 1) % 9], inHole: team.lineup[(bi + 2) % 9],
             pitcher: pit,
             outcome: ev.outcome, location: ev.location, outType: ev.outType, infielder: ev.infielder, error: !!ev.error,
-            runsOnPlay: ev.runs, basesAfter: (outs >= 3 ? [null, null, null] : bases.slice()), outsAfter: outs,
+            runsOnPlay: ev.runs, scored: (ev.scored ? ev.scored.slice() : []), basesAfter: (outs >= 3 ? [null, null, null] : bases.slice()), outsAfter: outs,
             text: resultText(ev, rng, __ctx),
             situOnly: __situOnly,
             pitches: buildPitchSequence(ev.outcome, rng),
@@ -1318,11 +1318,154 @@ function highlightLineup(teamCode, batIdx) {
     setResultLine('PLAY BALL!');
   }
 
+  // ===== POST-GAME BOX SCORE (additive; derived from GAME.stream + GAME.line) =====
+  // The engine does NOT accumulate per-player stats; we derive them by walking the
+  // SAME event stream that drives the scoreboard, so box totals reconcile with the
+  // line score (sum of batting R == team R == line-score R; sum of H == H column).
+  function __bxEnsureStyle(){
+    if (document.getElementById('boxscore-style')) return;
+    var st = document.createElement('style');
+    st.id = 'boxscore-style';
+    st.textContent =
+      '#boxscore-overlay{position:fixed;inset:0;z-index:300000;background:rgba(0,0,0,0.82);' +
+        'display:none;align-items:flex-start;justify-content:center;overflow:auto;padding:28px 12px;}' +
+      '#boxscore-overlay.show{display:flex;}' +
+      '#boxscore-panel{background:#000;border:4px solid #f6c81e;box-shadow:0 0 0 4px #000,0 8px 28px rgba(0,0,0,0.7);' +
+        'max-width:980px;width:100%;color:#fff;font-family:\'Press Start 2P\',monospace;padding:20px 18px 26px;}' +
+      '#boxscore-panel h2{color:#f6c81e;font-size:16px;margin:0 0 4px;letter-spacing:1px;text-align:center;}' +
+      '#boxscore-panel .bx-sub{color:#9fdcff;font-size:9px;text-align:center;margin-bottom:16px;letter-spacing:1px;}' +
+      '#boxscore-panel .bx-sec{color:#f6c81e;font-size:11px;margin:16px 0 6px;border-bottom:2px solid #f6c81e;padding-bottom:4px;letter-spacing:1px;}' +
+      '#boxscore-panel table{width:100%;border-collapse:collapse;font-size:9px;margin-bottom:6px;}' +
+      '#boxscore-panel th,#boxscore-panel td{padding:4px 3px;text-align:center;white-space:nowrap;}' +
+      '#boxscore-panel th{color:#9fdcff;border-bottom:1px solid #444;}' +
+      '#boxscore-panel td.bx-name,#boxscore-panel th.bx-name{text-align:left;color:#fff;}' +
+      '#boxscore-panel tr.bx-tot td{color:#f6c81e;border-top:1px solid #444;font-weight:bold;}' +
+      '#boxscore-panel .bx-pos{color:#888;}' +
+      '#boxscore-line{width:100%;border-collapse:collapse;font-size:9px;margin-bottom:6px;}' +
+      '#boxscore-line td,#boxscore-line th{border:1px solid #444;padding:4px 5px;text-align:center;}' +
+      '#boxscore-line th{color:#9fdcff;}' +
+      '#boxscore-line td.bx-rhe{color:#f6c81e;font-weight:bold;}' +
+      '#boxscore-close{display:block;margin:18px auto 0;font-family:\'Press Start 2P\',monospace;font-size:12px;' +
+        'color:#f6c81e;background:#7a1c1c;border:3px solid #f6c81e;padding:10px 22px;cursor:pointer;letter-spacing:1px;}' +
+      '#boxscore-result{text-align:center;color:#fff;font-size:12px;margin:10px 0 4px;letter-spacing:1px;}';
+    document.head.appendChild(st);
+  }
+  // Walk the stream (up to position `upto`, default whole game) and derive stats.
+  function __bxDerive(stream, upto){
+    if (upto == null) upto = stream.length - 1;
+    var teams = {
+      mudcats: { name: MUDCATS.name, code:'mudcats', bat: {}, order: [], pitcher: { name: ACORNS.pitcher.name, team: ACORNS.name, ip_outs:0, h:0, r:0, bb:0, k:0 } },
+      acorns:  { name: ACORNS.name,  code:'acorns',  bat: {}, order: [], pitcher: { name: MUDCATS.pitcher.name, team: MUDCATS.name, ip_outs:0, h:0, r:0, bb:0, k:0 } }
+    };
+    // R (runs scored) is credited by scorer NAME; tally a name->team+count first.
+    function batRec(t, idx, b){
+      if (!t.bat[idx]) { t.bat[idx] = { idx:idx, name:b.name, pos:(b.pos||''), ab:0, r:0, h:0, rbi:0, hr:0, bb:0, k:0 }; t.order.push(idx); }
+      return t.bat[idx];
+    }
+    var scorers = {}; // name -> count (across whole game)
+    for (var i=0; i<=upto && i<stream.length; i++){
+      var ev = stream[i];
+      var t = teams[ev.teamCode]; if (!t) continue;
+      var oppPit = (ev.teamCode === 'mudcats') ? teams.mudcats.pitcher : teams.acorns.pitcher; // pitcher that FACED this batter
+      var rec = batRec(t, ev.batterIdx, ev.batter);
+      var oc = ev.outcome;
+      var isHit = (oc==='_1B'||oc==='_2B'||oc==='_3B'||oc==='HR');
+      var isOutPA = (oc==='K'||oc==='OUT');
+      if (oc==='BB'){ rec.bb++; oppPit.bb++; }
+      else { rec.ab++; }              // K, OUT, and all hits count as AB
+      if (isHit){ rec.h++; oppPit.h++; if(oc==='HR') rec.hr++; }
+      if (oc==='K'){ rec.k++; oppPit.k++; }
+      rec.rbi += (ev.runsOnPlay||0);
+      oppPit.r += (ev.runsOnPlay||0);
+      if (isOutPA) oppPit.ip_outs++;  // each K/OUT is one out recorded by the pitcher
+      // runs scored: credit each scorer name
+      var sc = ev.scored || [];
+      for (var s=0; s<sc.length; s++){ var nm=sc[s]; scorers[nm]=(scorers[nm]||0)+1; }
+    }
+    // Apply scorer counts to the matching batter (by name) on each team.
+    ['mudcats','acorns'].forEach(function(code){
+      var t = teams[code];
+      t.order.forEach(function(idx){ var rec=t.bat[idx]; if(scorers[rec.name]) rec.r = scorers[rec.name]; });
+    });
+    return teams;
+  }
+  function __bxIP(outs){ return Math.floor(outs/3) + '.' + (outs%3); }
+  function __bxBatTable(t){
+    var rows = '';
+    var tot = { ab:0, r:0, h:0, rbi:0, hr:0, bb:0, k:0 };
+    t.order.sort(function(a,b){ return a-b; }).forEach(function(idx){
+      var p = t.bat[idx];
+      tot.ab+=p.ab; tot.r+=p.r; tot.h+=p.h; tot.rbi+=p.rbi; tot.hr+=p.hr; tot.bb+=p.bb; tot.k+=p.k;
+      rows += '<tr><td class="bx-name">'+__bxEsc(p.name)+' <span class="bx-pos">'+__bxEsc(p.pos||'')+'</span></td>'+
+        '<td>'+p.ab+'</td><td>'+p.r+'</td><td>'+p.h+'</td><td>'+p.rbi+'</td><td>'+p.hr+'</td><td>'+p.bb+'</td><td>'+p.k+'</td></tr>';
+    });
+    rows += '<tr class="bx-tot"><td class="bx-name">TOTALS</td><td>'+tot.ab+'</td><td>'+tot.r+'</td><td>'+tot.h+'</td><td>'+tot.rbi+'</td><td>'+tot.hr+'</td><td>'+tot.bb+'</td><td>'+tot.k+'</td></tr>';
+    return '<div class="bx-sec">'+__bxEsc(t.name)+' \u2014 BATTING</div>'+
+      '<table><thead><tr><th class="bx-name">BATTER</th><th>AB</th><th>R</th><th>H</th><th>RBI</th><th>HR</th><th>BB</th><th>K</th></tr></thead><tbody>'+rows+'</tbody></table>';
+  }
+  function __bxPitTable(t){
+    var p = t.pitcher;
+    return '<div class="bx-sec">'+__bxEsc(p.team||t.name)+' \u2014 PITCHING</div>'+
+      '<table><thead><tr><th class="bx-name">PITCHER</th><th>IP</th><th>H</th><th>R</th><th>BB</th><th>K</th></tr></thead><tbody>'+
+      '<tr><td class="bx-name">'+__bxEsc(p.name)+'</td><td>'+__bxIP(p.ip_outs)+'</td><td>'+p.h+'</td><td>'+p.r+'</td><td>'+p.bb+'</td><td>'+p.k+'</td></tr>'+
+      '</tbody></table>';
+  }
+  function __bxEsc(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;'); }
+  function __bxLineScore(line){
+    var hdr = '<tr><th class="bx-name"></th>';
+    for (var i=1;i<=9;i++) hdr += '<th>'+i+'</th>';
+    hdr += '<th class="bx-rhe">R</th><th class="bx-rhe">H</th><th class="bx-rhe">E</th></tr>';
+    function row(name, side){
+      var r = '<tr><td class="bx-name">'+__bxEsc(name)+'</td>';
+      for (var i=0;i<9;i++){ var v=side.innings[i]; r += '<td>'+(v==null?'':v)+'</td>'; }
+      r += '<td class="bx-rhe">'+side.r+'</td><td class="bx-rhe">'+side.h+'</td><td class="bx-rhe">'+side.e+'</td></tr>';
+      return r;
+    }
+    return '<div class="bx-sec">LINE SCORE</div><table id="boxscore-line"><thead>'+hdr+'</thead><tbody>'+
+      row(MUDCATS.name, line.mudcats)+row(ACORNS.name, line.acorns)+'</tbody></table>';
+  }
+  function __bxOverlay(){
+    var ov = document.getElementById('boxscore-overlay');
+    if (ov) return ov;
+    __bxEnsureStyle();
+    ov = document.createElement('div'); ov.id='boxscore-overlay';
+    var panel = document.createElement('div'); panel.id='boxscore-panel';
+    ov.appendChild(panel);
+    ov.addEventListener('click', function(e){ if (e.target===ov) __bxHide(); });
+    document.body.appendChild(ov);
+    return ov;
+  }
+  function __bxHide(){ var ov=document.getElementById('boxscore-overlay'); if(ov) ov.classList.remove('show'); }
+  function renderBoxScore(stream, line, upto){
+    try {
+      stream = stream || GAME.stream; line = line || GAME.line;
+      if (!stream || !stream.length) return;
+      var teams = __bxDerive(stream, upto);
+      var mr = line.mudcats.r, ar = line.acorns.r;
+      var winner = mr>ar ? MUDCATS.name : ar>mr ? ACORNS.name : null;
+      var resultLine = winner ? (winner + ' WIN, ' + Math.max(mr,ar) + '\u2013' + Math.min(mr,ar)) : ('TIE, ' + mr + '\u2013' + ar);
+      var ov = __bxOverlay();
+      var panel = document.getElementById('boxscore-panel');
+      panel.innerHTML =
+        '<h2>BOX SCORE</h2>'+
+        '<div class="bx-sub">'+__bxEsc(MUDCATS.name)+' VS '+__bxEsc(ACORNS.name)+'</div>'+
+        '<div id="boxscore-result">FINAL \u2014 '+__bxEsc(resultLine)+'</div>'+
+        __bxLineScore(line)+
+        __bxBatTable(teams.mudcats)+ __bxPitTable(teams.acorns)+
+        __bxBatTable(teams.acorns)+  __bxPitTable(teams.mudcats);
+      var close = document.createElement('button'); close.id='boxscore-close'; close.type='button'; close.textContent='\u2715 CLOSE';
+      close.onclick = __bxHide; panel.appendChild(close);
+      ov.classList.add('show');
+    } catch(e){ if(typeof console!=='undefined') console.warn('[BoxScore] render failed:', e); }
+  }
+  if (typeof window!=='undefined'){ window.__renderBoxScore = renderBoxScore; }
+
   function flashDone() {
     var L = GAME.line;
     var msg = 'FINAL — ' + MUDCATS.name + ' ' + L.mudcats.r + ', ' + ACORNS.name + ' ' + L.acorns.r;
     setResultLine(msg);
     try{ if(typeof window!=="undefined" && typeof window.__onMatchComplete==="function"){ window.__onMatchComplete(GAME.line); } }catch(__e){}
+    try{ if(typeof window!=="undefined" && typeof window.__renderBoxScore==="function"){ window.__renderBoxScore(GAME.stream, GAME.line); } }catch(__e2){}
   }
 
   // ---- Control panel (fixed, outside the scaled stage) ------------------
@@ -1373,7 +1516,10 @@ function highlightLineup(teamCode, batIdx) {
       GAME.pitchIdx = -1;           // reset any partial PA so the new mode starts clean
       if (wasPlaying) startAuto();
     };
-    bar.appendChild(playBtn); bar.appendChild(stepBtn); bar.appendChild(resetBtn);
+    var boxBtn = makeBtn('BOX SCORE');
+    boxBtn.style.background = '#7a5a1c'; boxBtn.style.borderColor = '#3f2f0d';
+    boxBtn.onclick = function () { if (typeof window.__renderBoxScore === 'function') window.__renderBoxScore(GAME.stream, GAME.line); };
+    bar.appendChild(playBtn); bar.appendChild(stepBtn); bar.appendChild(resetBtn); bar.appendChild(boxBtn);
     bar.appendChild(paceLbl); bar.appendChild(pace);
     document.body.appendChild(bar);
   }
