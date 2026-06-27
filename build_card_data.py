@@ -14,7 +14,7 @@ Keyless/static: plain files fetched one year at a time.
 """
 import csv, json, os, sys, datetime, unicodedata, re
 
-SRC = "baseball_cards_6brands_all_sets_1980-present.csv"
+SRC = "baseball_cards_with_urls.csv"
 OUT = "data"
 
 def norm_name(s):
@@ -48,6 +48,8 @@ def main():
                 "number": (row.get("Card Number") or "").strip(),
                 "player": player,
                 "notes":  (row.get("Notes") or "").strip(),
+                "url":    (row.get("Card Page URL") or "").strip(),
+                "team":   (row.get("Team") or "").strip(),
             }
             by_year.setdefault(year, []).append(rec)
             total += 1
