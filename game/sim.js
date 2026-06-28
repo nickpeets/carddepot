@@ -1309,6 +1309,26 @@ function highlightLineup(teamCode, batIdx) {
   }
   function toggleAuto() { GAME.playing ? stopAuto() : startAuto(); }
 
+  // ----- Initial card paint (FIX: cards were blank/placeholder on the first frame) -----
+  // The four boxes are only painted inside the per-event render path (applyEvent/applyPitch),
+  // which doesn't run until the first STEP. Paint them once at game start from GAME.stream[0]
+  // (the exact event the first STEP renders) using the SAME setPanel/setFace path, so there is
+  // no divergence and nothing jumps on the first step. Works for solo, applied-depot and match.
+  function paintInitialCards() {
+    var ev = GAME && GAME.stream && GAME.stream[0];
+    if (!ev || !ev.batter || !ev.onDeck || !ev.inHole || !ev.pitcher) return;
+    // AT BAT / ON DECK / IN THE HOLE = leadoff, 2nd, 3rd of the batting team
+    setPanel('atbat-box',    ev.batter.name, ev.batter.avg, ev.batter.hr, ev.batter.rbi, ev.teamCode);
+    setPanel('panel-ondeck', ev.onDeck.name, ev.onDeck.avg, ev.onDeck.hr, ev.onDeck.rbi, ev.teamCode);
+    setPanel('panel-inhole', ev.inHole.name, ev.inHole.avg, ev.inHole.hr, ev.inHole.rbi, ev.teamCode);
+    // PITCHING = defending team's pitcher (opposite teamCode), keyed to the defensive SIDE
+    setPanel('pitching-box', ev.pitcher.name, ev.pitcher.era, ev.pitcher.w, ev.pitcher.l, (ev.teamCode==='mudcats'?'acorns':'mudcats')); setActivePitcher(ev.half === 'top' ? 'home' : 'away', ev.pitcher);
+    // keep lineup-column highlight + team names consistent with the first STEP
+    highlightLineup(ev.teamCode, ev.batterIdx);
+    paintDepotVisitorNames();
+    applyTeamName();
+  }
+
   function resetGame(seed) {
     stopAuto();
     var built = buildPlayStream(seed);
@@ -1322,6 +1342,7 @@ function highlightLineup(teamCode, batIdx) {
     resetPitchStats();   // PC/K/BB -> 0 (per-pitcher; pitching change resets too)
     clearFlightLine();
     setResultLine('PLAY BALL!');
+    paintInitialCards();   // FIX: show real cards before the first STEP
   }
 
   // ===== POST-GAME BOX SCORE (additive; derived from GAME.stream + GAME.line) =====
