@@ -922,9 +922,10 @@ function clearFlightLine() {
       var plan = [];
       for (var i = 0; i < 4; i++) plan.push('BALL');
       for (var k = 0; k < strikesToAdd; k++) plan.push(rng() < 0.5 ? 'STRIKE' : 'FOUL');
-      // shuffle but keep a BALL last
+      // No shuffle: emit in a stable order (strikes first, then balls), final BALL last,
+      // so the running count never jumps around. emit() keeps balls/strikes monotonic.
       var last = 'BALL'; plan.splice(plan.lastIndexOf('BALL'), 1);
-      for (var j = plan.length - 1; j > 0; j--) { var r = (rng() * (j + 1)) | 0; var tmp = plan[j]; plan[j] = plan[r]; plan[r] = tmp; }
+      plan.sort(function (a) { return a === 'BALL' ? 1 : -1; }); // strikes/fouls first
       plan.push(last);
       // guard: never let strikes reach 3 before the walk; if it would, convert that strike to a foul (caps at 2)
       plan.forEach(function (c) { emit(c); });
@@ -934,8 +935,8 @@ function clearFlightLine() {
       var foulsToAdd = (rng() < 0.5) ? ((rng() * 3) | 0) : 0; // 0..2 foul-offs at 2 strikes
       var plan2 = ['STRIKE', 'STRIKE'];     // first two strikes
       for (var bi = 0; bi < ballsToAdd; bi++) plan2.push('BALL');
-      // shuffle the first part
-      for (var j2 = plan2.length - 1; j2 > 0; j2--) { var r2 = (rng() * (j2 + 1)) | 0; var t2 = plan2[j2]; plan2[j2] = plan2[r2]; plan2[r2] = t2; }
+      // No shuffle: keep a stable order so the running count is monotonic and believable.
+      plan2.sort(function (a) { return a === 'BALL' ? 1 : -1; }); // strikes first, balls after
       plan2.forEach(function (c) { emit(c); });
       for (var f = 0; f < foulsToAdd; f++) emit('FOUL'); // battle at 2 strikes
       emit('STRIKE'); // strike three
@@ -949,7 +950,9 @@ function clearFlightLine() {
       var pre = [];
       for (var pb = 0; pb < preBalls; pb++) pre.push('BALL');
       for (var ps = 0; ps < preStrikes; ps++) pre.push(rng() < 0.5 ? 'STRIKE' : 'FOUL');
-      for (var j3 = pre.length - 1; j3 > 0; j3--) { var r3 = (rng() * (j3 + 1)) | 0; var t3 = pre[j3]; pre[j3] = pre[r3]; pre[r3] = t3; }
+      // No shuffle (authoritative-display fix): emit pre-pitch calls in a stable order
+      // so the on-screen count never goes backwards. emit() is monotonic by construction.
+      pre.sort(function (a) { return a === 'BALL' ? 1 : -1; });
       pre.forEach(function (c) { emit(c); });
       // terminal pitch: a swing put in play
       var pp = randPitch(rng);
@@ -1098,13 +1101,22 @@ function highlightLineup(teamCode, batIdx) {
     // Inning indicator
     setInning(ev.inning, ev.half);
     // Outs from the event; B/S already resolved (we show a representative final count)
-    // Show a small "final count" flavor: walks -> 4 balls, K -> strike 3.
+    // Authoritative final count, consistent with the outcome (no fabrication):
+    //   BB -> ends on ball 4; K -> ends on strike 3; in-play -> last pitch's count
+    //   (from the reconstructed-but-monotonic pitch sequence). Outs come from the
+    //   real within-half out count so the HUD agrees with the box score.
     var b = 0, s = 0;
-    if (ev.outcome === 'BB') { b = 4; s = (Math.random() * 3) | 0; }
-    else if (ev.outcome === 'K') { s = 3; b = (Math.random() * 3) | 0; }
-    else { b = (Math.random() * 3) | 0; s = (Math.random() * 2) | 0; }
-    if (!skipCount) setCount(b, s, ev.outsAfter % 3);
-    else setText('count-o', ev.outsAfter % 3);
+    if (ev.outcome === 'BB') { b = 4; s = 0; }
+    else if (ev.outcome === 'K') { b = 0; s = 3; }
+    else {
+      var _seq = ev.pitches || [];
+      var _last = _seq.length ? _seq[_seq.length - 1] : null;
+      b = _last ? _last.balls : 0;
+      s = _last ? _last.strikes : 0;
+    }
+    var _o = outsInHalfAfter(GAME.pos);
+    if (!skipCount) setCount(b, s, _o);
+    else setText('count-o', _o);
 
     // Panels: AT BAT / ON DECK / IN THE HOLE
     setPanel('atbat-box', ev.batter.name, ev.batter.avg, ev.batter.hr, ev.batter.rbi, ev.teamCode);
@@ -1185,7 +1197,7 @@ function highlightLineup(teamCode, batIdx) {
     setInning(ev.inning, ev.half);
     setText('count-b', pitch.balls);
     setText('count-s', pitch.strikes);
-    setText('count-o', (ev.outsAfter - (ev.terminalOuts || 0)) % 3 < 0 ? 0 : ((ev.outsBefore != null ? ev.outsBefore : 0) % 3));
+    setText('count-o', outsInHalfBefore(GAME.pos));
     // keep the at-bat panels current while pitches tick
     setPanel('atbat-box', ev.batter.name, ev.batter.avg, ev.batter.hr, ev.batter.rbi, ev.teamCode);
     setPanel('panel-ondeck', ev.onDeck.name, ev.onDeck.avg, ev.onDeck.hr, ev.onDeck.rbi, ev.teamCode);
@@ -1261,12 +1273,38 @@ function highlightLineup(teamCode, batIdx) {
     return true;
   }
 
-  // outs already recorded BEFORE the given stream index, within its half-inning.
-  function currentOutsBefore(pos) {
+  // Cumulative outs at the moment the half-inning containing stream[pos] began.
+  // Authoritative: scan back to the first event of this same inning+half and read its
+  // pre-PA cumulative outs (ev.outs). Outs are cumulative+monotonic across the game,
+  // so (cumulative - halfBase) yields the real 0..3 within-half progression.
+  function halfBaseOuts(pos) {
     var ev = GAME.stream[pos];
-    var prev = GAME.stream[pos - 1];
-    if (!prev || prev.inning !== ev.inning || prev.half !== ev.half) return 0;
-    return prev.outsAfter % 3;
+    if (!ev) return 0;
+    var i = pos;
+    while (i > 0) {
+      var pv = GAME.stream[i - 1];
+      if (!pv || pv.inning !== ev.inning || pv.half !== ev.half) break;
+      i--;
+    }
+    var first = GAME.stream[i];
+    return (first && typeof first.outs === 'number') ? first.outs : 0;
+  }
+  function clampOut(n){ return n < 0 ? 0 : (n > 3 ? 3 : n); }
+  // Real within-half outs BEFORE this event resolves (0..2).
+  function outsInHalfBefore(pos) {
+    var ev = GAME.stream[pos];
+    if (!ev) return 0;
+    return clampOut((ev.outs || 0) - halfBaseOuts(pos));
+  }
+  // Real within-half outs AFTER this event resolves (0..3; 3 ends the half).
+  function outsInHalfAfter(pos) {
+    var ev = GAME.stream[pos];
+    if (!ev) return 0;
+    return clampOut((ev.outsAfter || 0) - halfBaseOuts(pos));
+  }
+  // outs already recorded BEFORE the given stream index, within its half-inning (0..2).
+  function currentOutsBefore(pos) {
+    return outsInHalfBefore(pos);
   }
 
   // delay (ms) until the next scheduled tick, given what just happened.
