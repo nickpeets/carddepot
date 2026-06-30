@@ -736,12 +736,12 @@
     // ===== HAND-OFF TO SIM =====
     // Batting order = 9 hitters (8 fielders + DH), NO pitcher. Pitcher sent separately.
     function buildTeamPayload(){
-      var lineup=ORDER.map(function(slot){ var id=slot.id; var c=cardById(id); var rv=RESOLVED[id]||{};
-        return { name:(c.player||'PLAYER').toUpperCase(), avg:rv.avg, hr:rv.hr, rbi:rv.rbi, tendency:rv.tendency||'spray', rates:rv.rates, pos:slot.pos };
-      });
+      var lineup=await Promise.all(ORDER.map(async function(slot){ var id=slot.id; var c=cardById(id); var rv=RESOLVED[id]||{};
+        return { name:(c.player||'PLAYER').toUpperCase(), avg:rv.avg, hr:rv.hr, rbi:rv.rbi, tendency:rv.tendency||'spray', rates:rv.rates, pos:slot.pos, cardId:id, img:(c&&c.photoPath?await cardSignedUrl(c.photoPath):'') };
+      }));
       var pitcher=null;
       if(PITCHER){ var pc=cardById(PITCHER); var prv=RESOLVED[PITCHER]||{};
-        pitcher={ name:(pc.player||'PITCHER').toUpperCase() };
+        pitcher={ cardId:PITCHER, name:(pc.player||'PITCHER').toUpperCase(), img:(pc&&pc.photoPath?await cardSignedUrl(pc.photoPath):'') };
             if(prv.rates){ pitcher.rates=prv.rates; pitcher.BB=prv.rates.BB; pitcher.K=prv.rates.K; pitcher.HR=prv.rates.HR; pitcher._2B=prv.rates._2B; pitcher._3B=prv.rates._3B; pitcher._1B=prv.rates._1B; }
         if(prv.era!=null && prv.era!=='') pitcher.era=String(prv.era);
         if(prv.w!=null) pitcher.w=String(prv.w);
@@ -751,10 +751,10 @@
       return { name:teamName, code:'mudcats', lineup:lineup, pitcher:pitcher };
     }
     function deriveTeamName(){ var n=(USER&&USER.email||'').split('@')[0]; return (n||'DEPOT').toUpperCase().slice(0,12); }
-    $('playBtn').addEventListener('click',function(){
+    $('playBtn').addEventListener('click',async function(){
       var usable=ORDER.every(function(slot){ return slot && isUsableHitter(slot.id); });
       if(!usable || ORDER.indexOf(null)>=0 || !PITCHER) return;
-      try{ sessionStorage.setItem('depot_user_team', JSON.stringify(buildTeamPayload())); }catch(e){}
+      try{ sessionStorage.setItem('depot_user_team', JSON.stringify(await buildTeamPayload())); }catch(e){}
       window.location.href='./?from=builder';
     });
 
