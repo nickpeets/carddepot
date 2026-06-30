@@ -539,8 +539,8 @@
         var note=(st==='bad')?(rv.note||'no hitting line'):'';
         // status text (no MLB-API pill): just a tiny dim note when unusable as a hitter
         var resPos = naturalPosFor(c.id);
-        // "pitcher-ready": resolved position P, or no usable hitting line (still resolving -> neutral)
-        var isPitcherCard = (resPos==='P') || (!usable && st!=='pending');
+        // "pitcher-ready": only actual pitchers (resolved fielding position P) qualify
+        var isPitcherCard = (resPos==='P');
         var hitTag = '';
         // Add-to-order button: disabled if already in order, or order full, or not a usable hitter
         var full=(firstEmptySlot()<0);
@@ -636,7 +636,7 @@
     function addToOrder(id){ if(inOrder(id)>=0) return; if(!isUsableHitter(id)) return; var slot=firstEmptySlot(); if(slot<0) return; if(PITCHER===id) PITCHER=null; var nat=naturalPosFor(id); if(nat==='P') nat=''; var used=usedPositions(); var oop=false, assigned; if(nat && !used[nat]){ assigned=nat; } else if(nat && used[nat]){ assigned=nextFreePos(''); oop=true; } else { assigned=nextFreePos(''); } ORDER[slot]={ id:id, pos:assigned, outOfPos:oop, natPos:nat }; renderAll(); }
     function removeSlot(i){ ORDER[i]=null; renderAll(); }
     function setSlotPos(i,pos){ if(!ORDER[i]) return; var u=usedPositions(); if(u[pos] && ORDER[i].pos!==pos){ /* swap with whoever holds it */ for(var k=0;k<9;k++){ if(k!==i && ORDER[k] && ORDER[k].pos===pos){ ORDER[k].pos=ORDER[i].pos; break; } } } ORDER[i].pos=pos; ORDER[i].outOfPos=false; renderAll(); }
-    function setPitcher(id){ if(PITCHER===id){ PITCHER=null; renderAll(); return; } var oi=inOrder(id); if(oi>=0) ORDER[oi]=null; PITCHER=id; renderAll(); }
+    function setPitcher(id){ if(PITCHER===id){ PITCHER=null; renderAll(); return; } if(naturalPosFor(id)!=='P') return; var oi=inOrder(id); if(oi>=0) ORDER[oi]=null; PITCHER=id; renderAll(); }
     function moveSlot(from,to){ if(from<0||to<0||from===to||from>8||to>8) return; var arr=ORDER.slice(); var item=arr.splice(from,1)[0]; arr.splice(to,0,item); ORDER=arr; renderAll(); }
 
     $('clearBtn').addEventListener('click',function(){ ORDER=new Array(9).fill(null); PITCHER=null; renderAll(); });
