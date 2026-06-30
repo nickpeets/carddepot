@@ -14,7 +14,7 @@
 
 </style>
   <noscript>
-    <style>#__bundler_loading { display: none; }</style>
+    <style>#__bundler_loading { display: none; } #__bundler_err{display:none!important}</style>
     <div style="position:fixed;bottom:12px;left:12px;font:13px/1.4 -apple-system,BlinkMacSystemFont,sans-serif;color:#999;background:rgba(255,255,255,0.9);padding:6px 12px;border-radius:6px;box-shadow:0 1px 4px rgba(0,0,0,0.08);z-index:10000;">
       This page requires JavaScript to display.
     </div>
@@ -240,10 +240,10 @@ document.addEventListener('DOMContentLoaded', async function() {
       window.__DEPOT_MATCH_MODE = true;
       var firstPlay = (m.status==='accepted');
 
-      waitEngine(function(){
+      waitEngine(async function(){
         var E=window.__simEngine;
         // challenger -> MUDCATS (visitor/top), opponent -> ACORNS (home/bot)
-        var okC=E.applyDepotTeam(E.MUDCATS, m.challenger_lineup);
+        async function hydrateLineupArt(raw){ try{ if(!sb||!raw) return; var arr=(raw.lineup||raw.batters||[]).slice(); if(raw.pitcher) arr.push(raw.pitcher); var ids=[]; for(var _i=0;_i<arr.length;_i++){ if(arr[_i]&&arr[_i].cardId) ids.push(arr[_i].cardId); } if(!ids.length) return; var rows=await sb.from('cards').select('id,photo_front_path').in('id',ids); var pathById={}; if(rows&&rows.data){ rows.data.forEach(function(r){ pathById[r.id]=r.photo_front_path; }); } await Promise.all(arr.map(async function(p){ try{ var path=(p&&p.cardId)?pathById[p.cardId]:''; if(!path) return; var s=await sb.storage.from('card-images').createSignedUrl(path,3600); if(s&&s.data&&s.data.signedUrl) p.img=s.data.signedUrl; }catch(_e){} })); }catch(_e){} } try{ await hydrateLineupArt(m.challenger_lineup); await hydrateLineupArt(m.opponent_lineup); }catch(_e){} var okC=E.applyDepotTeam(E.MUDCATS, m.challenger_lineup);
         var okO=E.applyDepotTeam(E.ACORNS, m.opponent_lineup);
         // Single source of truth per side: the name shown MUST be the name of the
       // lineup actually applied/rendered. Never render a real name over demo/
