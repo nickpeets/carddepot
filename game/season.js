@@ -248,6 +248,18 @@
     return { result: result, wins: wins, losses: losses };
   }
 
+  // Resolve a season_game by its match_id, then record the result.
+  // Called from index.html __onMatchComplete (which knows match_id, not sgId).
+  async function recordSeasonResultByMatch(matchId, userScore, oppScore){
+    var sb = SB(), uid = UID();
+    if (!sb || !uid || !matchId) return;
+    var q = await sb.from('season_games').select('*')
+                    .eq('owner_id', uid).eq('match_id', matchId).limit(1);
+    if (q.error) throw q.error;
+    if (!q.data || !q.data.length) return;   // not a season game -> no-op
+    return await recordSeasonResult(q.data[0].id, userScore, oppScore);
+  }
+
   /* ---- expose ---------------------------------------------------------- */
   window.DepotSeason = {
     GAMES_TOTAL: GAMES_TOTAL,
@@ -260,6 +272,7 @@
     clearSeasonCtx: clearSeasonCtx,
     attachMatchToSeasonGame: attachMatchToSeasonGame,
     recordSeasonResult: recordSeasonResult,
+    recordSeasonResultByMatch: recordSeasonResultByMatch,
     makeOpponentLineup: makeOpponentLineup,
     avgToRates: avgToRates
   };
