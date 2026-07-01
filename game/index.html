@@ -261,6 +261,17 @@ document.addEventListener('DOMContentLoaded', async function() {
         // result writeback on completion (only first play of an 'accepted' match)
         var wroteBack=false;
         window.__onMatchComplete = function(line){
+          // ===== SEASON MODE writeback (runs first, then falls through) =====
+          // If this match is a season game, record the result idempotently.
+          // Does NOT return -> the existing match writeback below runs unchanged.
+          // user side = mudcats.r (cName), opponent = acorns.r (oName).
+          try {
+            if (window.DepotSeason && DepotSeason.recordSeasonResultByMatch && m && m.id) {
+              DepotSeason.recordSeasonResultByMatch(m.id, line.mudcats.r, line.acorns.r)
+                .catch(function(e){ console.error('[season] record failed', e); });
+            }
+          } catch (e) { console.error('[season] writeback hook failed', e); }
+          // ===== end SEASON MODE writeback =====
           if(!firstPlay || wroteBack || !isParty) {
             banner('FINAL \u2014 '+cName+' '+line.mudcats.r+', '+oName+' '+line.acorns.r+(m.status==='played'?'  (replay)':''));
             return;
@@ -292,6 +303,7 @@ document.addEventListener('DOMContentLoaded', async function() {
   </script>
 <script src="sim.js" defer></script>
 <script src="billboards.js" defer></script>
+<script src="season.js" defer></script>
 <script>
 // Back to Depot button. The bundler does document.documentElement.replaceWith(...),
 // so a static element would be wiped. Inject after load and keep it present.
