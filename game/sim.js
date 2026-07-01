@@ -1511,7 +1511,13 @@ function highlightLineup(teamCode, batIdx) {
       stream = stream || GAME.stream; line = line || GAME.line;
       if (!stream || !stream.length) return;
       var teams = __bxDerive(stream, upto);
-      var mr = line.mudcats.r, ar = line.acorns.r;
+      var __cut = (upto == null ? stream.length - 1 : upto);
+      var __isFinal = (__cut + 1 >= stream.length);
+      function __sumR(t){ var s=0; t.order.forEach(function(idx){ s += (t.bat[idx] && t.bat[idx].r) || 0; }); return s; }
+      var mr = __sumR(teams.mudcats), ar = __sumR(teams.acorns);
+      var __cutEv = (__cut >= 0 && __cut < stream.length) ? stream[__cut] : null;
+      var __half = __cutEv ? (__cutEv.half === 'top' ? 'T' : 'B') : '';
+      var __hdrLabel = __isFinal ? 'FINAL' : ('IN PROGRESS \u2014 ' + __half + (__cutEv ? __cutEv.inning : ''));
       var winner = mr>ar ? MUDCATS.name : ar>mr ? ACORNS.name : null;
       var resultLine = winner ? (winner + ' WIN, ' + Math.max(mr,ar) + '\u2013' + Math.min(mr,ar)) : ('TIE, ' + mr + '\u2013' + ar);
       var ov = __bxOverlay();
@@ -1519,7 +1525,7 @@ function highlightLineup(teamCode, batIdx) {
       panel.innerHTML =
         '<h2>BOX SCORE</h2>'+
         '<div class="bx-sub">'+__bxEsc(MUDCATS.name)+' VS '+__bxEsc(ACORNS.name)+'</div>'+
-        '<div id="boxscore-result">FINAL \u2014 '+__bxEsc(resultLine)+'</div>'+
+        '<div id="boxscore-result">'+__hdrLabel+' \u2014 '+__bxEsc(resultLine)+'</div>'+
         __bxLineScore(line)+
         __bxBatTable(teams.mudcats)+ __bxPitTable(teams.acorns)+
         __bxBatTable(teams.acorns)+  __bxPitTable(teams.mudcats);
@@ -1535,7 +1541,7 @@ function highlightLineup(teamCode, batIdx) {
     var msg = 'FINAL — ' + MUDCATS.name + ' ' + L.mudcats.r + ', ' + ACORNS.name + ' ' + L.acorns.r;
     setResultLine(msg);
     try{ if(typeof window!=="undefined" && typeof window.__onMatchComplete==="function"){ window.__onMatchComplete(GAME.line); } }catch(__e){}
-    try{ if(typeof window!=="undefined" && typeof window.__renderBoxScore==="function"){ window.__renderBoxScore(GAME.stream, GAME.line); } }catch(__e2){}
+    try{ if(typeof window!=="undefined" && typeof window.__renderBoxScore==="function"){ window.__renderBoxScore(GAME.stream, GAME.line, GAME.pos); } }catch(__e2){}
   }
 
   // ---- Control panel (fixed, outside the scaled stage) ------------------
@@ -1588,7 +1594,7 @@ function highlightLineup(teamCode, batIdx) {
     };
     var boxBtn = makeBtn('BOX SCORE');
     boxBtn.style.background = '#7a5a1c'; boxBtn.style.borderColor = '#3f2f0d';
-    boxBtn.onclick = function () { if (typeof window.__renderBoxScore === 'function') window.__renderBoxScore(GAME.stream, GAME.line); };
+    boxBtn.onclick = function () { if (typeof window.__renderBoxScore === 'function') window.__renderBoxScore(GAME.stream, GAME.line, GAME.pos); };
     bar.appendChild(playBtn); bar.appendChild(stepBtn); bar.appendChild(resetBtn); bar.appendChild(boxBtn);
     bar.appendChild(paceLbl); bar.appendChild(pace);
     document.body.appendChild(bar);
