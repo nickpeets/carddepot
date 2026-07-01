@@ -737,11 +737,11 @@
     // Batting order = 9 hitters (8 fielders + DH), NO pitcher. Pitcher sent separately.
     async function buildTeamPayload(){
       var lineup=await Promise.all(ORDER.map(async function(slot){ var id=slot.id; var c=cardById(id); var rv=RESOLVED[id]||{};
-        return { name:(c.player||'PLAYER').toUpperCase(), avg:rv.avg, hr:rv.hr, rbi:rv.rbi, tendency:rv.tendency||'spray', rates:rv.rates, pos:slot.pos, cardId:id, img:(c&&c.photoPath?await cardSignedUrl(c.photoPath):'') };
+        return { name:(c.player||'PLAYER').toUpperCase(), avg:rv.avg, hr:rv.hr, rbi:rv.rbi, tendency:rv.tendency||'spray', rates:rv.rates, year:(c&&c.yr!=null?c.yr:null), pos:slot.pos, cardId:id, img:(c&&c.photoPath?await cardSignedUrl(c.photoPath):'') };
       }));
       var pitcher=null;
       if(PITCHER){ var pc=cardById(PITCHER); var prv=RESOLVED[PITCHER]||{};
-        pitcher={ cardId:PITCHER, name:(pc.player||'PITCHER').toUpperCase(), img:(pc&&pc.photoPath?await cardSignedUrl(pc.photoPath):'') };
+        pitcher={ cardId:PITCHER, name:(pc.player||'PITCHER').toUpperCase(), year:(pc&&pc.yr!=null?pc.yr:null), img:(pc&&pc.photoPath?await cardSignedUrl(pc.photoPath):'') };
             if(prv.rates){ pitcher.rates=prv.rates; pitcher.BB=prv.rates.BB; pitcher.K=prv.rates.K; pitcher.HR=prv.rates.HR; pitcher._2B=prv.rates._2B; pitcher._3B=prv.rates._3B; pitcher._1B=prv.rates._1B; }
         if(prv.era!=null && prv.era!=='') pitcher.era=String(prv.era);
         if(prv.w!=null) pitcher.w=String(prv.w);
@@ -765,12 +765,12 @@
           var batters=ORDER.map(function(slot){
             var id=slot.id; var c=cardById(id)||{}; var rv=RESOLVED[id]||{};
             return { cardId:id, name:(c.player||'PLAYER').toUpperCase(), pos:slot.pos,
-                     avg:rv.avg, hr:rv.hr, rbi:rv.rbi, tendency:rv.tendency||'spray', rates:rv.rates };
+                     avg:rv.avg, hr:rv.hr, rbi:rv.rbi, tendency:rv.tendency||'spray', rates:rv.rates, year:(c&&c.yr!=null?c.yr:null) };
           });
           var pitcher=null;
           if(PITCHER){
             var pc=cardById(PITCHER)||{}; var prv=RESOLVED[PITCHER]||{};
-            pitcher={ cardId:PITCHER, name:(pc.player||'PITCHER').toUpperCase() };
+            pitcher={ cardId:PITCHER, name:(pc.player||'PITCHER').toUpperCase(), year:(pc&&pc.yr!=null?pc.yr:null) };
             if(prv.rates){ pitcher.rates=prv.rates; pitcher.BB=prv.rates.BB; pitcher.K=prv.rates.K; pitcher.HR=prv.rates.HR; pitcher._2B=prv.rates._2B; pitcher._3B=prv.rates._3B; pitcher._1B=prv.rates._1B; }
             if(prv.era!=null && prv.era!=='') pitcher.era=String(prv.era);
             if(prv.w!=null) pitcher.w=String(prv.w);
