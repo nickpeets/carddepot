@@ -899,13 +899,13 @@ body{
 
   function renderSession(session){
     var loggedIn = !!(session && session.user);
-    var emailEl=$('authEmail'), loginBtn=$('authLoginBtn'), logoutBtn=$('authLogoutBtn'), playBtn=$('homePlayBtn');
+    var emailEl=$('authEmail'), loginBtn=$('authLoginBtn'), logoutBtn=$('authLogoutBtn'), playBtn=$('homePlayBtn'); var seasonBtn=$('depotSeasonBtn');
     if(!emailEl) return;
     if(loggedIn){
       emailEl.textContent = session.user.email || 'signed in';
-      emailEl.style.display=''; loginBtn.style.display='none'; logoutBtn.style.display=''; if(playBtn) playBtn.style.display='';
+      emailEl.style.display=''; loginBtn.style.display='none'; logoutBtn.style.display=''; if(playBtn) playBtn.style.display=''; if(seasonBtn) seasonBtn.style.display='';
     } else {
-      emailEl.style.display='none'; loginBtn.style.display=''; logoutBtn.style.display='none'; if(playBtn) playBtn.style.display='none';
+      emailEl.style.display='none'; loginBtn.style.display=''; logoutBtn.style.display='none'; if(playBtn) playBtn.style.display='none'; if(seasonBtn) seasonBtn.style.display='none';
     }
   }
 
@@ -1021,7 +1021,7 @@ body.logged-out #appFrame{display:none !important;}
   <div class="auth-area" id="authArea">
     <span class="auth-email" id="authEmail" style="display:none"></span>
     <button class="auth-btn" id="authLoginBtn" type="button" onclick="DepotAuth.openModal()">Log in</button>
-    <button class="auth-btn" id="authLogoutBtn" type="button" style="display:none" onclick="DepotAuth.logout()">Log out</button><button class="auth-btn" id="homePlayBtn" type="button" style="display:none" onclick="window.location.href='game/builder.html'">Play Ball</button>
+    <button class="auth-btn" id="authLogoutBtn" type="button" style="display:none" onclick="DepotAuth.logout()">Log out</button><button class="auth-btn" id="homePlayBtn" type="button" style="display:none" onclick="window.location.href='game/builder.html'">Play Ball</button><button class="auth-btn" id="depotSeasonBtn" type="button" style="display:none" onclick="window.__depotOpenSeason && window.__depotOpenSeason()">Season</button>
   </div>
 
 </div>
@@ -2678,5 +2678,87 @@ setAuthUI(false);
 }
 </style>
 
+
+<!-- ===== SEASON MODE view (retro schedule/record) ===== -->
+<div id="depotSeasonView" style="display:none; position:fixed; inset:0; z-index:9000; background:#0b1418; color:#e8e2c8; font-family:'Courier New',monospace; overflow:auto;">
+  <div style="max-width:640px; margin:0 auto; padding:28px 18px;">
+    <div style="display:flex; align-items:center; justify-content:space-between; border-bottom:2px solid #caa14a; padding-bottom:10px;">
+      <div style="font-size:22px; letter-spacing:2px; color:#caa14a;">SEASON</div>
+      <button id="depotSeasonClose" type="button" style="background:#20323a; color:#e8e2c8; border:1px solid #caa14a; padding:6px 12px; cursor:pointer; font-family:inherit;">CLOSE</button>
+    </div>
+    <div id="depotSeasonTeam" style="margin:14px 0 4px; font-size:16px;">&nbsp;</div>
+    <div id="depotSeasonRecord" style="font-size:34px; letter-spacing:3px; color:#8fd694; margin-bottom:12px;">0&ndash;0</div>
+    <div id="depotSeasonSched" style="border-top:1px solid #2c4048;"></div>
+    <div style="margin-top:18px; text-align:center;">
+      <button id="depotSeasonPlayNext" type="button" style="background:#caa14a; color:#0b1418; border:none; padding:12px 26px; font-size:16px; letter-spacing:1px; cursor:pointer; font-family:inherit;">PLAY NEXT GAME</button>
+    </div>
+    <div id="depotSeasonMsg" style="margin-top:12px; text-align:center; color:#c98; min-height:18px;"></div>
+  </div>
+</div>
+<script>
+(function(){
+  function $id(x){ return document.getElementById(x); }
+  var CUR = null; // { franchise, season }
+  function esc(t){ return String(t==null?'':t).replace(/[&<>]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c];}); }
+
+  function renderSched(games){
+    var el=$id('depotSeasonSched'); if(!el) return;
+    el.innerHTML='';
+    (games||[]).forEach(function(g){
+      var row=document.createElement('div');
+      row.style.cssText='display:flex; justify-content:space-between; padding:7px 2px; border-bottom:1px solid #2c4048; font-size:14px;';
+      var res = g.result==='pending' ? '&middot;' : (g.result==='win'?'W':'L');
+      var score = (g.user_score==null||g.opp_score==null) ? '' : (g.user_score+'&ndash;'+g.opp_score);
+      var col = g.result==='win' ? '#8fd694' : (g.result==='loss' ? '#e08a8a' : '#7a8c92');
+      row.innerHTML='<span>G'+g.game_number+' &nbsp; vs '+esc(g.opponent_name||'AI')+'</span>'+
+                    '<span style="color:'+col+';">'+res+' &nbsp; '+score+'</span>';
+      el.appendChild(row);
+    });
+  }
+
+  async function refresh(){
+    if(!window.DepotSeason){ $id('depotSeasonMsg').textContent='Season module not loaded.'; return; }
+    $id('depotSeasonMsg').textContent='Loading season...';
+    try{
+      CUR = await DepotSeason.startOrResumeSeason();
+      if(!CUR){ $id('depotSeasonMsg').textContent='Sign in to start a season.'; return; }
+      var team = (CUR.franchise && CUR.franchise.team_name) || 'MY CLUB';
+      var w=(CUR.season.wins|0), l=(CUR.season.losses|0);
+      $id('depotSeasonTeam').textContent = team + '  \u2014  Season';
+      $id('depotSeasonRecord').innerHTML = w+'&ndash;'+l;
+      var games = await DepotSeason.loadSeasonGames(CUR.season.id);
+      renderSched(games);
+      var done = (CUR.season.status==='complete') || (w+l >= (CUR.season.games_total|0));
+      var pn=$id('depotSeasonPlayNext');
+      pn.disabled = done; pn.style.opacity = done ? '0.5' : '1';
+      $id('depotSeasonMsg').textContent = done ? 'Season complete.' : '';
+    }catch(e){ console.error('[season] refresh failed', e); $id('depotSeasonMsg').textContent='Could not load season.'; }
+  }
+
+  window.__depotOpenSeason = function(){
+    var v=$id('depotSeasonView'); if(v){ v.style.display='block'; refresh(); }
+  };
+  document.addEventListener('DOMContentLoaded', function(){
+    var c=$id('depotSeasonClose'); if(c) c.addEventListener('click', function(){ $id('depotSeasonView').style.display='none'; });
+    var p=$id('depotSeasonPlayNext');
+    if(p) p.addEventListener('click', async function(){
+      if(!CUR || !window.DepotSeason) return;
+      $id('depotSeasonMsg').textContent='Starting next game...';
+      try{
+        var ng = await DepotSeason.nextPendingGame(CUR.season.id);
+        if(!ng){ $id('depotSeasonMsg').textContent='No pending games.'; return; }
+        DepotSeason.launchSeasonGame({
+          season_id: CUR.season.id,
+          season_game_id: ng.id,
+          game_number: ng.game_number,
+          franchise_id: CUR.franchise.id
+        });
+      }catch(e){ console.error('[season] play next failed', e); $id('depotSeasonMsg').textContent='Could not start game.'; }
+    });
+  });
+})();
+</script>
+<script src="game/season.js" defer></script>
+<!-- ===== end SEASON MODE view ===== -->
 </body>
 </html>
