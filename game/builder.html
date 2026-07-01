@@ -251,7 +251,7 @@
   <div id="status"></div>
   <div class="grid">
     <div class="col">
-      <h3>YOUR COLLECTION <span class="muted" id="collCount"></span> <button type="button" id="sortPosBtn" class="sortbtn" aria-pressed="false">Sort by position</button> <button type="button" id="viewBtn" class="viewbtn" aria-pressed="false" title="Toggle list / card view">View: List</button></h3>
+      <h3>YOUR COLLECTION <span class="muted" id="collCount"></span><span class="muted" id="coverageReadout" title="How many cards resolve to rich MLB rates vs the flat stat-line fallback vs no MLB line" style="margin-left:6px"></span> <button type="button" id="sortPosBtn" class="sortbtn" aria-pressed="false">Sort by position</button> <button type="button" id="viewBtn" class="viewbtn" aria-pressed="false" title="Toggle list / card view">View: List</button></h3>
       <div class="muted" style="margin:6px 0">Each card plays as its card-year self. Stats resolve from the MLB Stats API by player + year, falling back to the card&rsquo;s saved stat line.</div>
       <div id="cardList"><div class="muted">Loading your cards&hellip;</div></div>
     </div>
@@ -377,6 +377,40 @@
     return { bio:bio, meta:meta };
   }
 
+  // GAP1: mirror root app's notes serialization so we can round-trip meta from the builder.
+  function packNotes(bio, meta){
+    return (bio||'') + META_MARK + JSON.stringify(meta||{}) + META_END;
+  }
+
+  // GAP1: persist a genuine MLB-API resolution back onto the card's notes meta as ratesMeta,
+  // so future loads read stored rich rates instead of re-deriving from AVG on an API miss.
+  // Best-effort and non-blocking: any failure is swallowed and never affects rendering,
+  // resolution, the handoff, or the ?match path. Only called for status==='api'.
+  async function persistRichRates(card, line, rates){
+    try{
+      if(!sb || !USER || !card || !card.id) return false;
+      if(!rates) return false;
+      // Preserve existing meta (pos/type/stats/rare/…); only add/refresh ratesMeta.
+      var baseMeta = (card._meta && typeof card._meta==='object') ? card._meta : {};
+      var merged = {};
+      for(var k in baseMeta){ if(Object.prototype.hasOwnProperty.call(baseMeta,k)) merged[k]=baseMeta[k]; }
+      merged.ratesMeta = {
+        v:1, source:'mlb-api', year:(card.yr!=null?card.yr:null),
+        resolvedAt:new Date().toISOString(),
+        rates:{ BB:rates.BB, K:rates.K, HR:rates.HR, _2B:rates._2B, _3B:rates._3B, _1B:rates._1B },
+        line:(line||null)
+      };
+      var bio = (card._bio!=null ? card._bio : '');
+      var newNotes = packNotes(bio, merged);
+      // Owner scope: RLS + collection query already restrict to this user's cards; match id defensively.
+      var upd = await sb.from('cards').update({ notes:newNotes }).eq('id', card.id);
+      if(upd && upd.error){ try{ console.warn('[GAP1] rates persist failed (non-fatal):', upd.error); }catch(_){} return false; }
+      // Reflect locally so an immediate re-resolve short-circuits and bio/meta stay consistent.
+      card._notes = newNotes; card._meta = merged; card.ratesMeta = merged.ratesMeta;
+      return true;
+    }catch(e){ try{ console.warn('[GAP1] rates persist threw (non-fatal):', e); }catch(_){} return false; }
+  }
+
   // ----- Load user's cards from Supabase (mirrors main app collections->cards) -----
   async function loadCards(){
     if(!sb||!USER) return;
@@ -403,7 +437,11 @@
       id:r.id, player:r.player||'', team:r.team||'', yr:yr, photoPath:r.photo_front_path||'',
       brand:r.brand||'', set:r.set||'', number:r.number||'',
       pos:(u.meta&&u.meta.pos)||'', type:(u.meta&&u.meta.type)||'hitter',
-      stats:(u.meta&&u.meta.stats)||{}
+      stats:(u.meta&&u.meta.stats)||{},
+      // GAP1: carry raw notes + bio + any previously-persisted rich rates so a
+      // stored resolution can short-circuit the API and a write-back can preserve bio/meta.
+      _notes:(r.notes||''), _bio:(u.bio||''), _meta:(u.meta||{}),
+      ratesMeta:((u.meta&&u.meta.ratesMeta)||null)
     };
   }
 
@@ -494,6 +532,23 @@
   // ----- Master resolver: API by name+year -> card-text fallback -> unusable -----
   async function resolveCard(card){
     var out={ status:'pending', note:'', team:card.team||'', tendency:'spray', avg:'.000', hr:0, rbi:0, rates:null, pos:'', era:'', w:null, l:null };
+    // GAP1 read order step 0: stored rich rates short-circuit the network call.
+    // A previously-persisted genuine MLB-API resolution (ratesMeta with the six keys, matching
+    // the card year) is preferred over a fresh API hit or the flat avgToRates fallback.
+    try{
+      var rm = card.ratesMeta || (card._meta && card._meta.ratesMeta) || null;
+      if(rm && rm.rates && (rm.year==null || String(rm.year)===String(card.yr))){
+        var rr = rm.rates, keys=['BB','K','HR','_2B','_3B','_1B'], okr=true;
+        for(var ki=0;ki<keys.length;ki++){ var vv=rr[keys[ki]]; if(typeof vv!=='number'||!isFinite(vv)||vv<0){ okr=false; break; } }
+        if(okr){
+          out.status='api'; out.rates={ BB:rr.BB, K:rr.K, HR:rr.HR, _2B:rr._2B, _3B:rr._3B, _1B:rr._1B };
+          var _ln=rm.line||null;
+          if(_ln){ if(_ln.AVG!=null) out.avg=fmtAvg(_ln.AVG); out.hr=+_ln.HR||0; out.rbi=+_ln.RBI||0; }
+          out.note='stored MLB rates'+(rm.year!=null?(' '+rm.year):''); out._stored=true;
+          return out;
+        }
+      }
+    }catch(_e0){}
       try{ var _cs=card.stats||{}; if(_cs.ERA!=null) out.era=String(_cs.ERA); if(_cs.W!=null) out.w=String(_cs.W); if(_cs.L!=null) out.l=String(_cs.L); }catch(_e){}
     // 1) MLB API by player name + card year
     if(card.player && card.yr){
@@ -504,7 +559,7 @@
         var line=await mlbSeasonHitting(person.id, card.yr);
         if(line){
           var rates=lineToRates(line);
-          if(rates){ out.status='api'; out.rates=rates; out.avg=fmtAvg(line.AVG); out.hr=+line.HR||0; out.rbi=+line.RBI||0; out.note='MLB API '+card.yr; return out; }
+          if(rates){ out.status='api'; out.rates=rates; out.avg=fmtAvg(line.AVG); out.hr=+line.HR||0; out.rbi=+line.RBI||0; out.note='MLB API '+card.yr; out._freshLine=line; out._freshRates=rates; return out; }
         }
         out.note='MLB API: no '+card.yr+' hitting line';
       } else if(person && person.ambiguous){ out.note='MLB API: ambiguous name'; }
@@ -536,7 +591,7 @@
         var inOrd=inOrder(c.id)>=0;
         var isPit=(PITCHER===c.id);
         var sub=fmtMeta(c);
-        var note=(st==='bad')?(rv.note||'no hitting line'):'';
+        var note=(st==='bad')?('no MLB line'+((c.yr!=null)?(' for '+c.yr):'')):'';
         // status text (no MLB-API pill): just a tiny dim note when unusable as a hitter
         var resPos = naturalPosFor(c.id);
         // "pitcher-ready": resolved position P, or no usable hitting line (still resolving -> neutral)
@@ -837,9 +892,63 @@
   async function resolveAll(){
     for(var i=0;i<CARDS.length;i++){
       var c=CARDS[i];
-      RESOLVED[c.id]=await resolveCard(c);
+      var rv=await resolveCard(c);
+      RESOLVED[c.id]=rv;
+      // GAP1: persist ONLY a genuine, freshly-fetched MLB-API resolution (never the
+      // avgToRates 'card' fallback, never the league-average floor, never an already-stored
+      // one). Best-effort/non-blocking so a failed write can't break resolution or rendering.
+      if(rv && rv.status==='api' && !rv._stored && rv._freshRates){
+        try{ await persistRichRates(c, rv._freshLine||null, rv._freshRates); }catch(_pe){}
+      }
       renderCards(); renderStatus();
     }
+    try{ reportCoverageTally(); }catch(_ct){}
+  }
+
+  // GAP1 read-only diagnostic: one-time coverage tally across loaded cards after resolveAll.
+  // Reports how many cards resolve rich (api/stored) vs fall to the flat avgToRates path
+  // vs have no usable MLB line. No data invented; no writes. Honestly flags 'no MLB line'.
+  function reportCoverageTally(){
+    var tally={ total:0, storedRich:0, freshApi:0, flatCard:0, noLine:0, other:0 };
+    var noLineCards=[];
+    for(var i=0;i<CARDS.length;i++){
+      var c=CARDS[i], rv=RESOLVED[c.id]; if(!rv){ continue; }
+      tally.total++;
+      if(rv.status==='api' && rv._stored){ tally.storedRich++; }
+      else if(rv.status==='api'){ tally.freshApi++; }
+      else if(rv.status==='card'){ tally.flatCard++; }
+      else if(rv.status==='bad'){
+        tally.noLine++;
+        noLineCards.push({ player:c.player, year:(c.yr!=null?c.yr:'?'), note:(rv.note||'no usable stats') });
+      } else { tally.other++; }
+    }
+    var richTotal = tally.storedRich + tally.freshApi;
+    // GAP1: surface the breakdown in the builder UI (small, muted, retro), next to the collection count.
+    try{
+      var _ro = document.getElementById('coverageReadout');
+      if(_ro){
+        if(!tally.total){ _ro.innerHTML=''; }
+        else{
+          var parts=[];
+          parts.push('<b class="ok" style="border:0;padding:0">'+richTotal+' rich</b>');
+          if(tally.flatCard){ parts.push(tally.flatCard+' flat'); }
+          if(tally.noLine){ parts.push('<b class="no" style="border:0;padding:0">'+tally.noLine+' no MLB line</b>'); }
+          _ro.innerHTML = '\u00b7 ' + parts.join(' \u00b7 ');
+          _ro.title = tally.total+' cards \u00b7 '+richTotal+' rich (fresh '+tally.freshApi+', stored '+tally.storedRich+') \u00b7 '+tally.flatCard+' flat (avgToRates) \u00b7 '+tally.noLine+' no MLB line';
+        }
+      }
+    }catch(_ui){}
+    try{
+      console.log('[GAP1 coverage] '+tally.total+' cards | rich (api+stored): '+richTotal+
+        ' (fresh '+tally.freshApi+', stored '+tally.storedRich+') | flat avgToRates: '+tally.flatCard+
+        ' | no MLB line: '+tally.noLine);
+      if(noLineCards.length){
+        console.log('[GAP1 coverage] cards with no MLB line (kept on fallback, no data invented):');
+        noLineCards.forEach(function(n){ console.log('  - '+n.player+' ('+n.year+'): no MLB line for '+n.year+' — '+n.note); });
+      }
+    }catch(_l){}
+    try{ window.__DEPOT_COVERAGE={ tally:tally, noLineCards:noLineCards }; }catch(_w){}
+    return tally;
   }
   // hook resolveAll into loadCards completion
   var _renderAll=renderAll;
