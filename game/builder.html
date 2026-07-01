@@ -544,7 +544,7 @@
 
   // ----- Master resolver: API by name+year -> card-text fallback -> unusable -----
   async function resolveCard(card){
-    var out={ status:'pending', note:'', team:card.team||'', tendency:'spray', avg:'.000', hr:0, rbi:0, rates:null, if(naturalPosFor(id)!=='P') return;||'', era:'', w:null, l:null };
+    var out={ status:'pending', note:'', team:card.team||'', tendency:'spray', avg:'.000', hr:0, rbi:0, rates:null, pos:card.pos||'', era:'', w:null, l:null };
     // GAP1 read order step 0: stored rich rates short-circuit the network call.
     // A previously-persisted genuine MLB-API resolution (ratesMeta with the six keys, matching
     // the card year) is preferred over a fresh API hit or the flat avgToRates fallback.
