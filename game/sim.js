@@ -1650,7 +1650,7 @@ function highlightLineup(teamCode, batIdx) {
         var r = (p.rates && typeof p.rates === 'object') ? p.rates : { BB:LG.BB, K:LG.K, HR:LG.HR, _2B:LG._2B, _3B:LG._3B, _1B:LG._1B };
         var b = batter(p.name||"PLAYER", p.avg||".000", p.hr||0, p.rbi||0,
                        R(r.BB, r.K, r.HR, r._2B, r._3B, r._1B), p.tendency||"spray");
-        b.pos = p.pos || "\u2014"; b.img = (p.img||""); try{ if(typeof window!=="undefined"){ (window.__DEPOT_CARD_IMG=window.__DEPOT_CARD_IMG||{})[b.name]=b.img; } }catch(_e){}
+        b.pos = p.pos || "\u2014"; b.img = (p.img||""); b.year = (p.year!=null?p.year:null); try{ if(typeof window!=="undefined"){ (window.__DEPOT_CARD_IMG=window.__DEPOT_CARD_IMG||{})[b.name]=b.img; (window.__DEPOT_CARD_YEAR=window.__DEPOT_CARD_YEAR||{})[b.name]=b.year; } }catch(_e){}
         return b;
       });
       team.lineup = lu;
@@ -1662,7 +1662,7 @@ function highlightLineup(teamCode, batIdx) {
                          w: (pp.w!=null?pp.w:team.pitcher.w), l: (pp.l!=null?pp.l:team.pitcher.l),
                          BB:(pp.BB!=null?pp.BB:team.pitcher.BB), K:(pp.K!=null?pp.K:team.pitcher.K),
                          HR:(pp.HR!=null?pp.HR:team.pitcher.HR), _2B:(pp._2B!=null?pp._2B:team.pitcher._2B),
-                         _3B:(pp._3B!=null?pp._3B:team.pitcher._3B), _1B:(pp._1B!=null?pp._1B:team.pitcher._1B), img:(pp.img||"") }; try{ if(typeof window!=="undefined"){ (window.__DEPOT_CARD_IMG=window.__DEPOT_CARD_IMG||{})[team.pitcher.name]=(pp.img||""); } }catch(_e){}
+                         _3B:(pp._3B!=null?pp._3B:team.pitcher._3B), _1B:(pp._1B!=null?pp._1B:team.pitcher._1B), img:(pp.img||""), year:(pp.year!=null?pp.year:null) }; try{ if(typeof window!=="undefined"){ (window.__DEPOT_CARD_IMG=window.__DEPOT_CARD_IMG||{})[team.pitcher.name]=(pp.img||""); (window.__DEPOT_CARD_YEAR=window.__DEPOT_CARD_YEAR||{})[team.pitcher.name]=(pp.year!=null?pp.year:null); } }catch(_e){}
       }
       return true;
     } catch(e){ if(typeof console!=="undefined") console.warn("[MatchPlay] applyDepotTeam failed:", e); return false; }
