@@ -496,18 +496,30 @@
 
   // ----- MLB Stats API (keyless, CORS-open) -----
   function cleanName(s){ return String(s||'').toLowerCase().replace(/[.,'`\u2019]/g,'').replace(/\s+jr\b|\s+sr\b|\s+ii+\b|\s+iv\b/g,'').replace(/\s+/g,' ').trim(); }
-  async function mlbFindPlayer(name){
-    var q=encodeURIComponent(name);
-    // primary: people/search
-    try{
-      var r=await fetch(MLB_BASE+'/people/search?names='+q);
-      if(r.ok){ var j=await r.json(); if(j&&j.people&&j.people.length) return pickPerson(j.people,name); }
-    }catch(e){}
-    try{
-      var r2=await fetch(MLB_BASE+'/people/search?q='+q);
-      if(r2.ok){ var j2=await r2.json(); if(j2&&j2.people&&j2.people.length) return pickPerson(j2.people,name); }
-    }catch(e){}
-    return null;
+  // PERF: in-memory name->person cache. Two cards of the same player in one load
+  // share a single lookup. Stores the in-flight PROMISE so concurrent pool workers
+  // don't each fire the same search. Lives for the page session only.
+  var MLB_PLAYER_CACHE={};
+  function mlbFindPlayer(name){
+    var key=String(name||'').trim().toLowerCase();
+    if(Object.prototype.hasOwnProperty.call(MLB_PLAYER_CACHE,key)) return MLB_PLAYER_CACHE[key];
+    var p=(async function(){
+      var q=encodeURIComponent(name);
+      // primary: people/search
+      try{
+        var r=await fetch(MLB_BASE+'/people/search?names='+q);
+        if(r.ok){ var j=await r.json(); if(j&&j.people&&j.people.length) return pickPerson(j.people,name); }
+      }catch(e){}
+      try{
+        var r2=await fetch(MLB_BASE+'/people/search?q='+q);
+        if(r2.ok){ var j2=await r2.json(); if(j2&&j2.people&&j2.people.length) return pickPerson(j2.people,name); }
+      }catch(e){}
+      return null;
+    })();
+    // Cache the promise; drop it on rejection so a transient failure can be retried.
+    MLB_PLAYER_CACHE[key]=p;
+    p.catch(function(){ if(MLB_PLAYER_CACHE[key]===p) delete MLB_PLAYER_CACHE[key]; });
+    return p;
   }
   function pickPerson(people,name){
     var cn=cleanName(name);
@@ -594,7 +606,8 @@
         var inOrd=inOrder(c.id)>=0;
         var isPit=(PITCHER===c.id);
         var sub=fmtMeta(c);
-        var note=(st==='bad')?('no MLB line'+((c.yr!=null)?(' for '+c.yr):'')):'';
+        var note=(st==='bad')?('no MLB line'+((c.yr!=null)?(' for '+c.yr):''))
+                   :((st==='pending')?'resolving\u2026':'');
         // status text (no MLB-API pill): just a tiny dim note when unusable as a hitter
         var resPos = naturalPosFor(c.id);
         // "pitcher-ready": resolved position P, or no usable hitting line (still resolving -> neutral)
@@ -892,19 +905,36 @@
         });
     
     // ===== Resolve all cards after load (sequential, gentle on the API) =====
-  async function resolveAll(){
-    for(var i=0;i<CARDS.length;i++){
-      var c=CARDS[i];
-      var rv=await resolveCard(c);
-      RESOLVED[c.id]=rv;
-      // GAP1: persist ONLY a genuine, freshly-fetched MLB-API resolution (never the
-      // avgToRates 'card' fallback, never the league-average floor, never an already-stored
-      // one). Best-effort/non-blocking so a failed write can't break resolution or rendering.
-      if(rv && rv.status==='api' && !rv._stored && rv._freshRates){
-        try{ await persistRichRates(c, rv._freshLine||null, rv._freshRates, rv.pos); }catch(_pe){}
-      }
-      renderCards(); renderStatus();
+  // PERF: bounded-concurrency pool instead of a sequential for-await, so cold loads
+  // don't pay N x (2-3 serial MLB round-trips) in series. Stored-rich cards short-circuit
+  // inside resolveCard (no network), so they cost nothing. Pool size kept small to stay
+  // polite to the public MLB API (no unbounded Promise.all over the whole collection).
+  var RESOLVE_POOL_SIZE=6;
+  async function resolveOne(c){
+    var rv=await resolveCard(c);
+    RESOLVED[c.id]=rv;
+    // GAP1: persist ONLY a genuine, freshly-fetched MLB-API resolution (never the
+    // avgToRates 'card' fallback, never the league-average floor, never an already-stored
+    // one). Best-effort/non-blocking so a failed write can't break resolution or rendering.
+    if(rv && rv.status==='api' && !rv._stored && rv._freshRates){
+      try{ await persistRichRates(c, rv._freshLine||null, rv._freshRates, rv.pos); }catch(_pe){}
     }
+    // Progressive fill: re-render as each card resolves (list already tolerates pending).
+    renderCards(); renderStatus();
+  }
+  async function resolveAll(){
+    var queue=CARDS.slice();
+    var n=Math.max(1, Math.min(RESOLVE_POOL_SIZE, queue.length||1));
+    async function worker(){
+      while(queue.length){
+        var c=queue.shift();
+        if(!c) break;
+        try{ await resolveOne(c); }catch(_re){ /* per-card failure must not stall the pool */ }
+      }
+    }
+    var workers=[];
+    for(var w=0;w<n;w++){ workers.push(worker()); }
+    await Promise.all(workers);
     try{ reportCoverageTally(); }catch(_ct){}
   }
 
