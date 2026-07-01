@@ -825,6 +825,16 @@
     $('playBtn').addEventListener('click',async function(){
       var usable=ORDER.every(function(slot){ return slot && isUsableHitter(slot.id); });
       if(!usable || ORDER.indexOf(null)>=0 || !PITCHER) return;
+      // ===== SEASON MODE divert (guard-then-fall-through) =====
+      // If a season context is present, play the season game and RETURN.
+      // Otherwise fall through to the existing solo/challenge path unchanged.
+      try {
+        if (window.DepotSeason && DepotSeason.readSeasonCtx && DepotSeason.readSeasonCtx()) {
+          await __depotSeasonPlay();
+          return;
+        }
+      } catch (e) { console.error('[season] divert failed, falling through', e); }
+      // ===== end SEASON MODE divert =====
       try{ sessionStorage.setItem('depot_user_team', JSON.stringify(await buildTeamPayload())); }catch(e){}
       window.location.href='./?from=builder';
     });
@@ -1254,6 +1264,39 @@
   })();
 
 })();
+
+  /* ===== SEASON MODE: play handler (appended, isolated) =====
+   * Mirrors the real accepted-match insert so the season game is immediately
+   * playable via the existing sim pipeline:
+   *   matches.insert({ challenger_id, challenger_lineup, opponent_lineup,
+   *                    opponent_id, seed, status:'accepted' })
+   * Then stores match_id on the season_game and navigates index.html?match=<id>.
+   */
+  async function __depotSeasonPlay(){
+    var ctx = (window.DepotSeason && DepotSeason.readSeasonCtx) ? DepotSeason.readSeasonCtx() : null;
+    if (!ctx) return;
+    var sb = (typeof depotSB === 'function') ? depotSB() : (window.sb || null);
+    var user = window.DEPOT_USER || null;
+    if (!sb || !user) { alert('Please sign in to play a season game.'); return; }
+    var challenger = await buildTeamPayload();
+    var opponent = DepotSeason.makeOpponentLineup(ctx.season_id, ctx.game_number);
+    var seed = (Math.floor(Math.random() * 2147483647)) >>> 0;
+    var ins = await sb.from('matches').insert([{
+      challenger_id: user.id,
+      challenger_lineup: challenger,
+      opponent_lineup: opponent,
+      opponent_id: user.id,
+      seed: seed,
+      status: 'accepted'
+    }]).select();
+    if (ins.error) { console.error('[season] match insert failed', ins.error); alert('Could not start season game.'); return; }
+    var mid = ins.data && ins.data[0] && ins.data[0].id;
+    if (!mid) { alert('Could not start season game (no match id).'); return; }
+    try { await DepotSeason.attachMatchToSeasonGame(ctx.season_game_id, mid); }
+    catch (e) { console.error('[season] attach match_id failed', e); }
+    window.location.href = 'index.html?match=' + encodeURIComponent(mid);
+  }
+  /* ===== end SEASON MODE play handler ===== */
 </script>
 </body>
 </html>
