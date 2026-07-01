@@ -386,7 +386,7 @@
   // so future loads read stored rich rates instead of re-deriving from AVG on an API miss.
   // Best-effort and non-blocking: any failure is swallowed and never affects rendering,
   // resolution, the handoff, or the ?match path. Only called for status==='api'.
-  async function persistRichRates(card, line, rates){
+  async function persistRichRates(card, line, rates, pos){
     try{
       if(!sb || !USER || !card || !card.id) return false;
       if(!rates) return false;
@@ -398,6 +398,7 @@
         v:1, source:'mlb-api', year:(card.yr!=null?card.yr:null),
         resolvedAt:new Date().toISOString(),
         rates:{ BB:rates.BB, K:rates.K, HR:rates.HR, _2B:rates._2B, _3B:rates._3B, _1B:rates._1B },
+        pos:((pos!=null && pos!=='') ? pos : (merged.ratesMeta && merged.ratesMeta.pos) || null),
         line:(line||null)
       };
       var bio = (card._bio!=null ? card._bio : '');
@@ -542,6 +543,8 @@
         for(var ki=0;ki<keys.length;ki++){ var vv=rr[keys[ki]]; if(typeof vv!=='number'||!isFinite(vv)||vv<0){ okr=false; break; } }
         if(okr){
           out.status='api'; out.rates={ BB:rr.BB, K:rr.K, HR:rr.HR, _2B:rr._2B, _3B:rr._3B, _1B:rr._1B };
+          // Restore the persisted fielding position so a warm load keeps its position with no API call.
+          if(rm.pos!=null && rm.pos!=='') out.pos=rm.pos;
           var _ln=rm.line||null;
           if(_ln){ if(_ln.AVG!=null) out.avg=fmtAvg(_ln.AVG); out.hr=+_ln.HR||0; out.rbi=+_ln.RBI||0; }
           out.note='stored MLB rates'+(rm.year!=null?(' '+rm.year):''); out._stored=true;
@@ -898,7 +901,7 @@
       // avgToRates 'card' fallback, never the league-average floor, never an already-stored
       // one). Best-effort/non-blocking so a failed write can't break resolution or rendering.
       if(rv && rv.status==='api' && !rv._stored && rv._freshRates){
-        try{ await persistRichRates(c, rv._freshLine||null, rv._freshRates); }catch(_pe){}
+        try{ await persistRichRates(c, rv._freshLine||null, rv._freshRates, rv.pos); }catch(_pe){}
       }
       renderCards(); renderStatus();
     }
