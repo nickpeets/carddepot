@@ -1398,10 +1398,12 @@ function depotOnAuth(session){
   const loggedIn = !!(session && session.user);
   if(loggedIn){
     DEPOT_USER = session.user;
+    window.DEPOT_USER = DEPOT_USER;  // expose for standalone modules (season.js)
     setAuthUI(true);
     depotEnsureCollection().then(function(){ depotLoadCards(); });
   } else {
     DEPOT_USER = null; DEPOT_COLLECTION_ID = null;
+    window.DEPOT_USER = null;  // clear for standalone modules (season.js)
     USER_CARDS.length = 0;
     rebuild();
     setAuthUI(false);
@@ -2721,7 +2723,7 @@ setAuthUI(false);
     $id('depotSeasonMsg').textContent='Loading season...';
     try{
       CUR = await DepotSeason.startOrResumeSeason();
-      if(!CUR){ $id('depotSeasonMsg').textContent='Sign in to start a season.'; return; }
+      if(!CUR){ $id('depotSeasonMsg').textContent='No active season yet.  Sign in and open Season to start one.'; return; }
       var team = (CUR.franchise && CUR.franchise.team_name) || 'MY CLUB';
       var w=(CUR.season.wins|0), l=(CUR.season.losses|0);
       $id('depotSeasonTeam').textContent = team + '  \u2014  Season';
