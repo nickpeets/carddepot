@@ -352,8 +352,8 @@
     sb.auth.getSession().then(function(r){ onSession(r&&r.data?r.data.session:null); });
   }
   function onSession(session){
-    if(session&&session.user){ USER=session.user; showLoggedIn(USER.email); loadCards(); try{ if(window.loadNotifications) loadNotifications(); }catch(e){} }
-    else { USER=null; showLoggedOut(); }
+    if(session&&session.user){ USER=session.user; window.DEPOT_USER=session.user; showLoggedIn(USER.email); loadCards(); try{ if(window.loadNotifications) loadNotifications(); }catch(e){} }
+    else { USER=null; window.DEPOT_USER=null; showLoggedOut(); }
   }
   $('loginBtn').addEventListener('click',doLogin);
   $('pass').addEventListener('keydown',function(e){ if(e.key==='Enter') doLogin(); });
