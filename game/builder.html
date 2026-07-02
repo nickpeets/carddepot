@@ -1276,7 +1276,7 @@
   async function __depotSeasonPlay(){
     var ctx = (window.DepotSeason && DepotSeason.readSeasonCtx) ? DepotSeason.readSeasonCtx() : null;
     if (!ctx) return;
-    var sb = (typeof depotSB === 'function') ? depotSB() : (window.sb || null);
+    // sb here refers to the in-scope Supabase client created at page load (see var sb above)
     var user = window.DEPOT_USER || null;
     if (!sb || !user) { alert('Please sign in to play a season game.'); return; }
     var challenger = await buildTeamPayload();
