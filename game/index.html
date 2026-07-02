@@ -311,8 +311,10 @@ document.addEventListener('DOMContentLoaded', async function() {
   function add(){
     if(document.getElementById("backToDepot")) return;
     var a=document.createElement("a");
-    a.id="backToDepot"; a.href="../index.html"; a.setAttribute("role","button");
-    a.textContent="\u2190 BACK TO DEPOT";
+    a.id="backToDepot"; a.setAttribute("role","button");
+    var __isSeason=false; try{ __isSeason = !!sessionStorage.getItem("depot_season_ctx"); }catch(e){}
+    if(__isSeason){ a.href="../index.html?season=1"; a.textContent="\u2190 BACK TO SEASON"; }
+    else { a.href="../index.html"; a.textContent="\u2190 BACK TO DEPOT"; }
     a.style.cssText="position:fixed;top:"+((typeof window!=="undefined" && window.__DEPOT_MATCH_MODE)?41:10)+"px;left:10px;z-index:2147483647;pointer-events:auto;"+
       "font-family:monospace;font-size:11px;letter-spacing:1px;text-decoration:none;"+
       "color:#f7f0db;background:rgba(10,16,20,0.9);border:2px solid #f6c81e;"+
