@@ -914,7 +914,28 @@ body{
     console.log('[DepotAuth] onAuthStateChange:', event);
     renderSession(session);
   });
-  sb.auth.getSession().then(function(r){ renderSession(r.data ? r.data.session : null); });
+  // Initial auth chrome render: run exactly once, AFTER the auth-area DOM exists.
+  // getSession() resolves from cached storage almost immediately (a microtask), which can
+  // beat the HTML parser reaching #authArea. Running it inline would call renderSession
+  // against not-yet-parsed elements and bail via `if(!emailEl) return`, leaving the auth
+  // chrome hidden (the PR #34 regression: all controls default to display:none).
+  var __depotAuthChromeInit = false;
+  function initAuthChrome(){
+    if(__depotAuthChromeInit) return;
+    __depotAuthChromeInit = true;
+    Promise.resolve()
+      .then(function(){ return sb.auth.getSession(); })
+      .then(function(r){ renderSession(r && r.data ? r.data.session : null); })
+      .catch(function(e){
+        console.warn('[DepotAuth] getSession failed; failing open to Log in.', e);
+        renderSession(null); // fail open: show the Log in button rather than nothing
+      });
+  }
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', initAuthChrome, { once: true });
+  } else {
+    initAuthChrome();
+  }
 
   // Enter key submits from modal inputs
   document.addEventListener('keydown', function(e){
