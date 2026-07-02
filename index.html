@@ -1020,7 +1020,7 @@ body.logged-out #appFrame{display:none !important;}
   <!-- DEPOT AUTH (Phase 1): account status -->
   <div class="auth-area" id="authArea">
     <span class="auth-email" id="authEmail" style="display:none"></span>
-    <button class="auth-btn" id="authLoginBtn" type="button" onclick="DepotAuth.openModal()">Log in</button>
+    <button class="auth-btn" id="authLoginBtn" type="button" style="display:none" onclick="DepotAuth.openModal()">Log in</button>
     <button class="auth-btn" id="authLogoutBtn" type="button" style="display:none" onclick="DepotAuth.logout()">Log out</button><button class="auth-btn" id="homePlayBtn" type="button" style="display:none" onclick="window.location.href='game/builder.html'">Play Ball</button><button class="auth-btn" id="depotSeasonBtn" type="button" style="display:none" onclick="window.__depotOpenSeason && window.__depotOpenSeason()">Season</button>
   </div>
 
@@ -1418,7 +1418,7 @@ if(depotSB()){
 let COLLECTION = normalizeEras(SEED.concat(USER_CARDS));
 function rebuild(){ COLLECTION = normalizeEras(SEED.concat(USER_CARDS)); document.getElementById('countChip').textContent=`${COLLECTION.length} cards`; }
 
-let mode="binder", curEra="vintage", curPage=0, curSet=null, spotIdx=null, groupMode="era";
+let mode="binder", curEra="all", curPage=0, curSet=null, spotIdx=null, groupMode="era";
 const PER_PAGE=9;
 
 function placeholderBg(i){return PLACEHOLDER[i%PLACEHOLDER.length]}
@@ -2757,6 +2757,17 @@ setAuthUI(false);
         });
       }catch(e){ console.error('[season] play next failed', e); $id('depotSeasonMsg').textContent='Could not start game.'; }
     });
+    // If we arrived from a finished SEASON game (BACK TO SEASON), auto-open the season view.
+    try {
+      var __qsSeason = new URLSearchParams(window.location.search).get('season');
+      if (__qsSeason) {
+        var __openSeasonSoon = function(tries){
+          if (window.__depotOpenSeason) { window.__depotOpenSeason(); return; }
+          if ((tries||0) < 40) setTimeout(function(){ __openSeasonSoon((tries||0)+1); }, 150);
+        };
+        __openSeasonSoon(0);
+      }
+    } catch(e){}
   });
 })();
 </script>
