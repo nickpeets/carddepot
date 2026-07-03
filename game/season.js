@@ -205,6 +205,7 @@
   // store the created match_id on the season_game row.
   async function attachMatchToSeasonGame(seasonGameId, matchId){
     var sb = SB(), uid = UID();
+    try { console.log('[season] attachMatch', { haveSb: !!sb, haveUid: !!uid, seasonGameId: seasonGameId, matchId: matchId }); } catch (e) {}
     if (!sb || !uid || !seasonGameId || !matchId) return;
     var u = await sb.from('season_games').update({ match_id: matchId })
                     .eq('owner_id', uid).eq('id', seasonGameId);
@@ -214,6 +215,7 @@
   // idempotent writeback: only fires when the row is still pending.
   async function recordSeasonResult(seasonGameId, userScore, oppScore){
     var sb = SB(), uid = UID();
+    try { console.log('[season] recordResult', { haveSb: !!sb, haveUid: !!uid, seasonGameId: seasonGameId, userScore: userScore, oppScore: oppScore }); } catch (e) {}
     if (!sb || !uid || !seasonGameId) return;
     userScore = userScore|0; oppScore = oppScore|0;
     var result = (userScore > oppScore) ? 'win' : 'loss';
@@ -252,6 +254,7 @@
   // Called from index.html __onMatchComplete (which knows match_id, not sgId).
   async function recordSeasonResultByMatch(matchId, userScore, oppScore){
     var sb = SB(), uid = UID();
+    try { console.log('[season] recordByMatch', { haveSb: !!sb, haveUid: !!uid, matchId: matchId }); } catch (e) {}
     if (!sb || !uid || !matchId) return;
     var q = await sb.from('season_games').select('*')
                     .eq('owner_id', uid).eq('match_id', matchId).limit(1);
