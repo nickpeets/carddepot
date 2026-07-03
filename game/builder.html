@@ -1278,6 +1278,10 @@
     if (!ctx) return;
     // sb here refers to the in-scope Supabase client created at page load (see var sb above)
     var user = window.DEPOT_USER || null;
+    // [season fix] expose the in-scope Supabase client to window so season.js SB() resolves here
+    // (attachMatchToSeasonGame uses season.js's own SB(), which reads window.sb / depotSB()).
+    try { if (!window.sb && sb) window.sb = sb; } catch (e) {}
+    try { console.log('[season] builder play: attaching match', { seasonGameId: (ctx && ctx.season_game_id), haveSb: !!window.sb, haveUser: !!window.DEPOT_USER }); } catch (e) {}
     if (!sb || !user) { alert('Please sign in to play a season game.'); return; }
     var challenger = await buildTeamPayload();
     var opponent = DepotSeason.makeOpponentLineup(ctx.season_id, ctx.game_number);
