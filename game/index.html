@@ -266,6 +266,10 @@ document.addEventListener('DOMContentLoaded', async function() {
           // Does NOT return -> the existing match writeback below runs unchanged.
           // user side = mudcats.r (cName), opponent = acorns.r (oName).
           try {
+            // [season fix] expose in-scope Supabase client + user id to window so season.js SB()/UID() resolve on this page
+            try { if (!window.sb && sb) window.sb = sb; } catch (e) {}
+            try { if (!window.DEPOT_USER && me) window.DEPOT_USER = { id: me }; } catch (e) {}
+            try { console.log('[season] writeback fired', { matchId: (m && m.id), user: (line && line.mudcats && line.mudcats.r), opp: (line && line.acorns && line.acorns.r), haveSb: !!window.sb, haveUser: !!window.DEPOT_USER }); } catch (e) {}
             if (window.DepotSeason && DepotSeason.recordSeasonResultByMatch && m && m.id) {
               DepotSeason.recordSeasonResultByMatch(m.id, line.mudcats.r, line.acorns.r)
                 .catch(function(e){ console.error('[season] record failed', e); });
