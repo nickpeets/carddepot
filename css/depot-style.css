@@ -235,15 +235,31 @@ html.depot-builder.depot-builder-reveal-fallback body > header{
  *
  * Per Nick's locked amendment (DESIGN.md 3.4) the in-game presentation (RBI diamond,
  * field, HUD, nameplates) is NOT restyled — only the shell chrome around the stage and
- * the game controls change. js/depot-game-shell.js mounts the shell at <body> top and
- * adds the classes below to the existing controls (additive; no logic touched).
+ * the game controls change. js/depot-game-shell.js mounts the shell at <body> top, adds
+ * the classes below to the existing controls (additive; no logic touched), and publishes
+ * --depot-game-chrome-h (measured top-chrome height) which we use to translate the game
+ * backdrop down so the thin shell sits above the stage — WITHOUT touching the stage's
+ * scale transform.
  * ==========================================================================*/
 
-/* Thin game shell: the chrome sits above the fixed-positioned game stage. Keep it out
- * of the stage's way; the stage (#dc-root / #stage) manages its own layout untouched. */
-html.depot-game .depot-shell{max-width:none;padding-bottom:0}
+html.depot-game{ --depot-game-chrome-h:166px; }   /* JS overwrites with the measured value */
+
+/* The thin shell chrome is FIXED to the top of the viewport, above the game. */
+html.depot-game .depot-bunting,
+html.depot-game .depot-shell{
+  position:fixed;left:0;right:0;z-index:60;background:var(--depot-navy-bg);
+}
+html.depot-game .depot-bunting{top:0}
+html.depot-game .depot-shell{top:14px;max-width:none;padding-bottom:0;box-shadow:none}
 html.depot-game .depot-shell__header{padding:12px 24px}   /* slim header for the game */
 html.depot-game .depot-nav{padding:var(--sp2) 24px}
+
+/* Make room for the fixed chrome by translating the game's full-viewport backdrop
+ * (.sc-host > div, position:fixed inset:0) DOWN by the chrome height. This is a pure
+ * translateY on the backdrop CONTAINER: the whole canvas shifts uniformly, so the stage
+ * keeps its exact scale transform and its centering-within-the-backdrop (no clip). We do
+ * NOT touch #stage or its transform. */
+html.depot-game .sc-host > div{ transform:translateY(var(--depot-game-chrome-h)); }
 
 /* Game controls (#sim-controls) restyled to the shared shell look — the fixed bottom
  * bar the game already positions. Spacing/alignment only; buttons carry .btn/.ghost. */
@@ -259,8 +275,9 @@ html.depot-game .depot-nav{padding:var(--sp2) 24px}
 /* BACK control, relocated into the shell nav, reads as a ghost tab-height button */
 .depot-nav .depot-game-back{min-height:44px}
 
-/* Phone: the controls bar stays a comfortable bottom bar with 44px targets. The shared
- * bottom tab bar (nav) already pins to the very bottom; keep the controls above it. */
+/* Phone: the top chrome is bunting + header only (the shared nav becomes a fixed BOTTOM
+ * tab bar under 600px), so JS measures the smaller top offset automatically. Keep the
+ * controls a comfortable bar with 44px targets. */
 @media (max-width:600px){
   html.depot-game .depot-shell__header{padding:12px 14px}
   .depot-game-controls{gap:6px;padding:8px 10px}
