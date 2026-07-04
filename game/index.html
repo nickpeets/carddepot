@@ -185,6 +185,7 @@ document.addEventListener('DOMContentLoaded', async function() {
     "use strict";
     var SUPABASE_URL='https://nuymzokvbdntbvinsnda.supabase.co';
     var SUPABASE_KEY=['sb','publishable','IiTsIBqYgGTIEnwdvQEXPA','4rmQdYVo'].join('_');
+    window.DEPOT_SUPABASE_CONFIG = window.DEPOT_SUPABASE_CONFIG || { url: SUPABASE_URL, key: SUPABASE_KEY }; // depot-core config (additive)
     function qp(n){ try{ return new URLSearchParams(window.location.search).get(n); }catch(e){ return null; } }
     var matchId = qp('match');
     if(!matchId) return;
