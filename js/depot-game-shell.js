@@ -47,6 +47,7 @@
            if (changed) {
                      console.log('[depot] game-shell: re-asserted depot-game(-dressed) on live <html>');
                      setChromeOffset();
+                     setTabbarOffset();
            }
            return true;
    }
@@ -106,6 +107,31 @@
            }
    }
 
+  // Measure the LIVE height of the fixed bottom mode-tab bar (phone only) and publish it
+  // as --depot-game-tabbar-h so the game action bar (#sim-controls) can clear it exactly.
+  // Bar height varies with tab wrap (BACK TO DEPOT / BACK TO SEASON, 390px / 360px), so a
+  // hardcoded offset is brittle; same measured-variable pattern as --depot-game-chrome-h.
+  // Reads the live <html> via html() (the bundle can replace documentElement). Chrome/
+  // presentation only - never touches the sim or the stage.
+  function setTabbarOffset() {
+    try {
+      var mid = window.innerHeight / 2;
+      var navs = document.querySelectorAll('.depot-nav');
+      var h = 0, i, r;
+      for (i = 0; i < navs.length; i++) {
+        r = navs[i].getBoundingClientRect();
+        if (r.top >= mid && r.bottom > window.innerHeight - 4 && r.height > 0) {
+          if (r.height > h) { h = r.height; }
+        }
+      }
+      if (!h) { html().style.removeProperty('--depot-game-tabbar-h'); return; }
+      html().style.setProperty('--depot-game-tabbar-h', Math.round(h) + 'px');
+    } catch (e) {
+      console.warn('[depot] game-shell: setTabbarOffset threw: ' + e);
+    }
+  }
+
+
    function styleControls() {
            var ctrls = document.getElementById('sim-controls');
            if (!ctrls) { console.warn('[depot] game-shell: #sim-controls not found; controls keep default styling'); return; }
@@ -124,7 +150,7 @@
    var resizeTimer = null;
       function onResize() {
               if (resizeTimer) { clearTimeout(resizeTimer); }
-              resizeTimer = setTimeout(setChromeOffset, 120);
+              resizeTimer = setTimeout(function(){ setChromeOffset(); setTabbarOffset(); }, 120);
       }
 
    function mountShell() {
@@ -163,10 +189,11 @@
 
         styleControls();
            setChromeOffset();
+           setTabbarOffset();
            window.addEventListener('resize', onResize);
 
         reveal('depot-game-dressed');
-           setTimeout(setChromeOffset, 0);
+           setTimeout(function(){ setChromeOffset(); setTabbarOffset(); }, 0);
            mounted = true;
            ensureHtmlObserver();
 
