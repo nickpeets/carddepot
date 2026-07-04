@@ -307,3 +307,56 @@ html.depot-game.depot-game-reveal-fallback .depot-bunting,
 html.depot-game.depot-game-reveal-fallback .depot-shell{
   visibility:visible;
 }
+
+/* ============================================================================
+ * Session 6 — mobile polish (DESIGN.md IMPLEMENTATION_PLAN, FINAL).
+ *
+ * The shared shell already ships the phone bottom-tab-bar + 44px targets on its
+ * own controls (.depot-tab / .btn). This block finishes the job on the LEGACY
+ * per-page controls that pre-date the shell and were never bumped: the binder's
+ * era tabs / group-by mode buttons / pagination / auth button, and the builder's
+ * account cluster (which overflowed at 390px because the email never wrapped).
+ * Phone-scoped only (<=600px) so desktop is untouched. Additive — no existing
+ * rule is modified.
+ * ========================================================================== */
+@media (max-width:600px){
+  /* --- 44px touch targets on legacy binder/season controls ----------------- */
+  .auth-btn,
+  .mode-btn,
+  #eraTabs .era-tab,
+  .page-nav button{
+    min-height:44px;
+  }
+  /* auth button (Log in / Log out) — was 23px; give it real tap padding */
+  .auth-btn{ padding:12px 14px; }
+  /* group-by mode buttons (The Binder / By Set / + Add a card) — were 37px */
+  .mode-btn{ padding:11px 12px; }
+  /* pagination (‹ Prev page / Next page ›) — were 40px */
+  .page-nav button{ padding:11px 14px; }
+
+  /* --- builder account cluster overflow fix (was +148px horizontal scroll) -- */
+  /* The account cluster (email + logout) sat on one non-wrapping row and the
+   * email text (.who / .email) never broke, pushing the header wider than the
+   * viewport. Allow the cluster to wrap and let the email shrink+ellipsize. */
+  .depot-account{
+    flex-wrap:wrap;
+    max-width:100%;
+    min-width:0;
+    overflow:hidden;
+  }
+  .depot-account .who,
+  .depot-account .email{
+    min-width:0;
+    max-width:100%;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
+  }
+  /* builder ghost buttons (logout / notif) get 44px tap height on phone */
+  .depot-account .btn-ghost,
+  .depot-account .depot-bell{
+    min-height:44px;
+    display:inline-flex;
+    align-items:center;
+  }
+}
