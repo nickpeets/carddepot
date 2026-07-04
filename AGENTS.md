@@ -99,3 +99,13 @@ Pages deploys are flaky **server-side** in this repo — builds sometimes queue 
   filters and truncate tooling output. **Edit surgically:** target the specific
   lines/regions, mask keys before logging, and prefer an editor's document API over
   dumping the whole file. Never paste Supabase keys into logs, issues, URLs, or chat.
+
+## 8. Depot-core cutover
+
+`js/depot-core.js` provides ONE shared Supabase client + cached user behind a stable global API (`window.depotSB()` sync, `window.depotUser()` async, `window.depotUserCached` sync). It is loaded FIRST (after `version.js`) by all three pages, and each page sets `window.DEPOT_SUPABASE_CONFIG = { url, key }` from its own in-scope `SUPABASE_URL` / `SUPABASE_KEY` constants (public anon key). `season.js` `SB()`/`UID()` now try depot-core first (`depotSB()` / `depotUserCached`) with every existing fallback (`depotSB`, `window.sb`, `DEPOT_USER`) kept intact beneath.
+
+This is phase 1 (additive) only. Nothing has been removed: the per-page `createClient` clients and the `window.sb` / `DEPOT_USER` / `buildTeamPayload` mirrors are all still in place.
+
+**Migration rule for future sessions:** cut over ONE page at a time to depot-core-only. For each page, remove that page's own `createClient` and its ad-hoc `window.sb` / `DEPOT_USER` / `buildTeamPayload` mirror, route everything through `depotSB()` / `depotUser()`, and LIVE-VERIFY that page (page loads, auth chrome renders, card fetch works, and a full season game writes back with the record ticking past 1-0) BEFORE moving to the next page. Do not batch multiple pages in one cutover.
+
+The per-page clients and the `window.sb` / `DEPOT_USER` / `buildTeamPayload` mirrors are removed ONLY after all three pages have been individually cut over and live-verified. Until then they remain as the fallback path.
