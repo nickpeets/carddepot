@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Card Depot — Continuity Mockups</title>
+<link rel="stylesheet" href="depot-style.css">
+<style>
+  .wrap{max-width:1160px;margin:0 auto;padding:24px}
+  .lead{background:var(--depot-navy);border:3px solid #000;box-shadow:var(--pixel-shadow);padding:18px;margin-bottom:24px;line-height:1.9;font-size:11px}
+  .lead b{color:var(--depot-gold)}
+  .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:20px}
+  .mode{background:var(--depot-navy);border:3px solid #000;box-shadow:var(--pixel-shadow);padding:14px}
+  .mode h3{color:var(--depot-gold);font-size:13px;margin:0 0 10px}
+  .mode p{font-size:9px;line-height:1.9;opacity:.85;margin:0 0 12px}
+  .mode .links{display:flex;gap:8px;flex-wrap:wrap}
+  .phones{margin-top:36px}
+  .phones h2{color:var(--depot-gold);font-size:16px}
+  .phone-row{display:flex;gap:24px;flex-wrap:wrap;margin-top:16px}
+  .phone{border:6px solid #000;box-shadow:var(--pixel-shadow);background:#000;padding:6px 6px 10px;border-radius:18px}
+  .phone .cap{color:var(--depot-gold);font-size:9px;text-align:center;padding:6px 0}
+  .phone iframe{width:390px;height:720px;border:0;display:block;background:#1a1a2e}
+</style>
+</head>
+<body>
+<div class="depot-bunting"></div>
+<div class="wrap">
+  <div class="lead">
+    <b>CARD DEPOT — CONTINUITY MOCKUPS.</b><br>
+    Same game, finally connected. These are static mockups (hardcoded content) showing the
+    <b>existing 8-bit look</b> with one shared <b>shell</b> — bunting, header with franchise +
+    record, and the four-mode nav — worn identically by every screen. The look is not changed;
+    the drift is cleaned up. Click the tabs in any mockup to move between modes: the frame stays
+    put, only the stage swaps. Resize your window to ~390px to see mobile, or scroll down for the
+    phone previews.
+  </div>
+
+  <div class="cards">
+    <div class="mode"><h3>THE SHELL</h3><p>The persistent frame: bunting, header (wordmark + franchise + record + account), and the four-mode nav. Everything else lives inside it.</p><div class="links"><a class="btn" href="shell.html">Open</a></div></div>
+    <div class="mode"><h3>THE BINDER</h3><p>The reference screen. Era tiles + card tray, unchanged, now inside the shell.</p><div class="links"><a class="btn" href="binder.html">Open</a></div></div>
+    <div class="mode"><h3>LINEUP BUILDER</h3><p>Green chrome swapped for the shell; panels normalized to navy tiles + cream cards.</p><div class="links"><a class="btn" href="builder.html">Open</a></div></div>
+    <div class="mode"><h3>SEASON</h3><p>Was near-unstyled (Courier New / black). Rebuilt inside the shell with shared tokens.</p><div class="links"><a class="btn" href="season.html">Open</a></div></div>
+    <div class="mode"><h3>PLAY BALL (GAME)</h3><p>The RBI diamond, untouched, wrapped in the thin shell + scaled to fit the viewport.</p><div class="links"><a class="btn" href="game.html">Open</a></div></div>
+  </div>
+
+  <div class="phones">
+    <h2>MOBILE — ~390px</h2>
+    <div class="phone-row">
+      <div class="phone"><div class="cap">BINDER</div><iframe src="binder.html" title="binder mobile"></iframe></div>
+      <div class="phone"><div class="cap">BUILDER</div><iframe src="builder.html" title="builder mobile"></iframe></div>
+      <div class="phone"><div class="cap">SEASON</div><iframe src="season.html" title="season mobile"></iframe></div>
+      <div class="phone"><div class="cap">GAME</div><iframe src="game.html" title="game mobile"></iframe></div>
+    </div>
+  </div>
+</div>
+</body>
+</html>
