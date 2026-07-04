@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Card Depot &mdash; Play Ball</title>
+<link rel="stylesheet" href="depot-style.css">
+
+</head>
+<body>
+<div class="depot-bunting"></div>
+<div class="depot-shell">
+  <header class="depot-shell__header">
+    <div class="depot-wordmark">THE <b>DEPOT</b></div>
+    <div class="depot-franchise"><span class="name">PORTLAND MUDCATS</span><span class="record">SEASON RECORD &middot; 2-0</span></div>
+    <div class="depot-account"><span class="depot-bell">&#9733;<span class="dot">2</span></span><span>nickpeets@gmail.com</span><a class="btn ghost" href="#" style="min-height:0;padding:8px 10px">LOG OUT</a></div>
+  </header>
+  <nav class="depot-nav">
+    <a class="depot-tab"  href="binder.html">THE BINDER</a>
+    <a class="depot-tab"  href="builder.html">LINEUP</a>
+    <a class="depot-tab"  href="season.html">SEASON</a>
+    <a class="depot-tab is-active" aria-current="true" href="game.html">PLAY BALL</a>
+    <span class="spacer"></span>
+    <a class="btn ghost" href="index.html" style="font-size:9px">ALL MOCKUPS</a>
+  </nav>
+  <main class="depot-stage">
+    <p class="mock-note">PLAY BALL &mdash; the RBI diamond is the aesthetic north star, so it is untouched. The only change is a THIN shell above it (same bunting + header + nav) so entering a game still reads as the same app, plus the stage now SCALES TO FIT the viewport instead of rendering postage-stamp on phones. Action buttons move to a fixed bottom bar with 44px targets.</p>
+    <div class="game-frame">
+      <div class="game-canvas">
+        <div class="game-hud"><span>AT BAT &middot; PETE PEARL &middot; .312</span><span style="color:var(--depot-gold)">MUDCATS 2 &middot; ACORNS 1 &middot; BOT 3</span><span>PITCHING &middot; P. SANCHEZ</span></div>
+        <span style="position:absolute;left:50%;top:26%;width:9px;height:9px;background:#fff;border:1px solid #000"></span><span style="position:absolute;left:30%;top:40%;width:9px;height:9px;background:#fff;border:1px solid #000"></span><span style="position:absolute;left:70%;top:40%;width:9px;height:9px;background:#fff;border:1px solid #000"></span><span style="position:absolute;left:22%;top:55%;width:9px;height:9px;background:#fff;border:1px solid #000"></span><span style="position:absolute;left:78%;top:55%;width:9px;height:9px;background:#fff;border:1px solid #000"></span><span style="position:absolute;left:50%;top:58%;width:9px;height:9px;background:#fff;border:1px solid #000"></span><span style="position:absolute;left:50%;top:78%;width:9px;height:9px;background:#fff;border:1px solid #000"></span>
+        <div class="game-diamond"></div>
+        <div class="game-teams"><span>MUDCATS</span><span>ACORNS</span></div>
+      </div>
+    </div>
+    <div class="game-actions">
+      <button class="btn">SWING</button>
+      <button class="btn ghost">BOX SCORE</button>
+      <button class="btn ghost">PAUSE</button>
+      <span style="flex:1"></span>
+      <a class="btn ghost" href="season.html">&lsaquo; BACK TO SEASON</a>
+    </div>
+    <p class="muted" style="text-align:center;margin-top:12px">SINGLE &mdash; TROUT TO 1ST</p>
+  </main>
+</div>
+</body>
+</html>

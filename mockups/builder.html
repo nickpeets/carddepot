@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Card Depot &mdash; Lineup Builder</title>
+<link rel="stylesheet" href="depot-style.css">
+
+</head>
+<body>
+<div class="depot-bunting"></div>
+<div class="depot-shell">
+  <header class="depot-shell__header">
+    <div class="depot-wordmark">THE <b>DEPOT</b></div>
+    <div class="depot-franchise"><span class="name">PORTLAND MUDCATS</span><span class="record">SEASON RECORD &middot; 2-0</span></div>
+    <div class="depot-account"><span class="depot-bell">&#9733;<span class="dot">2</span></span><span>nickpeets@gmail.com</span><a class="btn ghost" href="#" style="min-height:0;padding:8px 10px">LOG OUT</a></div>
+  </header>
+  <nav class="depot-nav">
+    <a class="depot-tab"  href="binder.html">THE BINDER</a>
+    <a class="depot-tab is-active" aria-current="true" href="builder.html">LINEUP</a>
+    <a class="depot-tab"  href="season.html">SEASON</a>
+    <a class="depot-tab"  href="game.html">PLAY BALL</a>
+    <span class="spacer"></span>
+    <a class="btn ghost" href="index.html" style="font-size:9px">ALL MOCKUPS</a>
+  </nav>
+  <main class="depot-stage">
+    <p class="mock-note">LINEUP BUILDER &mdash; the biggest normalization. Today this screen is a self-contained GREEN app. Here the green chrome is swapped for the shared shell, panels move to navy tiles + cream cards, the status line becomes a gold callout, and selects get the shared control style. Same layout and logic &mdash; just wearing the shell. On phones the two columns stack and selects go full-width.</p>
+    <div class="callout">Batting order: 9 / 9 hitters set. Pitcher: set. Ready to play. <button class="btn ghost" style="margin-left:12px">PLAY BALL &rsaquo;</button></div>
+    <div class="two-col">
+      <section>
+        <h2 class="h2">YOUR COLLECTION</h2>
+        <p class="muted">17 cards &middot; 12 rich &middot; 4 flat &middot; 1 no MLB line</p>
+        <div style="display:flex;gap:8px;margin:10px 0"><button class="btn ghost" style="font-size:9px">Sort by position</button><button class="btn ghost" style="font-size:9px">View: List</button></div>
+        <div class="card-face" style="margin-bottom:10px"><span class="nm">RICKEY HENDERSON</span>1980 &middot; Oakland Athletics &middot; LF<div style="margin-top:8px"><button class="btn" style="font-size:9px;min-height:0;padding:8px 10px">Add to order</button></div></div>
+        <div class="card-face" style="margin-bottom:10px"><span class="nm">DON MATTINGLY</span>1984 &middot; New York Yankees &middot; 1B<div style="margin-top:8px"><span class="tile is-active" style="font-size:9px;padding:8px 10px">in order</span></div></div>
+        <div class="card-face"><span class="nm">TONY GWYNN</span>1983 &middot; San Diego Padres &middot; OF<div style="margin-top:8px"><button class="btn" style="font-size:9px;min-height:0;padding:8px 10px">Add to order</button></div></div>
+      </section>
+      <section>
+        <h2 class="h2">PITCHER <span class="muted">(pitching box)</span></h2>
+        <div class="panel" style="display:flex;align-items:center;gap:14px"><div><span style="color:var(--depot-gold);font-size:13px">Vida Blue</span><br><span class="muted">San Francisco Giants</span></div><button class="btn danger" style="margin-left:auto">remove</button></div>
+        <h2 class="h2">BATTING ORDER <span class="muted">(1-9 &middot; drag to reorder)</span></h2>
+        <div class="panel" style="display:flex;gap:12px;align-items:center;margin-bottom:12px">  <span class="tile is-active" style="min-width:40px;text-align:center;padding:14px 10px">1</span>  <div style="flex:1"><div class="card-face" style="box-shadow:none;border:0;padding:0;background:transparent;color:var(--depot-cream)"><span class="nm" style="color:var(--depot-gold)">Barry Bonds</span><span class="muted">.328 AVG &middot; 73 HR &middot; 137 RBI</span></div></div>  <select class="sel" style="max-width:240px"><option>Set to Left Field</option></select>  <button class="btn danger">remove</button></div>
+        <div class="panel" style="display:flex;gap:12px;align-items:center;margin-bottom:12px">  <span class="tile is-active" style="min-width:40px;text-align:center;padding:14px 10px">2</span>  <div style="flex:1"><div class="card-face" style="box-shadow:none;border:0;padding:0;background:transparent;color:var(--depot-cream)"><span class="nm" style="color:var(--depot-gold)">Don Mattingly</span><span class="muted">.343 AVG &middot; 23 HR &middot; 110 RBI</span></div></div>  <select class="sel" style="max-width:240px"><option>Set to First Base</option></select>  <button class="btn danger">remove</button></div>
+        <div class="panel" style="display:flex;gap:12px;align-items:center;margin-bottom:12px">  <span class="tile is-active" style="min-width:40px;text-align:center;padding:14px 10px">3</span>  <div style="flex:1"><div class="card-face" style="box-shadow:none;border:0;padding:0;background:transparent;color:var(--depot-cream)"><span class="nm" style="color:var(--depot-gold)">Matt Williams</span><span class="muted">.227 AVG &middot; 20 HR &middot; 66 RBI</span></div></div>  <select class="sel" style="max-width:240px"><option>Set to Third Base</option></select>  <button class="btn danger">remove</button></div>
+        <div class="panel" style="display:flex;gap:12px;align-items:center;margin-bottom:12px">  <span class="tile is-active" style="min-width:40px;text-align:center;padding:14px 10px">4</span>  <div style="flex:1"><div class="card-face" style="box-shadow:none;border:0;padding:0;background:transparent;color:var(--depot-cream)"><span class="nm" style="color:var(--depot-gold)">Ken Griffey Jr.</span><span class="muted">.264 AVG &middot; 16 HR &middot; 61 RBI</span></div></div>  <select class="sel" style="max-width:240px"><option>Set to Center Field</option></select>  <button class="btn danger">remove</button></div>
+      </section>
+    </div>
+  </main>
+</div>
+</body>
+</html>
