@@ -243,6 +243,10 @@ html.depot-builder.depot-builder-reveal-fallback body > header{
  * ==========================================================================*/
 
 html.depot-game{ --depot-game-chrome-h:166px; }   /* JS overwrites with the measured value */
+/* Measured height of the fixed bottom mode-tab bar on phone (varies with tab wrap:
+ * ~71px one row, ~91px when BACK TO SEASON wraps, up to ~123px at 360px). JS overwrites
+ * this with the live getBoundingClientRect height so the game action bar clears it exactly. */
+html.depot-game{ --depot-game-tabbar-h:71px; }
 
 /* The thin shell chrome is FIXED to the top of the viewport, above the game. */
 html.depot-game .depot-bunting,
@@ -394,7 +398,11 @@ html.depot-game .depot-nav #backToDepot{
      /* Lift the game action bar above the fixed bottom tab bar (~71px) and put it BELOW
       * the bar's stacking level so the four modes are always tappable + visible. */
   html.depot-game #sim-controls{
-         bottom:84px !important;
+         /* Clear the fixed bottom tab bar by its LIVE measured height (var set by
+          * js/depot-game-shell.js setTabbarOffset, same measured-variable pattern as
+          * --depot-game-chrome-h) plus a 13px gap - adapts to bar wrap (BACK TO DEPOT /
+          * BACK TO SEASON, 390px / 360px) instead of a brittle hardcoded offset. */
+         bottom:calc(var(--depot-game-tabbar-h, 71px) + 13px) !important;
          z-index:49 !important;
          max-width:calc(100vw - 20px) !important;
   }
