@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Card Depot &mdash; The Shell</title>
+<link rel="stylesheet" href="depot-style.css">
+
+</head>
+<body>
+<div class="depot-bunting"></div>
+<div class="depot-shell">
+  <header class="depot-shell__header">
+    <div class="depot-wordmark">THE <b>DEPOT</b></div>
+    <div class="depot-franchise">
+      <span class="name">PORTLAND MUDCATS</span>
+      <span class="record">SEASON RECORD &middot; 2-0</span>
+    </div>
+    <div class="depot-account">
+      <span class="depot-bell">&#9733;<span class="dot">2</span></span>
+      <span>nickpeets@gmail.com</span>
+      <a class="btn ghost" href="#" style="min-height:0;padding:8px 10px">LOG OUT</a>
+    </div>
+  </header>
+  <nav class="depot-nav">
+    <a class="depot-tab"  href="binder.html">THE BINDER</a>
+    <a class="depot-tab"  href="builder.html">LINEUP</a>
+    <a class="depot-tab"  href="season.html">SEASON</a>
+    <a class="depot-tab"  href="game.html">PLAY BALL</a>
+    <span class="spacer"></span>
+    <a class="btn ghost" href="index.html" style="font-size:9px">ALL MOCKUPS</a>
+  </nav>
+  <main class="depot-stage">
+    <p class="mock-note">THE SHELL &mdash; the persistent frame every mode wears: bunting, header (wordmark + franchise + record + account) and the four-mode nav. Active tab is gold; the rest navy. Click any tab: the frame never moves, only the stage below swaps. Franchise name + record stay pinned once signed in.</p>
+    <h1 class="h1">THE SHELL</h1>
+    <div class="panel">
+      <p style="line-height:1.9;font-size:11px">Below this line is the <b style="color:var(--depot-gold)">mode stage</b> &mdash; the only region that changes between modes. Each screen renders its body here and touches nothing above.</p>
+    </div>
+    <div class="grid cols4" style="margin-top:16px">
+      <a class="tile" href="binder.html"><span class="t">THE BINDER</span>collection</a>
+      <a class="tile" href="builder.html"><span class="t">LINEUP</span>builder</a>
+      <a class="tile" href="season.html"><span class="t">SEASON</span>8-game run</a>
+      <a class="tile is-active" href="game.html"><span class="t">PLAY BALL</span>the game</a>
+    </div>
+  </main>
+</div>
+</body>
+</html>
