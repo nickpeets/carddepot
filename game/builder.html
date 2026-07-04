@@ -286,6 +286,7 @@
   // ----- Config (publishable key only; same project as main app) -----
   var SUPABASE_URL='https://nuymzokvbdntbvinsnda.supabase.co';
   var SUPABASE_KEY=['sb','publishable','IiTsIBqYgGTIEnwdvQEXPA','4rmQdYVo'].join('_');
+  window.DEPOT_SUPABASE_CONFIG = window.DEPOT_SUPABASE_CONFIG || { url: SUPABASE_URL, key: SUPABASE_KEY }; // depot-core config (additive)
   var MLB_BASE='https://statsapi.mlb.com/api/v1';
   var META_MARK='\n\n<!--DEPOT_META:'; var META_END='-->';
   var sb=null;
