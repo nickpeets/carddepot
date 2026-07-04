@@ -49,3 +49,24 @@
     .season-score .season-play{width:100%}
     .season-score .season-chip{font-size:22px;padding:14px 18px}
 }
+
+
+/* ============================================================================
+ * FOUC guard - hide the raw (Courier placeholder) overlay until dressed
+ *
+ * depot-season-shell.js reskins at OPEN-TIME: it waits for #depotSeasonView to
+ * open and its schedule to render, THEN reparents the nodes into shell chrome.
+ * During that gap the raw overlay would flash. Keep the overlay's direct
+ * children invisible while it is open-but-not-yet-dressed; reveal only once
+ * depot-season-shell.js has added .depot-season-dressed (dressing complete) OR
+ * the fail-loud reveal fallback fired (.depot-season-reveal-fallback). The
+ * overlay's own navy background still paints, so no blank/white panel shows.
+ * When the overlay is closed it is display:none, so nothing is affected.
+ * ==========================================================================*/
+#depotSeasonView:not(.depot-season-dressed):not(.depot-season-reveal-fallback) > *{
+        visibility:hidden !important;
+}
+#depotSeasonView.depot-season-dressed > *,
+#depotSeasonView.depot-season-reveal-fallback > *{
+        visibility:visible;
+}
