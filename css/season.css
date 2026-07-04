@@ -1,0 +1,51 @@
+/* ============================================================================
+ * season.css - Session 3: Season screen reskin (additive, presentation only)
+ *
+ * Restyles the existing #depotSeasonView overlay to wear the shared shell and the
+ * mockups/season.html treatment. season.js logic and index.html's season render
+ * markup are untouched; js/depot-season-shell.js adds these classes/hooks to the
+ * existing nodes when the overlay opens. Tokens inherited from css/depot-style.css
+ * (no Courier / muted-gold / black).
+ * ==========================================================================*/
+
+#depotSeasonView.depot-season{
+    background:var(--depot-navy-bg);
+    color:var(--depot-cream);
+    font-family:'Press Start 2P','Oswald',monospace;
+}
+#depotSeasonView.depot-season .depot-shell{max-width:1180px;margin:0 auto}
+
+/* scoreboard: gold record chip + label + primary PLAY NEXT GAME */
+.season-score{display:flex;gap:var(--sp3);align-items:center;flex-wrap:wrap;margin:var(--sp3) 0 var(--sp4)}
+.season-score .season-chip{
+    background:var(--depot-gold);color:var(--depot-ink);
+    border:3px solid var(--depot-black);box-shadow:var(--pixel-shadow);
+    font-size:26px;padding:16px 26px;letter-spacing:2px;min-width:150px;text-align:center;
+}
+.season-score .season-reclbl{font-size:var(--fs-micro);line-height:1.7;color:var(--depot-cream)}
+.season-score .season-reclbl .remain{color:var(--depot-gold)}
+.season-score .season-spacer{flex:1}
+.season-score .season-play{font-size:var(--fs-h2);padding:16px 22px}
+
+/* schedule: two columns of navy tiles (own grid - avoids the binder's
+   !important .grid card-grid rule on index.html) */
+.season-sched{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.season-game{display:flex;justify-content:space-between;align-items:center;gap:12px;line-height:1.5}
+.season-game .season-res{white-space:nowrap;color:var(--depot-gold)}
+.season-game.is-active .season-res{color:var(--depot-ink)}
+.season-game.is-loss .season-res{color:var(--depot-red)}
+.season-game.is-next .season-res{color:var(--depot-gold)}
+.season-game.is-pending{opacity:.85}
+.season-game.is-pending .season-res{color:var(--depot-cream);opacity:.6}
+
+#depotSeasonMsg{font-size:var(--fs-micro);color:var(--depot-gold);margin-top:var(--sp3);line-height:1.6}
+
+/* ---- mobile: stack under the shell's bottom tab bar (< 600px) ------------ */
+@media (max-width:600px){
+    #depotSeasonView.depot-season .depot-shell{max-width:100%}
+    .season-sched{grid-template-columns:1fr}
+    .season-score{gap:var(--sp2)}
+    .season-score .season-spacer{display:none}
+    .season-score .season-play{width:100%}
+    .season-score .season-chip{font-size:22px;padding:14px 18px}
+}
