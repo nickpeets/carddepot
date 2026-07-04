@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Card Depot &mdash; Season</title>
+<link rel="stylesheet" href="depot-style.css">
+
+</head>
+<body>
+<div class="depot-bunting"></div>
+<div class="depot-shell">
+  <header class="depot-shell__header">
+    <div class="depot-wordmark">THE <b>DEPOT</b></div>
+    <div class="depot-franchise"><span class="name">PORTLAND MUDCATS</span><span class="record">SEASON RECORD &middot; 2-0</span></div>
+    <div class="depot-account"><span class="depot-bell">&#9733;<span class="dot">2</span></span><span>nickpeets@gmail.com</span><a class="btn ghost" href="#" style="min-height:0;padding:8px 10px">LOG OUT</a></div>
+  </header>
+  <nav class="depot-nav">
+    <a class="depot-tab"  href="binder.html">THE BINDER</a>
+    <a class="depot-tab"  href="builder.html">LINEUP</a>
+    <a class="depot-tab is-active" aria-current="true" href="season.html">SEASON</a>
+    <a class="depot-tab"  href="game.html">PLAY BALL</a>
+    <span class="spacer"></span>
+    <a class="btn ghost" href="index.html" style="font-size:9px">ALL MOCKUPS</a>
+  </nav>
+  <main class="depot-stage">
+    <p class="mock-note">SEASON &mdash; the screen that drifted the most. Today it is nearly unstyled (Courier New, muted gold, black &mdash; reads like a placeholder). Rebuilt here inside the shell with shared tokens: pixel type, gold scoreboard tile, navy schedule tiles, primary gold PLAY NEXT GAME button. The &ldquo;MY CLUB&rdquo; line is now redundant because the franchise + record live in the shell header above.</p>
+    <h1 class="h1">SEASON &mdash; 8-GAME RUN</h1>
+    <div class="score">
+      <div class="chip">2 - 0</div>
+      <div class="lbl">RECORD<br>through 2 games<br><span style="color:var(--depot-gold)">6 games remain</span></div>
+      <span style="flex:1"></span>
+      <button class="btn" style="font-size:13px;padding:16px 22px">PLAY NEXT GAME &rsaquo;</button>
+    </div>
+    <h2 class="h2">SCHEDULE</h2>
+    <div class="grid" style="grid-template-columns:1fr 1fr;gap:12px">
+      <div class="tile is-active" style="display:flex;justify-content:space-between;align-items:center"><span><span class="t" style="display:inline">G1</span> vs SALEM SENATORS</span><span style="color:var(--depot-gold)">W 7-3</span></div>
+      <div class="tile is-active" style="display:flex;justify-content:space-between;align-items:center"><span><span class="t" style="display:inline">G2</span> vs EUGENE EMERALDS</span><span style="color:var(--depot-gold)">W 5-2</span></div>
+      <div class="tile" style="display:flex;justify-content:space-between;align-items:center"><span><span class="t" style="display:inline">G3</span> vs TACOMA RAINIERS</span><span style="color:var(--depot-gold)">NEXT</span></div>
+      <div class="tile" style="display:flex;justify-content:space-between;align-items:center"><span><span class="t" style="display:inline">G4</span> vs SPOKANE INDIANS</span><span style="color:var(--depot-gold)">&mdash;</span></div>
+      <div class="tile" style="display:flex;justify-content:space-between;align-items:center"><span><span class="t" style="display:inline">G5</span> vs BOISE HAWKS</span><span style="color:var(--depot-gold)">&mdash;</span></div>
+      <div class="tile" style="display:flex;justify-content:space-between;align-items:center"><span><span class="t" style="display:inline">G6</span> vs YAKIMA BEARS</span><span style="color:var(--depot-gold)">&mdash;</span></div>
+      <div class="tile" style="display:flex;justify-content:space-between;align-items:center"><span><span class="t" style="display:inline">G7</span> vs SALEM SENATORS</span><span style="color:var(--depot-gold)">&mdash;</span></div>
+      <div class="tile" style="display:flex;justify-content:space-between;align-items:center"><span><span class="t" style="display:inline">G8</span> vs EUGENE EMERALDS</span><span style="color:var(--depot-gold)">&mdash;</span></div>
+    </div>
+    <div class="callout" style="margin-top:20px">Win the run to bank it in your franchise record. Your lineup carries over &mdash; tune it in the <a href="builder.html" style="color:var(--depot-ink);text-decoration:underline">Lineup Builder</a> before the next game.</div>
+  </main>
+</div>
+</body>
+</html>
