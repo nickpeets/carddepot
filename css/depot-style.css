@@ -202,3 +202,30 @@ a{color:inherit;text-decoration:none}
   .score{flex-wrap:wrap}
   .btn,.sel{width:100%}
 }
+
+/* ============================================================================
+ * FOUC guard — builder: hide the raw (pre-shell) content until dressed
+ *
+ * The Lineup Builder (game/builder.html) reskins on DOMContentLoaded: js/depot-
+ * builder-shell.js mounts the shared shell and reparents #loginView / #builderView
+ * into it, then hides the ad-hoc <header>. Between first paint and that mount the
+ * raw green-era content would flash. Mirrors the Season fix (PR #72): depot-builder-
+ * shell.js marks <html class="depot-builder"> at script-eval, so the rules below are
+ * scoped to the builder page ONLY (no effect on the binder or season screens, which
+ * never carry that class). Keep the builder's content invisible while it is armed but
+ * not yet dressed; reveal once .depot-builder-dressed (mount complete) OR the fail-loud
+ * .depot-builder-reveal-fallback (3s watchdog) lands. The page's navy <body> background
+ * (var(--depot-navy-bg)) still paints, so there is no blank/white flash.
+ * ==========================================================================*/
+html.depot-builder:not(.depot-builder-dressed):not(.depot-builder-reveal-fallback) #loginView,
+html.depot-builder:not(.depot-builder-dressed):not(.depot-builder-reveal-fallback) #builderView,
+html.depot-builder:not(.depot-builder-dressed):not(.depot-builder-reveal-fallback) body > header{
+  visibility:hidden !important;
+}
+html.depot-builder.depot-builder-dressed #loginView,
+html.depot-builder.depot-builder-dressed #builderView,
+html.depot-builder.depot-builder-reveal-fallback #loginView,
+html.depot-builder.depot-builder-reveal-fallback #builderView,
+html.depot-builder.depot-builder-reveal-fallback body > header{
+  visibility:visible;
+}

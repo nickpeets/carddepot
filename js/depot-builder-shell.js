@@ -12,6 +12,16 @@
  * to page-relative ('../index.html', 'builder.html', '../index.html?season=1',
  * 'index.html') after mount.
  *
+ * FOUC guard (mirrors the Season fix, PR #72): the builder reskins on DOMContentLoaded,
+ * so between first paint and mount the raw (green-era) content would flash. We arm the
+ * hide-until-dressed CSS immediately at script-eval by marking <html class="depot-builder">
+ * (builder-only, so no other page is affected); css/depot-style.css keeps #loginView /
+ * #builderView / the old <header> invisible while dressing is pending. The page's navy
+ * body background still paints, so there is no blank/white flash. On successful mount we
+ * add .depot-builder-dressed to reveal. A one-shot 3s fail-loud fallback adds
+ * .depot-builder-reveal-fallback (+ a [depot] warn) so a broken mount can never leave the
+ * screen blank. Every guard bails loud, per AGENTS.md §4.
+ *
  * Additive-first + fail-loud per AGENTS.md: every early return logs why, tagged [depot].
  * Node moves (appendChild) preserve existing event listeners, so the builder's app JS
  * keeps working after relocation.
@@ -26,13 +36,43 @@
     game: 'index.html'
   };
 
+  var docEl = document.documentElement;
+
+  // Arm the FOUC hide immediately (synchronously, before DOMContentLoaded). This class
+  // scopes the hide-until-dressed CSS to the builder page only. If any script below
+  // never reveals, the 3s fail-loud fallback (armReveal) guarantees the content shows.
+  docEl.classList.add('depot-builder');
+
+  var revealTimer = null;
+  function reveal(cls) {
+    if (revealTimer) { clearTimeout(revealTimer); revealTimer = null; }
+    docEl.classList.add(cls);
+  }
+  function armReveal() {
+    if (revealTimer) { return; }
+    if (docEl.classList.contains('depot-builder-dressed')) { return; }
+    revealTimer = setTimeout(function () {
+      revealTimer = null;
+      if (!docEl.classList.contains('depot-builder-dressed')) {
+        docEl.classList.add('depot-builder-reveal-fallback');
+        console.warn('[depot] builder-shell: reveal fallback — builder not dressed within 3s; revealing raw content so the screen is not left blank (shell mount hook may have failed)');
+      }
+    }, 3000);
+  }
+
   function init() {
+    // Fallback is armed for every path: if we bail before dressing, the 3s timer reveals
+    // the builder's ad-hoc chrome rather than leaving a blank navy screen.
+    armReveal();
+
     if (!window.DepotShell) {
       console.warn('[depot] builder-shell: window.DepotShell missing (depot-shell.js not loaded); builder keeps its ad-hoc chrome');
+      reveal('depot-builder-reveal-fallback');
       return;
     }
     if (document.querySelector('.depot-shell')) {
       console.warn('[depot] builder-shell: shell already mounted; skipping');
+      reveal('depot-builder-dressed');
       return;
     }
 
@@ -41,6 +81,7 @@
     var stage = window.DepotShell.stageEl();
     if (!stage) {
       console.warn('[depot] builder-shell: shell stage missing after mount; aborting relocate');
+      reveal('depot-builder-reveal-fallback');
       return;
     }
 
@@ -70,6 +111,9 @@
     var oldHeader = document.querySelector('body > header');
     if (oldHeader) { oldHeader.style.display = 'none'; }
     else { console.warn('[depot] builder-shell: ad-hoc <header> not found to retire'); }
+
+    // Dressing complete — reveal the shell (FOUC guard), and cancel the fail-loud timer.
+    reveal('depot-builder-dressed');
 
     console.log('[depot] builder-shell: lineup builder wearing shared shell (active=builder)');
   }
