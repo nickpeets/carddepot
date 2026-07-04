@@ -23,21 +23,24 @@
 
   var _client = null;
   var _clientTried = false;
+  var _configWarned = false;
   var _userCached = null;
   var _userPromise = null;
 
   function getClient() {
     if (_client) return _client;
     if (_clientTried) return _client; // already tried and failed; stay quiet after first log
-    _clientTried = true;
     try {
       var cfg = window.DEPOT_SUPABASE_CONFIG;
       if (!cfg || !cfg.url || !cfg.key) {
+        if (!_configWarned) { _configWarned = true;
         console.warn('[depot] depotSB: no DEPOT_SUPABASE_CONFIG (url/key) present on page; client unavailable');
+        }
         return null;
       }
       if (!window.supabase || typeof window.supabase.createClient !== 'function') {
         console.warn('[depot] depotSB: supabase-js lib not loaded (window.supabase.createClient missing)');
+        _clientTried = true;
         return null;
       }
       _client = window.supabase.createClient(cfg.url, cfg.key);
@@ -45,6 +48,7 @@
       return _client;
     } catch (e) {
       console.warn('[depot] depotSB: createClient threw:', e);
+      _clientTried = true;
       return null;
     }
   }
