@@ -288,6 +288,7 @@
   var META_MARK='\n\n<!--DEPOT_META:'; var META_END='-->';
   var sb=null;
   try{ if(window.supabase&&window.supabase.createClient){ sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY); } }catch(e){}
+  try{ if(sb){ window.sb = sb; window.supabaseClient = sb; } }catch(e){}
   if(!sb){ $('authMsg').textContent='Auth library failed to load. Check your connection and reload.'; }
 
   // ----- State -----
@@ -1280,7 +1281,7 @@
     var user = window.DEPOT_USER || null;
     // [season fix] expose the in-scope Supabase client to window so season.js SB() resolves here
     // (attachMatchToSeasonGame uses season.js's own SB(), which reads window.sb / depotSB()).
-    try { if (!window.sb && sb) window.sb = sb; } catch (e) {}
+    var sb = window.sb || window.supabaseClient || (typeof depotSB==='function'?depotSB():null) || null; /* [season fix] resolve client at call time; page-load var sb is IIFE-scoped and not visible here */
     try { console.log('[season] builder play: attaching match', { seasonGameId: (ctx && ctx.season_game_id), haveSb: !!window.sb, haveUser: !!window.DEPOT_USER }); } catch (e) {}
     if (!sb || !user) { alert('Please sign in to play a season game.'); return; }
     var challenger = await buildTeamPayload();
