@@ -124,6 +124,7 @@
       if (binderTab) binderTab.addEventListener('click', function(ev){ ev.preventDefault(); try { closeBtn.click(); } catch(e){ warn('close click threw: ' + e); } });
     }
     view.__depotShelled = true;
+    view.classList.add('depot-season-dressed'); // FOUC guard: reveal contents now dressing is complete
     log('season screen wearing shared shell (active=season, ' + (id.anon ? 'anonymous' : (wins + '-' + losses)) + ')');
   }
   function tryShell(){
@@ -140,9 +141,19 @@
   function boot(){
     var view = document.getElementById(VIEW_ID);
     if (!view) { warn('boot: no view in DOM; season overlay not present on this page'); return; }
-    var obs = new MutationObserver(function(){ if (isVisible(view) && !view.__depotShelled) tryShell(); });
+    var revealTimer = null;
+    function armReveal(){
+        if (revealTimer || view.__depotShelled) return;
+        revealTimer = setTimeout(function(){
+            if (!view.__depotShelled && !view.classList.contains('depot-season-dressed')){
+                view.classList.add('depot-season-reveal-fallback');
+                warn('reveal fallback: overlay not dressed within 3s; revealing raw content so the panel is not left blank (season shell hook may have failed)');
+            }
+        }, 3000);
+    }
+    var obs = new MutationObserver(function(){ if (isVisible(view)){ armReveal(); if (!view.__depotShelled) tryShell(); } });
     obs.observe(view, { childList: true, subtree: true, attributes: true, attributeFilter: ['style','class'] });
-    if (isVisible(view)) tryShell();
+    if (isVisible(view)){ armReveal(); tryShell(); }
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
   else boot();
