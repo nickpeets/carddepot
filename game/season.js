@@ -123,7 +123,7 @@
     if (q.data && q.data.length) return q.data[0];
     var name = null;
     try { name = window.prompt('Name your franchise (team name):', 'MY CLUB'); } catch(e){}
-    if (name == null) return null;                    // user cancelled
+    if (name == null) { console.warn('[season] ensureFranchise bail (name == null):', {"name":!!(name)}); return null; }                    // user cancelled
     name = String(name).trim().slice(0,40) || 'MY CLUB';
     var ins = await sb.from('franchises').insert({ owner_id: uid, team_name: name }).select().single();
     if (ins.error) throw ins.error;
@@ -162,9 +162,9 @@
 
   async function startOrResumeSeason(){
     var sb = SB(), uid = UID();
-    if (!sb || !uid) return null;
+    if (!sb || !uid) { console.warn('[season] startOrResumeSeason bail (!sb || !uid):', {"sb":!!(sb), "uid":!!(uid)}); return null; }
     var fr = await ensureFranchise(sb, uid);
-    if (!fr) return null;
+    if (!fr) { console.warn('[season] startOrResumeSeason bail (!fr):', {"fr":!!(fr)}); return null; }
     var season = await ensureSeason(sb, uid, fr);
     return { franchise: fr, season: season };
   }
@@ -172,7 +172,7 @@
   // first still-pending game (lowest game_number), or null if season done.
   async function nextPendingGame(seasonId){
     var sb = SB(), uid = UID();
-    if (!sb || !uid || !seasonId) return null;
+    if (!sb || !uid || !seasonId) { console.warn('[season] nextPendingGame bail (!sb || !uid || !seasonId):', {"sb":!!(sb), "uid":!!(uid), "seasonId":!!(seasonId)}); return null; }
     var q = await sb.from('season_games').select('*')
                     .eq('owner_id', uid).eq('season_id', seasonId).eq('result','pending')
                     .order('game_number', { ascending: true }).limit(1);
@@ -182,7 +182,7 @@
 
   async function loadSeasonGames(seasonId){
     var sb = SB(), uid = UID();
-    if (!sb || !uid || !seasonId) return [];
+    if (!sb || !uid || !seasonId) { console.warn('[season] loadSeasonGames bail (!sb || !uid || !seasonId):', {"sb":!!(sb), "uid":!!(uid), "seasonId":!!(seasonId)}); return []; }
     var q = await sb.from('season_games').select('*')
                     .eq('owner_id', uid).eq('season_id', seasonId)
                     .order('game_number', { ascending: true });
@@ -227,7 +227,7 @@
                     .eq('owner_id', uid).eq('id', seasonGameId).single();
     if (g.error) throw g.error;
     var row = g.data;
-    if (!row || row.result !== 'pending') return;     // already written -> no double count
+    if (!row || row.result !== 'pending') { console.warn('[season] recordSeasonResult bail (!row || row.result !== \'pending\'):', {"row":!!(row), "row.result":!!(row?.result)}); return; }     // already written -> no double count
 
     var upd = await sb.from('season_games').update({
         result: result, user_score: userScore, opp_score: oppScore,
