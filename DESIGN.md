@@ -1,7 +1,4 @@
-# Test line 1
-function x(){ return [1,2]; }
-  indented line
-<div class="a">hi</div># Card Depot — Unified Design Direction (Continuity Pass)
+# Card Depot — Unified Design Direction (Continuity Pass)
 
 > **Scope:** Continuity only. The existing 8-bit / RBI-Baseball pixel aesthetic
 > (navy + gold + pinstripe, Press Start 2P) is **already correct and stays as-is.**
@@ -193,12 +190,24 @@ returning to the binder. Schedule/games list uses navy tiles. This screen goes f
 
 ### 3.4 The Game screen (last, riskiest)
 
-Keep the RBI diamond exactly as rendered — it is the aesthetic north star. Wrap it in a
-**thin shell**: the bunting + a slim header (wordmark left, franchise+record center,
-BACK/nav right) above the game stage, so entering a game still reads as the same app.
-The in-game HUD (scoreboard, MUDCATS/ACORNS nameplates) is untouched. The one real fix
-here is **mobile scaling** (section 4). Do this screen last because the game loop is the
-riskiest working path to disturb.
+> **Nick's review amendment (approved direction):** the live game's in-game
+> presentation stays **exactly as-is** — the RBI diamond, field, HUD/scoreboard,
+> MUDCATS/ACORNS nameplates, play-by-play, and every in-game panel are the aesthetic
+> north star and are **not restyled**. The **only** visual change adopted on this
+> screen is the **controls**, which take the mockup's new control treatment (the shell
+> button/tile styling shown in `mockups/game.html`). So: shell chrome around the stage
+> + mockup controls, in-game aesthetic untouched.
+
+Wrap the game in a **thin shell**: the bunting + a slim header (wordmark left,
+franchise+record center, BACK/nav right) above the game stage, so entering a game still
+reads as the same app. The in-game field, panels, HUD (scoreboard, MUDCATS/ACORNS
+nameplates), and overall in-game aesthetic are left **untouched** — do not restyle them.
+Apply the mockup's control treatment to the game **controls only** (the action buttons —
+swing, box score, pause, back — adopt the shared shell button/tile look). The other real
+fix here is **mobile scaling** (section 4): the stage scales to fit the viewport instead
+of rendering postage-stamp, and the controls move to a fixed bottom bar with 44px
+targets. Do this screen last because the game loop is the riskiest working path to
+disturb.
 
 ---
 
@@ -282,10 +291,13 @@ Swap green chrome for the shell; normalize panels to navy-tile + cream-card; res
 status banner and selects. Palette/chrome only — no builder logic changes. Add the
 builder mobile restack (< 600px single column, full-width selects).
 
-**Session 5 — Game screen (last, riskiest).**
-Wrap the RBI diamond in the thin shell; do **not** touch the game loop or HUD. Implement
-the mobile scaling fix (scale-to-fit stage + bottom action bar). Test the full season ->
-builder -> game -> back-to-season round trip on desktop and 390px before merge.
+**Session 5 — Game screen (last, riskiest): shell chrome + mockup controls only.**
+Wrap the RBI diamond in the thin shell and adopt the mockup's control treatment for the
+game **controls only** (action buttons -> shared shell button/tile look). Do **not**
+restyle the in-game field, panels, HUD, or aesthetic — per Nick's review, the in-game
+presentation stays exactly as-is. Do not touch the game loop. Implement the mobile
+scaling fix (scale-to-fit stage + bottom action bar, 44px targets). Test the full season
+-> builder -> game -> back-to-season round trip on desktop and 390px before merge.
 
 **Session 6 — Mobile polish + transitions.**
 Bottom tab bar, 44px touch targets across all four, active-tile carry + optional stage
