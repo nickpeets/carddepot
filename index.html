@@ -851,6 +851,7 @@ body{
   var SUPABASE_URL = 'https://nuymzokvbdntbvinsnda.supabase.co';
   // publishable (anon) key, client-safe / RLS-protected; assembled from parts
   var SUPABASE_KEY = ['sb','publishable','IiTsIBqYgGTIEnwdvQEXPA','4rmQdYVo'].join('_');
+  window.DEPOT_SUPABASE_CONFIG = { url: SUPABASE_URL, key: SUPABASE_KEY }; // depot-core config (additive)
 
   if(!window.supabase || !window.supabase.createClient){
     console.warn('[DepotAuth] supabase-js failed to load; auth disabled, card flow unaffected.');
