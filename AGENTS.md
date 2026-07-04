@@ -91,3 +91,11 @@ Pages deploys are flaky **server-side** in this repo — builds sometimes queue 
 5. Merge with a `--no-ff` merge commit; **keep the branch**.
 6. Bump `js/version.js`; after merge, confirm live `[depot] build <hash>` matches.
 7. Report: files, commit hashes, and the live-verified build hash.
+
+## 7. Known tooling notes
+
+- **`game/index.html` embeds base64 card art** (and every page embeds Supabase
+  URL/anon-key constants). Reading these files wholesale can trip content/secret
+  filters and truncate tooling output. **Edit surgically:** target the specific
+  lines/regions, mask keys before logging, and prefer an editor's document API over
+  dumping the whole file. Never paste Supabase keys into logs, issues, URLs, or chat.
