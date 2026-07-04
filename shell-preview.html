@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <script src="js/version.js"></script>
+  <script src="js/depot-core.js"></script>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>The Depot — Shell Preview (Session 1)</title>
+  <link rel="stylesheet" href="css/depot-style.css">
+</head>
+<body>
+  <!--
+    shell-preview.html — Session 1 test harness (NOT a shipping page).
+    Loads the production css/depot-style.css + js/depot-shell.js with dummy content
+    so the shared shell can be live-verified standalone before any real page is
+    wired (Sessions 2-5). No Supabase config is set here on purpose: the shell falls
+    back to its anonymous state (see [depot] console logs). Use ?franchise=1 to
+    preview the signed-in identity block with dummy franchise/record.
+  -->
+  <script src="js/depot-shell.js"></script>
+  <script>
+    (function () {
+      DepotShell.mount({ active: 'binder' });
+      var stage = DepotShell.stageEl();
+      if (stage) {
+        stage.innerHTML = [
+          '<h1 class="h1">SHELL PREVIEW</h1>',
+          '<div class="callout">Session 1 harness — production css/depot-style.css + js/depot-shell.js. ' +
+            'The chrome above (bunting, header, mode nav) is the shared shell. Content below is dummy ' +
+            'filler to prove the shell frames a mode stage.</div>',
+          '<h2 class="h2">PANELS &amp; TILES</h2>',
+          '<div class="grid cols4">',
+            '<div class="tile is-active"><span class="t">50s</span>golden age</div>',
+            '<div class="tile"><span class="t">60s</span>expansion</div>',
+            '<div class="tile"><span class="t">70s</span>astroturf</div>',
+            '<div class="tile"><span class="t">80s</span>RBI era</div>',
+          '</div>',
+          '<h2 class="h2">BUTTONS (shared control treatment)</h2>',
+          '<div class="score">',
+            '<button class="btn">PRIMARY</button>',
+            '<button class="btn ghost">GHOST</button>',
+            '<button class="btn danger">remove</button>',
+          '</div>',
+          '<h2 class="h2">CARD FELT + FACE</h2>',
+          '<div class="card-tray"><div class="grid cols3">',
+            '<div class="card-face"><span class="nm">OTIS</span>LF · .301 · 12 HR</div>',
+            '<div class="card-face"><span class="nm">JEFFWAY</span>CF · .288 · 9 HR</div>',
+            '<div class="card-face"><span class="nm">RONALDS</span>RF · .312 · 24 HR</div>',
+          '</div></div>',
+          '<h2 class="h2">SCORE CHIPS</h2>',
+          '<div class="score">',
+            '<span class="chip">2</span><span class="lbl">WINS</span>',
+            '<span class="chip">0</span><span class="lbl">LOSSES</span>',
+          '</div>',
+          '<p class="muted">Resize to ~390px to verify the phone layout: header rows split (franchise ' +
+            'record kept), mode nav becomes a fixed bottom tab bar, buttons go full-width.</p>'
+        ].join('');
+      }
+      // Optional dummy signed-in preview via ?franchise=1 (no real data / no secrets).
+      try {
+        if (new URLSearchParams(location.search).get('franchise') === '1') {
+          DepotShell.setFranchise({ name: 'Portland Mudcats', wins: 2, losses: 0 });
+          var em = document.querySelector('[data-depot-email]');
+          if (em) { em.textContent = 'demo@thedepot'; }
+          console.log('[depot] shell-preview: dummy franchise applied (?franchise=1)');
+        }
+      } catch (e) { console.warn('[depot] shell-preview: dummy franchise failed:', e); }
+    })();
+  </script>
+</body>
+</html>
