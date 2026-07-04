@@ -164,7 +164,24 @@
     });
   }
 
-  function mount(opts){
+  // Session 6 — active-tile carry: paint the clicked mode tab active BEFORE the browser
+// navigates, so the destination page opens with that tile already lit (no flash of the
+// old active state across the load). Chrome-only, presentation; never blocks navigation
+// (the <a href> still follows normally). Fail-loud per AGENTS.md.
+function attachNavCarry(root){
+    if (!root){ console.warn('[depot] shell.attachNavCarry: no shell root; carry disabled'); return; }
+    var nav = root.querySelector('[data-depot-nav]');
+    if (!nav){ console.warn('[depot] shell.attachNavCarry: no [data-depot-nav]; carry disabled'); return; }
+    nav.addEventListener('click', function (e){
+        var tab = e.target && e.target.closest ? e.target.closest('.depot-tab') : null;
+        if (!tab){ return; }
+        var mode = tab.getAttribute('data-mode');
+        if (!mode){ console.warn('[depot] shell nav carry: clicked tab has no data-mode; not carrying'); return; }
+        setActive(mode); // light the destination tab now; navigation proceeds normally
+    });
+}
+
+function mount(opts){
     opts = opts || {};
     var el = opts.el || document.body;
     if (!el){ console.warn('[depot] shell.mount: no target element and no document.body; aborting'); return null; }
@@ -172,6 +189,7 @@
     el.insertAdjacentHTML('afterbegin', shellHtml({ active: opts.active, wordmark: opts.wordmark }));
     _root = el.querySelector('.depot-shell');
     _mounted = true;
+    attachNavCarry(_root);
     console.log('[depot] depot-shell mounted (active=' + (opts.active || 'none') + ')');
     // Auto-resolve franchise/record unless caller opts out.
     if (opts.autoFranchise !== false){ refreshFranchise(); }
