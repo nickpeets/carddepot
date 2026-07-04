@@ -6,18 +6,22 @@
  * play-by-play, and every in-game panel — is the aesthetic north star and is NOT
  * restyled. Only two things change on this screen:
  *   1. Shell chrome: a THIN shared header/nav frame (bunting + header + mode nav with
- *      PLAY BALL active, franchise + record identity) mounted ABOVE the game stage.
+ *      PLAY BALL active, franchise + record identity) fixed ABOVE the game stage.
  *   2. Controls: the game controls (#sim-controls buttons + pace select) adopt the
  *      shared shell button/tile look (.btn / .btn.ghost / .sel) — styling only; what
  *      the controls DO is untouched.
  *
  * HIGH CAUTION (AGENTS.md, riskiest working path): this file NEVER touches the sim,
  * __onMatchComplete, the season writeback, the BACK-nav behavior, or the 2000px scaled
- * #stage. The game content (#dc-root / .sc-host / #stage) is left exactly as the game
- * builds it and is NEVER hidden or delayed by the FOUC guard — the sim must not be gated
- * on shell mount. We only: mount chrome, MOVE the existing #backToDepot node into the
- * shell (node move preserves its listener + href + label — nav behavior unchanged), and
- * ADD shared classes to the existing #sim-controls children (additive styling only).
+ * #stage. The stage's scale transform is left EXACTLY as the game sets it. To make room
+ * for the thin shell we translate the game's full-viewport backdrop (.sc-host > div,
+ * position:fixed inset:0) DOWN by the measured chrome height via a CSS variable — a pure
+ * translateY on the backdrop CONTAINER, which shifts the whole canvas uniformly and
+ * preserves the stage's scale and its centering-within-the-backdrop (no scale change, no
+ * clipping). We only: mount chrome, MOVE the existing #backToDepot node into the shell
+ * (node move preserves its listener + href + label — nav behavior unchanged), ADD shared
+ * classes to the existing #sim-controls children (additive styling only), and set the
+ * --depot-game-chrome-h offset variable.
  *
  * FOUC guard (mirrors Season PR #72 / Builder PR #74) — CHROME ONLY: depot-game-shell.js
  * marks <html class="depot-game"> at script-eval so css/depot-style.css keeps the shell
@@ -65,6 +69,34 @@
     }, 3000);
   }
 
+  // Measure the height of the TOP chrome (bunting + header, plus the nav when it sits at
+  // the top on desktop) and publish it as --depot-game-chrome-h. css/depot-style.css uses
+  // it to translate the game backdrop down so the thin shell sits above the stage without
+  // touching the stage's scale. Recomputed on resize so desktop (nav-at-top) and phone
+  // (nav becomes a bottom tab bar) both offset by the correct amount. Fail-loud on miss.
+  function setChromeOffset() {
+    try {
+      var shell = document.querySelector('.depot-shell');
+      if (!shell) { console.warn('[depot] game-shell: setChromeOffset — no .depot-shell; leaving default offset'); return; }
+      var bunt = document.querySelector('.depot-bunting');
+      var header = shell.querySelector('.depot-shell__header');
+      var nav = shell.querySelector('.depot-nav');
+      var mid = window.innerHeight / 2;
+      var bottoms = [];
+      [bunt, header, nav].forEach(function (el) {
+        if (!el) { return; }
+        var r = el.getBoundingClientRect();
+        // only count chrome anchored near the TOP (the phone nav is a fixed bottom bar)
+        if (r.top < mid) { bottoms.push(r.bottom); }
+      });
+      if (!bottoms.length) { console.warn('[depot] game-shell: setChromeOffset — no top chrome measured; leaving default offset'); return; }
+      var h = Math.round(Math.max.apply(null, bottoms));
+      docEl.style.setProperty('--depot-game-chrome-h', h + 'px');
+    } catch (e) {
+      console.warn('[depot] game-shell: setChromeOffset threw: ' + e);
+    }
+  }
+
   // Restyle the game controls to the shared shell look — ADDITIVE CLASSES ONLY.
   // What the controls DO is never touched: no listeners added/removed, no logic changed.
   function styleControls() {
@@ -85,6 +117,12 @@
     console.log('[depot] game-shell: controls restyled to shared shell look (' + btns.length + ' buttons + pace select)');
   }
 
+  var resizeTimer = null;
+  function onResize() {
+    if (resizeTimer) { clearTimeout(resizeTimer); }
+    resizeTimer = setTimeout(setChromeOffset, 120);
+  }
+
   function init() {
     // Fallback armed on every path: if we bail before dressing, the 3s timer reveals
     // the chrome rather than leaving the shell hidden. The game stage is never hidden.
@@ -103,8 +141,9 @@
       return;
     }
 
-    // Mount the thin shell chrome at the TOP of the body (afterbegin), above the game
-    // stage. The stage (#dc-root) keeps its own fixed/absolute positioning untouched.
+    // Mount the thin shell chrome at the TOP of the body (afterbegin). CSS fixes it to
+    // the top and translates the game backdrop down by --depot-game-chrome-h; the stage
+    // (#dc-root / #stage) keeps its own scale/positioning untouched.
     window.DepotShell.mount({ el: document.body, active: 'game' });
 
     var tabs = document.querySelectorAll('.depot-shell .depot-tab');
@@ -128,8 +167,15 @@
 
     styleControls();
 
+    // Publish the chrome-height offset and keep it in sync on resize.
+    setChromeOffset();
+    window.addEventListener('resize', onResize);
+
     // Dressing complete — reveal the chrome (FOUC guard) and cancel the fail-loud timer.
     reveal('depot-game-dressed');
+
+    // One more offset pass after reveal in case fonts/reflow changed the chrome height.
+    setTimeout(setChromeOffset, 0);
 
     console.log('[depot] game-shell: play-ball screen wearing thin shared shell (active=game); in-game stage untouched');
   }
