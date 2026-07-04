@@ -277,6 +277,20 @@ markup + \`window.DepotShell\` helper (franchise/record API, active-tile setter)
 shell into **one** page (the binder, since it's the reference and lowest risk) to prove
 it renders identically to today. No other page changes. Ship + eyeball.
 
+> **✅ Session 1 COMPLETE (build `f680863`).** Shipped as the shared foundation only —
+> additive, no working paths touched. Per the operator's scope for this session, the shell
+> was **not** wired into the binder yet (that moves to Session 2); instead a standalone
+> `shell-preview.html` harness was added so the shell is live-verifiable on its own.
+> Delivered: `css/depot-style.css` (production tokens + shell + components + breakpoints,
+> adapted from `mockups/depot-style.css`; mockup-only `.mock-note` and the fake in-game
+> diamond dropped — the real in-game aesthetic stays untouched per Nick's amendment),
+> `js/depot-shell.js` (`window.DepotShell` mount/setFranchise/setActive/refreshFranchise,
+> franchise+record via depot-core with anonymous fallback + fail-loud `[depot]` logging),
+> and `shell-preview.html`. Commits: css `6f0c038`, shell `fc7abdc`, preview `cf0d7ca`;
+> foundation merge `f680863` (PR #61); version bump `06a70b9` / merge `33cf871` (PR #62).
+> Live preview for eyeballing: `/shell-preview.html` (append `?franchise=1` for the
+> signed-in identity block with dummy data).
+
 **Session 2 — Binder normalization.**
 Fully adopt the shell on the binder; add the franchise+record identity block; confirm
 era tiles / By Set / pagination unchanged. This locks the reference.
