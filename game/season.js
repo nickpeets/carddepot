@@ -29,7 +29,7 @@
 
   /* ---- tiny helpers ---------------------------------------------------- */
   function SB(){ try { return (typeof depotSB === 'function') ? depotSB() : (window.sb || null); } catch(e){ return null; } }
-  function UID(){ try { return (window.DEPOT_USER && window.DEPOT_USER.id) || null; } catch(e){ return null; } }
+  function UID(){ try { var _du = (typeof window!=="undefined") ? window.depotUserCached : null; if (_du && _du.id) return _du.id; } catch(e){ console.warn("[season] UID depot-core probe threw:", e); } try { return (window.DEPOT_USER && window.DEPOT_USER.id) || null; } catch(e){ return null; } }
 
   // deterministic PRNG (mulberry32) so an opponent is stable per game_number
   function seededRand(seed){
