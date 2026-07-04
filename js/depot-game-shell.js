@@ -123,11 +123,21 @@
   }
 
   function mountShell() {
-    if (mounted && document.querySelector('.depot-shell')) { return; }
-
-    // The bundler resets <html> class during init — (re)assert the FOUC scope class.
+    // The bundler resets <html> class during its render passes — (re)assert the FOUC
+    // scope class on EVERY call. Session 6 fix: the bundle strips .depot-game /
+    // .depot-game-dressed AFTER the initial mount but leaves the .depot-shell node under
+    // <body>, so an element-only early-return left the chrome unstyled/unpinned. Assert
+    // the classes first, then early-return only for the (already-mounted) heavy work.
     docEl.classList.add('depot-game');
     ensureStylesheet();
+    if (mounted && document.querySelector('.depot-shell')) {
+        if (!docEl.classList.contains('depot-game-dressed')) {
+            docEl.classList.add('depot-game-dressed');
+            console.log('[depot] game-shell: re-asserted depot-game(-dressed) after bundler class reset');
+            setChromeOffset();
+        }
+        return;
+    }
 
     if (!window.DepotShell) {
       console.warn('[depot] game-shell: window.DepotShell missing (depot-shell.js not loaded); game keeps its bare chrome');
@@ -180,18 +190,32 @@
     }
   }
 
+  // Session 6: the bundle re-renders <html> (stripping our scope classes) at unpredictable
+  // times AFTER the initial mount, so a lightweight watchdog re-asserts the classes
+  // whenever they go missing. mountShell() is idempotent (guard re-asserts + returns),
+  // so calling it is cheap. This never touches the sim/stage — chrome scope classes only.
+  function watchdog() {
+    if (!mounted) { return; }
+    if (!document.documentElement.classList.contains('depot-game') ||
+        !document.querySelector('.depot-shell')) {
+      mountShell();
+    }
+  }
+
   function boot() {
     ensureStylesheet();   // load the shared CSS ASAP so there is no flash of unstyled shell
     if (gameReady()) { mountShell(); }
-    obs = new MutationObserver(function () { tick(); });
-    obs.observe(document.body || docEl, { childList: true, subtree: true });
+    obs = new MutationObserver(function () { tick(); if (mounted) { watchdog(); } });
+    obs.observe(document.body || docEl, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
     poll = setInterval(tick, 200);
+    // Once mounted the heavy discovery poll stops, but a slow class-reassert watchdog
+    // keeps running for the life of the page (the bundle can re-render at any time).
+    setInterval(watchdog, 500);
     var stopPoll = setInterval(function () {
       if (mounted) { if (poll) { clearInterval(poll); poll = null; } clearInterval(stopPoll); }
       if (Date.now() > giveUpAt) { clearInterval(stopPoll); }
     }, 300);
   }
-
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', boot);
   } else {
