@@ -11,26 +11,28 @@
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script src="season.js" defer></script>
+  <link rel="stylesheet" href="../css/depot-style.css">
+  <script src="../js/depot-shell.js" defer></script>
   <style>
   :root{
     /* The Depot palette — lightened for a brighter, more readable builder */
-    --field:#1f7a3e; --field-deep:#2a8a4c; --field-dark:#176235;
-    --green-bright:#3fb85a; --green:#3fb85a;
-    --gold:#f6c81e; --cream:#f7f0db; --cream-dim:#e8d9b0;
+    --field:#0d2d5c; --field-deep:#15407f; --field-dark:#0a2447;
+    --green-bright:#c9a800; --green:#c9a800;
+    --gold:#f8d000; --cream:#e8e4d0; --cream-dim:#c9c6b4;
     --leather:#c07a3a; --red:#b8442a; --red-bright:#e25151;
     --blue:#2a5fc0; --blue-bright:#4a82e6;
-    --frame:#0c2c18; --bg:#16321f;
-    --panel:#2a8a4c; --ink:#f7f0db; --dim:#cde6d2;
+    --frame:#000000; --bg:#1a1a2e;
+    --panel:#15407f; --ink:#e8e4d0; --dim:#c9c6b4;
     --paper-ink:#1c2e22; --paper-dim:#5d7a64;
-    --paper:#f7f0db; --paper-line:#efe4c4;
+    --paper:#e8e4d0; --paper-line:#d8d4c0;
   }
   *{box-sizing:border-box}
   body{
     margin:0;background:var(--bg);color:var(--ink);
     font-family:'Press Start 2P',monospace;
     image-rendering:pixelated;-webkit-font-smoothing:none;
-    line-height:1.6;padding:14px;
-    background-image:repeating-linear-gradient(0deg,#16321f 0 2px,#193a24 2px 4px);
+    line-height:1.6;padding:0;
+    background-image:repeating-linear-gradient(0deg,#1a1a2e 0 2px,#20203a 2px 4px);
   }
   /* ---- header / scoreboard ---- */
   header{
@@ -116,6 +118,17 @@
     border:2px solid var(--red-bright);padding:5px 9px;font-size:8px;}
   .muted{color:var(--dim);font-size:9px;line-height:1.8;}
   @media(max-width:760px){.grid{grid-template-columns:1fr;}header h1{font-size:12px;}}
+  /* Session 4 mobile restack (<600px): single column, full-width selects + 44px touch targets. */
+  @media(max-width:600px){
+    body{padding:8px;}
+    .grid{grid-template-columns:1fr;gap:12px;}
+    #status{text-wrap:balance;font-size:10px;}
+    .pos-sel{width:100%;margin:6px 0 0;min-height:44px;}
+    .card-row .row-actions{width:100%;}
+    .add-btn,.pit-btn,.rm-btn,.sortbtn,.viewbtn{min-height:44px;}
+    #cardList.cardview{grid-template-columns:repeat(auto-fill,minmax(120px,1fr));}
+    .bat{flex-wrap:wrap;}
+  }
 
   /* ===== v2 lineup builder: lighter panels + new components ===== */
   h3{color:var(--gold);text-shadow:2px 2px 0 var(--frame);font-size:12px;}
@@ -160,7 +173,7 @@
     border:3px solid var(--field-dark);padding:8px 10px;min-height:46px;}
   .bat.filled{cursor:grab;}
   .bat.filled:active{cursor:grabbing;}
-  .bat.empty{background:rgba(247,240,219,0.18);border-style:dashed;border-color:var(--green-bright);color:var(--cream);}
+  .bat.empty{background:rgba(21,64,127,0.35);border-style:dashed;border-color:var(--gold);color:var(--cream);}
   .bat .ord{width:30px;height:30px;flex:0 0 30px;display:flex;align-items:center;justify-content:center;
     background:var(--gold);color:var(--frame);font-size:12px;font-weight:bold;border:2px solid var(--frame);}
   .bat .who{flex:1;min-width:120px;}
@@ -1308,5 +1321,6 @@
   }
   /* ===== end SEASON MODE play handler ===== */
 </script>
+<script src="../js/depot-builder-shell.js"></script>
 </body>
 </html>
