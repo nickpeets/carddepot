@@ -360,3 +360,42 @@ html.depot-game.depot-game-reveal-fallback .depot-shell{
     align-items:center;
   }
 }
+
+/* ============================================================================
+ * Session 6 — GAME screen mobile (DESIGN.md IMPLEMENTATION_PLAN, FINAL).
+ *
+ * The game/index.html runtime bundle inline-styles two of its own elements with
+ * position:fixed at high z-index, which the Session 5 shell relocation could not
+ * override (inline styles beat plain class rules):
+ *   1) #sim-controls  -> fixed; bottom:22px; left:50%; z-index:100000  (the action
+ *      bar). At phone width the four buttons stack tall and, anchored 22px off the
+ *      viewport bottom, the bar collided with the fixed bottom mode-tab bar (~71px)
+ *      AND covered it (z 100000 > nav z 50).
+ *   2) #backToDepot   -> fixed; top:10px; left:10px; z-index:2147483647  (BACK). Even
+ *      though Session 5 reparented the node INTO the shell nav, this inline fixed
+ *      pin kept it floating in the top-left corner over the wordmark (desktop + phone).
+ *
+ * Fix (chrome/presentation ONLY — the sim, stage transform and in-game visuals are
+ * never touched, per Nick's locked amendment): neutralise #backToDepot's inline pin
+ * so it flows inside the nav on every width, and on phone raise #sim-controls clear of
+ * the bottom tab bar and drop it BELOW the bar in the stacking order so the four modes
+ * are never covered. !important is required only to beat the bundle's inline styles.
+ * ========================================================================== */
+
+/* BACK control: cancel the bundle's inline fixed-corner pin so it sits in the nav. */
+html.depot-game .depot-nav #backToDepot{
+     position:static !important;
+     top:auto !important; left:auto !important; right:auto !important; bottom:auto !important;
+     z-index:auto !important;
+     box-shadow:var(--pixel-shadow) !important;
+}
+
+@media (max-width:600px){
+     /* Lift the game action bar above the fixed bottom tab bar (~71px) and put it BELOW
+      * the bar's stacking level so the four modes are always tappable + visible. */
+  html.depot-game #sim-controls{
+         bottom:84px !important;
+         z-index:49 !important;
+         max-width:calc(100vw - 20px) !important;
+  }
+}
