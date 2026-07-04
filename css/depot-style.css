@@ -229,3 +229,81 @@ html.depot-builder.depot-builder-reveal-fallback #builderView,
 html.depot-builder.depot-builder-reveal-fallback body > header{
   visibility:visible;
 }
+
+/* ============================================================================
+ * Session 5 — GAME screen (game/index.html): thin shell chrome + control restyle.
+ *
+ * Per Nick's locked amendment (DESIGN.md 3.4) the in-game presentation (RBI diamond,
+ * field, HUD, nameplates) is NOT restyled — only the shell chrome around the stage and
+ * the game controls change. js/depot-game-shell.js mounts the shell at <body> top, adds
+ * the classes below to the existing controls (additive; no logic touched), and publishes
+ * --depot-game-chrome-h (measured top-chrome height) which we use to translate the game
+ * backdrop down so the thin shell sits above the stage — WITHOUT touching the stage's
+ * scale transform.
+ * ==========================================================================*/
+
+html.depot-game{ --depot-game-chrome-h:166px; }   /* JS overwrites with the measured value */
+
+/* The thin shell chrome is FIXED to the top of the viewport, above the game. */
+html.depot-game .depot-bunting,
+html.depot-game .depot-shell{
+  position:fixed;left:0;right:0;z-index:60;background:var(--depot-navy-bg);
+}
+html.depot-game .depot-bunting{top:0}
+html.depot-game .depot-shell{top:14px;max-width:none;padding-bottom:0;box-shadow:none}
+html.depot-game .depot-shell__header{padding:12px 24px}   /* slim header for the game */
+html.depot-game .depot-nav{padding:var(--sp2) 24px}
+
+/* Make room for the fixed chrome by translating the game's full-viewport backdrop
+ * (.sc-host > div, position:fixed inset:0) DOWN by the chrome height. This is a pure
+ * translateY on the backdrop CONTAINER: the whole canvas shifts uniformly, so the stage
+ * keeps its exact scale transform and its centering-within-the-backdrop (no clip). We do
+ * NOT touch #stage or its transform. */
+html.depot-game .sc-host > div{ transform:translateY(var(--depot-game-chrome-h)); }
+
+/* Game controls (#sim-controls) restyled to the shared shell look — the fixed bottom
+ * bar the game already positions. Spacing/alignment only; buttons carry .btn/.ghost. */
+.depot-game-controls{
+  display:flex;align-items:center;gap:var(--sp2);flex-wrap:wrap;
+  background:var(--depot-navy);border:3px solid var(--depot-black);
+  box-shadow:var(--pixel-shadow);padding:10px 14px;
+}
+.depot-game-controls .depot-game-pacelbl{
+  font-size:var(--fs-micro);color:var(--depot-gold);margin-left:var(--sp2);white-space:nowrap;
+}
+.depot-game-controls .depot-game-sel{width:auto;min-width:150px}
+/* BACK control, relocated into the shell nav, reads as a ghost tab-height button */
+.depot-nav .depot-game-back{min-height:44px}
+
+/* Phone: the top chrome is bunting + header only (the shared nav becomes a fixed BOTTOM
+ * tab bar under 600px), so JS measures the smaller top offset automatically. Keep the
+ * controls a comfortable bar with 44px targets. */
+@media (max-width:600px){
+  html.depot-game .depot-shell__header{padding:12px 14px}
+  .depot-game-controls{gap:6px;padding:8px 10px}
+  .depot-game-controls .btn{min-height:44px}
+  .depot-game-controls .depot-game-sel{flex:1;min-width:0}
+}
+
+/* ---------------------------------------------------------------------------
+ * FOUC guard — GAME: hide the shell CHROME only until dressed. CHROME ONLY.
+ *
+ * js/depot-game-shell.js marks <html class="depot-game"> at script-eval, so these rules
+ * are scoped to the game page ONLY. IMPORTANT: unlike the builder guard, this hides ONLY
+ * the shell chrome (.depot-bunting + .depot-shell) — it deliberately does NOT touch the
+ * game stage (#dc-root / .sc-host / #stage) or the controls (#sim-controls), so the sim
+ * renders and runs immediately and is never gated on shell mount (Nick's amendment: the
+ * in-game presentation is the north star and must not be delayed). Reveal the chrome once
+ * .depot-game-dressed (mount complete) OR the fail-loud .depot-game-reveal-fallback (3s
+ * watchdog) lands. The navy <body> background still paints, so there is no white flash.
+ * ------------------------------------------------------------------------- */
+html.depot-game:not(.depot-game-dressed):not(.depot-game-reveal-fallback) .depot-bunting,
+html.depot-game:not(.depot-game-dressed):not(.depot-game-reveal-fallback) .depot-shell{
+  visibility:hidden !important;
+}
+html.depot-game.depot-game-dressed .depot-bunting,
+html.depot-game.depot-game-dressed .depot-shell,
+html.depot-game.depot-game-reveal-fallback .depot-bunting,
+html.depot-game.depot-game-reveal-fallback .depot-shell{
+  visibility:visible;
+}
