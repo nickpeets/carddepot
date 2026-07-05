@@ -109,3 +109,14 @@ This is phase 1 (additive) only. Nothing has been removed: the per-page `createC
 **Migration rule for future sessions:** cut over ONE page at a time to depot-core-only. For each page, remove that page's own `createClient` and its ad-hoc `window.sb` / `DEPOT_USER` / `buildTeamPayload` mirror, route everything through `depotSB()` / `depotUser()`, and LIVE-VERIFY that page (page loads, auth chrome renders, card fetch works, and a full season game writes back with the record ticking past 1-0) BEFORE moving to the next page. Do not batch multiple pages in one cutover.
 
 The per-page clients and the `window.sb` / `DEPOT_USER` / `buildTeamPayload` mirrors are removed ONLY after all three pages have been individually cut over and live-verified. Until then they remain as the fallback path.
+
+## 9. Game page runtime bundle (game/index.html)
+
+Session 5/6 lesson. `game/index.html` is a runtime React bundle with destructive load behavior. Static asset includes and cached DOM references do not survive it:
+
+- **Clears `<body>` on mount** — anything mounted at `DOMContentLoaded` is wiped.
+- **Strips static `<link>` and `<script>` tags** from the document — static asset includes do not survive; stylesheets must be injected at runtime.
+- **Replaces the entire `<html>` element** — any cached `document.documentElement` reference goes stale and writes hit an orphaned node. Never cache `documentElement`; read it fresh on every access (see the `html()` helper in `js/depot-game-shell.js`).
+- **Resets the `<html>` class after mount** — scope classes like `.depot-game` must be re-asserted (observer + interval pattern).
+
+Rule: any chrome/shell/style work on the game page must go through `js/depot-game-shell.js`'s runtime-injection + fresh-read + re-assert pattern. Never assume static assets or cached DOM references survive on this page. Mount waits for the game UI to exist (MutationObserver + interval, fail-loud 20s watchdog).
