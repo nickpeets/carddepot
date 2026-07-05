@@ -1,56 +1,66 @@
 /*
- * js/depot-prestige.js — Franchise Economy, Slice A prestige engine + UI.
- * See ECONOMY_DESIGN.md. Additive, fail-loud (AGENTS.md 4). Never touches how a
- * card plays — prestige is desirability, it only scales earnings.
- *
- * Exposes window.DepotPrestige:
- *   ready()                    -> Promise (tiers loaded)
- *   compute(card)              -> {total, tier, band, components:[{label,pts}], rookie}
- *   lineupTotal(cards)         -> number
- *   projectedWin(prestige)     -> number  (BASE_WIN + round(prestige * MULT))
- *   decorateBinder()           -> add prestige badges to rendered .card buttons
- *   spotlightBreakdownHTML(card)-> html string for the spotlight
- *   TIER_PTS, BASE_WIN, MULT   -> constants
+ * js/depot-prestige.js - Franchise Economy, Slice A prestige engine.
+ * Computes transparent, market-free card prestige from card data +
+ * data/player_tiers.json (STAR tiers) + data/set_tiers.json (iconic sets)
+ * + a rookie determination. See ECONOMY_DESIGN.md sections 1 and 1.5.
+ * Formula (amended): STAR_tier + ROOKIE + ERA(U-curve) + TRANSCENDENCE
+ *                    + GEM + ERROR + SET_TIER, floored at 5.
+ * Fail-loud: every guard logs [depot] why it bailed.
  */
 (function () {
   'use strict';
   var TAG = '[depot] prestige:';
-  var TIER_PTS = { HOF: 40, SUPERSTAR: 30, STAR: 20, REGULAR: 8, COMMON: 0 };
-  var ROOKIE_PTS = 30, GEM_PTS = 15, FLOOR = 5;
-  var BASE_WIN = 100, MULT = 1.8; // WIN = BASE_WIN + round(prestige * MULT) + bonuses
 
-  var _tiers = null, _tiersPromise = null;
+  var ROOKIE_PTS = 30, TRANSCEND_PTS = 30, GEM_PTS = 15, ERROR_PTS = 25, FLOOR = 5;
+  var BASE_WIN = 100, WIN_MULT = 1.8;
 
-  function normName(x) {
-    return String(x || '')
+  var _players = null, _tierPts = null, _sets = null, _setBonus = null, _ready = null;
+
+  function normName(s) {
+    return String(s || '')
       .normalize('NFKD').replace(/[\u0300-\u036f]/g, '')
       .toLowerCase().replace(/[^a-z0-9 ]/g, '').replace(/\s+/g, ' ').trim();
   }
 
-  function loadTiers() {
-    if (_tiersPromise) return _tiersPromise;
-    _tiersPromise = fetch('data/player_tiers.json')
-      .then(function (r) {
-        if (!r.ok) { console.warn(TAG, 'player_tiers.json fetch not ok status', r.status, '- tiers default to COMMON'); return {}; }
-        return r.json();
-      })
-      .then(function (j) { _tiers = (j && j.players) || {}; return _tiers; })
-      .catch(function (e) { console.warn(TAG, 'player_tiers.json load failed:', e && e.message, '- tiers default to COMMON'); _tiers = {}; return _tiers; });
-    return _tiersPromise;
+  function normSet(yr, set) {
+    return normName((yr ? yr + ' ' : '') + (set || ''));
+  }
+
+  function loadTables() {
+    if (_ready) return _ready;
+    _ready = Promise.all([
+      fetch('data/player_tiers.json').then(function (r) { if (!r.ok) throw new Error('player_tiers ' + r.status); return r.json(); }),
+      fetch('data/set_tiers.json').then(function (r) { if (!r.ok) throw new Error('set_tiers ' + r.status); return r.json(); })
+    ]).then(function (res) {
+      var pt = res[0], st = res[1];
+      _players = pt.players || {};
+      _tierPts = pt._tiers || { COMMON: 0, REGULAR: 8, STAR: 20, SUPERSTAR: 30, HOF: 40 };
+      _sets = st.sets || {};
+      _setBonus = st._bonuses || { ICONIC: 20, PREMIUM: 12, NOTABLE: 6 };
+      console.log(TAG, 'tables loaded', Object.keys(_players).length, 'players,', Object.keys(_sets).length, 'sets');
+      return true;
+    }).catch(function (e) {
+      console.warn(TAG, 'table load failed, prestige defaults to COMMON:', e && e.message);
+      _players = {}; _tierPts = { COMMON: 0, REGULAR: 8, STAR: 20, SUPERSTAR: 30, HOF: 40 };
+      _sets = {}; _setBonus = { ICONIC: 20, PREMIUM: 12, NOTABLE: 6 };
+      return false;
+    });
+    return _ready;
   }
 
   function tierFor(name) {
-    if (!_tiers) { return 'COMMON'; } // not loaded yet; fail-soft to COMMON
-    return _tiers[normName(name)] || 'COMMON';
+    if (!_players) return 'COMMON';
+    return _players[normName(name)] || 'COMMON';
   }
 
-  function vintageBonus(y) {
-    y = parseInt(y, 10) || 0;
-    if (!y) return { pts: 0, label: null };
-    if (y < 1980) return { pts: 20, label: 'VINTAGE' };
-    if (y <= 1989) return { pts: 10, label: 'VINTAGE' };
-    if (y <= 1994) return { pts: 6, label: 'ERA' };
-    return { pts: 0, label: null };
+  function tierPoints(tier) { return (_tierPts && _tierPts[tier]) || 0; }
+
+  function eraBonus(yr) {
+    yr = parseInt(yr, 10) || 0;
+    if (!yr) return { pts: 0, label: null };
+    if (yr <= 1985) return { pts: 20, label: 'VINTAGE (' + yr + ')' };
+    if (yr <= 1993) return { pts: 0,  label: 'JUNK WAX ERA' };
+    return { pts: 6, label: 'MODERN (' + yr + ')' };
   }
 
   function band(total) {
@@ -60,119 +70,142 @@
     return 'plain';
   }
 
-  // rookieYear may be cached on the card (card.rookie_year) once resolved via MLB API.
-  // Slice A does not perform the network lookup inline; it honors a cached value if present.
   function compute(card) {
-    if (!card) { console.warn(TAG, 'compute called with no card'); return { total: FLOOR, tier: 'COMMON', band: 'plain', components: [], rookie: false }; }
+    card = card || {};
     var comps = [];
-    var tier = tierFor(card.name);
-    var tpts = TIER_PTS[tier] || 0;
-    if (tpts > 0) comps.push({ label: 'STAR', pts: tpts, tier: tier });
-    var yr = parseInt(card.yr, 10) || 0;
-    var rookie = false;
+    var tier = card.tier || tierFor(card.name);
+    comps.push({ k: tier, pts: tierPoints(tier) });
+
+    var yr = parseInt(card.yr || card.year, 10) || 0;
     var ry = parseInt(card.rookie_year, 10) || 0;
-    if (ry && yr && ry === yr) { rookie = true; comps.push({ label: 'ROOKIE', pts: ROOKIE_PTS }); }
-    var vb = vintageBonus(yr);
-    if (vb.pts > 0) comps.push({ label: vb.label, pts: vb.pts });
-    if (card.gem) comps.push({ label: 'GEM', pts: GEM_PTS });
-    var total = comps.reduce(function (s, c) { return s + c.pts; }, 0);
+    var isRookie = ry && yr && ry === yr;
+    if (isRookie) comps.push({ k: 'ROOKIE', pts: ROOKIE_PTS });
+
+    var marquee = (tier === 'HOF' || tier === 'SUPERSTAR');
+    var transcend = isRookie && marquee;
+    var era = eraBonus(yr);
+    if (transcend) {
+      comps.push({ k: 'TRANSCENDENCE', pts: TRANSCEND_PTS });
+      comps.push({ k: era.label || 'ERA', pts: era.pts });
+    } else {
+      comps.push({ k: era.label || 'ERA', pts: era.pts });
+    }
+
+    if (card.gem) comps.push({ k: 'GEM', pts: GEM_PTS });
+    if (card.error) comps.push({ k: 'ERROR/VARIATION', pts: ERROR_PTS });
+
+    var sKey = normSet(yr, card.set);
+    var sTier = _sets && _sets[sKey];
+    if (sTier) comps.push({ k: 'SET: ' + sTier, pts: (_setBonus && _setBonus[sTier]) || 0 });
+
+    var total = 0;
+    for (var i = 0; i < comps.length; i++) total += comps[i].pts;
     if (total < FLOOR) total = FLOOR;
-    return { total: total, tier: tier, band: band(total), components: comps, rookie: rookie };
+    return { total: total, band: band(total), comps: comps };
   }
 
   function lineupTotal(cards) {
     if (!cards || !cards.length) return 0;
     var t = 0;
-    for (var i = 0; i < cards.length; i++) { if (cards[i]) t += compute(cards[i]).total; }
+    for (var i = 0; i < cards.length; i++) t += compute(cards[i]).total;
     return t;
   }
 
   function projectedWin(prestige) {
-    prestige = parseInt(prestige, 10) || 0;
-    return BASE_WIN + Math.round(prestige * MULT);
+    return BASE_WIN + Math.round((prestige || 0) * WIN_MULT);
+  }
+  // --- UI: binder badges + spotlight breakdown -------------------------------
+
+  function badgeHTML(res) {
+    return '<div class="depot-prestige-badge depot-band-' + res.band + '">' +
+           '<span class="dp-num">' + res.total + '</span>' +
+           '<span class="dp-lab">PRESTIGE</span></div>';
   }
 
-  // ---- Binder decoration --------------------------------------------------
-  // Adds a prestige badge to each .card button. COLLECTION (index.html) is the
-  // source array; card buttons carry onclick="openSpot(IDX)" so we map by index.
-  function badgeHTML(res) {
-    var stars = Math.max(1, Math.min(5, Math.round(res.total / 16))); // 80 -> 5 stars
-    var filled = '';
-    for (var i = 0; i < 5; i++) filled += (i < stars ? '\u2605' : '\u2606');
-    return '<span class="depot-prestige-badge is-' + res.band + '" title="' + res.total +
-      ' prestige">' + res.total + '<span class="dp-stars" aria-hidden="true">' + filled + '</span></span>';
+  function collection() {
+    try { return (typeof COLLECTION !== 'undefined' && COLLECTION) || window.COLLECTION || null; }
+    catch (e) { return window.COLLECTION || null; }
+  }
+
+  function cardIndexOf(el) {
+    var oc = el.getAttribute('onclick') || '';
+    var m = /openSpot\((\d+)\)/.exec(oc);
+    return m ? parseInt(m[1], 10) : -1;
   }
 
   function decorateBinder() {
-    try {
-      var coll = (typeof window.COLLECTION !== 'undefined') ? window.COLLECTION : null;
-      if (!coll) { console.warn(TAG, 'decorateBinder skipped: window.COLLECTION not present'); return; }
-      var cards = document.querySelectorAll('button.card[onclick^="openSpot"]');
-      if (!cards.length) { console.warn(TAG, 'decorateBinder: no .card buttons found (binder not rendered yet?)'); return; }
-      var n = 0;
-      cards.forEach(function (btn) {
-        var m = /openSpot\((\d+)\)/.exec(btn.getAttribute('onclick') || '');
-        if (!m) return;
-        var c = coll[parseInt(m[1], 10)];
-        if (!c) return;
-        if (btn.querySelector('.depot-prestige-badge')) btn.querySelector('.depot-prestige-badge').remove();
-        var res = compute(c);
-        var frame = btn.querySelector('.frame') || btn;
-        frame.insertAdjacentHTML('afterbegin', badgeHTML(res));
-        n++;
-      });
-      console.log(TAG, 'decorated', n, 'binder cards');
-    } catch (e) { console.warn(TAG, 'decorateBinder exception:', e && e.message); }
+    var coll = collection();
+    if (!coll) { console.warn(TAG, 'decorateBinder: no COLLECTION, skipping'); return; }
+    var grid = document.getElementById('binderGrid');
+    if (!grid) { console.warn(TAG, 'decorateBinder: no #binderGrid, skipping'); return; }
+    var cards = grid.querySelectorAll('.card');
+    var done = 0;
+    cards.forEach(function (el) {
+      var idx = cardIndexOf(el);
+      if (idx < 0 || !coll[idx]) return;
+      var old = el.querySelector('.depot-prestige-badge');
+      if (old) old.remove();
+      var res = compute(coll[idx]);
+      var host = el.querySelector('.frame') || el;
+      host.insertAdjacentHTML('afterbegin', badgeHTML(res));
+      done++;
+    });
+    console.log(TAG, 'decorated', done, 'of', cards.length, 'binder cards');
   }
 
-  // ---- Spotlight breakdown ------------------------------------------------
-  function spotlightBreakdownHTML(card) {
-    var res = compute(card);
-    var rows = res.components.map(function (c) {
-      var lab = c.label === 'STAR' ? ('STAR &middot; ' + c.tier) : c.label;
-      return '<div class="dp-row"><span>' + lab + '</span><span>+' + c.pts + '</span></div>';
+  function breakdownHTML(res) {
+    var rows = res.comps.map(function (c) {
+      var sign = c.pts >= 0 ? '+' : '';
+      return '<div class="dp-row"><span class="dp-k">' + String(c.k).toUpperCase() +
+             '</span><span class="dp-v">' + sign + c.pts + '</span></div>';
     }).join('');
-    if (!rows) rows = '<div class="dp-row"><span>COMMON</span><span>&mdash;</span></div>';
-    return '<div class="depot-prestige-breakdown is-' + res.band + '">' +
-      '<div class="dp-head"><span class="dp-total">' + res.total + '</span> PRESTIGE &middot; ' + res.band.toUpperCase() + ' TIER</div>' +
-      rows +
-      '<div class="dp-row dp-total-row"><span>TOTAL PRESTIGE</span><span>' + res.total + '</span></div>' +
-      '<div class="dp-note">Desirability, not power &mdash; a card always plays as its card-year self.</div>' +
-      '</div>';
+    return '<div class="depot-prestige-breakdown depot-band-' + res.band + '">' +
+           '<div class="dp-head"><span class="dp-total">' + res.total +
+           '</span><span class="dp-lab">PRESTIGE</span></div>' + rows + '</div>';
   }
 
-  // Wrap openSpot (if present) to inject the breakdown into #spotBack, non-destructively.
+  function renderSpotlightBreakdown(idx) {
+    var coll = collection();
+    if (!coll || !coll[idx]) { console.warn(TAG, 'spotlight: no card for idx', idx); return; }
+    var host = document.getElementById('spotBack') || document.getElementById('spotCard') ||
+               document.getElementById('spotlight');
+    if (!host) { console.warn(TAG, 'spotlight: no host element, skipping breakdown'); return; }
+    var prev = host.querySelector('.depot-prestige-breakdown');
+    if (prev) prev.remove();
+    host.insertAdjacentHTML('beforeend', breakdownHTML(compute(coll[idx])));
+  }
+
+  var _spotHooked = false;
   function hookSpotlight() {
-    if (typeof window.openSpot !== 'function') { console.warn(TAG, 'hookSpotlight skipped: window.openSpot not a function'); return; }
-    if (window.openSpot.__dpWrapped) return;
+    if (_spotHooked) return;
+    if (typeof window.openSpot !== 'function') {
+      console.warn(TAG, 'hookSpotlight: window.openSpot not ready, skipping');
+      return;
+    }
     var orig = window.openSpot;
-    var wrapped = function (idx) {
+    window.openSpot = function (idx) {
       var r = orig.apply(this, arguments);
-      try {
-        var coll = window.COLLECTION;
-        var back = document.getElementById('spotBack');
-        if (coll && back && coll[idx]) {
-          var old = back.querySelector('.depot-prestige-breakdown');
-          if (old) old.remove();
-          back.insertAdjacentHTML('beforeend', spotlightBreakdownHTML(coll[idx]));
-        } else { console.warn(TAG, 'spotlight breakdown skipped: missing', !coll ? 'COLLECTION' : (!back ? '#spotBack' : 'card')); }
-      } catch (e) { console.warn(TAG, 'spotlight breakdown exception:', e && e.message); }
+      try { renderSpotlightBreakdown(idx); }
+      catch (e) { console.warn(TAG, 'spotlight breakdown failed:', e && e.message); }
       return r;
     };
-    wrapped.__dpWrapped = true;
-    window.openSpot = wrapped;
+    _spotHooked = true;
     console.log(TAG, 'spotlight hooked');
   }
 
-  function ready() { return loadTiers(); }
+  function ready(cb) {
+    return loadTables().then(function (ok) { if (typeof cb === 'function') cb(ok); return ok; });
+  }
 
   window.DepotPrestige = {
-    ready: ready, compute: compute, lineupTotal: lineupTotal, projectedWin: projectedWin,
-    decorateBinder: decorateBinder, spotlightBreakdownHTML: spotlightBreakdownHTML,
-    hookSpotlight: hookSpotlight, normName: normName,
-    TIER_PTS: TIER_PTS, BASE_WIN: BASE_WIN, MULT: MULT
+    ready: ready,
+    compute: compute,
+    band: band,
+    normName: normName,
+    tierFor: tierFor,
+    lineupTotal: lineupTotal,
+    projectedWin: projectedWin,
+    decorateBinder: decorateBinder,
+    hookSpotlight: hookSpotlight
   };
-
-  // Kick off tier load immediately; pages call decorateBinder()/hookSpotlight() after render.
-  loadTiers().then(function () { console.log(TAG, 'tiers loaded'); });
 })();
