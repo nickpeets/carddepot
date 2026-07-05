@@ -394,6 +394,22 @@ html.depot-game .depot-nav #backToDepot{
      box-shadow:var(--pixel-shadow) !important;
 }
 
+/* Desktop: dock the game action bar into the chrome mode-nav row instead of floating it
+ * over home plate. js/depot-game-shell.js relocates the #sim-controls NODE into .depot-nav
+ * (listeners preserved); this cancels the bundle's inline fixed-over-the-field pin so it
+ * flows in the black chrome band between the PLAY BALL tab and BACK TO SEASON. !important is
+ * required only to beat the bundle's inline styles (same tactic as #backToDepot above).
+ * In-game visuals (field, plate, panels, #stage + its scale) are never touched. Scoped to
+ * .depot-nav so mobile (node stays in the bundle bottom bar) keeps its measured-clearance
+ * rule below, fully untouched. */
+html.depot-game .depot-nav #sim-controls{
+     position:static !important;
+     inset:auto !important; top:auto !important; left:auto !important; right:auto !important; bottom:auto !important;
+     transform:none !important; z-index:auto !important;
+     background:transparent !important; border:0 !important; box-shadow:none !important; border-radius:0 !important;
+     padding:0 !important; margin:0 auto !important;
+}
+
 @media (max-width:600px){
      /* Lift the game action bar above the fixed bottom tab bar (~71px) and put it BELOW
       * the bar's stacking level so the four modes are always tappable + visible. */
