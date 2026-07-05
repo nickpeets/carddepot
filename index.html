@@ -2721,7 +2721,16 @@ setAuthUI(false);
   .search-results{ grid-template-columns:repeat(2,1fr); }
   .form-foot .btn-ghost, .form-foot .btn-solid{ flex:1 1 auto; text-align:center; }
 }
-</style>
+
+    /* Franchise Economy Slice A: wallet chip + payday panel (additive) */
+    .depot-wallet-chip{display:inline-flex;align-items:baseline;gap:.25em;margin-left:.6em;padding:.12em .5em;border-radius:999px;background:rgba(212,175,55,.15);border:1px solid rgba(212,175,55,.5);font-weight:700;font-size:.8em;color:#e8c86a;vertical-align:middle}
+    .depot-wallet-chip .dw-cur{opacity:.7;font-size:.85em;font-weight:600}
+    .depot-payday{position:fixed;left:50%;bottom:1.2em;transform:translateX(-50%);z-index:9999;min-width:220px;max-width:90vw;background:#12161c;border:1px solid rgba(212,175,55,.55);border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.5);padding:.8em 1em;color:#e9edf2;font-size:.9em}
+    .depot-payday .dw-pay-title{font-weight:800;letter-spacing:.08em;color:#e8c86a;margin-bottom:.4em}
+    .depot-payday .dw-pay-row{display:flex;justify-content:space-between;gap:1em;opacity:.9;padding:.1em 0}
+    .depot-payday .dw-pay-total{display:flex;justify-content:space-between;border-top:1px solid rgba(255,255,255,.15);margin-top:.4em;padding-top:.4em;font-weight:800;color:#7CFC9B}
+    .depot-payday .dw-pay-bal{margin-top:.3em;opacity:.85;font-size:.9em}
+    </style>
 
 
 <!-- ===== SEASON MODE view (retro schedule/record) ===== -->
@@ -2817,6 +2826,25 @@ setAuthUI(false);
 <script src="game/season.js" defer></script>
 <script src="js/depot-index-shell.js"></script>
 <script src="js/depot-prestige.js"></script>
+<script src="js/depot-wallet.js"></script>
+<script>
+/* Franchise Economy Slice A: arm wallet chip + payout hook. Additive, fail-loud, graceful until DDL. */
+(function(){
+  var TAG='[depot] wallet-boot:';
+  var tries=0;
+  function boot(){
+    tries++;
+    if(!window.DepotWallet){ if(tries<40){ setTimeout(boot,150); } else { console.warn(TAG,'DepotWallet not present; giving up'); } return; }
+    try{ window.DepotWallet.ready(); }catch(e){ console.warn(TAG,'ready() failed:', e && e.message); }
+  }
+  if(document.readyState==='loading'){ document.addEventListener('DOMContentLoaded',boot); } else { boot(); }
+  // Re-mount the chip when the shell identity block (re)renders.
+  try{
+    var mo=new MutationObserver(function(){ if(window.DepotWallet){ try{ window.DepotWallet.mountChip(); }catch(e){} } });
+    mo.observe(document.body,{childList:true,subtree:true});
+  }catch(e){ console.warn(TAG,'observer setup failed:', e && e.message); }
+})();
+</script>
 <script>
 /* Franchise Economy Slice A: wire prestige into the binder + spotlight. Additive, fail-loud. */
 (function(){
