@@ -26,8 +26,11 @@
  * installNavInterceptor(): a capture-phase click guard on the shell nav links that, when
  * a season context is present AND the writeback promise is still pending, holds the
  * navigation, awaits the promise, then releases. The source #backToDepot node is no
- * longer relocated into the nav; it is hidden/removed so it cannot render. The sim, the
- * writeback itself, and __onMatchComplete are untouched.
+ * longer relocated into the nav; per §9 (the bundle re-creates DOM on its own render
+ * clock, so a one-shot remove races the React mount) it is hidden via hideBackButton(),
+ * RE-ASSERTED on every recurring guard (mount, assertScope, observer, interval, resize)
+ * exactly like the scope classes — so it can never flash back after a bundle re-render.
+ * The sim, the writeback itself, and __onMatchComplete are untouched.
  *
  * Additive-first + fail-loud per AGENTS.md: every early return logs why, tagged [depot].
  */
@@ -45,10 +48,29 @@
   var htmlObs = null;
   var observedHtml = null;
   var navInterceptorInstalled = false;
+  var backRemovalLogged = false;
 
   // Always read the LIVE <html> — the bundle can replace it out from under us.
   function html() { return document.documentElement; }
   function reveal(cls) { html().classList.add(cls); }
+
+  // Hide the redundant in-game BACK button. The bundle re-creates DOM on its own render
+  // clock, so a one-shot remove races the mount; instead we hide idempotently and RE-ASSERT
+  // this from every recurring guard (see §9). Node is left in place (its listeners/logic are
+  // the bundle's) — only its visibility is suppressed, so nothing in the bundle breaks.
+  function hideBackButton() {
+    var back = document.getElementById('backToDepot');
+    if (!back) { return; } // not rendered yet (or already gone); recurring guards will catch it
+    if (back.getAttribute('data-depot-hidden') !== '1') {
+      back.style.setProperty('display', 'none', 'important');
+      back.setAttribute('data-depot-hidden', '1');
+      back.setAttribute('aria-hidden', 'true');
+      if (!backRemovalLogged) {
+        console.log('[depot] game-shell: hid redundant #backToDepot (SEASON/BINDER tabs cover it); writeback protection moved to nav guard');
+        backRemovalLogged = true;
+      }
+    }
+  }
 
   // (re)assert the FOUC scope classes on the LIVE <html>; only once the shell exists.
   function assertScope() {
@@ -59,6 +81,8 @@
     if (!de.classList.contains('depot-game-dressed')) { de.classList.add('depot-game-dressed'); changed = true; }
     // The bundle may have swapped <html>; keep the observer pointed at the live node.
     ensureHtmlObserver();
+    // The bundle may have re-created the BACK button; keep it suppressed.
+    hideBackButton();
     if (changed) {
       console.log('[depot] game-shell: re-asserted depot-game(-dressed) on live <html>');
       setChromeOffset();
@@ -223,6 +247,8 @@
 
   function syncControlsPlacement() {
     try {
+      // The bundle may have re-created the BACK button between renders; keep it suppressed.
+      hideBackButton();
       var ctrls = document.getElementById('sim-controls');
       if (!ctrls) { return; } // gameReady() gates mount on #sim-controls; nothing to move yet
       if (isDesktop()) {
@@ -277,18 +303,10 @@
       if (HREF_FIX[m]) { tabs[i].setAttribute('href', HREF_FIX[m]); }
     }
 
-    // The dedicated in-game BACK button is retired (its tabs now live permanently in the
-    // shell nav). Do NOT relocate it into the nav; hide/remove the source node so it cannot
-    // render, and route its old season-writeback protection through installNavInterceptor().
-    var back = document.getElementById('backToDepot');
-    if (back) {
-      back.style.display = 'none';
-      if (back.parentElement) { back.parentElement.removeChild(back); }
-      console.log('[depot] game-shell: removed redundant #backToDepot (SEASON/BINDER tabs cover it); writeback protection moved to nav guard');
-    } else {
-      console.warn('[depot] game-shell: #backToDepot not found to remove (already absent)');
-    }
-
+    // The dedicated in-game BACK button is retired (its destinations now live permanently in
+    // the shell nav). Do NOT relocate it into the nav; hide it (re-asserted by the recurring
+    // guards per §9) and route its old season-writeback protection through the nav interceptor.
+    hideBackButton();
     installNavInterceptor();
 
     styleControls();
@@ -311,6 +329,8 @@
     if (gameReady()) {
       mountShell();
       if (mounted && !document.querySelector('.depot-shell')) { mounted = false; mountShell(); }
+      // Bundle re-renders can re-add the BACK button after mount; keep it suppressed.
+      if (mounted) { hideBackButton(); }
       return;
     }
     if (Date.now() > giveUpAt) {
@@ -322,12 +342,14 @@
 
   // Always-on backup guard: once mounted, re-assert scope on the LIVE <html> whenever it
   // goes missing (belt-and-braces alongside the <html> observer). Idempotent + cheap.
+  // Also re-suppresses the BACK button in case the bundle re-created it.
   function watchdog() {
     if (!mounted) { return; }
     if (!html().classList.contains('depot-game') || !document.querySelector('.depot-shell')) {
       mountShell();
       assertScope();
     }
+    hideBackButton();
   }
 
   function boot() {
