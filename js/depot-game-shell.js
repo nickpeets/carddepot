@@ -147,10 +147,50 @@
            if (span) { span.classList.add('depot-game-pacelbl'); }
    }
 
+
+   // --- Desktop-only relocation of the sim controls off the field and into the shell chrome. ---
+   // Per Nick's amendment this moves ONLY the floating #sim-controls overlay: the sim, stage,
+   // field, plate and panels are never touched. Same node-move-preserves-listeners pattern as the
+   // #backToDepot relocation above (reparent the live node; its React/DOM listeners ride along).
+   // The bundle inline-styles #sim-controls position:fixed bottom:22px (over home plate at desktop
+   // width); css/depot-style.css neutralises that inline pin to position:static !important ONLY
+   // while the node lives inside .depot-nav, so it flows in the black chrome band between the
+   // PLAY BALL tab and BACK TO SEASON. Mobile (<=600px) is left exactly as-is: the controls stay
+   // in their bundle-owned fixed bottom bar with the measured tab-bar clearance (PR #89).
+   // Reads the live <html> via html() (the bundle can replace documentElement).
+   var DESKTOP_MQ = (window.matchMedia ? window.matchMedia('(min-width: 601px)') : null);
+   function isDesktop() { return DESKTOP_MQ ? DESKTOP_MQ.matches : (window.innerWidth > 600); }
+
+   function syncControlsPlacement() {
+      try {
+         var ctrls = document.getElementById('sim-controls');
+         if (!ctrls) { return; } // gameReady() gates mount on #sim-controls; nothing to move yet
+         if (isDesktop()) {
+            // Dock into the nav's empty middle, before the spacer/BACK so it centres in the gap.
+            var nav = document.querySelector('.depot-shell .depot-nav');
+            if (!nav) { console.warn('[depot] game-shell: .depot-nav missing; leaving #sim-controls on field'); return; }
+            if (ctrls.parentElement === nav) { return; } // already docked (idempotent)
+            var spacer = nav.querySelector('.spacer');
+            if (spacer) { nav.insertBefore(ctrls, spacer); } else { nav.appendChild(ctrls); }
+            console.log('[depot] game-shell: docked #sim-controls into the chrome mode-nav (desktop); field/plate untouched');
+         } else {
+            // Mobile: return the node to its bundle home (<body>) so the fixed bottom bar +
+            // measured tab-bar clearance behave exactly as before. Fixed positioning is
+            // viewport-relative, so body is the correct, side-effect-free restore target.
+            if (ctrls.parentElement && ctrls.parentElement !== document.body) {
+               document.body.appendChild(ctrls);
+               console.log('[depot] game-shell: restored #sim-controls to bundle bottom bar (mobile)');
+            }
+         }
+      } catch (e) {
+         console.warn('[depot] game-shell: syncControlsPlacement threw: ' + e);
+      }
+   }
+
    var resizeTimer = null;
       function onResize() {
               if (resizeTimer) { clearTimeout(resizeTimer); }
-              resizeTimer = setTimeout(function(){ setChromeOffset(); setTabbarOffset(); }, 120);
+              resizeTimer = setTimeout(function(){ syncControlsPlacement(); setChromeOffset(); setTabbarOffset(); }, 120);
       }
 
    function mountShell() {
@@ -188,6 +228,7 @@
            }
 
         styleControls();
+           syncControlsPlacement();
            setChromeOffset();
            setTabbarOffset();
            window.addEventListener('resize', onResize);
