@@ -1,0 +1,208 @@
+/* ==========================================================================
+   economy.css  Franchise Economy mockup layer (MOCKUP  additive)
+   Sits ON TOP of the shared depot-style.css. Adds only economy-specific
+   pieces: wallet chip, prestige gems/stars, prestige spotlight, lineup
+   payout bar, the payout (payday) panel, the pack shop, and pack-rip reveal.
+   Same 8-bit navy/gold/black language. No new palette  reuses the tokens.
+   ========================================================================== */
+
+/* ---- wallet chip in the shell identity block ----------------------------- */
+.depot-wallet{
+  display:flex;flex-direction:column;gap:4px;
+  padding:8px 14px;margin-left:12px;
+  border:3px solid var(--depot-black);
+  background:var(--depot-gold);color:var(--depot-ink);
+  box-shadow:var(--pixel-shadow);
+}
+.depot-wallet .bal{font-size:var(--fs-nav);white-space:nowrap}
+.depot-wallet .cur{font-size:var(--fs-micro);opacity:.8}
+.coin{color:var(--depot-gold-deep)}
+
+/* ---- prestige gems + stars ---------------------------------------------- */
+.gem{
+  display:inline-block;width:14px;height:14px;margin-right:2px;
+  border:2px solid var(--depot-black);
+  box-shadow:2px 2px 0 var(--depot-black);
+  transform:rotate(45deg);vertical-align:middle;
+}
+.gem.gold{background:var(--depot-gold)}
+.gem.silver{background:#c9c9d2}
+.gem.bronze{background:#c07b39}
+
+.pgstars{color:var(--depot-gold);letter-spacing:2px;font-size:var(--fs-body)}
+.pgstars .off{color:#4a4a5e}
+
+/* prestige corner badge sat on a card-face */
+.card-face{position:relative}
+.pbadge{
+  position:absolute;top:-8px;right:-8px;
+  min-width:26px;text-align:center;
+  font-size:var(--fs-micro);line-height:1;padding:6px 6px;
+  border:3px solid var(--depot-black);box-shadow:var(--pixel-shadow);
+  background:var(--depot-gold);color:var(--depot-ink);
+}
+.pbadge.gold{background:var(--depot-gold)}
+.pbadge.silver{background:#c9c9d2}
+.pbadge.bronze{background:#c07b39;color:var(--depot-white)}
+.pbadge.common{background:var(--depot-cream)}
+.pbadge .n{display:block;font-size:var(--fs-body)}
+.pbadge .t{display:block;font-size:7px;opacity:.8;margin-top:2px}
+
+.tierline{display:flex;gap:6px;align-items:center;margin-top:8px}
+.tiertag{
+  font-size:7px;padding:3px 5px;border:2px solid var(--depot-black);
+  background:var(--depot-navy);color:var(--depot-gold);
+}
+.tiertag.gold{background:var(--depot-gold);color:var(--depot-ink)}
+.tiertag.silver{background:#c9c9d2;color:var(--depot-ink)}
+.tiertag.bronze{background:#c07b39;color:var(--depot-white)}
+
+/* ---- prestige spotlight (formula breakdown) ------------------------------ */
+.spotlight{
+  display:grid;grid-template-columns:200px 1fr;gap:var(--sp4);
+  background:var(--depot-navy);border:3px solid var(--depot-black);
+  box-shadow:var(--pixel-shadow-lg);padding:var(--sp4);margin:var(--sp3) 0;
+}
+.spotlight .bigcard{
+  background:var(--depot-cream);color:var(--depot-ink);
+  border:4px solid var(--depot-black);box-shadow:var(--pixel-shadow);
+  padding:14px;position:relative;
+}
+.spotlight .bigcard .yr{font-size:var(--fs-micro);opacity:.7}
+.spotlight .bigcard .nm{font-size:var(--fs-body);display:block;margin:6px 0}
+.spotlight .bigcard .set{font-size:7px;opacity:.7}
+.spotlight .bigcard .art{
+  height:120px;margin:10px 0;border:3px solid var(--depot-black);
+  background:linear-gradient(#0d2d5c 0 40%, #2d6a2d 40% 100%);
+  display:flex;align-items:flex-end;justify-content:center;color:var(--depot-white);
+  font-size:7px;padding-bottom:6px;
+}
+.pgrow{
+  display:flex;justify-content:space-between;align-items:center;
+  border-bottom:2px dotted var(--depot-gold-deep);
+  padding:10px 4px;font-size:var(--fs-body);
+}
+.pgrow .why{color:var(--depot-cream);opacity:.8;font-size:7px;display:block;margin-top:4px}
+.pgrow .lab{color:var(--depot-white)}
+.pgrow .amt{color:var(--depot-gold)}
+.pgrow.total{border-bottom:0;border-top:4px solid var(--depot-gold);margin-top:6px;padding-top:14px}
+.pgrow.total .lab,.pgrow.total .amt{font-size:var(--fs-h2);color:var(--depot-gold)}
+
+/* ---- lineup prestige / payout projection bar ----------------------------- */
+.payline{
+  display:flex;flex-wrap:wrap;gap:var(--sp3);align-items:center;
+  background:var(--depot-navy);border:3px solid var(--depot-black);
+  box-shadow:var(--pixel-shadow-lg);padding:var(--sp3) var(--sp4);margin:var(--sp3) 0;
+}
+.payline .stat{display:flex;flex-direction:column;gap:6px}
+.payline .stat .k{font-size:7px;color:var(--depot-cream);opacity:.8}
+.payline .stat .v{font-size:20px;color:var(--depot-gold)}
+.payline .arrow{font-size:20px;color:var(--depot-white)}
+.payline .pushright{margin-left:auto}
+
+/* ---- payday panel -------------------------------------------------------- */
+.payday-wrap{display:flex;justify-content:center;padding:var(--sp4) 0}
+.payday{
+  width:min(520px,94%);text-align:center;
+  background:var(--depot-navy);border:4px solid var(--depot-black);
+  box-shadow:var(--pixel-shadow-lg);padding:var(--sp5) var(--sp4);
+}
+.payday .win{
+  font-size:34px;color:var(--depot-gold);
+  text-shadow:4px 4px 0 var(--depot-black);margin-bottom:var(--sp3);
+  animation:pop .5s steps(3) both;
+}
+@keyframes pop{0%{transform:scale(.4);opacity:0}100%{transform:scale(1);opacity:1}}
+.payday .tally{
+  background:#000;border:3px solid var(--depot-gold);
+  padding:var(--sp3);margin:var(--sp3) 0;
+}
+.payday .tally .row{display:flex;justify-content:space-between;padding:6px 4px;font-size:var(--fs-body)}
+.payday .tally .row .amt{color:var(--depot-gold)}
+.payday .tally .row.big .amt{font-size:22px}
+.payday .newbal{
+  background:var(--depot-gold);color:var(--depot-ink);
+  border:3px solid var(--depot-black);box-shadow:var(--pixel-shadow);
+  padding:var(--sp3);font-size:var(--fs-h2);margin-top:var(--sp3);
+}
+
+/* ---- pack shop ----------------------------------------------------------- */
+.shop-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--sp3)}
+.pack{
+  background:var(--depot-navy);border:3px solid var(--depot-black);
+  box-shadow:var(--pixel-shadow);padding:var(--sp3);text-align:center;
+}
+.pack .wrapart{
+  height:150px;margin-bottom:var(--sp2);border:3px solid var(--depot-black);
+  display:flex;align-items:center;justify-content:center;
+  font-size:var(--fs-nav);color:var(--depot-white);text-align:center;padding:8px;
+  background-image:repeating-linear-gradient(45deg,rgba(0,0,0,.15) 0 8px,transparent 8px 16px);
+}
+.pack.bronze .wrapart{background-color:#c07b39}
+.pack.silver .wrapart{background-color:#8a8a95}
+.pack.gold   .wrapart{background-color:var(--depot-gold-deep)}
+.pack .pname{font-size:var(--fs-body);color:var(--depot-gold);display:block;margin-bottom:6px}
+.pack .pdesc{font-size:7px;opacity:.8;line-height:1.9;min-height:40px}
+.pack .price{
+  display:inline-block;margin-top:var(--sp2);
+  background:var(--depot-gold);color:var(--depot-ink);
+  border:3px solid var(--depot-black);box-shadow:var(--pixel-shadow);padding:10px 14px;
+}
+.cosmetic{
+  margin-top:var(--sp4);background:var(--depot-navy-lite);
+  border:3px dashed var(--depot-gold);padding:var(--sp3);
+}
+.cosmetic .lbl{font-size:7px;color:var(--depot-cream);opacity:.8}
+
+/* ---- pack rip / reveal --------------------------------------------------- */
+.rip-stage{
+  background:var(--depot-green);border:4px solid var(--depot-green-dark);
+  padding:var(--sp4);text-align:center;
+  background-image:repeating-linear-gradient(45deg,transparent 0 10px,rgba(0,0,0,.06) 10px 20px);
+}
+.rip-row{display:flex;gap:var(--sp3);justify-content:center;flex-wrap:wrap;margin:var(--sp3) 0}
+.rip{
+  width:120px;height:168px;position:relative;
+}
+.rip .face{
+  position:absolute;inset:0;border:3px solid var(--depot-black);
+  box-shadow:var(--pixel-shadow);padding:8px;font-size:7px;
+}
+.rip .back{
+  background:var(--depot-navy);color:var(--depot-gold);
+  display:flex;align-items:center;justify-content:center;text-align:center;
+  background-image:repeating-linear-gradient(45deg,rgba(0,0,0,.2) 0 6px,transparent 6px 12px);
+}
+.rip.flipped .back{display:none}
+.rip .front{
+  background:var(--depot-cream);color:var(--depot-ink);display:none;flex-direction:column;
+}
+.rip.flipped .front{display:flex}
+.rip .front .nm{font-size:var(--fs-micro);margin-bottom:4px}
+.rip .front .mini{
+  flex:1;margin:6px 0;border:2px solid var(--depot-black);
+  background:linear-gradient(#0d2d5c 0 45%, #2d6a2d 45% 100%);
+}
+.rip.hit .front{background:var(--depot-gold)}
+.rip.hit{animation:shine .8s ease-in-out infinite alternate}
+@keyframes shine{from{box-shadow:var(--pixel-shadow)}to{box-shadow:0 0 0 4px var(--depot-white),var(--pixel-shadow)}}
+.rip .rarity{
+  position:absolute;top:-10px;left:50%;transform:translateX(-50%);
+  font-size:7px;padding:4px 6px;border:2px solid var(--depot-black);
+  background:var(--depot-red);color:var(--depot-white);white-space:nowrap;
+}
+
+/* ---- small helpers ------------------------------------------------------- */
+.loopbar{display:flex;gap:var(--sp2);flex-wrap:wrap;margin:var(--sp3) 0}
+.loopbar .step{
+  background:var(--depot-navy);border:3px solid var(--depot-black);
+  box-shadow:var(--pixel-shadow);padding:12px 14px;font-size:var(--fs-micro);
+}
+.loopbar .step b{color:var(--depot-gold)}
+.loopbar .to{align-self:center;color:var(--depot-gold);font-size:var(--fs-nav)}
+
+@media (max-width:899px){
+  .spotlight{grid-template-columns:1fr}
+  .shop-grid{grid-template-columns:1fr}
+  .payline .pushright{margin-left:0}
+}
