@@ -1322,5 +1322,55 @@
   /* ===== end SEASON MODE play handler ===== */
 </script>
 <script src="../js/depot-builder-shell.js"></script>
+<script src="../js/depot-prestige.js"></script>
+<script>
+/* Franchise Economy Slice A: lineup prestige + projected payout in the builder. Additive, fail-loud. */
+(function(){
+  var TAG='[depot] prestige-builder:';
+  function projEl(){
+    var el=document.getElementById('depotLineupProj');
+    if(el) return el;
+    var play=document.getElementById('playBtn');
+    if(!play||!play.parentNode||!play.parentNode.parentNode){ console.warn(TAG,'no #playBtn to anchor projection'); return null; }
+    el=document.createElement('div');
+    el.id='depotLineupProj';
+    el.style.cssText='width:100%;margin:10px 0 4px;padding:8px 10px;border:3px solid var(--gold,#f8d000);border-radius:8px;font-family:inherit;font-weight:700;font-size:.7rem;letter-spacing:.5px;color:var(--gold,#f8d000);background:rgba(0,0,0,.35);text-align:center';
+    play.parentNode.parentNode.insertBefore(el, play.parentNode);
+    return el;
+  }
+  function cardsInOrder(){
+    if(typeof ORDER==='undefined'||typeof cardById!=='function'){ console.warn(TAG,'ORDER/cardById not available'); return []; }
+    var out=[];
+    for(var i=0;i<ORDER.length;i++){ if(ORDER[i]){ var c=cardById(ORDER[i].id); if(c) out.push({name:c.player,yr:c.yr,gem:c.gem,rookie_year:c.rookie_year}); } }
+    return out;
+  }
+  function update(){
+    try{
+      if(!window.DepotPrestige) return;
+      var el=projEl(); if(!el) return;
+      var cards=cardsInOrder();
+      var total=window.DepotPrestige.lineupTotal(cards);
+      var win=window.DepotPrestige.projectedWin(total);
+      el.innerHTML='LINEUP PRESTIGE '+total+' &rarr; WIN PAYS ~$'+win.toLocaleString()+' DD';
+    }catch(e){ console.warn(TAG,'update failed:',e&&e.message); }
+  }
+  function wrap(){
+    if(typeof window.renderStatus==='function' && !window.renderStatus.__dpWrapped){
+      var orig=window.renderStatus;
+      var w=function(){ var r=orig.apply(this,arguments); update(); return r; };
+      w.__dpWrapped=true; window.renderStatus=w; console.log(TAG,'renderStatus wrapped');
+    }
+  }
+  function boot(){
+    if(!window.DepotPrestige){ console.warn(TAG,'DepotPrestige missing'); return; }
+    window.DepotPrestige.ready().then(function(){
+      wrap(); update();
+      document.addEventListener('click',function(){ setTimeout(update,60); });
+      console.log(TAG,'wired');
+    });
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot); else boot();
+})();
+</script>
 </body>
 </html>
