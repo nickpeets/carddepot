@@ -1,4 +1,4 @@
-/* js/version.js — Card Depot build marker.
+/* js/version.js â Card Depot build marker.
  *
  * Loaded FIRST by all three pages (index.html, game/builder.html, game/index.html).
  * Logs the deployed commit short-hash on load so the live build can be verified after
@@ -7,7 +7,7 @@
  */
 (function () {
   // Deployed commit short-hash. Bumped on every merge (AGENTS.md section 5).
-  var BUILD = '81d2ae6';
+  var BUILD = '50d695d';
   window.DEPOT_BUILD = BUILD;
   try {
     console.log('[depot] build ' + BUILD);
