@@ -236,7 +236,11 @@
     #matchStatus .ms-overall b{color:var(--gold);}
     #matchStatus .ms-next{margin-top:6px;color:var(--cream);}
     #matchStatus .ms-next b{color:var(--green-bright);}
-</style>
+
+    /* Franchise Economy Slice A: wallet chip (additive) */
+    .depot-wallet-chip{display:inline-flex;align-items:baseline;gap:.25em;margin-left:.6em;padding:.12em .5em;border-radius:999px;background:rgba(212,175,55,.15);border:1px solid rgba(212,175,55,.5);font-weight:700;font-size:.8em;color:#e8c86a;vertical-align:middle}
+    .depot-wallet-chip .dw-cur{opacity:.7;font-size:.85em;font-weight:600}
+    </style>
 </head>
 <body>
 <header>
@@ -1323,6 +1327,21 @@
 </script>
 <script src="../js/depot-builder-shell.js"></script>
 <script src="../js/depot-prestige.js"></script>
+<script src="../js/depot-wallet.js"></script>
+<script>
+/* Franchise Economy Slice A: mount wallet chip on the builder. Additive, graceful until DDL. */
+(function(){
+  var TAG='[depot] wallet-boot:';
+  var tries=0;
+  function boot(){
+    tries++;
+    if(!window.DepotWallet){ if(tries<40){ setTimeout(boot,150); } else { console.warn(TAG,'DepotWallet not present; giving up'); } return; }
+    try{ window.DepotWallet.ready(); }catch(e){ console.warn(TAG,'ready() failed:', e && e.message); }
+  }
+  if(document.readyState==='loading'){ document.addEventListener('DOMContentLoaded',boot); } else { boot(); }
+  try{ var mo=new MutationObserver(function(){ if(window.DepotWallet){ try{ window.DepotWallet.mountChip(); }catch(e){} } }); mo.observe(document.body,{childList:true,subtree:true}); }catch(e){ console.warn(TAG,'observer setup failed:', e && e.message); }
+})();
+</script>
 <script>
 /* Franchise Economy Slice A: lineup prestige + projected payout in the builder. Additive, fail-loud. */
 (function(){
