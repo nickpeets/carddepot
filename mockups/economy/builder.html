@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Card Depot &mdash; Economy: Lineup Prestige</title>
+<link rel="stylesheet" href="../depot-style.css">
+<link rel="stylesheet" href="economy.css">
+</head>
+<body>
+<div class="depot-bunting"></div>
+<div class="depot-shell">
+  <header class="depot-shell__header">
+    <div class="depot-wordmark">THE <b>DEPOT</b></div>
+    <div class="depot-franchise"><span class="name">PORTLAND MUDCATS</span><span class="record">SEASON RECORD &middot; 3-0</span></div>
+    <div class="depot-wallet"><span class="bal"><span class="coin">&#36;</span> 1,240 DD</span><span class="cur">DEPOT DOLLARS</span></div>
+    <div class="depot-account"><span>nickpeets@gmail.com</span></div>
+  </header>
+  <nav class="depot-nav">
+    <a class="depot-tab" href="binder.html">THE BINDER</a>
+    <a class="depot-tab is-active" aria-current="true" href="builder.html">LINEUP</a>
+    <a class="depot-tab" href="shop.html">PACK SHOP</a>
+    <a class="depot-tab" href="payout.html">LAST GAME</a>
+    <span class="spacer"></span>
+    <a class="btn ghost" href="index.html" style="font-size:9px">ECONOMY MAP</a>
+  </nav>
+
+  <main class="depot-stage">
+    <p class="mock-note">LINEUP PRESTIGE IN THE BUILDER. The batting order sums each card's prestige into a <b>LINEUP PRESTIGE</b> total, and the action bar shows the <b>projected payout per win</b> before you ever play &mdash; so the earning math is predictable. Swap a commons-bin card for a Griffey and watch both numbers climb.</p>
+    <h1 class="h1">LINEUP BUILDER</h1>
+
+    <div class="payline">
+      <div class="stat"><span class="k">LINEUP PRESTIGE</span><span class="v">440</span></div>
+      <span class="arrow">&rarr;</span>
+      <div class="stat"><span class="k">WIN PAYS ~</span><span class="v"><span class="coin">&#36;</span>889 DD</span></div>
+      <div class="stat pushright"><span class="k">PAYOUT FORMULA</span><span class="v" style="font-size:11px;color:var(--depot-cream)">base 10 &times; prestige-scale</span></div>
+      <a class="btn pushright" href="payout.html">PLAY BALL &raquo;</a>
+    </div>
+
+    <div class="two-col">
+      <div class="panel">
+        <div class="h2" style="margin-top:0">SET LINEUP</div>
+        <select class="sel"><option>Griffey / Mariners</option></select>
+        <div style="margin-top:12px" class="muted">Higher-prestige starters raise the whole lineup's payout. Cards still play as their card-year stats &mdash; prestige never touches performance.</div>
+        <div class="callout" style="margin-top:16px;font-size:9px">TIP: three gold cards in the order pushes WIN PAYS past <b><span class="coin">&#36;</span>900 DD</b>.</div>
+      </div>
+      <div>
+        <div class="h2" style="margin-top:0">BATTING ORDER &mdash; PRESTIGE PER SLOT</div>
+        <div class="card-tray">
+        <div class="card-face" style="display:flex;justify-content:space-between;align-items:center"><div><span class="nm">KEN GRIFFEY JR.</span><span style="color:var(--depot-red)">CF</span></div><div style="text-align:right"><span class="gem gold"></span><b style="color:var(--depot-ink)">80</b></div></div>
+        <div class="card-face" style="display:flex;justify-content:space-between;align-items:center"><div><span class="nm">DON MATTINGLY</span><span style="color:var(--depot-red)">1B</span></div><div style="text-align:right"><span class="gem silver"></span><b style="color:var(--depot-ink)">60</b></div></div>
+        <div class="card-face" style="display:flex;justify-content:space-between;align-items:center"><div><span class="nm">BARRY BONDS</span><span style="color:var(--depot-red)">LF</span></div><div style="text-align:right"><span class="gem silver"></span><b style="color:var(--depot-ink)">55</b></div></div>
+        <div class="card-face" style="display:flex;justify-content:space-between;align-items:center"><div><span class="nm">TONY GWYNN</span><span style="color:var(--depot-red)">RF</span></div><div style="text-align:right"><span class="gem silver"></span><b style="color:var(--depot-ink)">50</b></div></div>
+        <div class="card-face" style="display:flex;justify-content:space-between;align-items:center"><div><span class="nm">RYNE SANDBERG</span><span style="color:var(--depot-red)">2B</span></div><div style="text-align:right"><span class="gem bronze"></span><b style="color:var(--depot-ink)">45</b></div></div>
+        <div class="card-face" style="display:flex;justify-content:space-between;align-items:center"><div><span class="nm">CAL RIPKEN JR.</span><span style="color:var(--depot-red)">SS</span></div><div style="text-align:right"><span class="gem silver"></span><b style="color:var(--depot-ink)">48</b></div></div>
+        <div class="card-face" style="display:flex;justify-content:space-between;align-items:center"><div><span class="nm">SHOHEI OHTANI</span><span style="color:var(--depot-red)">DH</span></div><div style="text-align:right"><span class="gem bronze"></span><b style="color:var(--depot-ink)">35</b></div></div>
+        <div class="card-face" style="display:flex;justify-content:space-between;align-items:center"><div><span class="nm">GARY CARTER</span><span style="color:var(--depot-red)">C</span></div><div style="text-align:right"><span class="gem bronze"></span><b style="color:var(--depot-ink)">30</b></div></div>
+        <div class="card-face" style="display:flex;justify-content:space-between;align-items:center"><div><span class="nm">NOLAN RYAN</span><span style="color:var(--depot-red)">P</span></div><div style="text-align:right"><span class="gem silver"></span><b style="color:var(--depot-ink)">37</b></div></div>
+        </div>
+      </div>
+    </div>
+  </main>
+</div>
+</body>
+</html>

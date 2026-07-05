@@ -1,0 +1,66 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Card Depot &mdash; Franchise Economy Mockups</title>
+<link rel="stylesheet" href="../depot-style.css">
+<link rel="stylesheet" href="economy.css">
+<style>
+  .wrap{max-width:1160px;margin:0 auto;padding:24px}
+  .lead{background:var(--depot-navy);border:3px solid var(--depot-black);box-shadow:var(--pixel-shadow);padding:18px 20px;line-height:1.9;font-size:10px}
+  .lead b{color:var(--depot-gold)}
+  .cards{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:20px;margin-top:24px}
+  .mode{background:var(--depot-navy);border:3px solid var(--depot-black);box-shadow:var(--pixel-shadow);padding:16px}
+  .mode h3{color:var(--depot-gold);font-size:12px;margin:0 0 10px;line-height:1.6}
+  .mode p{font-size:9px;line-height:1.9;opacity:.85;margin:0 0 12px}
+  .mode .links{display:flex;gap:8px;flex-wrap:wrap}
+  .phones{margin-top:36px}
+  .phones h2{color:var(--depot-gold);font-size:16px}
+  .phone-row{display:flex;gap:24px;flex-wrap:wrap;margin-top:16px}
+  .phone{border:6px solid var(--depot-black);padding:6px 6px 10px;border-radius:18px;background:var(--depot-navy)}
+  .phone .cap{color:var(--depot-gold);font-size:9px;text-align:center;padding:6px 0}
+  .phone iframe{width:390px;height:720px;border:0;display:block;background:var(--depot-navy-bg)}
+</style>
+</head>
+<body>
+<div class="depot-bunting"></div>
+<div class="wrap">
+  <div class="depot-wordmark" style="font-size:20px;margin-bottom:16px">THE <b style="color:var(--depot-gold)">DEPOT</b> &mdash; FRANCHISE ECONOMY</div>
+  <div class="lead">
+    <b>FRANCHISE ECONOMY &mdash; STATIC CLICKABLE MOCKUPS.</b> Baseball-Stars-inspired: cards carry <b>PRESTIGE</b> based on collectible desirability (rookie, star, vintage, rarity). Lineup prestige scales the play-money earned per win. Money spends on <b>PACKS</b> and franchise upgrades &mdash; <b>never</b> on stat boosts. Cards always play as their card-year selves; that's sacred.<br><br>
+    These wear the existing 8-bit navy/gold shell (shared <b>depot-style.css</b>) with an additive <b>economy.css</b> layer. Hardcoded content, real placeholder names from the collection. Click through the tabs in any screen; resize to ~390px or scroll to the phone previews below. Currency name <b>DEPOT DOLLARS / DD</b> is a placeholder &mdash; final call is Nick's.
+  </div>
+
+  <div class="loopbar" style="margin-top:20px">
+    <div class="step"><b>EARN</b><br>win games, prestige scales pay</div>
+    <span class="to">&rarr;</span>
+    <div class="step"><b>SPEND</b><br>packs &amp; franchise upgrades</div>
+    <span class="to">&rarr;</span>
+    <div class="step"><b>GROW</b><br>better cards &rarr; more prestige &rarr; bigger wins</div>
+  </div>
+
+  <div class="cards">
+    <div class="mode"><h3>1 &middot; WALLET + PRESTIGE (BINDER)</h3><p>The shell identity block grows a currency balance (placeholder DEPOT DOLLARS / DD &mdash; Nick's call) beside franchise + record. Every card wears a gold/silver/bronze prestige badge.</p><div class="links"><a class="btn" href="binder.html">Open</a></div></div>
+    <div class="mode"><h3>2 &middot; PRESTIGE SPOTLIGHT</h3><p>The breakdown that keeps the formula legible: 1989 Griffey = ROOKIE +40, STAR +30, VINTAGE +10 = 80 PRESTIGE. Desirability, never power.</p><div class="links"><a class="btn" href="spotlight.html">Open</a></div></div>
+    <div class="mode"><h3>3 &middot; LINEUP PRESTIGE (BUILDER)</h3><p>Action bar sums the batting order into LINEUP PRESTIGE and projects the payout: 440 &rarr; WIN PAYS ~$889 DD. The earning math is predictable before you play.</p><div class="links"><a class="btn" href="builder.html">Open</a></div></div>
+    <div class="mode"><h3>4 &middot; THE PAYOUT MOMENT</h3><p>Post-win payday panel &mdash; WIN!, prestige-scaled earnings tallying up, new balance. The dopamine hit, Baseball Stars style.</p><div class="links"><a class="btn" href="payout.html">Open</a></div></div>
+    <div class="mode"><h3>5 &middot; PACK SHOP + RIP</h3><p>Where money spends: pack tiers at three prices plus a franchise cosmetic sink; then the pack-rip reveal, cards flipping one at a time to a rarity moment.</p><div class="links"><a class="btn ghost" href="shop.html">Shop</a><a class="btn ghost" href="pack.html">Rip a pack</a></div></div>
+  </div>
+
+  <div class="phones">
+    <h2>MOBILE &mdash; ~390px</h2>
+    <div class="phone-row">
+      <div class="phone"><div class="cap">WALLET/PRESTIGE</div><iframe src="binder.html" title="WALLET/PRESTIGE mobile" loading="lazy"></iframe></div>
+      <div class="phone"><div class="cap">SPOTLIGHT</div><iframe src="spotlight.html" title="SPOTLIGHT mobile" loading="lazy"></iframe></div>
+      <div class="phone"><div class="cap">LINEUP PRESTIGE</div><iframe src="builder.html" title="LINEUP PRESTIGE mobile" loading="lazy"></iframe></div>
+      <div class="phone"><div class="cap">PAYDAY</div><iframe src="payout.html" title="PAYDAY mobile" loading="lazy"></iframe></div>
+      <div class="phone"><div class="cap">PACK SHOP</div><iframe src="shop.html" title="PACK SHOP mobile" loading="lazy"></iframe></div>
+      <div class="phone"><div class="cap">PACK RIP</div><iframe src="pack.html" title="PACK RIP mobile" loading="lazy"></iframe></div>
+    </div>
+  </div>
+
+  <p class="muted" style="margin-top:28px">Static mockups only &mdash; nothing here is wired to live data. <a href="../index.html" style="color:var(--depot-gold)">&laquo; back to the reskin continuity mockups</a></p>
+</div>
+</body>
+</html>

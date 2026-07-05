@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Card Depot &mdash; Economy: Pack Rip</title>
+<link rel="stylesheet" href="../depot-style.css">
+<link rel="stylesheet" href="economy.css">
+</head>
+<body>
+<div class="depot-bunting"></div>
+<div class="depot-shell">
+  <header class="depot-shell__header">
+    <div class="depot-wordmark">THE <b>DEPOT</b></div>
+    <div class="depot-franchise"><span class="name">PORTLAND MUDCATS</span><span class="record">SEASON RECORD &middot; 3-0</span></div>
+    <div class="depot-wallet"><span class="bal"><span class="coin">&#36;</span> 340 DD</span><span class="cur">DEPOT DOLLARS</span></div>
+    <div class="depot-account"><span>nickpeets@gmail.com</span></div>
+  </header>
+  <nav class="depot-nav">
+    <a class="depot-tab" href="binder.html">THE BINDER</a>
+    <a class="depot-tab" href="builder.html">LINEUP</a>
+    <a class="depot-tab is-active" aria-current="true" href="shop.html">PACK SHOP</a>
+    <a class="depot-tab" href="payout.html">LAST GAME</a>
+    <span class="spacer"></span>
+    <a class="btn ghost" href="index.html" style="font-size:9px">ECONOMY MAP</a>
+  </nav>
+
+  <main class="depot-stage">
+    <p class="mock-note">PACK OPENING &mdash; THE RIP. Cards flip over one at a time; the last card is the rarity moment. Click <b>RIP NEXT CARD</b> to reveal them in order &mdash; the fifth is a gold rookie <b>hit</b> that shines. Chunky, celebratory, 8-bit.</p>
+    <h1 class="h1">GOLD PACK &mdash; 5 CARDS</h1>
+
+    <div class="rip-stage">
+      <div class="rip-row">
+        <div class="rip" data-rip>
+        <div class="face back">?</div>
+        <div class="face front">
+          
+          <span class="nm">MARK GRACE</span>
+          <div class="mini"></div>
+          <div>1992 &middot; Cubs</div>
+          <div style="margin-top:4px"><span class="gem common"></span></div>
+        </div>
+      </div>
+        <div class="rip" data-rip>
+        <div class="face back">?</div>
+        <div class="face front">
+          
+          <span class="nm">B.J. SURHOFF</span>
+          <div class="mini"></div>
+          <div>1991 &middot; Brewers</div>
+          <div style="margin-top:4px"><span class="gem common"></span></div>
+        </div>
+      </div>
+        <div class="rip" data-rip>
+        <div class="face back">?</div>
+        <div class="face front">
+          
+          <span class="nm">CHUCK KNOBLAUCH</span>
+          <div class="mini"></div>
+          <div>1994 &middot; Twins</div>
+          <div style="margin-top:4px"><span class="gem bronze"></span></div>
+        </div>
+      </div>
+        <div class="rip" data-rip>
+        <div class="face back">?</div>
+        <div class="face front">
+          
+          <span class="nm">ROBIN YOUNT</span>
+          <div class="mini"></div>
+          <div>1989 &middot; Brewers</div>
+          <div style="margin-top:4px"><span class="gem silver"></span></div>
+        </div>
+      </div>
+        <div class="rip hit" data-rip>
+        <div class="face back">?</div>
+        <div class="face front">
+          <span class="rarity">&#9733; GOLD ROOKIE &#9733;</span>
+          <span class="nm">FRANK THOMAS</span>
+          <div class="mini"></div>
+          <div>1990 &middot; White Sox</div>
+          <div style="margin-top:4px"><span class="gem gold"></span></div>
+        </div>
+      </div>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:center;flex-wrap:wrap">
+        <button class="btn" id="ripBtn">RIP NEXT CARD</button>
+        <button class="btn ghost" id="ripAll">REVEAL ALL</button>
+        <a class="btn ghost" href="binder.html">ADD TO BINDER &raquo;</a>
+      </div>
+      <p class="muted" style="margin-top:14px">HIT! A <b>FRANK THOMAS 1990 rookie</b> &mdash; +40 prestige to your collection.</p>
+    </div>
+
+    <div class="callout" style="margin-top:20px">Every pull lands in the binder as its real card-year self. The gold rookie makes future lineups worth more per win &mdash; not stronger on the field.</div>
+  </main>
+</div>
+<script>
+(function(){
+  var rips=[].slice.call(document.querySelectorAll('[data-rip]'));
+  var i=0;
+  function next(){ if(i<rips.length){ rips[i].classList.add('flipped'); i++; } }
+  document.getElementById('ripBtn').addEventListener('click',next);
+  document.getElementById('ripAll').addEventListener('click',function(){ rips.forEach(function(r){r.classList.add('flipped');}); i=rips.length; });
+})();
+</script>
+</body>
+    </html>
