@@ -1,0 +1,22 @@
+{
+  "_comment": "Curated iconic-set prestige bonuses for the Franchise Economy. Keyed by \"YEAR brand/set\" normalized (lowercase, punctuation-stripped, collapsed spaces). Captures brand-within-year value (e.g. 1993 SP >> 1993 Topps). Unlisted sets default to 0. See ECONOMY_DESIGN.md section 1. Additive: add entries to grant a set bonus.",
+  "version": 1,
+  "_bonuses": {
+    "ICONIC": 20,
+    "PREMIUM": 12,
+    "NOTABLE": 6
+  },
+  "sets": {
+    "1952 topps": "ICONIC",
+    "1933 goudey": "ICONIC",
+    "1909 t206": "ICONIC",
+    "1986 fleer": "PREMIUM",
+    "1989 upper deck": "PREMIUM",
+    "1993 sp": "PREMIUM",
+    "1984 donruss": "PREMIUM",
+    "1957 topps": "NOTABLE",
+    "1975 topps": "NOTABLE",
+    "1954 topps": "NOTABLE",
+    "1980 topps": "NOTABLE"
+  }
+}
