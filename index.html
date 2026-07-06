@@ -2840,9 +2840,17 @@ setAuthUI(false);
   if(document.readyState==='loading'){ document.addEventListener('DOMContentLoaded',boot); } else { boot(); }
   // Re-mount the chip when the shell identity block (re)renders.
   try{
-    var mo=new MutationObserver(function(){ if(window.DepotWallet){ try{ window.DepotWallet.mountChip(); }catch(e){} } });
-    mo.observe(document.body,{childList:true,subtree:true});
-  }catch(e){ console.warn(TAG,'observer setup failed:', e && e.message); }
+      var _moBusy=false;
+      var _remount=function(){
+        if(_moBusy || !window.DepotWallet) return;
+        _moBusy=true; mo.disconnect();
+        var p; try{ p=window.DepotWallet.mountChip(); }catch(e){ console.warn(TAG,'mountChip failed:', e && e.message); }
+        var done=function(){ try{ mo.observe(document.body,{childList:true,subtree:true}); }catch(_e){} _moBusy=false; };
+        if(p && typeof p.then==='function') p.then(done, done); else done();
+      };
+      var mo=new MutationObserver(function(){ _remount(); });
+      mo.observe(document.body,{childList:true,subtree:true});
+    }catch(e){ console.warn(TAG,'observer setup failed:', e && e.message); }
 })();
 </script>
 <script>
@@ -2853,14 +2861,27 @@ setAuthUI(false);
     if(!window.DepotPrestige){ console.warn(TAG,'DepotPrestige not present; skipping'); return; }
     window.DepotPrestige.ready().then(function(){
       try{ window.DepotPrestige.hookSpotlight(); }catch(e){ console.warn(TAG,'hookSpotlight failed:',e&&e.message); }
-      var deco=function(){ try{ window.DepotPrestige.decorateBinder(); }catch(e){ console.warn(TAG,'decorate failed:',e&&e.message); } };
-      deco();
-      var grid=document.getElementById('binderGrid');
-      var picker=document.getElementById('setPicker');
-      var obs=new MutationObserver(function(){ deco(); });
-      if(grid) obs.observe(grid,{childList:true,subtree:true}); else console.warn(TAG,'no #binderGrid to observe');
-      if(picker) obs.observe(picker,{childList:true,subtree:true});
-      console.log(TAG,'wired');
+      var obs=null, _decoBusy=false;
+        var grid=document.getElementById('binderGrid');
+        var picker=document.getElementById('setPicker');
+        var deco=function(){
+          if(_decoBusy) return;
+          _decoBusy=true;
+          if(obs) obs.disconnect();
+          try{ window.DepotPrestige.decorateBinder(); }
+          catch(e){ console.warn(TAG,'decorate failed:', e && e.message); }
+          finally{
+            if(obs){ if(grid) obs.observe(grid,{childList:true,subtree:true}); if(picker) obs.observe(picker,{childList:true,subtree:true}); }
+            _decoBusy=false;
+          }
+        };
+        var _rafQueued=false;
+        var schedule=function(){ if(_rafQueued) return; _rafQueued=true; requestAnimationFrame(function(){ _rafQueued=false; deco(); }); };
+        obs=new MutationObserver(function(){ schedule(); });
+        if(grid) obs.observe(grid,{childList:true,subtree:true}); else console.warn(TAG,'no #binderGrid to observe');
+        if(picker) obs.observe(picker,{childList:true,subtree:true});
+        deco();
+        console.log(TAG,'wired');
     });
   }
   if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot); else boot();
