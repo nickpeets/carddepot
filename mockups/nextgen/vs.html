@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Card Depot — NEXT-GEN VS (Challenge a Friend)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../depot-style.css">
+<link rel="stylesheet" href="../economy/economy.css">
+<link rel="stylesheet" href="nextgen.css">
+</head>
+<body>
+<div class="depot-bunting"></div>
+<div class="depot-shell">
+  <header class="depot-shell__header">
+    <div class="depot-wordmark">THE <b>DEPOT</b></div>
+    <div class="depot-franchise"><span class="name">PORTLAND MUDCATS</span><span class="record">SEASON RECORD · 3-0</span></div>
+    <a class="lastgame-chip" href="index.html" title="Last game — quick access">LAST GAME <span class="res win">W 7-2</span> <span class="arrow">»</span></a>
+    <div class="depot-wallet"><span class="bal"><span class="coin">$</span> 1,240 DD</span><span class="cur">DEPOT DOLLARS</span></div>
+    <div class="depot-account"><span>nickpeets@gmail.com</span></div>
+  </header>
+  <nav class="depot-nav">
+    <a class="depot-tab" href="binder.html">THE BINDER</a>
+    <a class="depot-tab" href="lineup.html">LINEUP</a>
+    <a class="depot-tab" href="index.html#season">SEASON</a>
+    <a class="depot-tab" href="shop.html">PACK SHOP</a>
+    <a class="depot-tab is-active" href="vs.html">VS</a>
+    <a class="depot-tab" href="league.html">LEAGUE</a>
+    <span class="spacer"></span>
+    <a class="depot-tab" href="index.html">HUB</a>
+  </nav>
+  <main class="depot-stage">
+    <p class="mock-note">VS — CHALLENGE A FRIEND. The existing challenge/match flow, promoted to a first-class nav mode. Create a one-off match with your current lineup, or accept a challenge someone sent you. Winner's payout still scales with LINEUP PRESTIGE.</p>
+    <h1 class="h1">VS — CHALLENGE A FRIEND</h1>
+
+    <div class="vs-versus">
+      <div class="vs-team"><div class="nm">PORTLAND MUDCATS</div><div class="pr">YOU · PRESTIGE 438</div></div>
+      <span class="vs-bolt">VS</span>
+      <div class="vs-team"><div class="nm">???</div><div class="pr">awaiting opponent</div></div>
+    </div>
+
+    <div class="vs-wrap">
+      <div class="vs-card">
+        <h2>CREATE A CHALLENGE</h2>
+        <div class="muted" style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#cfd8e6;line-height:1.6">Send your current 9 + pitcher as a challenge. Generates a code your friend accepts. Win pays 888 DD at this lineup's prestige.</div>
+        <div class="field-in"><input type="text" value="Griffey / Bonds / Mattingly / Ryan (P) …" readonly></div>
+        <div class="field-in"><input type="text" value="CHALLENGE CODE: DEPOT-7F2K9" readonly></div>
+        <div class="spot-actions">
+          <a class="btn" href="#">CREATE CHALLENGE »</a>
+          <a class="btn ghost" href="lineup.html">« EDIT LINEUP FIRST</a>
+        </div>
+      </div>
+
+      <div class="vs-card">
+        <h2>ACCEPT A CHALLENGE</h2>
+        <div class="muted" style="font-family:'JetBrains Mono',monospace;font-size:10px;color:#cfd8e6;line-height:1.6">Paste a friend's code to load their lineup and play the match with yours.</div>
+        <div class="field-in"><input type="text" placeholder="Paste challenge code, e.g. DEPOT-3A8Q1"></div>
+        <div class="spot-actions">
+          <a class="btn" href="index.html#season">ACCEPT & PLAY BALL »</a>
+        </div>
+        <div class="h2" style="font-size:11px;margin-top:16px">OPEN CHALLENGES</div>
+        <table class="standings">
+          <tr><th>FROM</th><th>THEIR PRESTIGE</th><th></th></tr>
+          <tr><td>riverside_red</td><td>402</td><td><a href="index.html#season">ACCEPT</a></td></tr>
+          <tr><td>tacoma_tide</td><td>515</td><td><a href="index.html#season">ACCEPT</a></td></tr>
+        </table>
+      </div>
+    </div>
+    <p class="mock-note" style="margin-top:20px">MOCKUP SET: <a href="index.html">hub</a> · <a href="binder.html">binder</a> · <a href="lineup.html">lineup</a> · <a href="shop.html">shop</a> · <a href="league.html">league</a></p>
+  </main>
+</div>
+</body>
+</html>
