@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Card Depot — NEXT-GEN Lineup Builder</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="../depot-style.css">
+<link rel="stylesheet" href="../economy/economy.css">
+<link rel="stylesheet" href="nextgen.css">
+</head>
+<body>
+<div class="depot-bunting"></div>
+<div class="depot-shell">
+  <header class="depot-shell__header">
+    <div class="depot-wordmark">THE <b>DEPOT</b></div>
+    <div class="depot-franchise">
+      <span class="name">PORTLAND MUDCATS</span>
+      <span class="record">SEASON RECORD · 3-0</span>
+    </div>
+    <a class="lastgame-chip" href="index.html" title="Last game — quick access">LAST GAME <span class="res win">W 7-2</span> <span class="arrow">»</span></a>
+    <div class="depot-wallet"><span class="bal"><span class="coin">$</span> 1,240 DD</span><span class="cur">DEPOT DOLLARS</span></div>
+    <div class="depot-account"><span>nickpeets@gmail.com</span></div>
+  </header>
+
+  <nav class="depot-nav">
+    <a class="depot-tab" href="binder.html">THE BINDER</a>
+    <a class="depot-tab is-active" href="lineup.html">LINEUP</a>
+    <a class="depot-tab" href="index.html#season">SEASON</a>
+    <a class="depot-tab" href="shop.html">PACK SHOP</a>
+    <a class="depot-tab" href="vs.html">VS</a>
+    <a class="depot-tab" href="league.html">LEAGUE</a>
+    <span class="spacer"></span>
+    <a class="depot-tab" href="index.html">HUB</a>
+  </nav>
+
+  <main class="depot-stage">
+    <p class="mock-note">LINEUP BUILDER — the card-first build. Add cards to the batting order + pitcher; their prestige sums into LINEUP PRESTIGE, which drives the win payout via Slice A: <b>100 + prestige × 1.8 + bonuses</b>. Placeholder numbers in labelled slots — Nick iterates the exact contents. Click a card face (not its button) to open the prestige spotlight.</p>
+
+    <!-- TOP LAUNCH STRIP: stats box + PLAY BALL to the RIGHT -->
+    <div class="launch-strip">
+      <div class="statbox">
+        <div class="slot"><span class="k">LINEUP PRESTIGE</span><span class="v gold">438</span></div>
+        <div class="slot"><span class="k">WIN PAYOUT</span><span class="v">888 DD</span><span class="sub">this lineup</span></div>
+        <div class="slot"><span class="k">WIN PACE</span><span class="v">+62 DD/win ▲</span><span class="sub">vs last lineup</span></div>
+        <div class="slot"><span class="k">PAYOUT FORMULA</span><span class="v" style="font-size:11px">100 + 438×1.8 + 0</span><span class="sub">= 888 DD (Slice A)</span></div>
+      </div>
+      <a class="playball" href="index.html#season">PLAY BALL »</a>
+    </div>
+
+    <div class="lineup-body">
+      <!-- LEFT: collection as CARDS (grid) -->
+      <div>
+        <div class="col-head">YOUR COLLECTION</div>
+        <div class="coll-grid">
+
+          <div class="coll-card is-in-order" data-nm="KEN GRIFFEY JR." data-yr="1989" data-set="Upper Deck · #1 · Seattle Mariners" data-tier="gold" data-num="80" data-stars="★★★★★">
+            <div class="cc-art"><span class="pos">CF · OF</span><span class="slot-flag">SLOT 3 ✓</span><span class="head"></span><span class="body"></span></div>
+            <div class="cc-meta"><div class="cc-nm">KEN GRIFFEY JR.</div><div class="cc-sub">1989 · Mariners</div></div>
+            <div class="cc-row"><a class="btn-add in-order" href="#">IN ORDER ✓</a><span class="pchip"><span class="num gold">80</span><span class="lbl">PRESTIGE</span></span></div>
+          </div>
+
+          <div class="coll-card is-in-order" data-nm="BARRY BONDS" data-yr="1993" data-set="SP · #12 · San Francisco Giants" data-tier="silver" data-num="55" data-stars="★★★★☆">
+            <div class="cc-art"><span class="pos">LF · OF</span><span class="slot-flag">SLOT 4 ✓</span><span class="head"></span><span class="body"></span></div>
+            <div class="cc-meta"><div class="cc-nm">BARRY BONDS</div><div class="cc-sub">1993 · Giants</div></div>
+            <div class="cc-row"><a class="btn-add in-order" href="#">IN ORDER ✓</a><span class="pchip"><span class="num silver">55</span><span class="lbl">PRESTIGE</span></span></div>
+          </div>
+
+          <div class="coll-card" data-nm="DON MATTINGLY" data-yr="1984" data-set="Donruss · #248 · New York Yankees" data-tier="gold" data-num="60" data-stars="★★★★☆">
+            <div class="cc-art"><span class="pos">1B</span><span class="head"></span><span class="body"></span></div>
+            <div class="cc-meta"><div class="cc-nm">DON MATTINGLY</div><div class="cc-sub">1984 · Yankees</div></div>
+            <div class="cc-row"><a class="btn-add" href="#">ADD TO ORDER</a><span class="pchip"><span class="num gold">60</span><span class="lbl">PRESTIGE</span></span></div>
+          </div>
+
+          <div class="coll-card" data-nm="TONY GWYNN" data-yr="1983" data-set="Topps · #482 · San Diego Padres" data-tier="silver" data-num="50" data-stars="★★★☆☆">
+            <div class="cc-art"><span class="pos">RF · OF</span><span class="head"></span><span class="body"></span></div>
+            <div class="cc-meta"><div class="cc-nm">TONY GWYNN</div><div class="cc-sub">1983 · Padres</div></div>
+            <div class="cc-row"><a class="btn-add" href="#">ADD TO ORDER</a><span class="pchip"><span class="num silver">50</span><span class="lbl">PRESTIGE</span></span></div>
+          </div>
+
+          <div class="coll-card" data-nm="RYNE SANDBERG" data-yr="1985" data-set="Fleer · #57 · Chicago Cubs" data-tier="bronze" data-num="45" data-stars="★★★☆☆">
+            <div class="cc-art"><span class="pos">2B</span><span class="head"></span><span class="body"></span></div>
+            <div class="cc-meta"><div class="cc-nm">RYNE SANDBERG</div><div class="cc-sub">1985 · Cubs</div></div>
+            <div class="cc-row"><a class="btn-add" href="#">ADD TO ORDER</a><span class="pchip"><span class="num bronze">45</span><span class="lbl">PRESTIGE</span></span></div>
+          </div>
+
+          <div class="coll-card" data-nm="NOLAN RYAN" data-yr="1980" data-set="Topps · #580 · Houston Astros" data-tier="gold" data-num="72" data-stars="★★★★★">
+            <div class="cc-art"><span class="pos">P</span><span class="head"></span><span class="body"></span></div>
+            <div class="cc-meta"><div class="cc-nm">NOLAN RYAN</div><div class="cc-sub">1980 · Astros</div></div>
+            <div class="cc-row"><a class="btn-add in-order" href="#">PITCHER ✓</a><span class="pchip"><span class="num gold">72</span><span class="lbl">PRESTIGE</span></span></div>
+          </div>
+
+          <div class="coll-card is-full" data-nm="JOSE LIND" data-yr="1990" data-set="Score · #212 · Pittsburgh Pirates" data-tier="plain" data-num="8" data-stars="★☆☆☆☆">
+            <div class="cc-art"><span class="pos">2B</span><span class="slot-flag full">ORDER FULL</span><span class="head"></span><span class="body"></span></div>
+            <div class="cc-meta"><div class="cc-nm">JOSE LIND</div><div class="cc-sub">1990 · Pirates</div></div>
+            <div class="cc-row"><a class="btn-add disabled" href="#">ORDER FULL</a><span class="pchip"><span class="num plain">8</span><span class="lbl">PRESTIGE</span></span></div>
+          </div>
+
+          <div class="coll-card is-full" data-nm="KEVIN MAAS" data-yr="1991" data-set="Upper Deck · #71 · New York Yankees" data-tier="plain" data-num="6" data-stars="★☆☆☆☆">
+            <div class="cc-art"><span class="pos">1B</span><span class="slot-flag full">ORDER FULL</span><span class="head"></span><span class="body"></span></div>
+            <div class="cc-meta"><div class="cc-nm">KEVIN MAAS</div><div class="cc-sub">1991 · Yankees</div></div>
+            <div class="cc-row"><a class="btn-add disabled" href="#">ORDER FULL</a><span class="pchip"><span class="num plain">6</span><span class="lbl">PRESTIGE</span></span></div>
+          </div>
+
+          <div class="coll-card is-full" data-nm="GARY CARTER" data-yr="1987" data-set="Topps · #20 · New York Mets" data-tier="silver" data-num="30" data-stars="★★★☆☆">
+            <div class="cc-art"><span class="pos">C</span><span class="slot-flag full">ORDER FULL</span><span class="head"></span><span class="body"></span></div>
+            <div class="cc-meta"><div class="cc-nm">GARY CARTER</div><div class="cc-sub">1987 · Mets</div></div>
+            <div class="cc-row"><a class="btn-add disabled" href="#">ORDER FULL</a><span class="pchip"><span class="num silver">30</span><span class="lbl">PRESTIGE</span></span></div>
+          </div>
+
+        </div>
+      </div>
+
+      <!-- RIGHT: batting order + pitcher slots -->
+      <div>
+        <div class="col-head">BATTING ORDER + PITCHER</div>
+        <div class="order-panel">
+          <div class="order-slot"><span class="no">1</span><span class="who">TONY GWYNN<span class="role">RF</span></span><span class="mini-chip" style="background:#c9d2e0;color:#1a2440">50</span></div>
+          <div class="order-slot"><span class="no">2</span><span class="who">RYNE SANDBERG<span class="role">2B</span></span><span class="mini-chip" style="background:#c8813c;color:#3a1f06">45</span></div>
+          <div class="order-slot"><span class="no">3</span><span class="who">KEN GRIFFEY JR.<span class="role">CF</span></span><span class="mini-chip" style="background:#f8d000;color:#3a2e00">80</span></div>
+          <div class="order-slot"><span class="no">4</span><span class="who">BARRY BONDS<span class="role">LF</span></span><span class="mini-chip" style="background:#c9d2e0;color:#1a2440">55</span></div>
+          <div class="order-slot"><span class="no">5</span><span class="who">DON MATTINGLY<span class="role">1B</span></span><span class="mini-chip" style="background:#f8d000;color:#3a2e00">60</span></div>
+          <div class="order-slot empty"><span class="no">6</span><span class="who">EMPTY — add a card</span></div>
+          <div class="order-slot empty"><span class="no">7</span><span class="who">EMPTY — add a card</span></div>
+          <div class="order-slot empty"><span class="no">8</span><span class="who">EMPTY — add a card</span></div>
+          <div class="order-slot empty"><span class="no">9</span><span class="who">EMPTY — add a card</span></div>
+          <div class="order-slot pitcher"><span class="no">P</span><span class="who">NOLAN RYAN<span class="role">STARTING PITCHER</span></span><span class="mini-chip" style="background:#f8d000;color:#3a2e00">72</span></div>
+        </div>
+      </div>
+    </div>
+
+    <p class="mock-note" style="margin-top:20px">MOCKUP SET: <a href="index.html">hub</a> · <a href="binder.html">binder</a> · <a href="lineup-mobile.html">lineup (mobile)</a> · <a href="shop.html">shop</a> · <a href="vs.html">vs</a> · <a href="league.html">league</a></p>
+  </main>
+</div>
+
+<!-- CARD SPOTLIGHT OVERLAY (spotlight.html treatment) -->
+<div class="spot-overlay" id="spot">
+  <div class="spot-modal">
+    <button class="spot-x" id="spotClose">CLOSE ✕</button>
+    <div class="spot-grid">
+      <div class="spot-bigcard">
+        <div class="pbadge-big"><span class="n" id="sNum">80</span><span class="t">PRESTIGE</span></div>
+        <div class="yr" id="sYr">1989</div>
+        <span class="nm" id="sNm">KEN GRIFFEY JR.</span>
+        <div class="set" id="sSet">Upper Deck · #1 · Seattle Mariners</div>
+        <div class="art" id="sArt">CARD-YEAR ART (1989)</div>
+        <div class="pgstars" id="sStars">★★★★★</div>
+      </div>
+      <div class="spot-break">
+        <div class="h2">PRESTIGE BREAKDOWN</div>
+        <div class="pg-line"><span class="lab">ROOKIE CARD<span class="why">first-year card of the player — the collector's grail</span></span><span class="amt">+40</span></div>
+        <div class="pg-line"><span class="lab">STAR PLAYER<span class="why">Hall-of-Fame calibre name</span></span><span class="amt">+30</span></div>
+        <div class="pg-line"><span class="lab">VINTAGE YEAR<span class="why">pre-1990 issue</span></span><span class="amt">+10</span></div>
+        <div class="pg-line total"><span class="lab">TOTAL PRESTIGE</span><span class="amt">= 80</span></div>
+        <div class="spot-actions">
+          <a class="btn" href="#" id="spotAdd">ADD TO ORDER</a>
+          <button class="btn ghost" id="spotClose2">« BACK TO LINEUP</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+  var spot=document.getElementById('spot');
+  function open(c){
+    document.getElementById('sNm').textContent=c.dataset.nm;
+    document.getElementById('sYr').textContent=c.dataset.yr;
+    document.getElementById('sSet').textContent=c.dataset.set;
+    document.getElementById('sArt').textContent='CARD-YEAR ART ('+c.dataset.yr+')';
+    document.getElementById('sNum').textContent=c.dataset.num;
+    document.getElementById('sStars').textContent=c.dataset.stars;
+    spot.classList.add('open');
+  }
+  function close(){ spot.classList.remove('open'); }
+  document.querySelectorAll('.coll-card').forEach(function(c){
+    c.addEventListener('click',function(e){
+      if(e.target.closest('.btn-add')) return; // button handled separately
+      open(c);
+    });
+  });
+  document.getElementById('spotClose').addEventListener('click',close);
+  document.getElementById('spotClose2').addEventListener('click',close);
+  spot.addEventListener('click',function(e){ if(e.target===spot) close(); });
+  document.querySelectorAll('.btn-add').forEach(function(b){ b.addEventListener('click',function(e){e.preventDefault();}); });
+})();
+</script>
+</body>
+</html>
