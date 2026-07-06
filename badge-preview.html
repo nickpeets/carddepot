@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Card Depot — Prestige Badge Preview (3 variants)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --navy:#0d1b3a; --navy-dark:#081027; --navy-line:#1c3060;
+    --gold:#f8d000; --gold-deep:#c9a800;
+    --cream:#e8e4d0; --ink:#16110a;
+    --felt:#2d6a2d; --felt-dark:#1d4a1d;
+    --band-gold:#f8d000; --band-gold-ink:#3a2e00;
+    --band-silver:#c9d2e0; --band-silver-ink:#1a2440;
+    --band-bronze:#c8813c; --band-bronze-ink:#3a1f06;
+    --band-plain:#8b93a7; --band-plain-ink:#10131c;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{background:var(--navy);color:var(--cream);font-family:'Oswald',sans-serif;
+    background-image:radial-gradient(circle at 20% 0%, #142654 0%, transparent 55%);
+    padding:0 0 60px;}
+  .barber{height:14px;background:repeating-linear-gradient(90deg,#b22 0 14px,#e8e4d0 14px 28px);border-bottom:3px solid var(--gold)}
+  header{padding:22px 28px 10px}
+  h1{font-size:26px;letter-spacing:2px;color:var(--gold);text-transform:uppercase}
+  h1 span{color:var(--cream)}
+  .sub{font-family:'JetBrains Mono',monospace;font-size:12px;color:#9fb0d6;margin-top:6px;max-width:820px;line-height:1.5}
+  .legend{font-family:'JetBrains Mono',monospace;font-size:11px;color:#c9d2e0;margin-top:10px;display:flex;gap:14px;flex-wrap:wrap}
+  .legend b{padding:2px 7px;border-radius:2px}
+  .lg-gold{background:var(--band-gold);color:var(--band-gold-ink)}
+  .lg-silver{background:var(--band-silver);color:var(--band-silver-ink)}
+  .lg-bronze{background:var(--band-bronze);color:var(--band-bronze-ink)}
+  .lg-plain{background:var(--band-plain);color:var(--band-plain-ink)}
+  .variant{margin:30px 28px 0;border:2px solid var(--navy-line);border-radius:6px;background:var(--navy-dark);overflow:hidden}
+  .vhead{padding:14px 18px;border-bottom:2px solid var(--navy-line);background:#0a1430}
+  .vhead h2{font-size:18px;letter-spacing:1px;color:var(--gold);text-transform:uppercase}
+  .vhead p{font-family:'JetBrains Mono',monospace;font-size:11.5px;color:#9fb0d6;margin-top:5px;line-height:1.5;max-width:760px}
+  .rebadge{font-family:'JetBrains Mono',monospace;font-size:10px;color:#0d1b3a;background:var(--gold);padding:2px 8px;border-radius:2px;text-transform:uppercase;letter-spacing:.5px;margin-left:8px}
+  .widths{display:flex;gap:26px;flex-wrap:wrap;padding:20px 18px 24px}
+  .wcol{flex:1 1 0}
+  .wlabel{font-family:'JetBrains Mono',monospace;font-size:11px;color:#7f8db0;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px}
+  .grid{display:grid;gap:14px}
+  .grid.desktop{grid-template-columns:repeat(3,1fr);max-width:none}
+  .grid.mobile{grid-template-columns:repeat(2,1fr);max-width:360px}
+
+  /* ---- generic faux photographic card ---- */
+  .card{position:relative;border:3px solid #111;border-radius:4px;overflow:hidden;
+    background:#111;aspect-ratio:5/7;box-shadow:0 4px 0 rgba(0,0,0,.45);}
+  .photo{position:absolute;inset:0;}
+  /* four varied 'photo' backgrounds to stress-test legibility */
+  .bg-sky{background:linear-gradient(#7db4e6 0%,#bcd9f2 55%,#3c7a3c 55%,#2c5f2c 100%);}
+  .bg-dark{background:linear-gradient(#1a2740 0%,#26364f 60%,#3a2f22 100%);}
+  .bg-crowd{background:linear-gradient(#8a8574 0%,#9a9480 40%,#3c7a3c 55%,#255025 100%);}
+  .bg-day{background:linear-gradient(#a9c9e8 0%,#cfe0f0 45%,#4b8a3c 55%,#356328 100%);}
+  /* pixel 'player' silhouette */
+  .fig{position:absolute;left:50%;top:22%;transform:translateX(-50%);width:34%;height:52%;
+    background:#22303f;border-radius:40% 40% 30% 30%;opacity:.82}
+  .fig::after{content:"";position:absolute;left:50%;top:-30%;transform:translateX(-50%);
+    width:60%;height:52%;border-radius:50%;background:#e8c9a8}
+  .bg-sky .fig{background:#d9a520}.bg-dark .fig{background:#12203a}
+  .bg-crowd .fig{background:#b6402c}.bg-day .fig{background:#2a3d6a}
+  /* card's own nameplate baked into the art (like real cards) */
+  .cardplate{position:absolute;left:0;right:0;bottom:0;padding:6px 8px;
+    background:linear-gradient(transparent,rgba(0,0,0,.55));}
+  .cardplate .cn{font-weight:700;font-size:12px;color:#fff;text-shadow:1px 1px 0 #000;letter-spacing:.5px}
+  .cardplate .ct{font-family:'JetBrains Mono',monospace;font-size:9px;color:#ffe28a}
+  /* team color strip the card art already uses (collision hazard, top-left) */
+  .cardribbon{position:absolute;top:8px;left:0;background:#0b8f3a;color:#fff;
+    font-family:'JetBrains Mono',monospace;font-size:8px;padding:2px 6px 2px 5px;
+    border-radius:0 3px 3px 0;text-transform:uppercase;letter-spacing:.5px}
+
+  /* ============ VARIANT A: corner gem on the FRAME, off the image ============ */
+  .va .card{border:none;background:transparent;box-shadow:none;aspect-ratio:auto}
+  .va .frame{background:var(--cream);border:3px solid #111;border-radius:4px;padding:5px;
+    position:relative;box-shadow:0 4px 0 rgba(0,0,0,.45)}
+  .va .imgwrap{position:relative;aspect-ratio:5/6;border:2px solid #111;overflow:hidden}
+  .va .gem{position:absolute;top:-9px;right:-9px;width:40px;height:40px;border-radius:50%;
+    border:3px solid #111;display:flex;flex-direction:column;align-items:center;justify-content:center;
+    font-family:'JetBrains Mono',monospace;line-height:1;box-shadow:0 2px 0 rgba(0,0,0,.4);z-index:6}
+  .va .gem .n{font-weight:700;font-size:15px}
+  .va .gem .l{font-size:6px;letter-spacing:.5px;margin-top:1px}
+  .va .plate{padding:5px 2px 1px;text-align:center}
+  .va .plate .pn{font-weight:700;font-size:12px;color:var(--ink);letter-spacing:.5px}
+  .va .plate .stars{font-size:11px;letter-spacing:1px}
+
+  /* ============ VARIANT B: badge on nameplate/footer strip, never over art ============ */
+  .vb .frame{background:var(--cream);border:3px solid #111;border-radius:4px;overflow:hidden;box-shadow:0 4px 0 rgba(0,0,0,.45)}
+  .vb .imgwrap{position:relative;aspect-ratio:5/5.4;border-bottom:3px solid #111;overflow:hidden}
+  .vb .footer{display:flex;align-items:center;gap:8px;padding:6px 8px;background:var(--cream)}
+  .vb .fnum{font-family:'JetBrains Mono',monospace;font-weight:700;font-size:15px;
+    padding:3px 8px;border:2px solid #111;border-radius:3px;line-height:1}
+  .vb .fmeta{flex:1;min-width:0}
+  .vb .fmeta .pn{font-weight:700;font-size:12px;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .vb .fmeta .stars{font-size:10px;letter-spacing:1px}
+  .vb .flabel{font-family:'JetBrains Mono',monospace;font-size:7px;color:#5a5442;text-transform:uppercase;letter-spacing:.5px}
+
+  /* ============ VARIANT C: minimal prestige-colored frame glow, number on hover ============ */
+  .vc .card{transition:transform .12s}
+  .vc .card{border-width:4px}
+  .vc .card.tier-gold{border-color:var(--band-gold);box-shadow:0 0 0 2px #111,0 0 14px 2px rgba(248,208,0,.55)}
+  .vc .card.tier-silver{border-color:var(--band-silver);box-shadow:0 0 0 2px #111,0 0 12px 1px rgba(201,210,224,.45)}
+  .vc .card.tier-bronze{border-color:var(--band-bronze);box-shadow:0 0 0 2px #111,0 0 12px 1px rgba(200,129,60,.45)}
+  .vc .card.tier-plain{border-color:#4a5268;box-shadow:0 0 0 2px #111}
+  .vc .hovnum{position:absolute;top:6px;right:6px;font-family:'JetBrains Mono',monospace;font-weight:700;
+    font-size:13px;padding:2px 7px;border:2px solid #111;border-radius:3px;opacity:0;transform:translateY(-4px);
+    transition:opacity .12s,transform .12s;z-index:6}
+  .vc .card:hover{transform:translateY(-3px)}
+  .vc .card:hover .hovnum{opacity:1;transform:translateY(0)}
+  .vc .hint{font-family:'JetBrains Mono',monospace;font-size:10px;color:#7f8db0;margin-top:8px}
+
+  /* shared band colors */
+  .b-gold{background:var(--band-gold);color:var(--band-gold-ink)}
+  .b-silver{background:var(--band-silver);color:var(--band-silver-ink)}
+  .b-bronze{background:var(--band-bronze);color:var(--band-bronze-ink)}
+  .b-plain{background:var(--band-plain);color:var(--band-plain-ink)}
+  .stars{color:var(--gold)}
+  .stars .off{color:#b9b39a}
+  footer.note{margin:34px 28px 0;font-family:'JetBrains Mono',monospace;font-size:11px;color:#7f8db0;line-height:1.6;border-top:2px solid var(--navy-line);padding-top:16px}
+</style>
+</head>
+<body>
+<div class="barber"></div>
+<header>
+  <h1>THE <span>DEPOT</span> — Prestige Badge Preview</h1>
+  <p class="sub">Three badge treatments on the same set of cards, shown at desktop (3-up) and mobile (2-up) widths. The card art below is stand-in artwork with deliberately varied backgrounds (bright sky, dark uniform, busy crowd, day field) to test legibility the way real, mixed photographic cards do. Pick a variant and I will wire it into the live binder.</p>
+  <div class="legend">
+    <span>TIER BANDS:</span>
+    <b class="lg-gold">GOLD 60+</b>
+    <b class="lg-silver">SILVER 30-59</b>
+    <b class="lg-bronze">BRONZE 10-29</b>
+    <b class="lg-plain">PLAIN &lt;10</b>
+  </div>
+</header>
+
+<!-- ============ VARIANT A ============ -->
+<section class="variant va">
+  <div class="vhead">
+    <h2>Variant A — Corner gem on the frame <span class="rebadge">as mocked</span></h2>
+    <p>The approved mockup treatment: a small round prestige gem tucked on the card frame's top-right corner, sitting on the cream border rather than over the photo. Player name + star rating on the nameplate below. Never touches the art.</p>
+  </div>
+  <div class="widths">
+    <div class="wcol"><div class="wlabel">Desktop</div><div class="grid desktop" data-render="A" data-cols="6"></div></div>
+    <div class="wcol"><div class="wlabel">Mobile</div><div class="grid mobile" data-render="A" data-cols="4"></div></div>
+  </div>
+</section>
+
+<!-- ============ VARIANT B ============ -->
+<section class="variant vb">
+  <div class="vhead">
+    <h2>Variant B — Nameplate / footer strip</h2>
+    <p>The badge lives in a cream footer strip below the image — a solid backing plate that always gives the number full contrast, and can never cover a face or the card's own graphics. Number is tier-colored; name + stars sit beside it.</p>
+  </div>
+  <div class="widths">
+    <div class="wcol"><div class="wlabel">Desktop</div><div class="grid desktop" data-render="B" data-cols="6"></div></div>
+    <div class="wcol"><div class="wlabel">Mobile</div><div class="grid mobile" data-render="B" data-cols="4"></div></div>
+  </div>
+</section>
+
+<!-- ============ VARIANT C ============ -->
+<section class="variant vc">
+  <div class="vhead">
+    <h2>Variant C — Minimal frame glow (number on hover)</h2>
+    <p>No badge over the art at all. Tier is shown only as a colored frame + glow on the card border; the exact number appears on hover (and in the spotlight). Cleanest over busy art, but the number is not visible at a glance. Hover a card to reveal it.</p>
+  </div>
+  <div class="widths">
+    <div class="wcol"><div class="wlabel">Desktop</div><div class="grid desktop" data-render="C" data-cols="6"></div><div class="hint">&#9432; hover a card to reveal the number</div></div>
+    <div class="wcol"><div class="wlabel">Mobile</div><div class="grid mobile" data-render="C" data-cols="4"></div></div>
+  </div>
+</section>
+
+<footer class="note">
+  Static preview page &mdash; not wired to live data. Card artwork is stand-in only. Once a variant is chosen, the treatment will be ported into <code>js/depot-prestige.js</code> (decorateBinder) and the spotlight breakdown, matching the 8-bit navy/gold system.
+</footer>
+
+<script>
+  // Sample cards spanning all tiers + varied art backgrounds
+  var CARDS = [
+    {name:"KEN GRIFFEY JR.", yr:"1989 \u00b7 Mariners", n:80, band:"gold",   stars:5, bg:"bg-day",   ribbon:"OUTFIELD"},
+    {name:"BARRY BONDS",     yr:"1993 \u00b7 Giants",   n:55, band:"silver", stars:4, bg:"bg-dark",  ribbon:"OUTFIELD"},
+    {name:"DON MATTINGLY",   yr:"1984 \u00b7 Yankees",  n:60, band:"gold",   stars:4, bg:"bg-dark",  ribbon:"FIRST BASE"},
+    {name:"TONY GWYNN",      yr:"1983 \u00b7 Padres",   n:50, band:"silver", stars:3, bg:"bg-crowd", ribbon:"OUTFIELD"},
+    {name:"RYNE SANDBERG",   yr:"1985 \u00b7 Cubs",     n:45, band:"bronze", stars:3, bg:"bg-sky",   ribbon:"2ND BASE"},
+    {name:"KEVIN MAAS",      yr:"1991 \u00b7 Yankees",  n:6,  band:"plain",  stars:1, bg:"bg-sky",   ribbon:"FIRST BASE"}
+  ];
+  function stars(n){ var s=""; for(var i=0;i<5;i++){ s += (i<n) ? "\u2605" : "<span class='off'>\u2606</span>"; } return s; }
+  function decode(s){ return s.replace(/\\u([0-9a-f]{4})/gi,function(_,h){return String.fromCharCode(parseInt(h,16));}); }
+  function photo(c){
+    return '<div class="photo '+c.bg+'"><div class="fig"></div>'+
+      '<div class="cardribbon">'+c.ribbon+'</div>'+
+      '<div class="cardplate"><div class="cn">'+c.name+'</div><div class="ct">'+decode(c.yr)+'</div></div></div>';
+  }
+  function renderA(c){
+    return '<div class="card"><div class="frame">'+
+      '<div class="imgwrap">'+photo(c)+
+        '<div class="gem b-'+c.band+'"><span class="n">'+c.n+'</span><span class="l">PRES</span></div>'+
+      '</div>'+
+      '<div class="plate"><div class="pn">'+c.name+'</div><div class="stars">'+stars(c.stars)+'</div></div>'+
+    '</div></div>';
+  }
+  function renderB(c){
+    return '<div class="card"><div class="frame">'+
+      '<div class="imgwrap">'+photo(c)+'</div>'+
+      '<div class="footer">'+
+        '<div class="fnum b-'+c.band+'">'+c.n+'</div>'+
+        '<div class="fmeta"><div class="pn">'+c.name+'</div><div class="flabel">PRESTIGE</div><div class="stars">'+stars(c.stars)+'</div></div>'+
+      '</div>'+
+    '</div></div>';
+  }
+  function renderC(c){
+    return '<div class="card tier-'+c.band+'">'+photo(c)+
+      '<div class="hovnum b-'+c.band+'">'+c.n+'</div>'+
+    '</div>';
+  }
+  var R={A:renderA,B:renderB,C:renderC};
+  document.querySelectorAll('.grid[data-render]').forEach(function(g){
+    var kind=g.getAttribute('data-render');
+    g.innerHTML = CARDS.map(R[kind]).join('');
+  });
+</script>
+</body>
+</html>
