@@ -240,6 +240,69 @@
     /* Franchise Economy Slice A: wallet chip (additive) */
     .depot-wallet-chip{display:inline-flex;align-items:baseline;gap:.25em;margin-left:.6em;padding:.12em .5em;border-radius:999px;background:rgba(212,175,55,.15);border:1px solid rgba(212,175,55,.5);font-weight:700;font-size:.8em;color:#e8c86a;vertical-align:middle}
     .depot-wallet-chip .dw-cur{opacity:.7;font-size:.85em;font-weight:600}
+
+  /* ===== NEXT-GEN LINEUP BUILDER (BUILD SESSION 1) — card-first =====
+     Launch strip + prestige chips (Variant B) + spotlight. Tier colors
+     driven by DepotPrestige.band(): gold>=60 / silver>=30 / bronze>=10 / plain. */
+  .launch-strip{display:flex;gap:14px;align-items:stretch;margin:14px 0 4px;flex-wrap:wrap;}
+  .ls-box{flex:1 1 640px;display:flex;align-items:stretch;gap:0;background:var(--field);border:3px solid var(--frame);box-shadow:4px 4px 0 var(--frame);padding:14px 18px;}
+  .ls-stats{flex:1;display:flex;gap:26px;align-items:flex-start;flex-wrap:wrap;}
+  .ls-slot{display:flex;flex-direction:column;gap:5px;min-width:110px;}
+  .ls-slot .ls-lab{font-size:8px;letter-spacing:1px;color:var(--gold);text-shadow:1px 1px 0 var(--frame);}
+  .ls-slot .ls-val{font-size:17px;color:var(--cream);text-shadow:2px 2px 0 var(--frame);line-height:1.3;}
+  .ls-slot .ls-sub{font-size:7px;color:var(--dim);letter-spacing:.5px;}
+  .ls-slot.ls-pace .ls-val{color:var(--green-bright);}
+  .ls-slot.ls-formula .ls-val{font-size:12px;color:var(--cream);}
+  .ls-play-wrap{flex:0 0 auto;display:flex;align-items:center;}
+  #playBtn.ls-play{font-size:15px;padding:20px 26px;letter-spacing:1px;height:100%;box-shadow:4px 4px 0 var(--field-dark);}
+  .dp-chip{display:inline-flex;align-items:center;gap:6px;background:var(--cream);border:2px solid var(--frame);padding:3px 7px 3px 3px;vertical-align:middle;}
+  .dp-chip .dp-chip-num{min-width:26px;text-align:center;font-size:11px;font-weight:bold;padding:3px 5px;border:2px solid var(--frame);color:var(--frame);line-height:1;}
+  .dp-chip .dp-chip-lab{font-size:7px;letter-spacing:.5px;color:var(--field-dark);}
+  .dp-chip-num.depot-band-gold{background:#f8d000;color:#1a1a1a;}
+  .dp-chip-num.depot-band-silver{background:#c3ccd8;color:#1a2436;}
+  .dp-chip-num.depot-band-bronze{background:#cd7f32;color:#1a1008;}
+  .dp-chip-num.depot-band-plain{background:#8a93a3;color:#12161d;}
+  .ctile-art{cursor:pointer;}
+  .ctile-art:hover{outline:3px solid var(--gold);outline-offset:-3px;}
+  .ctile .ctile-status{position:absolute;top:4px;right:4px;background:var(--field-dark);color:var(--gold);border:2px solid var(--frame);font-size:7px;padding:2px 5px;letter-spacing:.5px;z-index:2;}
+  .ctile.in-order .ctile-status{background:#2d6a2d;color:#fff;}
+  .ctile.order-full{opacity:.5;}
+  .add-btn.in-order{background:#2d6a2d;color:#fff;border-color:var(--frame);}
+  .bat .bat-pres{flex:0 0 auto;min-width:30px;text-align:center;font-size:11px;font-weight:bold;padding:4px 6px;border:2px solid var(--frame);color:var(--frame);line-height:1;}
+  .bat-pres.depot-band-gold{background:#f8d000;color:#1a1a1a;}
+  .bat-pres.depot-band-silver{background:#c3ccd8;color:#1a2436;}
+  .bat-pres.depot-band-bronze{background:#cd7f32;color:#1a1008;}
+  .bat-pres.depot-band-plain{background:#8a93a3;color:#12161d;}
+  #spotBack{display:none;position:fixed;inset:0;background:rgba(0,0,0,.82);z-index:9000;align-items:center;justify-content:center;padding:20px;}
+  #spotBack.open{display:flex;}
+  #spotCard{position:relative;background:var(--field);border:4px solid var(--gold);box-shadow:0 0 0 5px var(--frame);max-width:760px;width:100%;max-height:90vh;overflow:auto;padding:20px;display:flex;gap:20px;flex-wrap:wrap;}
+  #spotCard .sp-left{flex:0 0 200px;}
+  #spotCard .sp-artbox{width:200px;aspect-ratio:5/7;background:var(--frame);border:3px solid var(--gold);overflow:hidden;display:flex;align-items:center;justify-content:center;}
+  #spotCard .sp-artbox img{width:100%;height:100%;object-fit:cover;}
+  #spotCard .sp-ph{color:var(--gold);font-size:9px;text-align:center;padding:10px;}
+  #spotCard .sp-right{flex:1;min-width:220px;}
+  #spotCard .sp-name{font-size:15px;color:var(--gold);text-shadow:2px 2px 0 var(--frame);margin:0 0 4px;line-height:1.4;}
+  #spotCard .sp-meta{font-size:9px;color:var(--dim);margin-bottom:10px;line-height:1.7;}
+  #spotCard .sp-stats{font-size:9px;color:var(--cream);margin-bottom:12px;line-height:1.8;}
+  #spotClose{position:absolute;top:14px;right:18px;background:var(--gold);color:var(--frame);border:3px solid var(--frame);font-family:inherit;font-size:11px;padding:6px 10px;cursor:pointer;z-index:9001;}
+  .depot-prestige-breakdown{background:var(--field-dark);border:3px solid var(--frame);padding:12px;}
+  .depot-prestige-breakdown .dp-head{display:flex;align-items:baseline;gap:8px;border-bottom:2px solid var(--frame);padding-bottom:8px;margin-bottom:8px;}
+  .depot-prestige-breakdown .dp-total{font-size:22px;font-weight:bold;color:var(--gold);}
+  .depot-prestige-breakdown.depot-band-silver .dp-total{color:#c3ccd8;}
+  .depot-prestige-breakdown.depot-band-bronze .dp-total{color:#cd7f32;}
+  .depot-prestige-breakdown.depot-band-plain .dp-total{color:#8a93a3;}
+  .depot-prestige-breakdown .dp-lab{font-size:8px;letter-spacing:1px;color:var(--dim);}
+  .depot-prestige-breakdown .dp-row{display:flex;justify-content:space-between;gap:12px;font-size:10px;color:var(--cream);padding:3px 0;}
+  .depot-prestige-breakdown .dp-row .dp-v{color:var(--gold);font-weight:bold;}
+  @media(max-width:600px){
+    .launch-strip{flex-direction:column;}
+    .ls-box{flex:1 1 auto;flex-wrap:wrap;}
+    .ls-stats{gap:14px;}
+    #playBtn.ls-play{width:100%;min-height:44px;}
+    #spotCard{flex-direction:column;}
+    #spotCard .sp-left,#spotCard .sp-artbox{flex:0 0 auto;width:100%;max-width:220px;margin:0 auto;}
+  }
+
     </style>
 </head>
 <body>
@@ -269,6 +332,19 @@
 <!-- Logged-in: builder -->
 <div id="builderView" class="wrap" style="display:none">
   <div id="status"></div>
+  <!-- NEXT-GEN TOP LAUNCH STRIP (labeled slots; contents iterate later) -->
+  <div class="launch-strip" id="launchStrip">
+    <div class="ls-box">
+      <div class="ls-stats">
+        <div class="ls-slot"><span class="ls-lab">LINEUP PRESTIGE</span><span class="ls-val" id="lsPrestige">0</span><span class="ls-sub">this lineup</span></div>
+        <div class="ls-slot"><span class="ls-lab">WIN PAYOUT</span><span class="ls-val" id="lsPayout">&mdash;</span><span class="ls-sub">DD &middot; Slice A base (bonuses apply in-game)</span></div>
+        <div class="ls-slot ls-pace"><span class="ls-lab">WIN PACE</span><span class="ls-val" id="lsPace">&mdash;</span><span class="ls-sub">vs previous lineup</span></div>
+        <div class="ls-slot ls-formula"><span class="ls-lab">PAYOUT FORMULA</span><span class="ls-val" id="lsFormula">100 + 0&times;1.8</span><span class="ls-sub" id="lsFormulaSub">= 100 DD (Slice A)</span></div>
+      </div>
+      <div class="ls-play-wrap"><button class="btn-primary ls-play" id="playBtn" disabled>PLAY BALL &#9654;</button></div>
+    </div>
+  </div>
+
   <div class="grid">
     <div class="col">
       <h3>YOUR COLLECTION <span class="muted" id="collCount"></span><span class="muted" id="coverageReadout" title="How many cards resolve to rich MLB rates vs the flat stat-line fallback vs no MLB line" style="margin-left:6px"></span> <button type="button" id="sortPosBtn" class="sortbtn" aria-pressed="false">Sort by position</button> <button type="button" id="viewBtn" class="viewbtn" aria-pressed="false" title="Toggle list / card view">View: List</button></h3>
@@ -282,7 +358,7 @@
           <div id="slots"></div>
         <div id="teamNameWrap" style="margin-top:16px;"><label for="teamNameInput" style="display:block;font-size:9px;letter-spacing:1px;margin:0 0 6px;color:var(--gold);">TEAM NAME</label><input type="text" id="teamNameInput" maxlength="12" autocomplete="off" spellcheck="false" placeholder="YOUR TEAM" style="width:100%;max-width:300px;padding:10px;background:var(--field-dark);color:var(--gold);border:2px solid var(--gold);font-family:inherit;font-size:11px;letter-spacing:1px;text-transform:uppercase;"><div class="muted" style="font-size:8px;margin-top:5px;">Shows on the scoreboard &amp; field (max 12 chars).</div></div>
       <div style="margin-top:14px;display:flex;gap:8px;align-items:center;">
-        <button class="btn-primary" id="playBtn" disabled>PLAY BALL &#9654;</button>
+        
         <button class="btn-ghost" id="clearBtn">Clear</button>
         <button class="btn-ghost" id="challengeBtn" disabled>CHALLENGE &#9876;</button>
         <span class="muted" id="playHint"></span>
@@ -292,6 +368,21 @@
           <div style="margin-top:8px;"><button class="btn-ghost" id="copyChallengeBtn" type="button">Copy link</button> <span class="muted" id="copyMsg" style="font-size:9px;margin-left:6px;"></span></div>
         </div>
         <div id="challengeError" style="display:none;margin-top:10px;font-size:10px;color:var(--red-bright);"></div>
+
+  <!-- NEXT-GEN CARD SPOTLIGHT OVERLAY (opens on card-face click) -->
+  <div id="spotBack" role="dialog" aria-modal="true" aria-label="Card spotlight">
+    <div id="spotCard">
+      <button id="spotClose" type="button" aria-label="Close spotlight">CLOSE &times;</button>
+      <div class="sp-left"><div class="sp-artbox" id="spotArt"></div></div>
+      <div class="sp-right">
+        <h2 class="sp-name" id="spotName"></h2>
+        <div class="sp-meta" id="spotMeta"></div>
+        <div class="sp-stats" id="spotStats"></div>
+        <div id="spotBreak"></div>
+      </div>
+    </div>
+  </div>
+
       </div>
     </div>
   </div>
@@ -324,7 +415,7 @@
     var PITCHER=null; // cardId or null
     var RESOLVED={}; // cardId -> {status:'api'|'card'|'bad'|'pending', team, rates, avg, hr, rbi, tendency, pos, note}
     var SORT_BY_POS=false; // collection-list sort toggle (left list only; does not affect lineup)
-    var VIEW_MODE='list'; // collection view: 'list' (compact rows, default) or 'card' (card art). View-only; never affects lineup/sort.
+    var VIEW_MODE='card'; // collection view: 'list' (compact rows, default) or 'card' (card art). View-only; never affects lineup/sort.
     // normalize a raw card position string to one of our position codes (for default suggestion)
     function normPos(raw){ var r=String(raw||'').toUpperCase().trim();
       if(BAT_POS.indexOf(r)>=0) return r;
@@ -644,21 +735,28 @@
         var pitClass = isPit ? ' on' : (isPitcherCard ? ' pit-primary' : ' pit-deemph');
         var pitBtn = '<button class="pit-btn'+pitClass+'" data-pit="'+c.id+'">'+(isPit?'\u2605 Pitcher':'Set as P')+'</button>';
         var actions = isPitcherCard ? pitBtn : addBtn;
+        var __idx = CARDS.indexOf(c);
+        var __pres = (window.DepotPrestige && DepotPrestige.compute) ? DepotPrestige.compute({name:c.player,yr:c.yr,gem:c.gem,error:c.error,set:c.set,rookie_year:c.rookie_year}) : null;
+        var __band = __pres ? __pres.band : 'plain';
+        var __chip = '<span class="dp-chip"><span class="dp-chip-num depot-band-'+__band+'">'+(__pres?__pres.total:'?')+'</span><span class="dp-chip-lab">PRESTIGE</span></span>';
+        var __ord0 = inOrder(c.id);
+        var __statusTag = isPit ? '<span class="ctile-status">PITCHER \u2713</span>' : (__ord0>=0 ? '<span class="ctile-status">SLOT '+(__ord0+1)+' \u2713</span>' : ((full && usable && !isPitcherCard) ? '<span class="ctile-status">ORDER FULL</span>' : ''));
+        var __stateCls = (__ord0>=0||isPit) ? ' in-order' : ((full && usable && !isPitcherCard) ? ' order-full' : '');
         if(VIEW_MODE==='card'){
           // CARD VIEW: real card art (signed url cached on c._imgUrl); graceful no-image fallback.
           var _u=c._imgUrl;
           var _imgInner = _u ? '<img class="ctile-img" src="'+esc(_u)+'" alt="'+esc(c.player||'card')+'" loading="lazy" onerror="ctileImgFail(this)">' : '';
           var _ph = '<div class="ctile-ph"><b>'+esc(c.player||'(unnamed)')+'</b><small>'+esc(sub)+'</small></div>';
           var _hasImg = !!_u;
-          html+= '<div class="ctile'+(isPitcherCard?' pitcher-card':(usable?'':' dim-row'))+(_hasImg?'':' noimg')+'" title="'+esc(c.player||'')+'">'
-            +   '<div class="ctile-art">'+_imgInner+_ph+'</div>'
-            +   '<div class="ctile-actions row-actions">'+hitTag+actions+'</div>'
+          html+= '<div class="ctile'+(isPitcherCard?' pitcher-card':(usable?'':' dim-row'))+__stateCls+(_hasImg?'':' noimg')+'" title="'+esc(c.player||'')+'">'
+            +   '<div class="ctile-art" data-spot="'+__idx+'">'+__statusTag+_imgInner+_ph+'</div>'
+            +   '<div class="ctile-actions row-actions">'+actions+__chip+hitTag+'</div>'
             + '</div>';
         } else {
-        html+= '<div class="card-row'+(isPitcherCard?' pitcher-card':(usable?'':' dim-row'))+'">'
-             +   '<div class="nm"><b>'+esc(c.player||'(unnamed)')+'</b>'
+        html+= '<div class="card-row'+(isPitcherCard?' pitcher-card':(usable?'':' dim-row'))+__stateCls+'">'
+             +   '<div class="nm" data-spot="'+__idx+'" style="cursor:pointer"><b>'+esc(c.player||'(unnamed)')+'</b>'
              +     '<small>'+esc(sub)+(note?(' \u00b7 '+esc(note)):'')+'</small></div>'
-             +   '<div class="row-actions">'+hitTag+actions+'</div>'
+             +   '<div class="row-actions">'+actions+__chip+hitTag+'</div>'
              + '</div>';
         }
       });
@@ -666,6 +764,7 @@
       $('cardList').innerHTML=html;
       Array.prototype.forEach.call($('cardList').querySelectorAll('[data-add]'),function(b){ b.addEventListener('click',function(){ addToOrder(b.getAttribute('data-add')); }); });
       Array.prototype.forEach.call($('cardList').querySelectorAll('[data-pit]'),function(b){ b.addEventListener('click',function(){ setPitcher(b.getAttribute('data-pit')); }); });
+      Array.prototype.forEach.call($('cardList').querySelectorAll('[data-spot]'),function(el){ el.addEventListener('click',function(ev){ ev.stopPropagation(); try{ openSpot(+el.getAttribute('data-spot')); }catch(e){ console.warn('[builder] spotlight open failed', e && e.message); } }); });
     }
 
     // ----- RIGHT: batting order (drag to reorder) -----
@@ -676,11 +775,14 @@
         var slot=ORDER[i];
         if(slot){
           var c=cardById(slot.id); var rv=RESOLVED[slot.id]||{};
+          var __sp=(c&&window.DepotPrestige&&DepotPrestige.compute)?DepotPrestige.compute({name:c.player,yr:c.yr,gem:c.gem,error:c.error,set:c.set,rookie_year:c.rookie_year}):null;
+          var __spBox=__sp?('<span class="bat-pres depot-band-'+__sp.band+'" title="lineup prestige contribution">'+__sp.total+'</span>'):'';
           var posSel='<select class="pos-sel" data-pos="'+i+'">'+BAT_POS.map(function(P){ var u=usedPositions(); var taken=(u[P]&&P!==slot.pos); return '<option value="'+P+'"'+(P===slot.pos?' selected':'')+(taken?' disabled':'')+'>Set to '+(POS_FULL[P]||P)+'</option>'; }).join('')+'</select>';
           html+='<div class="bat filled'+(slot.outOfPos?' outpos':'')+'" draggable="true" data-slot="'+i+'">'
               +   '<div class="ord">'+(i+1)+'</div>'
               +   '<div class="who"><b>'+esc(c?c.player:'?')+'</b>'+(slot.outOfPos?' <span class="oop-flag" title="Natural position taken \u2013 set a position below">OUT OF POS</span>':'')
               +     '<small>'+esc((rv.avg||'.000'))+' AVG \u00b7 '+(rv.hr||0)+' HR \u00b7 '+(rv.rbi||0)+' RBI</small></div>'
+              +   __spBox
               +   posSel
               +   '<button class="rm-btn" data-rm="'+i+'">remove</button>'
               + '</div>';
@@ -710,6 +812,30 @@
       } else { box.innerHTML='<span class="muted">No pitcher chosen \u2014 pick one from your collection (\u201cSet as P\u201d).</span>'; }
     }
 
+    // ===== NEXT-GEN CARD SPOTLIGHT (card large + stats + prestige breakdown) =====
+    function spotBreakdownHTML(res){
+      var rows=(res.comps||[]).map(function(x){ var sign=x.pts>=0?'+':''; return '<div class="dp-row"><span class="dp-k">'+esc(String(x.k).toUpperCase())+'</span><span class="dp-v">'+sign+x.pts+'</span></div>'; }).join('');
+      return '<div class="depot-prestige-breakdown depot-band-'+res.band+'"><div class="dp-head"><span class="dp-total">'+res.total+'</span><span class="dp-lab">PRESTIGE</span></div>'+rows+'</div>';
+    }
+    function closeSpot(){ var b=$('spotBack'); if(b) b.classList.remove('open'); }
+    function openSpot(idx){
+      var c = CARDS[idx];
+      if(!c){ console.warn('[builder] spotlight: no card at index', idx); return; }
+      var b=$('spotBack'); if(!b){ console.warn('[builder] spotlight: no overlay element'); return; }
+      var rv=RESOLVED[c.id]||{};
+      var art=$('spotArt'); if(art){ art.innerHTML = c._imgUrl ? ('<img src="'+esc(c._imgUrl)+'" alt="'+esc(c.player||'card')+'">') : ('<div class="sp-ph">'+esc(c.player||'(unnamed)')+'</div>'); }
+      var nm=$('spotName'); if(nm) nm.textContent = c.player||'(unnamed)';
+      var mt=$('spotMeta'); if(mt) mt.textContent = fmtMeta(c) || [c.yr,c.team].filter(Boolean).join(' \u00b7 ');
+      var stt=$('spotStats'); if(stt){ var av=(rv.avg||'.000'); stt.innerHTML = esc(av)+' AVG \u00b7 '+(rv.hr||0)+' HR \u00b7 '+(rv.rbi||0)+' RBI'+(rv.era?(' \u00b7 '+esc(rv.era)+' ERA'):''); }
+      var brk=$('spotBreak');
+      if(brk){ if(window.DepotPrestige && DepotPrestige.compute){ brk.innerHTML = spotBreakdownHTML(DepotPrestige.compute({name:c.player,yr:c.yr,gem:c.gem,error:c.error,set:c.set,rookie_year:c.rookie_year})); } else { brk.innerHTML='<div class="muted">Prestige engine not loaded.</div>'; console.warn('[builder] spotlight: DepotPrestige missing'); } }
+      b.classList.add('open');
+    }
+    window.openSpot = openSpot;
+    (function(){ var cl=$('spotClose'); if(cl) cl.addEventListener('click',closeSpot);
+      var bk=$('spotBack'); if(bk) bk.addEventListener('click',function(e){ if(e.target===bk) closeSpot(); });
+      document.addEventListener('keydown',function(e){ if(e.key==='Escape') closeSpot(); }); })();
+
     function renderAll(){ renderCards(); renderOrder(); renderPitcher(); renderStatus(); try{ saveDraft(); }catch(e){} }
 
     function renderStatus(){
@@ -735,7 +861,7 @@
     $('clearBtn').addEventListener('click',function(){ ORDER=new Array(9).fill(null); PITCHER=null; renderAll(); });
       try{ var _tnEl=$('teamNameInput'); if(_tnEl){ _tnEl.addEventListener('input', function(){ try{ saveDraft(); }catch(e){} }); } }catch(e){}
       var _sortBtn=$('sortPosBtn'); if(_sortBtn){ _sortBtn.addEventListener('click',function(){ SORT_BY_POS=!SORT_BY_POS; _sortBtn.classList.toggle('on',SORT_BY_POS); _sortBtn.setAttribute('aria-pressed',SORT_BY_POS?'true':'false'); _sortBtn.textContent=SORT_BY_POS?'Sorted by position':'Sort by position'; renderCards(); }); }
-      var _viewBtn=$('viewBtn'); if(_viewBtn){ _viewBtn.addEventListener('click',function(){ VIEW_MODE=(VIEW_MODE==='card')?'list':'card'; var on=(VIEW_MODE==='card'); _viewBtn.classList.toggle('on',on); _viewBtn.setAttribute('aria-pressed',on?'true':'false'); _viewBtn.textContent=on?'View: Card':'View: List'; if(on) resolveCardImages(); renderCards(); }); } // view-only toggle; never touches lineup/sort
+      var _viewBtn=$('viewBtn'); if(_viewBtn){ if(VIEW_MODE==='card'){ _viewBtn.classList.add('on'); _viewBtn.setAttribute('aria-pressed','true'); _viewBtn.textContent='View: Card'; } _viewBtn.addEventListener('click',function(){ VIEW_MODE=(VIEW_MODE==='card')?'list':'card'; var on=(VIEW_MODE==='card'); _viewBtn.classList.toggle('on',on); _viewBtn.setAttribute('aria-pressed',on?'true':'false'); _viewBtn.textContent=on?'View: Card':'View: List'; if(on) resolveCardImages(); renderCards(); }); } // view-only toggle; never touches lineup/sort
     function esc(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
 
     
@@ -1018,7 +1144,7 @@
   }
   // hook resolveAll into loadCards completion
   var _renderAll=renderAll;
-  renderAll=function(){ _renderAll(); if(CARDS.length && !renderAll._kicked){ renderAll._kicked=true; resolveAll(); } };
+  renderAll=function(){ _renderAll(); if(CARDS.length && !renderAll._kicked){ renderAll._kicked=true; resolveAll(); try{ if(VIEW_MODE==='card') resolveCardImages(); }catch(e){ console.warn('[builder] initial image resolve failed', e && e.message); } } };
 
   // expose a couple internals for headless tests
   window.__DepotBuilder={ lineToRates:lineToRates, avgToRates:avgToRates, parseStatLine:parseStatLine, resolveCard:resolveCard, mlbFindPlayer:mlbFindPlayer, mlbSeasonHitting:mlbSeasonHitting, buildTeamPayload:function(){return buildTeamPayload();} };
@@ -1360,17 +1486,25 @@
   function cardsInOrder(){
     if(typeof ORDER==='undefined'||typeof cardById!=='function'){ console.warn(TAG,'ORDER/cardById not available'); return []; }
     var out=[];
-    for(var i=0;i<ORDER.length;i++){ if(ORDER[i]){ var c=cardById(ORDER[i].id); if(c) out.push({name:c.player,yr:c.yr,gem:c.gem,rookie_year:c.rookie_year}); } }
+    for(var i=0;i<ORDER.length;i++){ if(ORDER[i]){ var c=cardById(ORDER[i].id); if(c) out.push({name:c.player,yr:c.yr,gem:c.gem,error:c.error,set:c.set,rookie_year:c.rookie_year}); } }
     return out;
   }
+  var _prevTotal=null;
+  function setLS(id,v){ var el=document.getElementById(id); if(el) el.innerHTML=v; }
   function update(){
     try{
       if(!window.DepotPrestige) return;
-      var el=projEl(); if(!el) return;
+      if(!document.getElementById('lsPrestige')) return;
       var cards=cardsInOrder();
       var total=window.DepotPrestige.lineupTotal(cards);
       var win=window.DepotPrestige.projectedWin(total);
-      el.innerHTML='LINEUP PRESTIGE '+total+' &rarr; WIN PAYS ~$'+win.toLocaleString()+' DD';
+      setLS('lsPrestige', String(total));
+      setLS('lsPayout', '$'+win.toLocaleString()+' DD');
+      setLS('lsFormula', '100 + '+total+'&times;1.8');
+      setLS('lsFormulaSub', '= '+win.toLocaleString()+' DD (Slice A)');
+      if(_prevTotal===null || total===_prevTotal){ setLS('lsPace','&mdash;'); }
+      else { var d=win-window.DepotPrestige.projectedWin(_prevTotal); setLS('lsPace', (d>=0?'+':'')+d.toLocaleString()+' DD'); }
+      _prevTotal=total;
     }catch(e){ console.warn(TAG,'update failed:',e&&e.message); }
   }
   function wrap(){
