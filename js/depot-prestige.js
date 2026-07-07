@@ -11,6 +11,15 @@
   'use strict';
   var TAG = '[depot] prestige:';
 
+  // Resolve data tables relative to THIS script's URL so paths are correct
+  // from any page depth (builder.html lives one level deeper than the repo
+  // root; page-relative fetch() 404s there and quietly scored all COMMON).
+  var _scriptSrc = (document.currentScript && document.currentScript.src) || '';
+  var _dataURL = function (f) {
+    try { return new URL('../data/' + f, _scriptSrc).href; }
+    catch (e) { return 'data/' + f; }
+  };
+
   var ROOKIE_PTS = 30, TRANSCEND_PTS = 30, GEM_PTS = 15, ERROR_PTS = 25, FLOOR = 5;
   var BASE_WIN = 100, WIN_MULT = 1.8;
 
@@ -29,8 +38,8 @@
   function loadTables() {
     if (_ready) return _ready;
     _ready = Promise.all([
-      fetch('data/player_tiers.json').then(function (r) { if (!r.ok) throw new Error('player_tiers ' + r.status); return r.json(); }),
-      fetch('data/set_tiers.json').then(function (r) { if (!r.ok) throw new Error('set_tiers ' + r.status); return r.json(); })
+      fetch(_dataURL('player_tiers.json')).then(function (r) { if (!r.ok) throw new Error('player_tiers ' + r.status + ' @ ' + _dataURL('player_tiers.json')); return r.json(); }),
+      fetch(_dataURL('set_tiers.json')).then(function (r) { if (!r.ok) throw new Error('set_tiers ' + r.status + ' @ ' + _dataURL('set_tiers.json')); return r.json(); })
     ]).then(function (res) {
       var pt = res[0], st = res[1];
       _players = pt.players || {};
@@ -40,7 +49,7 @@
       console.log(TAG, 'tables loaded', Object.keys(_players).length, 'players,', Object.keys(_sets).length, 'sets');
       return true;
     }).catch(function (e) {
-      console.warn(TAG, 'table load failed, prestige defaults to COMMON:', e && e.message);
+      console.error(TAG, 'TABLE LOAD FAILED — prestige is NOT reliable, all cards scoring COMMON. Fix the data path:', (e && e.message) || e);
       _players = {}; _tierPts = { COMMON: 0, REGULAR: 8, STAR: 20, SUPERSTAR: 30, HOF: 40 };
       _sets = {}; _setBonus = { ICONIC: 20, PREMIUM: 12, NOTABLE: 6 };
       return false;
