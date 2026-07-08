@@ -528,7 +528,7 @@
   // fix/rookie-year-resolver: resolve a card's MLB debut year once and persist to the rookie_year COLUMN.
   // Cached one-time (skips if already set), fail-loud per row. Mirrors the GAP1 owner-scoped writeback shape.
   // ID_OVERRIDES pins known-ambiguous names to a specific MLB personId (checked before the name search).
-  var ROOKIE_ID_OVERRIDES = { 'Mike Piazza': 120536 };
+  var ROOKIE_ID_OVERRIDES = { 'Mike Piazza': 120536, 'Tony Gwynn': 115270, 'Matt Williams': 124326 };
   async function persistRookieYear(card){
     try{
       if(!sb || !USER || !card || !card.id){ console.warn('[GAP2] rookie-year skipped: no client/user/card'); return false; }
