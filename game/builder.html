@@ -432,7 +432,8 @@
     // ----- Card-art view: resolve Supabase signed URLs for collection card images -----
     async function cardSignedUrl(path){ if(!path) return ''; if(String(path).indexOf('data:')===0) return path; try{ if(!sb) return ''; var r=await sb.storage.from('card-images').createSignedUrl(path,3600); if(r.error){ return ''; } return (r.data&&r.data.signedUrl)||''; }catch(e){ return ''; } }
     function ctileImgFail(img){ try{ var t=img.parentNode; while(t && t.className.indexOf('ctile')<0){ t=t.parentNode; } if(t) t.classList.add('noimg'); }catch(e){} } // image 404/expired -> fall back to placeholder tile
-    var _imgResolving=false;
+    var _imgResolving=false, _imgResolvePending=false;
+    var IMG_RESOLVE_MAX_PASSES=3, IMG_RESOLVE_BACKOFF_MS=400;
     function patchCardTile(idx, url){
       // Additive fix: patch the already-rendered tile for CARDS[idx] once its signed URL
       // resolves, so a tile painted before its URL was ready swaps its placeholder for real
@@ -457,7 +458,39 @@
       var tile=art.closest('.ctile');
       if(tile) tile.classList.remove('noimg');
     }
-    async function resolveCardImages(){ if(_imgResolving) return; _imgResolving=true; var changed=false; try{ for(var i=0;i<CARDS.length;i++){ var c=CARDS[i]; if(c && c.photoPath && c._imgUrl===undefined){ c._imgUrl=await cardSignedUrl(c.photoPath); patchCardTile(i, c._imgUrl); changed=true; } } }finally{ _imgResolving=false; } if(changed) renderCards(); } // caches resolved url on c._imgUrl; '' means resolved-but-empty
+    // Resolve Supabase signed URLs for every collection card. Re-entrant-safe:
+    // a call arriving mid-pass is queued (never silently dropped) and re-runs when the
+    // active pass finishes. Bounded retry passes recover cards whose URL lost the race or
+    // transiently resolved empty; anything still unresolved after the cap is logged loudly
+    // so a genuine storage failure cannot masquerade as a race.
+    async function resolveCardImages(){
+      if(!Array.isArray(CARDS) || !CARDS.length){ console.warn('[depot] builder: resolveCardImages called before CARDS ready; deferring'); _imgResolvePending=true; return; }
+      if(!sb || !sb.storage){ console.warn('[depot] builder: resolveCardImages called before Supabase client ready; deferring'); _imgResolvePending=true; return; }
+      if(_imgResolving){ console.warn('[depot] builder: resolveCardImages called while a pass is running; queuing re-check'); _imgResolvePending=true; return; }
+      _imgResolving=true;
+      try{
+        do{
+          _imgResolvePending=false;
+          var changed=false, pass=0, pending=[];
+          do{
+            pass++;
+            pending=[];
+            for(var i=0;i<CARDS.length;i++){
+              var c=CARDS[i];
+              if(c && c.photoPath && (c._imgUrl===undefined || c._imgUrl==='')){
+                var url=await cardSignedUrl(c.photoPath);
+                c._imgUrl=url;
+                if(url){ patchCardTile(i, url); changed=true; }
+                else { pending.push((c.name||c.player||('#'+i))); }
+              }
+            }
+            if(pending.length && pass<IMG_RESOLVE_MAX_PASSES){ await new Promise(function(r){ setTimeout(r, IMG_RESOLVE_BACKOFF_MS*pass); }); }
+          } while(pending.length && pass<IMG_RESOLVE_MAX_PASSES);
+          if(pending.length){ console.warn('[depot] builder: '+pending.length+' card image(s) still unresolved after '+pass+' pass(es): '+pending.join(', ')+' (possible storage issue, not just a race)'); }
+          if(changed) renderCards();
+        } while(_imgResolvePending);
+      } finally { _imgResolving=false; }
+    } // caches resolved url on c._imgUrl; '' means unresolved-so-far (retried up to cap)
 
     function isUsableHitter(id){ var rv=id?RESOLVED[id]:null; return !!(rv && (rv.status==='api'||rv.status==='card')); }
     function inOrder(id){ for(var i=0;i<9;i++){ if(ORDER[i]&&ORDER[i].id===id) return i; } return -1; }
