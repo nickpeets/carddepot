@@ -859,6 +859,15 @@
       Array.prototype.forEach.call($('cardList').querySelectorAll('[data-add]'),function(b){ b.addEventListener('click',function(){ addToOrder(b.getAttribute('data-add')); }); });
       Array.prototype.forEach.call($('cardList').querySelectorAll('[data-pit]'),function(b){ b.addEventListener('click',function(){ setPitcher(b.getAttribute('data-pit')); }); });
       Array.prototype.forEach.call($('cardList').querySelectorAll('[data-spot]'),function(el){ el.addEventListener('click',function(ev){ ev.stopPropagation(); try{ openSpot(+el.getAttribute('data-spot')); }catch(e){ console.warn('[builder] spotlight open failed', e && e.message); } }); });
+      // Convergence self-heal: after this full rebuild, count how many photoPath
+      // tiles actually have a resolved image, and (if any are still imgless) re-kick
+      // the idempotent/coalescing image resolver so they converge on a later render.
+      try{
+        var _shHave=0, _shTot=0;
+        for(var _shi=0;_shi<CARDS.length;_shi++){ var _shc=CARDS[_shi]; if(!_shc||!_shc.photoPath) continue; _shTot++; if(_shc._imgUrl){ _shHave++; } }
+        console.log('[depot] builder: '+_shHave+'/'+_shTot+' tiles have img after final render');
+        if(_shHave<_shTot && !_imgResolving){ resolveCardImages(); }
+      }catch(_sh){ console.warn('[depot] builder: renderCards self-heal threw:', _sh && _sh.message); }
     }
 
     // ----- RIGHT: batting order (drag to reorder) -----
@@ -1190,6 +1199,9 @@
     var workers=[];
     for(var w=0;w<n;w++){ workers.push(worker()); }
     await Promise.all(workers);
+    // Convergence: all progressive stat re-renders have settled; re-kick the image
+    // resolver so a complete-_imgUrl render fires AFTER the last stat-driven rebuild.
+    try{ resolveCardImages(); }catch(_ick){ console.warn('[depot] builder: post-stat resolveCardImages kick threw:', _ick && _ick.message); }
     try{ reportCoverageTally(); }catch(_ct){}
   }
 
