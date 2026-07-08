@@ -433,7 +433,31 @@
     async function cardSignedUrl(path){ if(!path) return ''; if(String(path).indexOf('data:')===0) return path; try{ if(!sb) return ''; var r=await sb.storage.from('card-images').createSignedUrl(path,3600); if(r.error){ return ''; } return (r.data&&r.data.signedUrl)||''; }catch(e){ return ''; } }
     function ctileImgFail(img){ try{ var t=img.parentNode; while(t && t.className.indexOf('ctile')<0){ t=t.parentNode; } if(t) t.classList.add('noimg'); }catch(e){} } // image 404/expired -> fall back to placeholder tile
     var _imgResolving=false;
-    async function resolveCardImages(){ if(_imgResolving) return; _imgResolving=true; var changed=false; try{ for(var i=0;i<CARDS.length;i++){ var c=CARDS[i]; if(c && c.photoPath && c._imgUrl===undefined){ c._imgUrl=await cardSignedUrl(c.photoPath); changed=true; } } }finally{ _imgResolving=false; } if(changed) renderCards(); } // caches resolved url on c._imgUrl; '' means resolved-but-empty
+    function patchCardTile(idx, url){
+      // Additive fix: patch the already-rendered tile for CARDS[idx] once its signed URL
+      // resolves, so a tile painted before its URL was ready swaps its placeholder for real
+      // art instead of staying a noimg black box. Found by the same stable data-spot key the
+      // render loop stamps on .ctile-art (CARDS index).
+      if(VIEW_MODE!=='card') return; // only card view renders .ctile-art image tiles
+      var art=document.querySelector('.ctile-art[data-spot="'+idx+'"]');
+      if(!art){ console.warn('[depot] builder: resolved img url for card index '+idx+' but no .ctile-art[data-spot] tile found; skipping in-place patch'); return; }
+      if(!url) return; // resolved-but-empty: leave placeholder as-is
+      var img=art.querySelector('img.ctile-img');
+      if(img){ img.src=url; }
+      else {
+        img=document.createElement('img');
+        img.className='ctile-img';
+        img.setAttribute('loading','lazy');
+        img.setAttribute('onerror','ctileImgFail(this)');
+        img.alt=(CARDS[idx] && CARDS[idx].player) ? CARDS[idx].player : 'card';
+        img.src=url;
+        var ph=art.querySelector('.ctile-ph');
+        if(ph) art.insertBefore(img, ph); else art.appendChild(img);
+      }
+      var tile=art.closest('.ctile');
+      if(tile) tile.classList.remove('noimg');
+    }
+    async function resolveCardImages(){ if(_imgResolving) return; _imgResolving=true; var changed=false; try{ for(var i=0;i<CARDS.length;i++){ var c=CARDS[i]; if(c && c.photoPath && c._imgUrl===undefined){ c._imgUrl=await cardSignedUrl(c.photoPath); patchCardTile(i, c._imgUrl); changed=true; } } }finally{ _imgResolving=false; } if(changed) renderCards(); } // caches resolved url on c._imgUrl; '' means resolved-but-empty
 
     function isUsableHitter(id){ var rv=id?RESOLVED[id]:null; return !!(rv && (rv.status==='api'||rv.status==='card')); }
     function inOrder(id){ for(var i=0;i<9;i++){ if(ORDER[i]&&ORDER[i].id===id) return i; } return -1; }
