@@ -525,6 +525,41 @@
     }catch(e){ try{ console.warn('[GAP1] rates persist threw (non-fatal):', e); }catch(_){} return false; }
   }
 
+  // fix/rookie-year-resolver: resolve a card's MLB debut year once and persist to the rookie_year COLUMN.
+  // Cached one-time (skips if already set), fail-loud per row. Mirrors the GAP1 owner-scoped writeback shape.
+  // ID_OVERRIDES pins known-ambiguous names to a specific MLB personId (checked before the name search).
+  var ROOKIE_ID_OVERRIDES = { 'Mike Piazza': 120536 };
+  async function persistRookieYear(card){
+    try{
+      if(!sb || !USER || !card || !card.id){ console.warn('[GAP2] rookie-year skipped: no client/user/card'); return false; }
+      if(card.rookie_year!=null){ return true; } // one-time cache: already resolved
+      if(!card.player){ console.warn('[GAP2] rookie-year skipped: no player name', card.id); return false; }
+      var debut=null, pid=null;
+      var ov = ROOKIE_ID_OVERRIDES[card.player];
+      if(ov!=null){
+        try{
+          var rr=await fetch(MLB_BASE+'/people/'+ov); var jj=rr.ok?await rr.json():null;
+          var pp=jj&&jj.people&&jj.people[0]; if(pp&&pp.mlbDebutDate){ debut=pp.mlbDebutDate; pid=pp.id; }
+        }catch(_ovErr){}
+        if(!debut){ console.warn('[GAP2] rookie-year unresolved: override id', ov, 'no debut date for', card.player); return false; }
+      } else {
+        var person = await mlbFindPlayer(card.player);
+        if(!person){ console.warn('[GAP2] rookie-year unresolved: no MLB match for', card.player); return false; }
+        if(person.ambiguous){ console.warn('[GAP2] rookie-year unresolved: ambiguous name', card.player, '('+person.count+' matches) - add to ROOKIE_ID_OVERRIDES'); return false; }
+        if(!person.mlbDebutDate){ console.warn('[GAP2] rookie-year unresolved: no mlbDebutDate for', card.player, 'id', person.id); return false; }
+        debut=person.mlbDebutDate; pid=person.id;
+      }
+      var ry = parseInt(String(debut).slice(0,4),10);
+      if(!isFinite(ry) || ry<1870 || ry>2100){ console.warn('[GAP2] rookie-year unresolved: bad debut date', debut, 'for', card.player); return false; }
+      // Owner scope: RLS + collection query already restrict to this user's cards; match id defensively.
+      var upd = await sb.from('cards').update({ rookie_year: ry }).eq('id', card.id);
+      if(upd && upd.error){ console.warn('[GAP2] rookie-year persist failed (non-fatal):', upd.error); return false; }
+      card.rookie_year = ry; // reflect locally so prestige re-renders correctly with no re-fetch
+      console.log('[GAP2] rookie-year set', card.player, card.yr, '=> rookie_year', ry, (ry===card.yr?'(ROOKIE card)':''), 'id', pid);
+      return true;
+    }catch(e){ console.warn('[GAP2] rookie-year threw (non-fatal):', e && e.message); return false; }
+  }
+
   // ----- Load user's cards from Supabase (mirrors main app collections->cards) -----
   async function loadCards(){
     if(!sb||!USER) return;
@@ -547,8 +582,10 @@
   function rowToCard(r){
     var u=unpackNotes(r.notes);
     var yr=parseInt(r.year,10)||null;
+    // fix/rookie-year-resolver: surface the rookie_year column (additive read; null when absent/unset).
+    var ry=(r.rookie_year!=null)?(parseInt(r.rookie_year,10)||null):null;
     return {
-      id:r.id, player:r.player||'', team:r.team||'', yr:yr, photoPath:r.photo_front_path||'',
+      id:r.id, player:r.player||'', team:r.team||'', yr:yr, rookie_year:ry, photoPath:r.photo_front_path||'',
       brand:r.brand||'', set:r.set||'', number:r.number||'',
       pos:(u.meta&&u.meta.pos)||'', type:(u.meta&&u.meta.type)||'hitter',
       stats:(u.meta&&u.meta.stats)||{},
@@ -1072,6 +1109,8 @@
   async function resolveOne(c){
     var rv=await resolveCard(c);
     RESOLVED[c.id]=rv;
+    // fix/rookie-year-resolver: resolve+persist rookie_year once during the normal resolve flow (non-blocking, fail-loud).
+    try{ await persistRookieYear(c); }catch(_ry){}
     // GAP1: persist ONLY a genuine, freshly-fetched MLB-API resolution (never the
     // avgToRates 'card' fallback, never the league-average floor, never an already-stored
     // one). Best-effort/non-blocking so a failed write can't break resolution or rendering.
