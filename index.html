@@ -2854,26 +2854,6 @@ setAuthUI(false);
     if(!window.DepotPrestige){ console.warn(TAG,'DepotPrestige not present; skipping'); return; }
     window.DepotPrestige.ready().then(function(){
       try{ window.DepotPrestige.hookSpotlight(); }catch(e){ console.warn(TAG,'hookSpotlight failed:',e&&e.message); }
-      var obs=null, _decoBusy=false;
-        var grid=document.getElementById('binderGrid');
-        var picker=document.getElementById('setPicker');
-        var deco=function(){
-          if(_decoBusy) return;
-          _decoBusy=true;
-          if(obs) obs.disconnect();
-          try{ window.DepotPrestige.decorateBinder(); }
-          catch(e){ console.warn(TAG,'decorate failed:', e && e.message); }
-          finally{
-            if(obs){ if(grid) obs.observe(grid,{childList:true,subtree:true}); if(picker) obs.observe(picker,{childList:true,subtree:true}); }
-            _decoBusy=false;
-          }
-        };
-        var _rafQueued=false;
-        var schedule=function(){ if(_rafQueued) return; _rafQueued=true; requestAnimationFrame(function(){ _rafQueued=false; deco(); }); };
-        obs=new MutationObserver(function(){ schedule(); });
-        if(grid) obs.observe(grid,{childList:true,subtree:true}); else console.warn(TAG,'no #binderGrid to observe');
-        if(picker) obs.observe(picker,{childList:true,subtree:true});
-        deco();
         console.log(TAG,'wired');
     });
   }
