@@ -78,6 +78,7 @@ Pages deploys are flaky **server-side** in this repo — builds sometimes queue 
 - **After every merge, verify the live build actually updated before declaring done.** The mechanism: `js/version.js` logs `[depot] build <hash>` on load. Load the live page, read the console, and confirm `<hash>` matches the just-merged commit short-hash. Only then is the work "done."
 - **Every merge bumps `js/version.js`** to the new deployed commit short-hash. That is what makes the live-build check meaningful.
 - **If Pages flakes** — a failed/"try again later" build, or a build still queued after **~15 minutes** — push an **additive** bump to `REDEPLOY.md` (a no-op marker change) to trigger a fresh Pages deploy. Repeat if needed. Never force a non-additive change just to poke the deployer.
+- **Direct terminal git push to `main` does NOT trigger a Pages build.** The legacy `pages-build-deployment` workflow only fires on **web-UI commits** and **PR merges done via the web UI**. If you push from a terminal/Codespace, the live build will silently stay stale — either open+merge a PR in the web UI, or land a small web-UI commit (e.g. a REDEPLOY.md nudge or the `js/version.js` bump) to fire the deploy. In practice the web-editor `js/version.js` bump you already do after each merge doubles as that deploy trigger. Always live-verify `js/version.js` afterward.
 - Do not report a task complete on the basis of a green merge alone. Green merge + verified live `[depot] build <hash>` = done.
 
 ---
