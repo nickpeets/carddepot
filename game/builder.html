@@ -1149,6 +1149,11 @@
   // expose a couple internals for headless tests
   window.__DepotBuilder={ lineToRates:lineToRates, avgToRates:avgToRates, parseStatLine:parseStatLine, resolveCard:resolveCard, mlbFindPlayer:mlbFindPlayer, mlbSeasonHitting:mlbSeasonHitting, buildTeamPayload:function(){return buildTeamPayload();} };
 
+  // fix/strip-live-total: read-only accessors so the strip (out of IIFE scope) can read the real ordered lineup + pitcher.
+  window.__DepotBuilder.cardsInOrder = function(){ var out=[]; for(var i=0;i<ORDER.length;i++){ if(ORDER[i]){ var c=cardById(ORDER[i].id); if(c) out.push({name:c.player,yr:c.yr,gem:c.gem,error:c.error,set:c.set,rookie_year:c.rookie_year}); } } return out; };
+
+  window.__DepotBuilder.pitcher = function(){ if(PITCHER==null) return null; var c=cardById(PITCHER); if(!c) return null; return {name:c.player,yr:c.yr,gem:c.gem,error:c.error,set:c.set,rookie_year:c.rookie_year}; };
+
     // ===== MULTIPLAYER 1c: ACCEPT-VIA-LINK ===========================
     // Detect ?match=<id>. If a valid pending+open match, enter accept mode.
     (function mpAcceptInit(){
@@ -1484,6 +1489,9 @@
     return el;
   }
   function cardsInOrder(){
+    // fix/strip-live-total: prefer the builder's read-only accessor (real lineup). Fail-loud fallback below if absent.
+    if(window.__DepotBuilder && typeof window.__DepotBuilder.cardsInOrder==='function'){ return window.__DepotBuilder.cardsInOrder(); }
+    console.warn(TAG,'__DepotBuilder.cardsInOrder unavailable; using DOM/ORDER fallback');
     if(typeof ORDER==='undefined'||typeof cardById!=='function'){ console.warn(TAG,'ORDER/cardById not available'); return []; }
     var out=[];
     for(var i=0;i<ORDER.length;i++){ if(ORDER[i]){ var c=cardById(ORDER[i].id); if(c) out.push({name:c.player,yr:c.yr,gem:c.gem,error:c.error,set:c.set,rookie_year:c.rookie_year}); } }
