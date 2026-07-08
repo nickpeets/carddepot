@@ -143,6 +143,8 @@
   }
 
   function decorateBinder() {
+    // Binder decoration disabled — prestige lives in the Lineup section only (Nick's call).
+    console.log(TAG, 'binder decoration disabled — prestige lives in Lineup only'); return;
     var coll = collection();
     if (!coll) { console.warn(TAG, 'decorateBinder: no COLLECTION, skipping'); return; }
     var grid = document.getElementById('binderGrid');
