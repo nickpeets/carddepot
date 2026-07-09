@@ -128,10 +128,33 @@
 
   function afterSeasonResult(seasonGameId, userScore, oppScore) {
     var detail = earningsFor(userScore, oppScore, { season: true, exhibition: false, prestige: currentPrestige(), streak: (window.DepotSeason && window.DepotSeason.winStreak) || 0 });
-    if (!detail.win) { console.log(TAG, 'loss - consolation only, no ledger write'); return; }
+    if (!detail.win) {
+      // [loss consolation] SEASON losses persist the flat consolation (ECONOMY_DESIGN 2: LOSS = 15 flat).
+      if (_tablesOk === false) { console.warn(TAG, 'wallet tables absent (DDL not run) - skipping season-loss write, showing preview panel'); showPayday({ lines: detail.lines, total: detail.total, balance: null }); return; }
+      writePayout(detail.total, 'season_loss', seasonGameId).then(function (r) {
+        if (!r.ok) { console.warn(TAG, 'season-loss consolation not persisted (DDL likely not run); showing preview panel'); showPayday({ lines: detail.lines, total: detail.total, balance: null }); return; }
+        showPayday({ lines: detail.lines, total: detail.total, balance: r.balance });
+        mountChip();
+      });
+      return;
+    }
     if (_tablesOk === false) { console.warn(TAG, 'wallet tables absent (DDL not run) - skipping payout write, showing preview panel'); showPayday({ lines: detail.lines, total: detail.total, balance: null }); return; }
     writePayout(detail.total, 'season_win', seasonGameId).then(function (r) {
       if (!r.ok) { console.warn(TAG, 'payout not persisted (DDL likely not run); showing preview panel'); showPayday({ lines: detail.lines, total: detail.total, balance: null }); return; }
+      showPayday({ lines: detail.lines, total: detail.total, balance: r.balance });
+      mountChip();
+    });
+  }
+
+  // [exhibition payout] additive: AI-exhibition completion trickle (ECONOMY_DESIGN 3).
+  // Mirrors afterSeasonResult's fail-loud/DDL-graceful shape. Losses follow the same
+  // policy as season losses (no ledger write; consolation is display-only) for consistency.
+  function recordExhibitionResult(matchId, userScore, oppScore) {
+    var detail = earningsFor(userScore, oppScore, { season: false, exhibition: true });
+    if (!detail.win) { console.log(TAG, 'exhibition loss - consolation only, no ledger write'); return; }
+    if (_tablesOk === false) { console.warn(TAG, 'wallet tables absent (DDL not run) - skipping exhibition payout, showing preview panel'); showPayday({ lines: detail.lines, total: detail.total, balance: null }); return; }
+    writePayout(detail.total, 'exhibition_win', null).then(function (r) {
+      if (!r.ok) { console.warn(TAG, 'exhibition payout not persisted (DDL likely not run); showing preview panel'); showPayday({ lines: detail.lines, total: detail.total, balance: null }); return; }
       showPayday({ lines: detail.lines, total: detail.total, balance: r.balance });
       mountChip();
     });
@@ -152,7 +175,26 @@
     console.log(TAG, 'payout hook armed around DepotSeason.recordSeasonResult');
   }
 
-  function ready() { hookPayout(); return mountChip(); }
+  var _authSubbed = false;
+  function subscribeAuth() {
+    if (_authSubbed) return;
+    var client = sb();
+    if (!client || !client.auth || typeof client.auth.onAuthStateChange !== 'function') { return; }
+    try {
+      client.auth.onAuthStateChange(function (event) {
+        // mount-before-auth-settles fix: re-mount once the session resolves, without a reload.
+        if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED') {
+          try { mountChip(); } catch (e) { console.warn(TAG, 'auth re-mount failed:', e && e.message); }
+        } else if (event === 'SIGNED_OUT') {
+          try { var h = chipHost(); var ex = h && h.querySelector('.depot-wallet-chip'); if (ex) ex.remove(); } catch (e) {}
+        }
+      });
+      _authSubbed = true;
+      console.log(TAG, 'auth re-mount subscription armed');
+    } catch (e) { console.warn(TAG, 'subscribeAuth failed:', e && e.message); }
+  }
 
-  window.DepotWallet = { CURRENCY: CURRENCY, ready: ready, getBalance: getBalance, earningsFor: earningsFor, mountChip: mountChip, hookPayout: hookPayout, showPayday: showPayday };
+  function ready() { hookPayout(); subscribeAuth(); return mountChip(); }
+
+  window.DepotWallet = { CURRENCY: CURRENCY, recordExhibitionResult: recordExhibitionResult, ready: ready, getBalance: getBalance, earningsFor: earningsFor, mountChip: mountChip, hookPayout: hookPayout, showPayday: showPayday };
 })();
