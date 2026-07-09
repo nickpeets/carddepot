@@ -209,23 +209,27 @@ document.addEventListener('DOMContentLoaded', async function() {
     // Fires the capped 25 DD trickle + payday panel via DepotWallet (fail-loud/DDL-graceful).
     if(!matchId){
       var _exPaid = false;
+      var _resolveUidThenPay = function(line, attempt){
+        attempt = attempt || 0;
+        var pay = function(){ try{ window.DepotWallet.recordExhibitionResult(null, line.mudcats.r, line.acorns.r); }catch(e){ try{ console.warn('[depot] wallet: exhibition payout call failed:', e && e.message); }catch(e2){} } };
+        if(window.depotUser && window.depotUser.id){ pay(); return; }
+        if(typeof depotSB !== 'function'){ pay(); return; }
+        try{
+          depotSB().auth.getUser().then(function(u){
+            var id = u && u.data && u.data.user ? u.data.user.id : null;
+            if(id){ window.depotUser = { id: id }; pay(); return; }
+            if(attempt < 20){ setTimeout(function(){ _resolveUidThenPay(line, attempt+1); }, 250); }
+            else { try{ console.warn('[depot] wallet: exhibition payout - user session not ready after retries; showing preview only'); }catch(e){} pay(); }
+          }).catch(function(){ if(attempt < 20){ setTimeout(function(){ _resolveUidThenPay(line, attempt+1); }, 250); } else { pay(); } });
+        }catch(e){ pay(); }
+      };
       window.__onMatchComplete = function(line){
         try{
           if(_exPaid) return; // one-shot: a replay/re-sim must not re-pay
           if(!line || !line.mudcats || !line.acorns) return;
           _exPaid = true;
           if(!window.DepotWallet || typeof window.DepotWallet.recordExhibitionResult !== 'function'){ try{ console.warn('[depot] wallet: exhibition handler - DepotWallet not loaded, skipping'); }catch(e){} return; }
-          // resolve user id so the wallet's uid() (window.depotUser) is populated on this page
-          try{
-            if(typeof depotSB === 'function'){
-              depotSB().auth.getUser().then(function(u){
-                try{ var id = u && u.data && u.data.user ? u.data.user.id : null; if(id && !window.depotUser) window.depotUser = { id: id }; }catch(e){}
-                window.DepotWallet.recordExhibitionResult(null, line.mudcats.r, line.acorns.r);
-              }).catch(function(){ window.DepotWallet.recordExhibitionResult(null, line.mudcats.r, line.acorns.r); });
-            } else {
-              window.DepotWallet.recordExhibitionResult(null, line.mudcats.r, line.acorns.r);
-            }
-          }catch(e){ try{ console.warn('[depot] wallet: exhibition payout hook failed:', e && e.message); }catch(e2){} }
+          _resolveUidThenPay(line, 0);
         }catch(eOuter){ try{ console.warn('[depot] wallet: exhibition handler error:', eOuter && eOuter.message); }catch(e3){} }
       };
     }
@@ -387,4 +391,4 @@ document.addEventListener('DOMContentLoaded', async function() {
 })();
 </script>
 </body>
-</html>
+  </html>
