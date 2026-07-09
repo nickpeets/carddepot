@@ -423,3 +423,26 @@ html.depot-game .depot-nav #sim-controls{
          max-width:calc(100vw - 20px) !important;
   }
 }
+
+
+/* ============================================================
+   [exhibition payout / §9 fix] payday panel + wallet chip.
+   Ported from mockups/economy/payout.html. These classes were
+   originally added as a static <style> in game/index.html, but
+   the game page's runtime bundle strips static tags (AGENTS.md §9),
+   so the panel rendered unstyled live. Placing them here routes
+   the CSS through depot-game-shell.js's ensureStylesheet() runtime
+   injection of depot-style.css, which survives the bundle teardown.
+   Scoped classes; inert on pages without the payday/chip markup.
+   ============================================================ */
+.depot-payday{ position:fixed; left:50%; top:50%; transform:translate(-50%,-50%); z-index:2147483646; width:min(520px,92vw); text-align:center; background:var(--depot-navy,#12233b); border:4px solid var(--depot-black,#0a0a0a); box-shadow:var(--pixel-shadow-lg,8px 8px 0 rgba(0,0,0,.6)); padding:26px 20px; font-family:monospace; animation:dwPop .5s steps(3) both; }
+@keyframes dwPop{ 0%{ transform:translate(-50%,-50%) scale(.4); opacity:0 } 100%{ transform:translate(-50%,-50%) scale(1); opacity:1 } }
+.depot-payday .dw-pay-title{ font-size:34px; font-weight:800; letter-spacing:1px; color:var(--depot-gold,#d4af37); text-shadow:4px 4px 0 var(--depot-black,#0a0a0a); margin-bottom:16px; }
+.depot-payday .dw-pay-row{ display:flex; justify-content:space-between; gap:16px; padding:6px 10px; font-size:14px; color:#e8e8ee; border-top:1px solid rgba(212,175,55,.25); }
+.depot-payday .dw-pay-row:first-of-type{ border-top:none; }
+.depot-payday .dw-pay-row span:last-child{ color:var(--depot-gold,#d4af37); font-weight:700; }
+.depot-payday .dw-pay-total{ margin-top:12px; padding:10px; font-size:22px; font-weight:800; color:var(--depot-gold,#d4af37); border:3px solid var(--depot-gold,#d4af37); background:#000; }
+.depot-payday .dw-pay-bal{ margin-top:12px; padding:8px 10px; font-size:14px; font-weight:700; background:var(--depot-gold,#d4af37); color:var(--depot-ink,#0a0a0a); }
+.depot-payday .dw-pay-bal b{ font-size:18px; }
+.depot-wallet-chip{ display:inline-flex; align-items:baseline; gap:.25em; margin-left:.6em; padding:.12em .5em; border-radius:999px; background:rgba(212,175,55,.15); border:1px solid rgba(212,175,55,.5); font-weight:700; font-size:.8em; color:#e8c86a; vertical-align:middle; }
+.depot-wallet-chip .dw-cur{ opacity:.7; font-size:.85em; font-weight:600; }
