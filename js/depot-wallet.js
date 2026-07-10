@@ -23,8 +23,9 @@
     catch (e) { return null; }
   }
   function uid() {
-    var u = window.depotUser || window.depotUserCached;
-    return u && u.id ? u.id : null;
+        var u = window.depotUserCached || (typeof window.depotUser === 'object' && window.depotUser) || null;
+        if (!u || !u.id) { if (!uid._warned) { uid._warned = true; console.warn(TAG, 'uid: no cached user (depotUserCached/depotUser both absent); balance/chip hidden until auth resolves'); } return null; }
+        return u.id;
   }
 
   function earningsFor(userScore, oppScore, context) {
