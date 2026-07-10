@@ -180,3 +180,156 @@ The wallet + ledger DDL (franchise balance + wallet_transactions, owner-scoped R
 payout written via the same authenticated path as the season writeback) is specified in
 the **session report** for Nick to run in the Supabase SQL editor. Slice A code must
 **fail-loud and hide the wallet chip** until those tables exist.
+
+
+---
+
+## 7. Slice B — The Pack Shop (the DD sink)
+
+> **Status:** design pinned; Part 2 DDL below is **proposed for Nick to run** — no
+> > schema/RLS executed by this session (AGENTS.md §2). Purchase-path code does not merge
+> > > until Nick confirms the DDL is run. Prices/odds below match the approved mockups
+> > > > (mockups/economy/shop.html + pack.html, mockups/nextgen/shop.html).
+> > > >
+> > > > ### 7.1 Packs grant REAL collection cards
+> > > > A pack purchase inserts real rows into the `cards` table — owner-scoped, playable in
+> > > > lineups, visible in the binder — drawn from the checklist catalog (the static
+> > > > `data/cards-YYYY.json` universe, year from filename; see SHARED_LIBRARY_DESIGN.md §0).
+> > > > The collection **is** the roster, so the money sink must feed the same table earning
+> > > > feeds off. Pack rows are flagged `source:'pack'` so scanned cards and pulled cards stay
+> > > > distinguishable (scans stay `source:'scan'`, the default).
+> > > >
+> > > > Pack-granted cards have **no scan image**. They render with an original **8-bit
+> > > > pixel-art card front** generated client-side in the Depot style: player name, year,
+> > > > brand, position on a stylized pixel card, plus the prestige gem. **No copyrighted
+> > > > imagery and no real card art is fetched from anywhere** — the front is drawn from card
+> > > > text only. Per SHARED_LIBRARY_DESIGN.md §5 the resolution order is
+> > > > **personal image → shared-library image → pixel placeholder**; the shared library is
+> > > > unbuilt, so today pack cards always resolve to the pixel placeholder, and the library
+> > > > later upgrades that art in place when scans exist.
+> > > >
+> > > > ### 7.2 Tiers, pricing, odds (tuned to the earnings curve)
+> > > > Season win ≈ 300–450 DD at the current lineup (§2). Prices come straight from the
+> > > > approved mockups (shop.html / nextgen/shop.html both show 150 / 400 / 900 DD). These
+> > > > supersede the rough 100/250/500 first-pass figures: a Bronze is a fraction of one win,
+> > > > a Gold is ~2–3 wins, so the earn→spend→grow loop stays tight (the mockup's own note:
+> > > > "balance after a GOLD pack … win two more games and you're back in gold range").
+> > > >
+> > > > | Tier   | Price   | Cards | Pool / weighting                                   | Guarantee / hit slot |
+> > > > |--------|--------:|:-----:|----------------------------------------------------|----------------------|
+> > > > | Bronze | 150 DD  |   5   | junk-wax-weighted (1986–1993 heavy), low star odds | small shot at a SILVER-band hit |
+> > > > | Silver | 400 DD  |   5   | all eras, moderate star/rookie odds                | guaranteed ≥1 SILVER-band, better vintage odds |
+> > > > | Gold   | 900 DD  |   5   | vintage + rookie-weighted                          | guaranteed a GOLD-band (prestige ≥ 60) hit |
+> > > >
+> > > > **Structure:** 5 cards per pack; the **5th card is the "hit" slot** with tier-scaled
+> > > > odds and the reveal ceremony. Draws are weighted by the prestige system's own tiers so
+> > > > pack excitement tracks the game's real value system: the roll biases toward
+> > > > `player_tiers.json` STAR/SUPERSTAR/HOF names, the rookie determination (card year ==
+> > > > debut year), and the era U-curve (§1.5 — vintage ≤1985 and marquee rookies score high;
+> > > > junk-wax commons score low). The hit slot re-rolls until it meets the tier's band floor
+> > > > (Bronze→SILVER 30+, Silver→SILVER 30+ with higher rookie odds, Gold→GOLD 60+).
+> > > >
+> > > > **Published odds (legibility rule, §1.5F):** the shop UI prints each tier's card count,
+> > > > guarantee, and hit-band odds on the pack card, so the value system is visible before
+> > > > purchase — no hidden rates.
+> > > >
+> > > > ### 7.3 Duplicates
+> > > > Duplicates are **allowed** — real collecting has dupes, and a second copy of a star is
+> > > > still lineup-useful and still desirable. Future **trade-in sink** (turn N dupes into DD
+> > > > or a tier token) is noted for a later slice; **not built in v1.**
+> > > >
+> > > > ### 7.4 Anti-abuse
+> > > > v1 is single-user reality, so pack **contents are client-rolled** in v1. But the
+> > > > **DEBIT must be server-atomic**: the existing `depot_apply_payout` RPC has **no floor
+> > > > check**, so a client-side "balance ≥ cost" check alone would allow a negative balance
+> > > > under a race or a tampered client. Part 2 proposes a `depot_purchase_pack` RPC that,
+> > > > in one transaction, checks `balance >= cost`, debits, writes the ledger row, and returns
+> > > > the new balance — refusing (no debit, no ledger row) when funds are short.
+> > > >
+> > > > **League-mode hardening (deferred, noted):** move the pack **roll** server-side (RPC
+> > > > returns the rolled catalog keys) so contents can't be client-tampered. v1 keeps the roll
+> > > > client-side and only hardens the debit; this is the documented hardening item.
+> > > >
+> > > > ### 7.5 Part 2 — proposed DDL for the shop (Nick runs; not executed here)
+> > > >
+> > > > Same pattern as the wallet DDL (§6): `SECURITY DEFINER`, `auth.uid()` guard like
+> > > > `depot_apply_payout`, owner-scoped, ledger-first. The RPC is the only new server object
+> > > > strictly required; the `source` column is a small additive column; a pack-log table is
+> > > > **argued unnecessary** (derive from `wallet_transactions`).
+> > > >
+> > > > ```sql
+> > > > -- (1) cards.source — distinguish scanned vs pack-granted cards. Additive, default keeps
+> > > > --     every existing row correct as a scan. No backfill needed.
+> > > > alter table public.cards
+> > > >   add column if not exists source text not null default 'scan';
+> > > > -- optional guard: constrain to known values
+> > > > alter table public.cards
+> > > >   add constraint cards_source_chk check (source in ('scan','pack')) not valid;
+> > > >
+> > > > -- (2) depot_purchase_pack — server-atomic debit with a balance floor.
+> > > > --     Mirrors depot_apply_payout's auth guard, but ADDS the floor check the payout RPC
+> > > > --     lacks, and writes the negative-amount ledger row in the SAME transaction as the
+> > > > --     debit so a purchase can never leave a row/balance mismatch.
+> > > > create or replace function public.depot_purchase_pack(p_cost integer, p_tier text)
+> > > > returns integer               -- returns the NEW balance
+> > > > language plpgsql
+> > > > security definer
+> > > > set search_path = public
+> > > > as $$
+> > > > declare
+> > > >   v_owner uuid := auth.uid();
+> > > >   v_balance integer;
+> > > > begin
+> > > >   if v_owner is null then
+> > > >     raise exception 'depot_purchase_pack: not authenticated';
+> > > >   end if;
+> > > >   if p_cost is null or p_cost <= 0 then
+> > > >     raise exception 'depot_purchase_pack: invalid cost %', p_cost;
+> > > >   end if;
+> > > >
+> > > >   -- lock the franchise row for this owner so the check+debit is atomic
+> > > >   select balance into v_balance
+> > > >     from public.franchises
+> > > >    where owner_id = v_owner
+> > > >    for update;
+> > > >
+> > > >   if v_balance is null then
+> > > >     raise exception 'depot_purchase_pack: no franchise for owner';
+> > > >   end if;
+> > > >
+> > > >   -- THE FLOOR CHECK the payout RPC lacks: refuse, do not go negative
+> > > >   if v_balance < p_cost then
+> > > >     raise exception 'depot_purchase_pack: insufficient funds (balance %, cost %)',
+> > > >       v_balance, p_cost using errcode = 'P0001';
+> > > >   end if;
+> > > >
+> > > >   -- ledger row first (negative amount), then debit, one transaction
+> > > >   insert into public.wallet_transactions (owner_id, amount, reason, meta)
+> > > >   values (v_owner, -p_cost, 'pack_purchase',
+> > > >           jsonb_build_object('tier', p_tier));
+> > > >
+> > > >   update public.franchises
+> > > >      set balance = balance - p_cost
+> > > >    where owner_id = v_owner
+> > > >   returning balance into v_balance;
+> > > >
+> > > >   return v_balance;
+> > > > end;
+> > > > $$;
+> > > >
+> > > > revoke all on function public.depot_purchase_pack(integer, text) from public;
+> > > > grant execute on function public.depot_purchase_pack(integer, text) to authenticated;
+> > > > ```
+> > > >
+> > > > **Pack-log / pack-odds table — not needed (documented decision).** A purchase is fully
+> > > > recoverable from `wallet_transactions`: reason `'pack_purchase'`, negative `amount`, and
+> > > > the tier in `meta`. Which cards were pulled is recoverable from `cards where source='pack'`
+> > > > (with `created_at`). Odds live in shipped client config + this doc, not a table, so they
+> > > > stay legible and versioned in git. Adding a `pack_log` table would duplicate derivable
+> > > > state; **deferred to league mode** (when server-side rolls need an audit trail).
+> > > >
+> > > > > **Note on `wallet_transactions.meta`:** the RPC assumes a `meta jsonb` column exists on
+> > > > > > `wallet_transactions` (used to stamp the tier). If the wallet DDL as run does **not**
+> > > > > > > have `meta`, drop the `meta` arg from the insert (the tier is still derivable from the
+> > > > > > > > pack contents); Nick to confirm which shape shipped.
+> > > > > > > > 
