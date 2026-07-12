@@ -118,7 +118,10 @@ function loadCatalog() {
           clearReceipt(); // 3b: no value moved
           if (/insufficient funds/i.test(msg)) {
             console.warn(TAG + ' RPC refused: ' + msg + ' (receipt cleared, no ledger row)');
-            ui.insufficient(cfg.price, balance);
+            // Re-read the live balance so the refusal shows the real number, not a stale pre-auth read. (fix/shop-auth-settle)
+            Promise.resolve(getBalance()).then(function (freshBal) {
+              ui.insufficient(cfg.price, (freshBal != null ? freshBal : balance));
+            }).catch(function () { ui.insufficient(cfg.price, balance); });
           } else if (/not authenticated/i.test(msg)) {
             ui.fail('Please sign in to buy packs.');
           } else if (/does not exist|schema cache|not find|function/i.test(msg)) {
