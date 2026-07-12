@@ -803,6 +803,25 @@
     function fmtMeta(c){ var rv=RESOLVED[c.id]; var bits=[]; if(c.yr) bits.push(c.yr); if(c.team) bits.push(c.team); var np=rv?normPos(rv.pos):''; if(np&&np!=='P') bits.push(np); return bits.join(' \u00b7 '); }
 
     // ----- LEFT: collection -----
+    // Pixel-front fallback: a card with NO photo path renders a deterministic
+    // DepotPixelCard front (never a black box). Path present = photo pipeline;
+    // path absent = pixel front. Convergence/coverage machinery is untouched.
+    function depotPixelFront(c){
+      try {
+        if (!window.DepotPixelCard || !DepotPixelCard.renderDataURL) return "";
+        var shaped = {
+          player: c.player||"", name: c.player||"", team: c.team||"",
+          year: (c.yr!=null?c.yr:c.year), yr: c.yr,
+          brand: c.brand||"", set: c.set||"", number: c.number||"",
+          position: c.position||"", gem: c.gem, error: c.error,
+          rookie_year: c.rookie_year||""
+        };
+        var pr = (window.DepotPrestige && DepotPrestige.compute) ? DepotPrestige.compute(shaped) : null;
+        var src = DepotPixelCard.renderDataURL(shaped, pr, { w: 250, h: 350 });
+        if (!src) return "";
+        return '<img class="ctile-img" src="'+src+'" alt="'+esc(c.player||"card")+'" loading="lazy">';
+      } catch (e) { return ""; }
+    }
     function renderCards(){
       $('collCount').textContent=CARDS.length?('('+CARDS.length+' cards)'):'';
       if(!CARDS.length){ if($('cardList').innerHTML.indexOf('Could not')<0) $('cardList').innerHTML='<div class="muted">No cards found in your collection.</div>'; return; }
@@ -839,7 +858,7 @@
         if(VIEW_MODE==='card'){
           // CARD VIEW: real card art (signed url cached on c._imgUrl); graceful no-image fallback.
           var _u=c._imgUrl;
-          var _imgInner = _u ? '<img class="ctile-img" src="'+esc(_u)+'" alt="'+esc(c.player||'card')+'" loading="lazy" onerror="ctileImgFail(this)">' : '';
+          var _imgInner = _u ? '<img class="ctile-img" src="'+esc(_u)+'" alt="'+esc(c.player||'card')+'" loading="lazy" onerror="ctileImgFail(this)">' : (c.photoPath ? '' : depotPixelFront(c));
           var _ph = '<div class="ctile-ph"><b>'+esc(c.player||'(unnamed)')+'</b><small>'+esc(sub)+'</small></div>';
           var _hasImg = !!_u;
           html+= '<div class="ctile'+(isPitcherCard?' pitcher-card':(usable?'':' dim-row'))+__stateCls+(_hasImg?'':' noimg')+'" title="'+esc(c.player||'')+'">'
@@ -1566,6 +1585,7 @@
 </script>
 <script src="../js/depot-builder-shell.js"></script>
 <script src="../js/depot-prestige.js"></script>
+<script src="../js/depot-pixel-card.js"></script>
 <script src="../js/depot-wallet.js"></script>
 <script>
 /* Franchise Economy Slice A: mount wallet chip on the builder. Additive, graceful until DDL. */
