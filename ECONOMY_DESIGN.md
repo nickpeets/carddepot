@@ -249,6 +249,18 @@ the **session report** for Nick to run in the Supabase SQL editor. Slice A code 
 > > > > **League-mode hardening (deferred, noted):** move the pack **roll** server-side (RPC
 > > > > returns the rolled catalog keys) so contents can't be client-tampered. v1 keeps the roll
 > > > > client-side and only hardens the debit; this is the documented hardening item.
+> > > > **Modern gold is deferred to the collection (Part 3 obligation):** catalog prestige is
+> > > > pre-rookie. Catalog rows have no `rookie_year`, so catalog scoring can't see ROOKIE/
+> > > > TRANSCENDENCE and a modern star scores "silver" in a pack. But a PULLED card lands in the
+> > > > collection and flows through `persistRookieYear`, where a true rookie of a tiered player
+> > > > upgrades exactly like Ohtani '18 did (36->96 gold) -- a second reveal in the binder, a
+> > > > feature not a gap. Part 3 MUST wire the rip so its inserted rows trigger the rookie
+> > > > resolver. Gold-band pack HITS stay vintage-HOF (thematically right); hit logic unchanged.
+> > > > **Purchase-service error classification (Part 3 obligation):** `depot-shop.js` must
+> > > > distinguish network / undefined-function errors ("offline" -- show the offline banner)
+> > > > from Postgres exceptions raised by `depot_purchase_pack` ("exists" -- surface the message,
+> > > > e.g. insufficient funds). Today both wear the offline banner, so a genuine outage and a
+> > > > real RPC bug are indistinguishable. (Prompted by the missing-config bug fixed in fix/shop-supabase-config.)
 > > > >
 > > > > ### 7.5 Part 2 — proposed DDL for the shop (Nick runs; not executed here)
 > > > >
