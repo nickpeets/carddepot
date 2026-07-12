@@ -87,11 +87,11 @@
         // The PLAY SURFACE (scoreboard chip / "through N games" / schedule) is NOT
         // touched here - it keeps showing whatever season.js has open.
         if (rc){
-          rc.textContent = wins + ' - ' + losses;
+          rc.textContent = wins + '-' + losses;
           try {
             if (window.DepotShell && typeof window.DepotShell.resolveRecord === 'function'){
               window.DepotShell.resolveRecord().then(function (r){
-                if (r){ rc.textContent = (r.recordPrefix || '') + r.wins + ' - ' + r.losses; }
+                if (r){ rc.textContent = (r.recordPrefix || '') + r.wins + '-' + r.losses; }
               }).catch(function (e){ warn('resolveRecord for season header threw: ' + e); });
             }
           } catch (e){ warn('resolveRecord wiring threw: ' + e); }
