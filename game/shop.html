@@ -23,6 +23,7 @@
   </script>
 <link rel="stylesheet" href="../css/depot-style.css">
 <link rel="stylesheet" href="../css/shop.css">
+  <link rel="stylesheet" href="../css/depot-shop-view.css">
 <script src="../js/depot-shell.js" defer></script>
 </head>
 <body>
@@ -57,6 +58,7 @@
 <script src="../js/depot-pack-engine.js"></script>
 <script src="../js/depot-pixel-card.js"></script>
 <script src="../js/depot-shop.js"></script>
+  <script src="../js/depot-shop-view.js"></script>
 <script src="../js/depot-shop-entry.js"></script>
 
 <script>
@@ -223,10 +225,23 @@
       pending: function () { setStatus('warn', 'Opening your free daily pack\u2026'); },
       claimed: function (card, band, nextClaimAt) {
         if (nextClaimAt) { _freeNextClaimAt = new Date(nextClaimAt); }
-        setStatus('ok', '<b>Free card claimed!</b> It has been added to your collection. ' + revealCard(card, band));
-        // one-flip: add the flip trigger after paint
-        setTimeout(function () { var c = document.querySelector('.reveal-card.flip'); if (c) c.classList.add('flipped'); }, 60);
-        if (typeof refreshBalance === 'function') { /* balance unchanged (0 DD) but re-render resets the tile */ }
+        clearStatus();
+        // SHARED band-scaled reveal ceremony (same code the in-binder shop uses -- no fork).
+        if (window.DepotShopView && DepotShopView.buildReveal) {
+          var rev = DepotShopView.buildReveal(card, band);
+          var host = document.createElement('div'); host.className = 'dsv-reveal-host';
+          host.appendChild(rev.node); document.body.appendChild(host);
+          rev.node.addEventListener('click', function () {
+            if (rev.node.classList.contains('landed')) { rev.node.classList.add('dismissing'); setTimeout(function(){ if(host.parentNode) host.parentNode.removeChild(host); }, 320); }
+          });
+          DepotShopView.playCeremony(rev).then(function () {
+            setStatus('ok', '<b>Free card claimed!</b> It has been added to your collection.');
+            setTimeout(function(){ rev.node.classList.add('dismissing'); setTimeout(function(){ if(host.parentNode) host.parentNode.removeChild(host); }, 320); }, 2600);
+          });
+        } else {
+          setStatus('ok', '<b>Free card claimed!</b> It has been added to your collection. ' + revealCard(card, band));
+          setTimeout(function () { var c = document.querySelector('.reveal-card.flip'); if (c) c.classList.add('flipped'); }, 60);
+        }
         renderGrid();
       },
       cooldown: function (nextClaimAt) {
