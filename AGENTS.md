@@ -110,6 +110,8 @@ This is phase 1 (additive) only. Nothing has been removed: the per-page `createC
 
 **Migration rule for future sessions:** cut over ONE page at a time to depot-core-only. For each page, remove that page's own `createClient` and its ad-hoc `window.sb` / `DEPOT_USER` / `buildTeamPayload` mirror, route everything through `depotSB()` / `depotUser()`, and LIVE-VERIFY that page (page loads, auth chrome renders, card fetch works, and a full season game writes back with the record ticking past 1-0) BEFORE moving to the next page. Do not batch multiple pages in one cutover.
 
+**New-page config rule (earned its bullet):** every NEW page that loads `depot-core.js` MUST set `window.DEPOT_SUPABASE_CONFIG` in an inline script BEFORE the shell loads -- mirror the config block from `game/builder.html`. Symptom of forgetting: `depotSB()` returns null, anonymous shell, `— DD` balance (never renders the signed-in amount), and features misdiagnosing as offline. This is the second new-page config miss (game/shop.html in fix/shop-supabase-config; the depot-core rollout hit the ordering version of it).
+
 The per-page clients and the `window.sb` / `DEPOT_USER` / `buildTeamPayload` mirrors are removed ONLY after all three pages have been individually cut over and live-verified. Until then they remain as the fallback path.
 
 ## 9. Game page runtime bundle (game/index.html)
