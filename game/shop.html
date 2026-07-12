@@ -1,0 +1,165 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Card Depot &mdash; Pack Shop</title>
+<script src="../js/version.js"></script>
+<script src="../js/depot-core.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<link rel="stylesheet" href="../css/depot-style.css">
+<link rel="stylesheet" href="../css/shop.css">
+<script src="../js/depot-shell.js" defer></script>
+</head>
+<body>
+<div class="depot-bunting" aria-hidden="true"></div>
+<script>
+  // Mount the shared shell chrome (header + 4-tab nav, unchanged). PACK SHOP is
+  // reached via the header entry button (depot-shop-entry.js), NOT a 5th tab.
+  document.addEventListener('DOMContentLoaded', function () {
+    if (window.DepotShell && window.DepotShell.mount) {
+      window.DepotShell.mount({ active: 'binder', wordmark: 'THE <b>DEPOT</b>' });
+    }
+  });
+</script>
+
+<main class="depot-stage" data-depot-stage>
+  <div class="shop-head">
+    <h1 class="h1">PACK SHOP</h1>
+    <div class="shop-bal">Balance: <span class="amt" id="shopBal">&mdash;</span></div>
+  </div>
+  <p class="mock-note">Where the money goes &mdash; and the <b>only</b> things it buys: card
+    <b>PACKS</b>. Never stat boosts. Cards always play as their card-year selves; that's sacred.
+    Published odds below are computed from the live draw engine &mdash; no hidden rates.</p>
+
+  <div class="shop-grid" id="shopGrid"><!-- packs injected here --></div>
+
+  <div class="shop-status" id="shopStatus" role="status" aria-live="polite"></div>
+</main>
+
+<!-- engine + prestige + wallet + shop controller + header entry button -->
+<script src="../js/depot-prestige.js"></script>
+<script src="../js/depot-wallet.js"></script>
+<script src="../js/depot-pack-engine.js"></script>
+<script src="../js/depot-pixel-card.js"></script>
+<script src="../js/depot-shop.js"></script>
+<script src="../js/depot-shop-entry.js"></script>
+
+<script>
+(function () {
+  var LOG = '[depot] shop-page:';
+  var Shop = window.DepotShop, Eng = window.DepotPackEngine;
+  var grid = document.getElementById('shopGrid');
+  var balEl = document.getElementById('shopBal');
+  var statusEl = document.getElementById('shopStatus');
+  var CUR = (window.DepotWallet && window.DepotWallet.CURRENCY) || 'DD';
+
+  function fmt(n) { return (n == null ? '\u2014' : String(n)) + ' ' + CUR; }
+  function setStatus(kind, html) {
+    statusEl.className = 'shop-status show ' + kind;
+    statusEl.innerHTML = html;
+  }
+  function clearStatus() { statusEl.className = 'shop-status'; statusEl.innerHTML = ''; }
+
+  // UI callback bundle handed to Shop.buy() for each purchase attempt.
+  function makeUi(tier) {
+    return {
+      pending: function () { setStatus('warn', 'Opening ' + tier.toUpperCase() + ' pack\u2026'); },
+      insufficient: function (cost, bal) {
+        setStatus('err', '<b>Insufficient funds.</b> ' + tier.toUpperCase() + ' pack costs ' +
+          fmt(cost) + ' but your balance is ' + fmt(bal) + '. No pack was purchased and no ' +
+          'Depot Dollars were spent. Win season games to earn more.');
+      },
+      offline: function () {
+        setStatus('warn', 'Shop is temporarily offline (purchase service unavailable). ' +
+          'No Depot Dollars were spent.');
+      },
+      savedNoRip: function (newBal) {
+        setStatus('ok', '<b>Pack purchased.</b> Your pack is <b>saved</b> and the opening ' +
+          'ceremony arrives in the next update. New balance: ' + fmt(newBal) + '.');
+        refreshBalance();
+      },
+      fail: function (msg) { setStatus('err', msg || 'Something went wrong.'); }
+    };
+  }
+
+  var _catalog = null, _balance = null;
+
+  function packCardHtml(tier, odds, balance) {
+    var copy = Shop.TIER_COPY[tier];
+    var price = Eng.tierConfig(tier).price;
+    var afford = (balance != null && balance >= price);
+    var hb = odds ? odds.hitBandPct : null;
+    var oddsHtml = hb ? ('Hit odds: <b>' + (hb.gold || 0) + '%</b> gold \u00b7 <b>' +
+      (hb.silver || 0) + '%</b> silver \u00b7 <b>' + (hb.bronze || 0) + '%</b> bronze') :
+      'Odds unavailable';
+    var gap = (!afford && balance != null) ? '<span class="gap">Need ' + (price - balance) +
+      ' more ' + CUR + '</span>' : '';
+    return '' +
+      '<div class="pack ' + tier + (afford ? '' : ' cant-afford') + '" data-tier="' + tier + '">' +
+        '<div class="wrapart">' + copy.name.replace(' PACK', '') + '<br>PACK</div>' +
+        '<span class="pname">' + copy.name + '</span>' +
+        '<div class="pdesc">' + copy.desc + '</div>' +
+        '<div class="odds">' + oddsHtml + '<br>5 cards \u00b7 5th is the hit slot</div>' +
+        '<button class="buy" data-tier="' + tier + '">' +
+          'BUY \u2014 <span class="price"><span class="coin">' + CUR + '</span>' + price + '</span>' + gap +
+        '</button>' +
+      '</div>';
+  }
+
+  function renderGrid() {
+    if (!Eng) { setStatus('err', 'Pack engine failed to load.'); return; }
+    var html = '';
+    Shop.TIER_ORDER.forEach(function (tier) {
+      var odds = null;
+      try { odds = _catalog && _catalog.length ? Eng.estimateOdds(tier, _catalog, window.DepotPrestige, 250) : null; }
+      catch (e) { console.warn(LOG + ' odds calc failed for ' + tier, e && e.message); }
+      html += packCardHtml(tier, odds, _balance);
+    });
+    grid.innerHTML = html;
+    // wire buy buttons
+    var btns = grid.querySelectorAll('button.buy');
+    for (var i = 0; i < btns.length; i++) {
+      (function (btn) {
+        btn.addEventListener('click', function () {
+          var tier = btn.getAttribute('data-tier');
+          clearStatus();
+          if (!_catalog || !_catalog.length) { setStatus('err', 'Card catalog not loaded yet.'); return; }
+          Shop.buy(tier, _catalog, _balance, makeUi(tier));
+        });
+      })(btns[i]);
+    }
+  }
+
+  function refreshBalance() {
+    Shop.getBalance().then(function (bal) {
+      _balance = bal; balEl.textContent = fmt(bal);
+      console.log(LOG + ' balance = ' + bal);
+      renderGrid();
+    }).catch(function () { balEl.textContent = fmt(null); renderGrid(); });
+  }
+
+  function boot() {
+    if (!Shop || !Eng) { console.error(LOG + ' shop/engine missing'); return; }
+    balEl.textContent = 'loading\u2026';
+    // load catalog + balance in parallel; prestige tables ready first for odds.
+    var ready = (window.DepotPrestige && window.DepotPrestige.ready) ? window.DepotPrestige.ready() : Promise.resolve();
+    Promise.all([ Shop.loadCatalog(), ready ]).then(function (r) {
+      _catalog = r[0] || [];
+      console.log(LOG + ' catalog loaded: ' + _catalog.length + ' cards');
+      refreshBalance();
+    }).catch(function (e) {
+      console.error(LOG + ' boot failed', e && e.message || e);
+      setStatus('err', 'Shop failed to load its catalog.');
+    });
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+  else boot();
+})();
+</script>
+</body>
+</html>

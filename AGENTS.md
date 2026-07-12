@@ -49,6 +49,7 @@ Read this first, every session. It encodes hard-won rules from real incidents in
 
 **Data / backend (Supabase):**
 - Tables: `seasons`, `season_games`, `franchises` (plus card data under `data/*.json`).
+  - **Catalog ↔ prestige shape:** catalog rows (`data/cards-*.json`) carry `.player`; the prestige engine (`depot-prestige.js`) reads `.name`. Adapt via the engine’s mapper `catalogCardToPrestigeShape()` (in `depot-shop.js`) — any future consumer (pack rip, shared library, league draft) MUST route catalog rows through it.
 - **RLS**: row ownership is enforced by an owner column — `owner_id` (matches `auth.uid()`). Any query/insert into owned tables must set/scope `owner_id` or it will be silently rejected by RLS. Treat a "0 rows affected" writeback as a **bug to log**, not a no-op (see §4).
 
 **Client bootstrap (the recurring hazard):**
