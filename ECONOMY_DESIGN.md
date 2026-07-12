@@ -353,7 +353,7 @@ A free tier so there's always something to rip, even at 0 DD. The daily login ri
 
 **Shape (honest, published):**
 - **1 card** (not 5). No hit-slot guarantee — this is not a paid pack, so it does not borrow the 5th-slot floor.
-- **Commons-weighted pool.** The roll is bronze-heavy with a small, *published* upset chance at silver+ so the daily still has a spark. Proposed odds (published on the card, "no hidden rates"): **bronze ~92%, silver ~7%, gold ~1%.** These are the free-tier draw weights and are independent of the paid tiers' hit-slot logic. Bands stay fixed at 10/30/60 (gold≥60, silver≥30, bronze≥10) — the free pack changes *draw weights*, never the bands.
+- **Band-first draw (SHIPPED).** The free roll picks a *band* first at published rates, then draws a card from that band's pool — so the odds are exact by construction and the longshot is REAL (a 5,000-roll live sample lands on-rate, with silver and gold both actually appearing). Published odds (on the card, "no hidden rates"): **plain ~90%, bronze ~8%, silver ~1.5%, gold ~0.5%.** These are the literal configured band rates (`FREE_BAND_ODDS` in `depot-pack-engine.js`; `estimateOdds('free')` returns them verbatim, `exact:true` — never a hand-typed string). Independent of the paid tiers' hit-slot logic. Bands stay fixed at 10/30/60 (gold≥60, silver≥30, bronze≥10) — the free pack picks a band then a card within it; it never renames a band. Plain is stored as plain (honest).
 - **Cost: 0 DD.** No debit. The ledger row is a 0-amount marker, not a transaction.
 - **Cadence: once per 24h.** Server-enforced. The claim is refused inside the window with a next-claim time; the client shows a live countdown.
 

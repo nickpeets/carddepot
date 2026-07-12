@@ -135,13 +135,18 @@
     var btn = onCooldown
       ? '<button class="claim-free" disabled>ON COOLDOWN</button>'
       : '<button class="claim-free">CLAIM FREE CARD</button>';
+    // Odds are COMPUTED from the live draw engine (band-first draw) -- never a hand-typed string.
+    var _o = null;
+    try { _o = window.DepotPackEngine && window.DepotPackEngine.estimateOdds('free'); } catch (e) { _o = null; }
+    var _p = (_o && _o.hitBandPct) || { plain: 90, bronze: 8, silver: 1.5, gold: 0.5 };
+    var _oddsHtml = 'Published odds: <b>~' + _p.plain + '%</b> plain \u00b7 <b>~' + _p.bronze + '%</b> bronze \u00b7 <b>~' + _p.silver + '%</b> silver \u00b7 <b>~' + _p.gold + '%</b> gold';
     return '' +
       '<div class="pack free" data-tier="free">' +
         '<div class="free-ribbon">FREE \u00b7 DAILY</div>' +
         '<div class="wrapart">FREE<br>PULL</div>' +
         '<span class="pname">FREE DAILY PACK</span>' +
         '<div class="pdesc">One card on the house, every day. No Depot Dollars. No hit-slot guarantee \u2014 pure luck of the draw.</div>' +
-        '<div class="odds">Published odds: <b>~92%</b> bronze \u00b7 <b>~7%</b> silver \u00b7 <b>~1%</b> gold<br>1 card \u00b7 once every 24h</div>' +
+        '<div class="odds">' + _oddsHtml + '<br>1 card \u00b7 once every 24h</div>' +
         btn +
         '<div class="cooldown" aria-live="polite"></div>' +
       '</div>';
