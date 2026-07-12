@@ -80,7 +80,22 @@
       var nm = header.querySelector('.depot-franchise .name');
       var rc = header.querySelector('.depot-franchise .record');
       if (nm) nm.textContent = id.name;
-      if (rc) rc.textContent = 'SEASON RECORD \u00b7 ' + wins + '-' + losses;
+        // IDENTITY BLOCK record: use the shared shell's HYBRID record (single source
+        // of truth in depot-shell.js resolveRecord), so the header chrome reads the
+        // same everywhere ("S1 · 8-0" fallback; bare live record once season 2 has
+        // games). Seed with the on-screen record for zero-flash, then reconcile async.
+        // The PLAY SURFACE (scoreboard chip / "through N games" / schedule) is NOT
+        // touched here - it keeps showing whatever season.js has open.
+        if (rc){
+          rc.textContent = wins + ' - ' + losses;
+          try {
+            if (window.DepotShell && typeof window.DepotShell.resolveRecord === 'function'){
+              window.DepotShell.resolveRecord().then(function (r){
+                if (r){ rc.textContent = (r.recordPrefix || '') + r.wins + ' - ' + r.losses; }
+              }).catch(function (e){ warn('resolveRecord for season header threw: ' + e); });
+            }
+          } catch (e){ warn('resolveRecord wiring threw: ' + e); }
+        }
       var acct = header.querySelector('.depot-account');
       if (acct){
         var bell = document.createElement('span'); bell.className = 'depot-bell'; bell.setAttribute('aria-hidden','true'); bell.textContent = '\u25cf';
