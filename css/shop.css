@@ -1,0 +1,38 @@
+/* css/shop.css -- Pack Shop screen (ADDITIVE). Reuses depot-style.css vars. */
+.shop-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:var(--sp3,16px);margin-top:14px}
+@media (max-width:720px){.shop-grid{grid-template-columns:1fr}}
+.pack{border:3px solid var(--depot-gold,#f4c14b);background:var(--depot-navy,#0f1c3f);
+  border-radius:8px;padding:14px;display:flex;flex-direction:column;gap:8px;position:relative}
+.pack .wrapart{background-color:#5a6784;color:var(--depot-cream,#f5efe0);
+  text-align:center;padding:20px 8px;border-radius:6px;font-weight:700;line-height:1.15;
+  letter-spacing:.05em;font-size:15px}
+.pack.bronze .wrapart{background-color:#c07b39}
+.pack.silver .wrapart{background-color:#8a8a95}
+.pack.gold   .wrapart{background-color:var(--depot-gold-deep,#b8891f)}
+.pack .pname{font-size:15px;color:var(--depot-gold,#f4c14b);font-weight:700;display:block}
+.pack .pdesc{font-size:11px;opacity:.85;line-height:1.6;min-height:40px;color:var(--depot-cream,#f5efe0)}
+.pack .odds{font-size:10.5px;color:#c9d2e0;line-height:1.7;border-top:1px dashed rgba(244,193,75,.35);
+  padding-top:6px;margin-top:2px}
+.pack .odds b{color:var(--depot-gold,#f4c14b)}
+.pack .coin{color:var(--depot-gold,#f4c14b);font-weight:700;margin-right:2px}
+.pack .buy{margin-top:auto;background:var(--depot-gold,#f4c14b);color:var(--depot-ink,#0a1330);
+  border:none;border-radius:6px;padding:10px;font-weight:800;cursor:pointer;font-family:inherit;
+  letter-spacing:.04em;font-size:13px}
+.pack .buy:hover{filter:brightness(1.08)}
+.pack .buy .price{font-variant-numeric:tabular-nums}
+/* can't-afford: still clickable (demonstrable refusal), shows the gap */
+.pack.cant-afford .buy{background:transparent;color:var(--depot-gold,#f4c14b);
+  border:2px dashed var(--depot-gold,#f4c14b);opacity:.9}
+.pack .gap{display:block;font-size:9.5px;font-weight:600;color:#e8a; margin-top:3px;letter-spacing:.02em}
+/* shop header balance line */
+.shop-head{display:flex;align-items:baseline;justify-content:space-between;flex-wrap:wrap;gap:8px}
+.shop-bal{font-size:13px;color:var(--depot-cream,#f5efe0)}
+.shop-bal .amt{color:var(--depot-gold,#f4c14b);font-weight:800;font-size:16px}
+/* status / fail-loud states */
+.shop-status{margin-top:14px;padding:12px 14px;border-radius:6px;font-size:12.5px;line-height:1.5;
+  display:none}
+.shop-status.show{display:block}
+.shop-status.err{background:rgba(200,60,60,.15);border:1px solid #c85a5a;color:#ffd7d7}
+.shop-status.ok{background:rgba(90,200,120,.12);border:1px solid #5ac878;color:#d7ffe1}
+.shop-status.warn{background:rgba(244,193,75,.12);border:1px solid var(--depot-gold,#f4c14b);color:#ffeec2}
+.mock-note{font-size:12px;opacity:.8;line-height:1.6}
