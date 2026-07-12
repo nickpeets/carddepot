@@ -260,14 +260,14 @@
   function estimateOdds(tier, catalog, prestige, samples) {
     var cfg = tierConfig(tier);
     if (!cfg) throw new Error(TAG + ' unknown tier: ' + tier);
-    if (!catalog || !catalog.length) throw new Error(TAG + ' empty catalog');
-    samples = samples || 250;
-    // FREE tier: band-first draw means odds ARE the configured rates -- report them directly, exact.
+    // FREE tier: band-first draw means odds ARE the configured rates -- report them directly, exact (no catalog needed).
     if (String(tier).toLowerCase() === 'free') {
       var fp = {};
       for (var fi = 0; fi < FREE_BAND_ODDS.length; fi++) { fp[FREE_BAND_ODDS[fi].band] = Math.round(FREE_BAND_ODDS[fi].p * 1000) / 10; }
-      return { tier: 'free', cards: cfg.cards, price: cfg.price, hitFloorBand: cfg.hitFloorBand, hitBandPct: fp, samples: samples, exact: true };
+      return { tier: 'free', cards: cfg.cards, price: cfg.price, hitFloorBand: cfg.hitFloorBand, hitBandPct: fp, samples: (samples || 250), exact: true };
     }
+    if (!catalog || !catalog.length) throw new Error(TAG + ' empty catalog');
+    samples = samples || 250;
     var counts = sampleHitBands(catalog, cfg, tier.toLowerCase(), prestige, samples, 1);
     var pct = {};
     for (var k in counts) { if (counts.hasOwnProperty(k)) pct[k] = Math.round((counts[k] / samples) * 1000) / 10; }
