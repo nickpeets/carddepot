@@ -79,7 +79,11 @@
   function makeUi(tier) {
     return {
       pending: function () { setStatus('warn', 'Opening ' + tier.toUpperCase() + ' pack\u2026'); },
-      insufficient: function (cost, bal) {
+      insufficient: function (cost, bal, rawMsg) {
+      if (rawMsg && /insufficient funds/i.test(rawMsg)) {
+        setStatus('err', '<b>' + rawMsg + '</b> No pack was purchased and no Depot Dollars were spent. Win season games to earn more.');
+        return;
+      }
         setStatus('err', '<b>Insufficient funds.</b> ' + tier.toUpperCase() + ' pack costs ' +
           fmt(cost) + ' but your balance is ' + fmt(bal) + '. No pack was purchased and no ' +
           'Depot Dollars were spent. Win season games to earn more.');
@@ -121,6 +125,116 @@
       '</div>';
   }
 
+  // ============ FREE DAILY pack: 4th tile, claim flow, reveal, cooldown ============
+  var FREE_WINDOW_MS = 24 * 60 * 60 * 1000;
+  var _freeNextClaimAt = null;   // Date (or null) of when the next free claim unlocks
+  var _cooldownTimer = null;
+
+  function freeTileHTML() {
+    var onCooldown = _freeNextClaimAt && (_freeNextClaimAt.getTime() > Date.now());
+    var btn = onCooldown
+      ? '<button class="claim-free" disabled>ON COOLDOWN</button>'
+      : '<button class="claim-free">CLAIM FREE CARD</button>';
+    return '' +
+      '<div class="pack free" data-tier="free">' +
+        '<div class="free-ribbon">FREE \u00b7 DAILY</div>' +
+        '<div class="wrapart">FREE<br>PULL</div>' +
+        '<span class="pname">FREE DAILY PACK</span>' +
+        '<div class="pdesc">One card on the house, every day. No Depot Dollars. No hit-slot guarantee \u2014 pure luck of the draw.</div>' +
+        '<div class="odds">Published odds: <b>~92%</b> bronze \u00b7 <b>~7%</b> silver \u00b7 <b>~1%</b> gold<br>1 card \u00b7 once every 24h</div>' +
+        btn +
+        '<div class="cooldown" aria-live="polite"></div>' +
+      '</div>';
+  }
+
+  function fmtCountdown(ms) {
+    if (ms < 0) ms = 0;
+    var s = Math.floor(ms / 1000);
+    var h = Math.floor(s / 3600); s -= h * 3600;
+    var m = Math.floor(s / 60); s -= m * 60;
+    function pad(n) { return (n < 10 ? '0' : '') + n; }
+    return pad(h) + ':' + pad(m) + ':' + pad(s);
+  }
+
+  function startCooldownTicker() {
+    if (_cooldownTimer) { clearInterval(_cooldownTimer); _cooldownTimer = null; }
+    var el = grid.querySelector('.pack.free .cooldown');
+    var btn = grid.querySelector('.pack.free button.claim-free');
+    if (!el) return;
+    function tick() {
+      if (!_freeNextClaimAt) { el.textContent = ''; return; }
+      var remain = _freeNextClaimAt.getTime() - Date.now();
+      if (remain <= 0) {
+        el.textContent = '';
+        if (btn) { btn.disabled = false; btn.textContent = 'CLAIM FREE CARD'; }
+        if (_cooldownTimer) { clearInterval(_cooldownTimer); _cooldownTimer = null; }
+        return;
+      }
+      if (btn) { btn.disabled = true; btn.textContent = 'ON COOLDOWN'; }
+      el.textContent = 'Next free card in ' + fmtCountdown(remain);
+    }
+    tick();
+    _cooldownTimer = setInterval(tick, 1000);
+  }
+
+  // Read-only boot probe: find the last free_pack claim so the countdown shows on load.
+  function probeFreeCooldown() {
+    try {
+      var sb = (typeof window.depotSB === 'function') ? window.depotSB() : null;
+      var uid = (window.DEPOT_USER && window.DEPOT_USER.id) || null;
+      if (!sb || !uid) return;
+      sb.from('wallet_transactions').select('created_at').eq('owner_id', uid)
+        .eq('reason', 'free_pack').order('created_at', { ascending: false }).limit(1)
+        .then(function (r) {
+          var rows = r && r.data ? r.data : [];
+          if (!rows.length) return;
+          var last = new Date(rows[0].created_at).getTime();
+          var next = last + FREE_WINDOW_MS;
+          if (next > Date.now()) { _freeNextClaimAt = new Date(next); startCooldownTicker(); }
+        }).catch(function () {});
+    } catch (e) {}
+  }
+
+  // Renders the pulled card as a real pixel front (never a black box) into a one-flip reveal.
+  function revealCard(card, band) {
+    var shaped = (Shop.cardToShape ? Shop.cardToShape(card, card.year) : card);
+    var pr = (window.DepotPrestige && window.DepotPrestige.compute) ? window.DepotPrestige.compute(shaped) : { band: band || 'bronze', total: 0 };
+    var src = '';
+    try { src = window.DepotPixelCard.renderDataURL(shaped, pr, { w: 250, h: 350 }); } catch (e) {}
+    var name = shaped.player || shaped.name || 'Unknown';
+    var meta = [shaped.year, shaped.brand, shaped.set].filter(Boolean).join(' \u00b7 ');
+    return '' +
+      '<div class="reveal-wrap">' +
+        '<div class="reveal-card flip band-' + (pr.band || band || 'bronze') + '">' +
+          '<div class="rc-back"></div>' +
+          '<div class="rc-front">' + (src ? '<img alt="" src="' + src + '">' : '') + '</div>' +
+        '</div>' +
+        '<div class="reveal-cap"><b>' + name + '</b><br>' + meta + '<br><span class="band-tag band-' + (pr.band || 'bronze') + '">' + (pr.band || 'bronze').toUpperCase() + '</span></div>' +
+      '</div>';
+  }
+
+  function makeFreeUi() {
+    return {
+      pending: function () { setStatus('warn', 'Opening your free daily pack\u2026'); },
+      claimed: function (card, band, nextClaimAt) {
+        if (nextClaimAt) { _freeNextClaimAt = new Date(nextClaimAt); }
+        setStatus('ok', '<b>Free card claimed!</b> It has been added to your collection. ' + revealCard(card, band));
+        // one-flip: add the flip trigger after paint
+        setTimeout(function () { var c = document.querySelector('.reveal-card.flip'); if (c) c.classList.add('flipped'); }, 60);
+        if (typeof refreshBalance === 'function') { /* balance unchanged (0 DD) but re-render resets the tile */ }
+        renderGrid();
+      },
+      cooldown: function (nextClaimAt) {
+        if (nextClaimAt) { _freeNextClaimAt = new Date(nextClaimAt); }
+        setStatus('warn', 'You already claimed your free card today. Come back after the countdown.');
+        renderGrid();
+      },
+      offline: function () { setStatus('warn', 'Free pack service is temporarily offline. Please try again shortly.'); renderGrid(); },
+      notSignedIn: function () { setStatus('err', 'Please sign in to claim your free daily card.'); renderGrid(); },
+      fail: function (msg) { setStatus('err', msg || 'Free claim failed.'); renderGrid(); }
+    };
+  }
+
   function renderGrid() {
     if (!Eng) { setStatus('err', 'Pack engine failed to load.'); return; }
     var html = '';
@@ -130,6 +244,7 @@
       catch (e) { console.warn(LOG + ' odds calc failed for ' + tier, e && e.message); }
       html += packCardHtml(tier, odds, _balance);
     });
+    html += freeTileHTML();
     grid.innerHTML = html;
     // wire buy buttons
     var btns = grid.querySelectorAll('button.buy');
@@ -143,6 +258,17 @@
         });
       })(btns[i]);
     }
+    // wire the FREE DAILY claim button + start its cooldown ticker
+    var claimBtn = grid.querySelector('button.claim-free');
+    if (claimBtn) {
+      claimBtn.addEventListener('click', function () {
+        clearStatus();
+        if (!_catalog || !_catalog.length) { setStatus('err', 'Card catalog not loaded yet.'); return; }
+        claimBtn.disabled = true;
+        Shop.claimFree(_catalog, makeFreeUi());
+      });
+    }
+    startCooldownTicker();
   }
 
   function refreshBalance() {
@@ -183,6 +309,7 @@
       console.log(LOG + ' catalog loaded: ' + _catalog.length + ' cards');
       refreshBalance();
       settleAuthAndRefresh(); // re-render balance + franchise once auth resolves (fix/shop-auth-settle)
+      probeFreeCooldown();  // seed the free-pack cooldown countdown from the ledger, if any
     }).catch(function (e) {
       console.error(LOG + ' boot failed', e && e.message || e);
       setStatus('err', 'Shop failed to load its catalog.');

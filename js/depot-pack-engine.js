@@ -23,7 +23,10 @@
   var TIERS = {
     bronze: { price: 150, cards: 5, eraWeight: { vintage: 0.6, junkwax: 3.0, modern: 1.0 }, starBias: 0.5, hitFloorBand: 'silver', hitStarBias: 1.0 },
     silver: { price: 400, cards: 5, eraWeight: { vintage: 1.2, junkwax: 1.0, modern: 1.0 }, starBias: 1.0, hitFloorBand: 'silver', hitStarBias: 1.6 },
-    gold:   { price: 900, cards: 5, eraWeight: { vintage: 2.0, junkwax: 0.7, modern: 1.0 }, starBias: 1.5, hitFloorBand: 'gold',   hitStarBias: 2.4 }
+    gold:   { price: 900, cards: 5, eraWeight: { vintage: 2.0, junkwax: 0.7, modern: 1.0 }, starBias: 1.5, hitFloorBand: 'gold',   hitStarBias: 2.4 },
+    // FREE DAILY: 1 card, commons-weighted, NO hit-slot guarantee. 0 DD. Odds live here in shipped config (section 7.1), not a DB table.
+    // Very low starBias keeps most pulls in the bronze band; published odds ~92% bronze / 7% silver / 1% gold.
+    free:   { price: 0,   cards: 1, eraWeight: { vintage: 0.5, junkwax: 3.0, modern: 1.0 }, starBias: 0.2, hitFloorBand: 'plain', hitStarBias: 1.0 }
   };
   var BAND_RANK = { plain: 0, bronze: 1, silver: 2, gold: 3 };
 
@@ -151,6 +154,28 @@
     };
   }
 
+  /* ---- FREE DAILY roll: exactly ONE card from the commons-weighted base pool.
+   * No hit slot, no band floor — whatever the weighted draw lands on is the pull.
+   * Same return shape as rollPack so the reveal + prestige path is identical. ---- */
+  function rollFree(opts) {
+    opts = opts || {};
+    var cfg = tierConfig('free');
+    if (!cfg) throw new Error(TAG + ' free tier missing from config');
+    var catalog = opts.catalog || [];
+    if (!catalog.length) throw new Error(TAG + ' empty catalog — cannot roll free');
+    var prestige = opts.prestige || (typeof window !== 'undefined' ? window.DepotPrestige : null);
+    var seed = (opts.seed >>> 0) || 1;
+    var rng = makeRng(seed);
+    var W = weightsFor(catalog, cfg, 'free', prestige);
+    var idx = weightedPick(W.baseW, {}, rng);
+    var card = catalog[idx];
+    var res = computeCached(card, prestige);
+    return {
+      tier: 'free', seed: seed, cards: [card], hitIndex: -1,
+      prestige: [res], floorMet: true
+    };
+  }
+
   /* Fast hit-band distribution via cumulative-sum + binary search over the hit
    * weights. O(samples * log n) instead of O(samples * n) full-pack simulation.
    * The 4 non-hit commons are excluded in a real pull, but on a ~72k catalog
@@ -202,7 +227,7 @@
 
   window.DepotPackEngine = {
     TIERS: TIERS, tierConfig: tierConfig, makeRng: makeRng, eraClass: eraClass,
-    cardWeight: cardWeight, rollPack: rollPack, estimateOdds: estimateOdds
+    cardWeight: cardWeight, rollPack: rollPack, rollFree: rollFree, estimateOdds: estimateOdds
   };
   try { console.log(TAG + ' ready (deterministic, seedable, memoized)'); } catch (e) {}
 })();
