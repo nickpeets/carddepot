@@ -113,70 +113,66 @@
     if (email){ email.textContent = ''; }
   }
 
-  // Resolve franchise name + W-L from depot-core. Fail-loud, anonymous fallback.
-  function refreshFranchise(){
-    if (typeof window.depotSB !== 'function'){
-      console.warn('[depot] shell: window.depotSB missing (depot-core not loaded); anonymous shell');
-      setAnonymous();
-      return Promise.resolve(null);
-    }
-    var sb = window.depotSB();
-    if (!sb){
-      console.warn('[depot] shell: depotSB() returned no client; anonymous shell');
-      setAnonymous();
-      return Promise.resolve(null);
-    }
-    var userP = (window.depotUserCached)
-      ? Promise.resolve(window.depotUserCached)
-      : (typeof window.depotUser === 'function' ? window.depotUser() : Promise.resolve(null));
-    return userP.then(function (user){
-      if (!user){
-        console.warn('[depot] shell: no signed-in user; anonymous shell');
-        setAnonymous();
-        return null;
-      }
-      var email = q('[data-depot-email]');
-      if (email && user.email){ email.textContent = user.email; }
-      return sb.from('franchises').select('id,team_name')
-        .eq('owner_id', user.id).order('created_at', { ascending: false }).limit(1)
-        .then(function (fr){
-          if (fr.error){ console.warn('[depot] shell: franchises query failed:', fr.error.message); setAnonymous(); return null; }
-          var row = (fr.data && fr.data[0]) ? fr.data[0] : null;
-          if (!row){ console.warn('[depot] shell: no franchise row for user; anonymous shell'); setAnonymous(); return null; }
-          // Hybrid record: ACTIVE season once it has games played; else the most-recent
-          // COMPLETED season, so a fresh 0-0 campaign doesn't erase the standing record.
-          return sb.from('seasons').select('wins,losses,status,created_at')
-              .eq('owner_id', user.id).eq('franchise_id', row.id)
-              .order('created_at', { ascending: true })
-              .then(function (se){
-                if (se.error){ console.warn('[depot] shell: seasons query failed:', se.error.message); }
-                var rows = (se.data && se.data.length) ? se.data : [];
-                for (var k = 0; k < rows.length; k++){ rows[k]._ord = k + 1; }
-                var active = null, m;
-                for (m = rows.length - 1; m >= 0; m--){ if (rows[m].status === 'active'){ active = rows[m]; break; } }
-                var lastComplete = null;
-                for (m = rows.length - 1; m >= 0; m--){ if (rows[m].status === 'complete'){ lastComplete = rows[m]; break; } }
-                var played = function (r){ return r ? (r.wins||0) + (r.losses||0) : 0; };
-                var srow = null, prefix = '';
-                if (active && played(active) > 0){ srow = active; }
-                else if (lastComplete){ srow = lastComplete; prefix = 'S' + lastComplete._ord + ' \u00b7 '; }
-                else if (active){ srow = active; }
-                if (!srow){ console.warn('[depot] shell: no season for franchise; record defaults 0-0'); }
-                setFranchise({
-                  name: row.team_name || 'MY CLUB',
-                  wins: srow ? srow.wins : 0,
-                  losses: srow ? srow.losses : 0,
-                  recordPrefix: prefix
+      // Resolve franchise name + hybrid record from depot-core (single source of truth).
+      // Returns Promise<{name,wins,losses,recordPrefix,email}|null>. NO DOM writes here
+      // so both the shop/binder shell AND the season-page identity block derive record
+      // the same way ("apply the rule in ONE place"). Fail-loud, anonymous -> null.
+      function resolveRecord(){
+        if (typeof window.depotSB !== 'function'){
+          console.warn('[depot] shell: window.depotSB missing (depot-core not loaded); anonymous shell');
+          return Promise.resolve(null);
+        }
+        var sb = window.depotSB();
+        if (!sb){
+          console.warn('[depot] shell: depotSB() returned no client; anonymous shell');
+          return Promise.resolve(null);
+        }
+        var userP = (window.depotUserCached)
+          ? Promise.resolve(window.depotUserCached)
+          : (typeof window.depotUser === 'function' ? window.depotUser() : Promise.resolve(null));
+        return userP.then(function (user){
+          if (!user){ return null; }
+          return sb.from('franchises').select('id,team_name').eq('owner_id', user.id).order('created_at', { ascending: false }).limit(1)
+            .then(function (fr){
+              if (fr.error){ console.warn('[depot] shell: franchises query failed:', fr.error.message); return null; }
+              var row = (fr.data && fr.data[0]) ? fr.data[0] : null;
+              if (!row){ console.warn('[depot] shell: no franchise row for user; anonymous shell'); return null; }
+              // Hybrid record: ACTIVE season once it has games played; else the most-recent
+              // COMPLETED season, so a fresh 0-0 campaign doesn't erase the standing record.
+              return sb.from('seasons').select('wins,losses,status,created_at').eq('owner_id', user.id).eq('franchise_id', row.id).order('created_at', { ascending: true })
+                .then(function (se){
+                  if (se.error){ console.warn('[depot] shell: seasons query failed:', se.error.message); }
+                  var rows = (se.data && se.data.length) ? se.data : [];
+                  for (var k = 0; k < rows.length; k++){ rows[k]._ord = k + 1; }
+                  var active = null, m;
+                  for (m = rows.length - 1; m >= 0; m--){ if (rows[m].status === 'active'){ active = rows[m]; break; } }
+                  var lastComplete = null;
+                  for (m = rows.length - 1; m >= 0; m--){ if (rows[m].status === 'complete'){ lastComplete = rows[m]; break; } }
+                  var played = function (r){ return r ? (r.wins||0) + (r.losses||0) : 0; };
+                  var srow = null, prefix = '';
+                  if (active && played(active) > 0){ srow = active; }
+                  else if (lastComplete){ srow = lastComplete; prefix = 'S' + lastComplete._ord + ' \u00b7 '; }
+                  else if (active){ srow = active; }
+                  if (!srow){ console.warn('[depot] shell: no season for franchise; record defaults 0-0'); }
+                  return { name: row.team_name || 'MY CLUB', wins: srow ? srow.wins : 0, losses: srow ? srow.losses : 0, recordPrefix: prefix, email: user.email || '' };
                 });
-                return { name: row.team_name, wins: srow ? srow.wins : 0, losses: srow ? srow.losses : 0, recordPrefix: prefix };
             });
         });
-    }).catch(function (e){
-      console.warn('[depot] shell: refreshFranchise threw:', e);
-      setAnonymous();
-      return null;
-    });
-  }
+      }
+      // Shop/binder header: derive via resolveRecord, then paint the shared shell chrome.
+      function refreshFranchise(){
+        return resolveRecord().then(function (rec){
+          if (!rec){ setAnonymous(); return null; }
+          var email = q('[data-depot-email]');
+          if (email && rec.email){ email.textContent = rec.email; }
+          setFranchise({ name: rec.name || 'MY CLUB', wins: rec.wins, losses: rec.losses, recordPrefix: rec.recordPrefix });
+          return rec;
+        }).catch(function (e){
+          console.warn('[depot] shell: refreshFranchise threw:', e);
+          setAnonymous();
+          return null;
+        });
+      }
 
   // Session 6 — active-tile carry: paint the clicked mode tab active BEFORE the browser
 // navigates, so the destination page opens with that tile already lit (no flash of the
@@ -216,6 +212,7 @@ function mount(opts){
     setAnonymous: setAnonymous,
     setActive: setActive,
     refreshFranchise: refreshFranchise,
+    resolveRecord: resolveRecord,
     stageEl: function(){ return q('[data-depot-stage]'); }
   };
 
