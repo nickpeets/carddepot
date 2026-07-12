@@ -153,6 +153,26 @@
     }).catch(function () { balEl.textContent = fmt(null); renderGrid(); });
   }
 
+  // Auth settles asynchronously (depot-core resolves depotUser() after load). The first
+  // balance/franchise render can run before auth is ready -> stale "— DD" and 0-0 record.
+  // Settle auth, re-render both, then subscribe so a late sign-in also updates. (fix/shop-auth-settle)
+  function settleAuthAndRefresh() {
+    function rerender() {
+      try { refreshBalance(); } catch (e) { console.warn(LOG + ' settleAuth: refreshBalance threw', e); }
+      try { if (window.DepotShell && window.DepotShell.refreshFranchise) window.DepotShell.refreshFranchise(); }
+      catch (e) { console.warn(LOG + ' settleAuth: refreshFranchise threw', e); }
+    }
+    var settle = (typeof window.depotUser === 'function') ? window.depotUser() : Promise.resolve(null);
+    Promise.resolve(settle).then(function () { rerender(); }).catch(function () { rerender(); });
+    // Re-render on any future auth state change (sign-in/out/token refresh).
+    try {
+      var _sb = (typeof window.depotSB === 'function') ? window.depotSB() : null;
+      if (_sb && _sb.auth && typeof _sb.auth.onAuthStateChange === 'function') {
+        _sb.auth.onAuthStateChange(function () { rerender(); });
+      }
+    } catch (e) { console.warn(LOG + ' settleAuth: subscribe failed', e); }
+  }
+
   function boot() {
     if (!Shop || !Eng) { console.error(LOG + ' shop/engine missing'); return; }
     balEl.textContent = 'loading\u2026';
@@ -162,6 +182,7 @@
       _catalog = r[0] || [];
       console.log(LOG + ' catalog loaded: ' + _catalog.length + ' cards');
       refreshBalance();
+      settleAuthAndRefresh(); // re-render balance + franchise once auth resolves (fix/shop-auth-settle)
     }).catch(function (e) {
       console.error(LOG + ' boot failed', e && e.message || e);
       setStatus('err', 'Shop failed to load its catalog.');
