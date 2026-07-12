@@ -99,7 +99,8 @@
     var l = (info.losses == null) ? 0 : info.losses;
     box.classList.remove('is-anon');
     box.querySelector('.name').textContent = String(info.name).toUpperCase();
-    box.querySelector('.record').textContent = w + '-' + l;
+    var _pfx = info.recordPrefix ? String(info.recordPrefix) : '';
+    box.querySelector('.record').textContent = _pfx + w + '-' + l;
   }
 
   function setAnonymous(){
@@ -142,19 +143,32 @@
           if (fr.error){ console.warn('[depot] shell: franchises query failed:', fr.error.message); setAnonymous(); return null; }
           var row = (fr.data && fr.data[0]) ? fr.data[0] : null;
           if (!row){ console.warn('[depot] shell: no franchise row for user; anonymous shell'); setAnonymous(); return null; }
-          return sb.from('seasons').select('wins,losses,status')
-            .eq('owner_id', user.id).eq('franchise_id', row.id).eq('status', 'active')
-            .order('created_at', { ascending: false }).limit(1)
-            .then(function (se){
-              if (se.error){ console.warn('[depot] shell: seasons query failed:', se.error.message); }
-              var srow = (se.data && se.data[0]) ? se.data[0] : null;
-              if (!srow){ console.warn('[depot] shell: no active season for franchise; record defaults 0-0'); }
-              setFranchise({
-                name: row.team_name || 'MY CLUB',
-                wins: srow ? srow.wins : 0,
-                losses: srow ? srow.losses : 0
-              });
-              return { name: row.team_name, wins: srow ? srow.wins : 0, losses: srow ? srow.losses : 0 };
+          // Hybrid record: ACTIVE season once it has games played; else the most-recent
+          // COMPLETED season, so a fresh 0-0 campaign doesn't erase the standing record.
+          return sb.from('seasons').select('wins,losses,status,created_at')
+              .eq('owner_id', user.id).eq('franchise_id', row.id)
+              .order('created_at', { ascending: true })
+              .then(function (se){
+                if (se.error){ console.warn('[depot] shell: seasons query failed:', se.error.message); }
+                var rows = (se.data && se.data.length) ? se.data : [];
+                for (var k = 0; k < rows.length; k++){ rows[k]._ord = k + 1; }
+                var active = null, m;
+                for (m = rows.length - 1; m >= 0; m--){ if (rows[m].status === 'active'){ active = rows[m]; break; } }
+                var lastComplete = null;
+                for (m = rows.length - 1; m >= 0; m--){ if (rows[m].status === 'complete'){ lastComplete = rows[m]; break; } }
+                var played = function (r){ return r ? (r.wins||0) + (r.losses||0) : 0; };
+                var srow = null, prefix = '';
+                if (active && played(active) > 0){ srow = active; }
+                else if (lastComplete){ srow = lastComplete; prefix = 'S' + lastComplete._ord + ' \u00b7 '; }
+                else if (active){ srow = active; }
+                if (!srow){ console.warn('[depot] shell: no season for franchise; record defaults 0-0'); }
+                setFranchise({
+                  name: row.team_name || 'MY CLUB',
+                  wins: srow ? srow.wins : 0,
+                  losses: srow ? srow.losses : 0,
+                  recordPrefix: prefix
+                });
+                return { name: row.team_name, wins: srow ? srow.wins : 0, losses: srow ? srow.losses : 0, recordPrefix: prefix };
             });
         });
     }).catch(function (e){
