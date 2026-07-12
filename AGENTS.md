@@ -57,6 +57,17 @@ Read this first, every session. It encodes hard-won rules from real incidents in
 
 ---
 
+### Data-path rule (anchor fetches to the script URL, never page-relative)
+
+Any module that fetches repo data (`data/*.json`, tier tables, catalogs) MUST anchor its
+paths to its OWN script URL via the `_dataURL` pattern (`new URL('../data/' + f,
+document.currentScript.src)`), NEVER page-relative. Page-relative paths break the moment a
+second page at a different depth mounts the module. This has now bitten TWICE: depth-down
+(PR #108, prestige tables 404ing from `game/`) and depth-up (the shop catalog 404ing from
+the root binder tab). Two instances of the same class is a convention.
+
+---
+
 ## 4. Fail-loud rule (no silent guards)
 
 Silent `if (!x) return;` guards are banned in the season/game/builder paths. They are how the phantom-reference bugs hid for so long — a missing client or user just bailed with no trace.
