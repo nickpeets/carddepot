@@ -120,8 +120,8 @@ function loadCatalog() {
             console.warn(TAG + ' RPC refused: ' + msg + ' (receipt cleared, no ledger row)');
             // Re-read the live balance so the refusal shows the real number, not a stale pre-auth read. (fix/shop-auth-settle)
             Promise.resolve(getBalance()).then(function (freshBal) {
-              ui.insufficient(cfg.price, (freshBal != null ? freshBal : balance));
-            }).catch(function () { ui.insufficient(cfg.price, balance); });
+              ui.insufficient(cfg.price, (freshBal != null ? freshBal : balance), msg);
+            }).catch(function () { ui.insufficient(cfg.price, balance, msg); });
           } else if (/not authenticated/i.test(msg)) {
             ui.fail('Please sign in to buy packs.');
           } else if (/does not exist|schema cache|not find|function/i.test(msg)) {
@@ -152,6 +152,61 @@ function loadCatalog() {
       });
   }
 
+  // ---- the FREE DAILY claim flow ----
+  // Client rolls ONE card from the engine free pool, then hands it to the server RPC.
+  // The RPC is the cooldown clock + the atomic grant (owner-scoped card insert, source:pack)
+  // + the 0-amount free_pack ledger row. Server never trusts the roll for money (there is none).
+  function claimFree(catalog, ui) {
+    var Eng = window.DepotPackEngine;
+    if (!Eng || !Eng.rollFree) { ui.fail("Free pack engine unavailable."); return; }
+    // 1) ROLL one card from the free pool.
+    var seed = (Date.now() ^ Math.floor(Math.random() * 0x7fffffff)) >>> 0;
+    var pack;
+    try {
+      pack = Eng.rollFree({ catalog: catalog, seed: seed, prestige: window.DepotPrestige });
+    } catch (e) { ui.fail("Could not roll free card: " + (e && e.message || e)); return; }
+    var card = pack.cards[0];
+    // Band is the card\'s own prestige tier (fixed 10/30/60 bands) — used for the ledger label + reveal styling.
+    var pr = (window.DepotPrestige && window.DepotPrestige.compute) ? window.DepotPrestige.compute(card) : null;
+    var band = (pr && pr.band) || "bronze";
+    // 2) Build the jsonb payload the RPC expects (identity only; never money).
+    var p_card = {
+      year: (card.year != null ? String(card.year) : ""),
+      brand: card.brand || "", set: card.set || "", number: (card.number != null ? String(card.number) : ""),
+      player: card.player || card.name || "", team: card.team || "",
+      rookie_year: (card.rookie_year != null ? String(card.rookie_year) : ""),
+      tier: band
+    };
+    var client = sb();
+    if (!client || !client.rpc) {
+      console.warn(TAG + " no supabase client / rpc (DDL likely not run) — free claim offline");
+      ui.offline(); return;
+    }
+    ui.pending();
+    client.rpc("depot_claim_free_pack", { p_card: p_card }).then(function (res) {
+      if (res && res.error) {
+        var msg = (res.error.message || "") + "";
+        if (/not authenticated/i.test(msg)) { ui.notSignedIn(); }
+        else if (/does not exist|schema cache|not find/i.test(msg)) { console.warn(TAG + " free RPC absent: " + msg); ui.offline(); }
+        else { console.warn(TAG + " free RPC error: " + msg); ui.fail(msg); }
+        return;
+      }
+      var data = res && res.data ? res.data : {};
+      if (data.ok === false) {
+        // On cooldown: server refused WITHOUT inserting. Show the countdown to next_claim_at.
+        console.log(TAG + " free claim on cooldown until " + data.next_claim_at);
+        ui.cooldown(data.next_claim_at);
+        return;
+      }
+      // Success: the card is granted server-side. Reveal it.
+      console.log(TAG + " free claim OK card_id=" + data.card_id + " tier=" + data.tier);
+      ui.claimed(card, band, data.next_claim_at, data.card_id);
+    }).catch(function (e) {
+      console.error(TAG + " free RPC threw:", e && e.message || e);
+      ui.fail("Free claim could not be confirmed. Please try again.");
+    });
+  }
+
   window.DepotShop = {
     RECEIPT_KEY: RECEIPT_KEY,
     TIER_ORDER: TIER_ORDER,
@@ -159,6 +214,9 @@ function loadCatalog() {
     loadCatalog: loadCatalog,
     getBalance: getBalance,
     buy: buy,
+    claimFree: claimFree,
+    cardToShape: catalogCardToPrestigeShape,
+    cardId: cardId,
     saveReceipt: saveReceipt,
     clearReceipt: clearReceipt
   };

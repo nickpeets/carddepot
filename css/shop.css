@@ -36,3 +36,31 @@
 .shop-status.ok{background:rgba(90,200,120,.12);border:1px solid #5ac878;color:#d7ffe1}
 .shop-status.warn{background:rgba(244,193,75,.12);border:1px solid var(--depot-gold,#f4c14b);color:#ffeec2}
 .mock-note{font-size:12px;opacity:.8;line-height:1.6}
+
+/* ===== FREE DAILY pack: distinct 4th tile (spans full width), claim + reveal ===== */
+.pack.free{grid-column:1 / -1;position:relative;border-color:#39c07b;background:linear-gradient(160deg,#0f2a24,#0f1c3f 70%);text-align:center}
+.pack.free .wrapart{background-color:#1f7a54;color:#eafff4}
+.pack.free .pname{color:#7cf0b4}
+.pack.free .odds{border-top-color:rgba(57,192,123,.4);color:#bfeed6}
+.free-ribbon{position:absolute;top:10px;right:-34px;transform:rotate(45deg);background:#39c07b;color:#062014;font-weight:800;font-size:11px;letter-spacing:.08em;padding:3px 40px;box-shadow:0 1px 4px rgba(0,0,0,.4)}
+.claim-free{margin-top:8px;background:#39c07b;color:#062014;border:0;border-radius:6px;font-weight:800;font-size:14px;letter-spacing:.04em;padding:9px 18px;cursor:pointer}
+.claim-free:hover:not(:disabled){filter:brightness(1.08)}
+.claim-free:disabled{background:#2a4a3d;color:#8fb8a4;cursor:not-allowed}
+.pack.free .cooldown{margin-top:6px;font-size:12px;color:#7cf0b4;font-variant-numeric:tabular-nums;min-height:16px}
+
+.reveal-wrap{display:inline-block;margin-top:10px;text-align:center}
+.reveal-card{width:150px;height:210px;margin:0 auto;position:relative;perspective:700px}
+.reveal-card .rc-back,.reveal-card .rc-front{position:absolute;inset:0;border-radius:8px;backface-visibility:hidden;transition:transform .6s cubic-bezier(.2,.7,.2,1);overflow:hidden}
+.reveal-card .rc-back{background:repeating-linear-gradient(45deg,#0f1c3f,#0f1c3f 8px,#16264f 8px,#16264f 16px);border:2px solid #f4c14b;transform:rotateY(0deg)}
+.reveal-card .rc-front{transform:rotateY(180deg);background:#0f1c3f;border:2px solid #f4c14b}
+.reveal-card .rc-front img{width:100%;height:100%;display:block;image-rendering:pixelated}
+.reveal-card.flipped .rc-back{transform:rotateY(-180deg)}
+.reveal-card.flipped .rc-front{transform:rotateY(0deg)}
+.reveal-card.band-gold .rc-front,.reveal-card.band-gold .rc-back{border-color:#f4c14b;box-shadow:0 0 12px rgba(244,193,75,.6)}
+.reveal-card.band-silver .rc-front,.reveal-card.band-silver .rc-back{border-color:#c8ccd6}
+.reveal-card.band-bronze .rc-front,.reveal-card.band-bronze .rc-back{border-color:#c07b39}
+.reveal-cap{margin-top:8px;font-size:12px;color:#eafff4;line-height:1.5}
+.band-tag{display:inline-block;margin-top:4px;padding:1px 8px;border-radius:4px;font-weight:800;font-size:10px;letter-spacing:.06em}
+.band-tag.band-gold{background:#f4c14b;color:#3a2a00}
+.band-tag.band-silver{background:#c8ccd6;color:#22252b}
+.band-tag.band-bronze{background:#c07b39;color:#241203}
