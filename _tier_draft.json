@@ -1,0 +1,32 @@
+{
+  "HOF": [
+    "albert pujols", "miguel cabrera", "ichiro suzuki", "adrian beltre", "david ortiz",
+    "derek jeter", "mariano rivera", "alex rodriguez", "manny ramirez", "carlos beltran",
+    "justin verlander", "max scherzer", "clayton kershaw", "zack greinke", "robinson cano",
+    "joey votto", "buster posey", "yadier molina", "dustin pedroia", "felix hernandez"
+  ],
+  "SUPERSTAR": [
+    "mike trout", "mookie betts", "aaron judge", "shohei ohtani", "bryce harper",
+    "freddie freeman", "jose altuve", "nolan arenado", "manny machado", "paul goldschmidt",
+    "francisco lindor", "juan soto", "ronald acuna jr", "fernando tatis jr", "jacob degrom",
+    "gerrit cole", "corey seager", "jose ramirez", "trea turner", "vladimir guerrero jr",
+    "giancarlo stanton", "chris sale", "corbin burnes", "marcus semien", "xander bogaerts"
+  ],
+  "STAR": [
+    "anthony rizzo", "kris bryant", "joey gallo", "nolan gorman", "bo bichette",
+    "rafael devers", "pete alonso", "matt olson", "austin riley", "ozzie albies",
+    "cody bellinger", "christian yelich", "j.d. martinez", "jd martinez", "george springer",
+    "carlos correa", "dansby swanson", "salvador perez", "j.t. realmuto", "jt realmuto",
+    "tim anderson", "whit merrifield", "jose abreu", "kyle tucker", "yordan alvarez",
+    "julio rodriguez", "adley rutschman", "bobby witt jr", "gunnar henderson", "spencer strider",
+    "shane bieber", "sandy alcantara", "dylan cease", "logan webb", "framber valdez",
+    "jose berrios", "aaron nola", "walker buehler", "blake snell", "kevin gausman",
+    "starling marte", "nick castellanos", "eugenio suarez", "willy adames", "ketel marte",
+    "cedric mullins", "byron buxton", "andrew mccutchen", "charlie blackmon", "dj lemahieu"
+  ],
+  "BORDERLINE_Q": [
+    "jesse winker?", "joc pederson?", "max muncy?", "jorge soler?", "teoscar hernandez?",
+    "lourdes gurriel jr?", "jonathan india?", "jazz chisholm jr?", "cavan biggio?", "alec bohm?",
+    "jeremy pena?", "steven kwan?", "masataka yoshida?", "ha-seong kim?", "seiya suzuki?"
+  ]
+}
