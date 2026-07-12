@@ -249,6 +249,7 @@ the **session report** for Nick to run in the Supabase SQL editor. Slice A code 
 > > > > **League-mode hardening (deferred, noted):** move the pack **roll** server-side (RPC
 > > > > returns the rolled catalog keys) so contents can't be client-tampered. v1 keeps the roll
 > > > > client-side and only hardens the debit; this is the documented hardening item.
+> > > > The same applies to `depot_claim_free_pack`: it trusts the client-supplied card payload, so a crafted call could grant any card. Acceptable single-player (Nick forging cards into his own binder only cheats himself), but it MUST move to a server-side roll before league mode — the same hardening item as the paid-pack roll — because injected high-prestige cards would inflate payouts against other players.
 > > > > **Modern gold is deferred to the collection (Part 3 obligation):** catalog prestige is
 > > > > pre-rookie. Catalog rows have no `rookie_year`, so catalog scoring can't see ROOKIE/
 > > > > TRANSCENDENCE and a modern star scores "silver" in a pack. But a PULLED card lands in the
