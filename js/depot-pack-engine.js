@@ -30,6 +30,49 @@
   };
   var BAND_RANK = { plain: 0, bronze: 1, silver: 2, gold: 3 };
 
+  /* FREE DAILY published band odds (ECONOMY_DESIGN section 7.1). Band-first draw:
+     roll a band at these exact rates, THEN draw a card from that band's pool, so
+     the odds are exact by construction and trivially publishable. Longshot is REAL. */
+  var FREE_BAND_ODDS = [
+    { band: 'gold',   p: 0.005 },
+    { band: 'silver', p: 0.015 },
+    { band: 'bronze', p: 0.08 },
+    { band: 'plain',  p: 0.90 }
+  ];
+  function pickFreeBand(rng) {
+    var r = rng(), acc = 0;
+    for (var i = 0; i < FREE_BAND_ODDS.length; i++) { acc += FREE_BAND_ODDS[i].p; if (r < acc) return FREE_BAND_ODDS[i].band; }
+    return 'plain';
+  }
+  // Group catalog indices by band (memoized on the cached weights object W).
+  function bandIndexOf(W) {
+    if (W._bandIndex) return W._bandIndex;
+    var bi = { plain: [], bronze: [], silver: [], gold: [] };
+    var b = W.bands || [];
+    for (var i = 0; i < b.length; i++) { var k = b[i] || 'plain'; if (bi[k]) bi[k].push(i); }
+    W._bandIndex = bi; return bi;
+  }
+  // Draw ONE catalog index using the band-first scheme; steps DOWN to a populated band if the rolled one is empty.
+  function drawFreeIndex(W, rng) {
+    var bi = bandIndexOf(W);
+    var order = ['gold', 'silver', 'bronze', 'plain'];
+    var band = pickFreeBand(rng);
+    var start = order.indexOf(band);
+    for (var j = start; j < order.length; j++) {
+      var pool = bi[order[j]];
+      if (pool && pool.length) {
+        // weighted pick within the band's pool, using the same base weights
+        var sum = 0, k;
+        for (k = 0; k < pool.length; k++) sum += W.baseW[pool[k]];
+        var t = rng() * sum;
+        for (k = 0; k < pool.length; k++) { t -= W.baseW[pool[k]]; if (t <= 0) return pool[k]; }
+        return pool[pool.length - 1];
+      }
+    }
+    // no populated band at or below (impossible for a non-empty catalog) -> first card
+    return 0;
+  }
+
   function tierConfig(name) { return TIERS[(name || '').toLowerCase()] || null; }
 
   /* ---- deterministic PRNG: mulberry32 (seedable, verifiable) ---- */
@@ -167,7 +210,7 @@
     var seed = (opts.seed >>> 0) || 1;
     var rng = makeRng(seed);
     var W = weightsFor(catalog, cfg, 'free', prestige);
-    var idx = weightedPick(W.baseW, {}, rng);
+    var idx = drawFreeIndex(W, rng);
     var card = catalog[idx];
     var res = computeCached(card, prestige);
     return {
@@ -219,6 +262,12 @@
     if (!cfg) throw new Error(TAG + ' unknown tier: ' + tier);
     if (!catalog || !catalog.length) throw new Error(TAG + ' empty catalog');
     samples = samples || 250;
+    // FREE tier: band-first draw means odds ARE the configured rates -- report them directly, exact.
+    if (String(tier).toLowerCase() === 'free') {
+      var fp = {};
+      for (var fi = 0; fi < FREE_BAND_ODDS.length; fi++) { fp[FREE_BAND_ODDS[fi].band] = Math.round(FREE_BAND_ODDS[fi].p * 1000) / 10; }
+      return { tier: 'free', cards: cfg.cards, price: cfg.price, hitFloorBand: cfg.hitFloorBand, hitBandPct: fp, samples: samples, exact: true };
+    }
     var counts = sampleHitBands(catalog, cfg, tier.toLowerCase(), prestige, samples, 1);
     var pct = {};
     for (var k in counts) { if (counts.hasOwnProperty(k)) pct[k] = Math.round((counts[k] / samples) * 1000) / 10; }
