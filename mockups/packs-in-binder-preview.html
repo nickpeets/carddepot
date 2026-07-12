@@ -1,0 +1,128 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Preview - Pack Shop inside the Binder</title>
+<style>
+  /* Static PREVIEW only (no logic). Colors/fonts lifted from the live binder:
+     card 225x315 (5:7), --brass #f8d000, --leather-dark #1d4a1d, --sb-blue #0d2d5c,
+     --sb-blue-lite #15407f, --cream #e8e4d0, body navy #1a1a2e, Press Start 2P. */
+  :root{ --brass:#f8d000; --green:#1d4a1d; --green-lite:#2e7d32; --blue:#0d2d5c;
+         --blue-lite:#15407f; --cream:#e8e4d0; --navy:#1a1a2e; }
+  *{ box-sizing:border-box; }
+  body{ margin:0; background:var(--navy); color:#fff;
+        font-family:'Press Start 2P','Courier New',monospace; font-size:11px; line-height:1.6; }
+  .wrap{ max-width:1040px; margin:0 auto; padding:0 16px 60px; }
+  .rail{ height:14px; background:repeating-linear-gradient(90deg,#b33 0 22px,#fff 22px 44px); border-bottom:3px solid #000; }
+  /* header */
+  .hdr{ background:var(--blue); border:3px solid #000; margin-top:18px; padding:16px 20px;
+        display:flex; align-items:center; justify-content:space-between; }
+  .brand{ font-size:20px; color:#fff; } .brand b{ color:var(--brass); }
+  .club{ background:var(--blue-lite); border:3px solid #000; padding:8px 12px; text-align:center; font-size:9px; }
+  .club .rec{ color:var(--brass); } .club .dd{ background:#000; color:var(--brass); padding:2px 6px; margin-top:4px; display:inline-block; }
+  .who{ font-size:9px; color:#cfe6f5; } .who .lo{ background:var(--brass); color:#000; border:3px solid #000; padding:6px 10px; margin-left:12px; }
+  /* nav */
+  .nav{ display:flex; gap:10px; margin:22px 0 14px; }
+  .nav button{ font-family:inherit; font-size:10px; background:var(--blue-lite); color:#fff; border:3px solid #000; padding:10px 16px; cursor:pointer; }
+  .nav button.on{ background:var(--brass); color:#000; }
+  .subnav{ display:flex; align-items:center; justify-content:space-between; margin-bottom:14px; }
+  .subnav .l{ display:flex; gap:8px; } .subnav .r button, .subnav .l button{ font-family:inherit; font-size:9px; background:var(--blue-lite); color:#fff; border:3px solid #000; padding:8px 12px; cursor:pointer; }
+  .subnav .l button.on{ background:var(--brass); color:#000; }
+  /* era filter tabs -- SHOP added as a tab (recommended placement) */
+  .eras{ display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin:8px 0 18px; }
+  .era{ background:var(--blue-lite); border:3px solid #000; padding:10px 14px; text-align:center; font-size:9px; min-width:150px; cursor:pointer; }
+  .era small{ display:block; color:#9fb8d8; font-size:8px; margin-top:5px; }
+  .era.on{ background:var(--brass); color:#000; } .era.on small{ color:#5a4b00; }
+  .era.shop.on{ background:var(--green-lite); color:#fff; border-color:#000; } .era.shop.on small{ color:#d6ffd6; }
+  /* section head */
+  .sec{ text-align:center; margin:6px 0 4px; }
+  .sec h2{ color:var(--brass); font-size:15px; margin:6px 0; }
+  .sec p{ color:#cfe6f5; font-size:9px; margin:0; }
+  /* binder page + grid */
+  .page{ background:var(--green); border:5px solid var(--green-lite); margin-top:14px; padding:20px; }
+  .grid{ display:grid; grid-template-columns:repeat(3,225px); gap:16px; justify-content:center; }
+  /* PACK TILE at card dimensions (225x315) */
+  .pk{ width:225px; height:315px; border:4px solid #000; display:flex; flex-direction:column;
+       background:var(--cream); position:relative; overflow:hidden; }
+  .pk .back{ flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; padding:14px; text-align:center; }
+  .pk .tier{ font-size:16px; letter-spacing:1px; text-shadow:2px 2px 0 rgba(0,0,0,.45); }
+  .pk .sub{ font-size:8px; line-height:1.7; opacity:.95; }
+  .pk .odds{ font-size:7.5px; line-height:1.7; background:rgba(0,0,0,.28); padding:8px; border:2px solid rgba(0,0,0,.4); }
+  .pk .odds b{ color:#fff; }
+  .pk.bronze .back{ background:linear-gradient(160deg,#c47a3d,#8a5424); color:#fff; }
+  .pk.silver .back{ background:linear-gradient(160deg,#9aa0a6,#6b7178); color:#fff; }
+  .pk.gold   .back{ background:linear-gradient(160deg,#e8c200,#b08f00); color:#3a2f00; }
+  .pk.free   .back{ background:linear-gradient(160deg,#2e7d32,#1b5e20); color:#fff; }
+  .pk .ribbon{ position:absolute; top:12px; right:-30px; transform:rotate(45deg); background:var(--brass); color:#000; font-size:7px; padding:3px 34px; border:2px solid #000; }
+  /* FOOTER in the Add-to-Order style: full-width button stacked below the card back */
+  .pk .foot{ border-top:4px solid #000; }
+  .pk .foot button{ width:100%; font-family:inherit; font-size:10px; border:0; border-top:0; padding:12px 0; cursor:pointer; background:var(--brass); color:#000; }
+  .pk .foot .price{ display:block; font-size:8px; color:#3a2f00; margin-bottom:3px; }
+  .pk.free .foot button{ background:var(--green-lite); color:#fff; }
+  .note{ margin-top:28px; padding:16px; border:3px dashed var(--green-lite); font-size:9px; line-height:2; color:#cfe6f5; }
+  .note b{ color:var(--brass); }
+</style>
+</head>
+<body>
+<div class="rail"></div>
+<div class="wrap">
+  <div class="hdr">
+    <div class="brand">THE <b>DEPOT</b></div>
+    <div class="club">MY CLUB<br><span class="rec">S1 &middot; 8-0</span><br><span class="dd">125 DD</span></div>
+    <div class="who">nickpeets@gmail.com <span class="lo">Log out</span></div>
+  </div>
+
+  <div class="nav">
+    <button class="on">THE BINDER</button><button>LINEUP</button><button>SEASON</button><button>PLAY BALL</button>
+  </div>
+
+  <div class="subnav">
+    <div class="l"><button class="on">THE BINDER</button><button>BY SET</button></div>
+    <div class="r"><button>+ ADD A CARD</button></div>
+  </div>
+
+  <div class="eras">
+    <div class="era">All<small>every era &middot; 18 cards</small></div>
+    <div class="era">The Vintage Years<small>&ndash;1985 &middot; 7 cards</small></div>
+    <div class="era">The Junk Wax Era<small>1986&ndash;1993 &middot; 7 cards</small></div>
+    <div class="era">The Modern Game<small>1994 onward &middot; 4 cards</small></div>
+    <div class="era shop on">THE PACK SHOP<small>rip a pack &middot; 4 tiers</small></div>
+  </div>
+
+  <div class="sec"><h2>&#9670; THE PACK SHOP</h2><p>Where the money goes &mdash; card PACKS only. Never stat boosts. Published odds, no hidden rates.</p></div>
+
+  <div class="page">
+    <div class="grid">
+      <div class="pk bronze">
+        <div class="back"><div class="tier">BRONZE</div><div class="sub">5 cards &middot; mostly commons<br>small shot at a silver</div>
+          <div class="odds">Hit odds<br><b>4.8%</b> gold &middot; <b>95.2%</b> silver</div></div>
+        <div class="foot"><button><span class="price">DD 150</span>BUY PACK</button></div>
+      </div>
+      <div class="pk silver">
+        <div class="back"><div class="tier">SILVER</div><div class="sub">5 cards &middot; guaranteed 1 silver+<br>better vintage odds</div>
+          <div class="odds">Hit odds<br><b>11.6%</b> gold &middot; <b>88.4%</b> silver</div></div>
+        <div class="foot"><button><span class="price">DD 400</span>BUY PACK</button></div>
+      </div>
+      <div class="pk gold">
+        <div class="back"><div class="tier">GOLD</div><div class="sub">5 cards &middot; guaranteed rare<br>real shot at a gold rookie</div>
+          <div class="odds">Hit odds<br><b>97.2%</b> gold &middot; <b>2.8%</b> silver</div></div>
+        <div class="foot"><button><span class="price">DD 900</span>BUY PACK</button></div>
+      </div>
+      <div class="pk free">
+        <div class="ribbon">FREE &middot; DAILY</div>
+        <div class="back"><div class="tier">FREE PULL</div><div class="sub">One card on the house, every day<br>pure luck of the draw</div>
+          <div class="odds"><b>~90%</b> plain &middot; <b>~8%</b> bronze<br><b>~1.5%</b> silver &middot; <b>~0.5%</b> gold</div></div>
+        <div class="foot"><button><span class="price">1 card &middot; once / 24h</span>CLAIM FREE CARD</button></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="note">
+    <b>PREVIEW NOTE.</b> This is a static mockup for eyeballing only &mdash; no live logic.<br>
+    Placement shown: a <b>&ldquo;THE PACK SHOP&rdquo; era-style filter tab</b> (the green tab, right of the era filters). Clicking it swaps the grid to pack tiles; the four era tabs still show the collection.<br>
+    Pack tiles use the <b>binder card footprint (225&times;315, 5:7)</b>; tier color is the card back; price/odds sit on the tile; the CLAIM/BUY button is the full-width footer in the &ldquo;Add to Order&rdquo; style.
+  </div>
+</div>
+</body>
+</html>

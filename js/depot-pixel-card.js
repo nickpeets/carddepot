@@ -20,12 +20,12 @@
 
   // Depot palette (navy / gold house style).
   var PAL = {
-    navy:   '#0f1c3f',
-    navy2:  '#1b2f5e',
-    gold:   '#f4c14b',
-    goldDk: '#b8891f',
-    cream:  '#f5efe0',
-    ink:    '#0a1330',
+    navy:   '#0d2d5c',
+    navy2:  '#15407f',
+    gold:   '#f8d000',
+    goldDk: '#c9a800',
+    cream:  '#e8e4d0',
+    ink:    '#16110a',
     silver: '#c9d2e0',
     bronze: '#c8853b',
     plain:  '#5a6784'
