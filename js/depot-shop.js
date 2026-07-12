@@ -24,6 +24,15 @@
   var RECEIPT_KEY = 'depot.pendingPack';
   var CURRENCY = (window.DepotWallet && window.DepotWallet.CURRENCY) || 'DD';
 
+  // Resolve data files relative to THIS script's URL so fetch() works from any
+  // page depth (index.html at root, game/shop.html one level deeper). Page-relative
+  // '../data/' 404s at root -> 'shop failed to load'. Mirrors depot-prestige _dataURL.
+  var _scriptSrc = (document.currentScript && document.currentScript.src) || '';
+  var _dataURL = function (f) {
+    try { return new URL('../data/' + f, _scriptSrc).href; }
+    catch (e) { return '../data/' + f; }
+  };
+
   var TIER_ORDER = ['bronze', 'silver', 'gold'];
   var TIER_COPY = {
     bronze: { name: 'BRONZE PACK', desc: '5 cards \u00b7 mostly commons \u00b7 small shot at a silver.' },
@@ -37,7 +46,7 @@
 // SOURCE OF TRUTH: the year span comes from data/index.json (the checklist pipeline's
 // manifest, 1980-2026), never a hardcoded literal, so the pool can't drift from the data.
 function catalogYears() {
-  return fetch('../data/index.json')
+  return fetch(_dataURL('index.json'))
     .then(function (r) { if (!r.ok) throw new Error('index.json ' + r.status); return r.json(); })
     .then(function (idx) {
       var ys = (idx && idx.years) ? idx.years.map(function (y) { return parseInt(y, 10); }) : [];
@@ -57,7 +66,7 @@ function catalogCardToPrestigeShape(c, y) {
 function loadCatalog() {
   return catalogYears().then(function (years) {
     return Promise.all(years.map(function (y) {
-      return fetch('../data/cards-' + y + '.json')
+      return fetch(_dataURL('cards-' + y + '.json'))
         .then(function (r) { return r.ok ? r.json() : []; })
         .then(function (arr) { return (arr || []).map(function (c) { return catalogCardToPrestigeShape(c, y); }); })
         .catch(function () { return []; });
