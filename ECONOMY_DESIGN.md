@@ -345,3 +345,29 @@ the **session report** for Nick to run in the Supabase SQL editor. Slice A code 
 > > > > > > > have `meta`, drop the `meta` arg from the insert (the tier is still derivable from the
 > > > > > > > > pack contents); Nick to confirm which shape shipped.
 > > > > > > > > 
+
+### 7.1 FREE DAILY PACK (Nick's request — retention hook)
+
+A free tier so there's always something to rip, even at 0 DD. The daily login ritual: the reason to come back tomorrow. Fits the live-service vision — a small, honest reward on a fixed cadence, no paywall, no gacha pressure.
+
+**Shape (honest, published):**
+- **1 card** (not 5). No hit-slot guarantee — this is not a paid pack, so it does not borrow the 5th-slot floor.
+- **Commons-weighted pool.** The roll is bronze-heavy with a small, *published* upset chance at silver+ so the daily still has a spark. Proposed odds (published on the card, "no hidden rates"): **bronze ~92%, silver ~7%, gold ~1%.** These are the free-tier draw weights and are independent of the paid tiers' hit-slot logic. Bands stay fixed at 10/30/60 (gold≥60, silver≥30, bronze≥10) — the free pack changes *draw weights*, never the bands.
+- **Cost: 0 DD.** No debit. The ledger row is a 0-amount marker, not a transaction.
+- **Cadence: once per 24h.** Server-enforced. The claim is refused inside the window with a next-claim time; the client shows a live countdown.
+
+**Cooldown clock = the ledger, no new table.** The last `wallet_transactions` row with `reason = 'free_pack'` for the owner *is* the clock: if its `created_at` is within 24h, the claim is refused. A successful claim inserts a fresh 0-amount `free_pack` row, which becomes the new clock. This reuses the existing money-safety surface (owner-scoped, `SECURITY DEFINER`, ledger-first) rather than adding a `free_pack_claims` table that would duplicate derivable state — same reasoning as the deferred `pack_log` table in §7.
+
+**Grant path (this is the FIRST Part 3 grant path).** A successful claim grants its single card through the same pipeline the paid rip will use: roll 1 card seeded → insert one owner-scoped `cards` row with `source = 'pack'` → pixel front (depot-pixel-card.js) → rookie resolver. The free pack builds the **single-card grant + a minimal reveal** (one flip, no full 5-card rip ceremony). Part 3's paid rip then *extends* this — a 5-card roll and the full reveal ceremony reuse the same grant primitive rather than starting fresh. Building it here de-risks Part 3.
+
+**Server contract — `depot_claim_free_pack()` (DDL proposal, Nick runs it).**
+- `SECURITY DEFINER`, `revoke all` from public, `grant execute` to `authenticated`. Auth guard: `auth.uid()` must be non-null.
+- Reads the owner's most-recent `free_pack` ledger row; if `now() - created_at < interval '24 hours'`, returns `{ ok: false, next_claim_at }` **without** inserting (idempotent-safe under double-tap).
+- Otherwise inserts a 0-amount `free_pack` ledger row with `meta` stamping the rolled tier + card identity, and returns `{ ok: true, next_claim_at }`. The card `INSERT` into `cards` is done by the same function (owner-scoped, `source='pack'`) so the grant and the cooldown stamp land in one transaction — no partial state.
+- Returns `next_claim_at` in both branches so the client renders the countdown from the server's own clock, not the device clock.
+
+**Client (Part 3 build, after Nick runs the DDL):** a fourth pack **card** in the shop grid (not a fifth nav tab — nav stays four) styled distinctly, labelled "FREE DAILY · 1 card · commons with a longshot", with the published odds, a CLAIM button, and a cooldown state showing the live countdown to `next_claim_at`.
+
+### 7.2 Fold-in: authoritative insufficient-funds message (approved)
+
+The live `depot_purchase_pack` raises a **bare** `'insufficient funds'` (P0001) — the balance/cost are not in the message, contrary to §7's documented text. This was found live during the shop-refusal fix. Approved change: amend the exception to `'insufficient funds: balance % DD, cost % DD'` (with `v_balance, p_cost`) so the RPC is authoritative and the shop's refusal can read the RPC's own reported numbers rather than a client-side balance read. Folded into the free-pack DDL batch below.
