@@ -372,3 +372,28 @@ A free tier so there's always something to rip, even at 0 DD. The daily login ri
 ### 7.2 Fold-in: authoritative insufficient-funds message (approved)
 
 The live `depot_purchase_pack` raises a **bare** `'insufficient funds'` (P0001) — the balance/cost are not in the message, contrary to §7's documented text. This was found live during the shop-refusal fix. Approved change: amend the exception to `'insufficient funds: balance % DD, cost % DD'` (with `v_balance, p_cost`) so the RPC is authoritative and the shop's refusal can read the RPC's own reported numbers rather than a client-side balance read. Folded into the free-pack DDL batch below.
+
+### 7.3 PACK HISTORY + REPLAY (ceremony v2)
+
+The pack shop shelves every opened pack in a **PACK HISTORY** strip: tier, date,
+and card count only — never the contents. A **REPLAY** button re-rolls the pack
+from its stored seed (`DepotPackEngine.rollPack`, deterministic) and plays the
+full held ceremony **cosmetically, with zero DB writes**. Rolls are seeded, so a
+replay reproduces the exact same 5 cards in the exact same order (hit last).
+
+**v1 storage (as built): `localStorage` (`depot.packHistory`).** Entries are
+`{ tier, seed, count, at }`, idempotent per `tier:seed`, recorded on redemption.
+This is intentionally lightweight and needs no schema.
+
+**Known caveat — device-local.** `localStorage` is per-device and per-browser,
+and is wiped by a cache clear. So the v1 shelf does not follow the player across
+devices, and a pack opened before this feature shipped won't appear on its own
+(it was bridged in manually by writing one history entry — no DB write).
+
+**Durable record already exists.** The authoritative, cross-device record of
+every pack is already in the ledger: `pack_grants` (one row per pack: owner,
+collection, seed, tier, card_count, created_at) plus `wallet_transactions` for
+the debit. A later slice can **derive PACK HISTORY from `pack_grants`** instead
+of `localStorage`, making the shelf survive devices and browser resets while
+keeping REPLAY a pure client-side re-roll from the stored seed (still zero DB
+writes). v1 as built is fine; this is the upgrade path, not a defect.
