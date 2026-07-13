@@ -147,10 +147,14 @@ function loadCatalog() {
         receipt.balanceAfter = newBal; receipt.status = 'debited';
         saveReceipt(receipt);
         console.log(TAG + ' purchase OK, new balance ' + newBal + '. Receipt retained for rip.', receipt);
-        if (window.DepotPackRip && window.DepotPackRip.open) {
-          window.DepotPackRip.open(receipt, pack); // Part 3 will honor + then clear
+        // A debit just completed; receipt is stamped 'debited'. Honor it NOW:
+        // never leave a paid pack un-opened. Prefer the caller's rip hook
+        // (redeemPending -> grant + ceremony); fall back to the unmissable
+        // "PACK SAVED - OPENING..." state which redeems on next shop load.
+        if (ui && typeof ui.rip === 'function') {
+          ui.rip(newBal, receipt); // grants the 5 cards + plays the ceremony, then clears
         } else {
-          ui.savedNoRip(newBal); // clean state; receipt LEFT for Part 3 to honor
+          ui.savedNoRip(newBal); // unmissable saved state; redeemPending honors it on next load
         }
       })
       .catch(function (e) {
@@ -216,6 +220,81 @@ function loadCatalog() {
     });
   }
 
+  
+  // ------------------------------------------------------------------
+  // REDEMPTION (case a): honor a debited receipt whose cards were never
+  // granted. Idempotent + crash-safe. Re-rolls the exact 5 cards from the
+  // stored seed (rollPack is deterministic), inserts them owner-scoped
+  // (source:'pack', seed stamped into notes), then fires the rip ceremony
+  // with the hit slot LAST. Clears the receipt only AFTER ceremony start.
+  // Money-safety: NEVER clears the receipt unless all cards confirm.
+  var SEED_TAG='packseed:';
+  function seedNote(seed){ return SEED_TAG+seed; }
+  function loadReceipt(){ try{ var r=localStorage.getItem(RECEIPT_KEY); return r?JSON.parse(r):null; }catch(e){ return null; } }
+  function resolveCollection(client, ownerId){
+    return client.from('collections').select('id,created_at').eq('owner_id',ownerId).order('created_at',{ascending:true}).limit(1).then(function(r){
+      if(r.error) throw new Error('collection lookup failed: '+r.error.message);
+      if(!r.data||!r.data.length) throw new Error('no collection for owner');
+      return r.data[0].id;
+    });
+  }
+  function cardRow(c, ownerId, collectionId, seed){
+    var note=seedNote(seed)+(c.notes?(' | '+c.notes):'');
+    return { owner_id:ownerId, collection_id:collectionId, year:c.year, brand:c.brand, set:c.set, number:String(c.number), player:c.player, team:c.team||'', source:'pack', notes:note, tcdb_url:c.url||null };
+  }
+  function redeemPending(catalog, view, opts){
+    opts=opts||{};
+    var receipt=loadReceipt();
+    if(!receipt||receipt.status!=='debited') return Promise.resolve({redeemed:false});
+    var client=sb();
+    if(!client||!client.from){ console.warn(TAG+' redeem: no client'); return Promise.resolve({redeemed:false}); }
+    if(!catalog||!catalog.ok){ console.warn(TAG+' redeem: catalog not ready'); return Promise.resolve({redeemed:false}); }
+    console.log(TAG+' redeeming pending pack', receipt);
+    var ownerId, collectionId, pack, cards, hitIndex;
+    return client.auth.getUser().then(function(u){
+      ownerId=u&&u.data&&u.data.user?u.data.user.id:null;
+      if(!ownerId) throw new Error('not signed in');
+      return resolveCollection(client, ownerId);
+    }).then(function(cid){
+      collectionId=cid;
+      pack=window.DepotPackEngine.rollPack({tier:receipt.tier, catalog:catalog, seed:receipt.seed, prestige:window.DepotPrestige});
+      cards=pack.cards; hitIndex=(typeof receipt.hitIndex==='number')?receipt.hitIndex:pack.hitIndex;
+      return client.from('cards').select('id,notes').eq('owner_id',ownerId).eq('source','pack').ilike('notes','%'+seedNote(receipt.seed)+'%');
+    }).then(function(existing){
+      if(existing.error) throw new Error('idempotency check failed: '+existing.error.message);
+      var already=(existing.data||[]).length;
+      if(already>=cards.length){ console.log(TAG+' redeem: all '+cards.length+' cards already granted for seed '+receipt.seed+' -> ceremony only'); return {skipInsert:true}; }
+      var toInsert=(already===0)?cards.map(function(c){return cardRow(c,ownerId,collectionId,receipt.seed);}):cards.slice(already).map(function(c){return cardRow(c,ownerId,collectionId,receipt.seed);});
+      return client.from('cards').insert(toInsert).select('id').then(function(ins){
+        if(ins.error) throw new Error('card insert rejected: '+ins.error.message);
+        console.log(TAG+' redeem: inserted '+((ins.data||[]).length)+' card(s) (had '+already+')');
+        return {skipInsert:false};
+      });
+    }).then(function(){
+      if(typeof opts.render==='function'){ try{opts.render();}catch(e){} }
+      return playPackCeremony(view, cards, hitIndex, opts).then(function(){ clearReceipt(); console.log(TAG+' redeem: ceremony done, receipt cleared'); return {redeemed:true, count:cards.length}; });
+    }).catch(function(e){
+      console.error(TAG+' redeem failed (receipt retained): ', e&&e.message||e);
+      return {redeemed:false, error:(e&&e.message)||String(e)};
+    });
+  }
+  function playPackCeremony(view, cards, hitIndex, opts){
+    opts = opts || {};
+    var revealOne = (typeof opts.revealOne === 'function') ? opts.revealOne : null;
+    if(!revealOne && (!view||!view.buildReveal||!view.playCeremony)){ console.warn(TAG+' no DepotShopView ceremony; cards granted silently'); return Promise.resolve(); }
+    var order=[]; for(var i=0;i<cards.length;i++){ if(i!==hitIndex) order.push(i); }
+    if(typeof hitIndex==='number'&&cards[hitIndex]) order.push(hitIndex);
+    var chain=Promise.resolve();
+    order.forEach(function(idx){ chain=chain.then(function(){
+      var shaped=catalogCardToPrestigeShape(cards[idx], cards[idx].year);
+      var band=(window.DepotPrestige&&window.DepotPrestige.compute)?(window.DepotPrestige.compute(shaped).band||'plain'):'plain';
+      if(revealOne){ return revealOne(cards[idx], band); }
+      var rev=view.buildReveal(cards[idx], band);
+      return view.playCeremony(rev);
+    }); });
+    return chain;
+  }
+
   window.DepotShop = {
     RECEIPT_KEY: RECEIPT_KEY,
     TIER_ORDER: TIER_ORDER,
@@ -225,6 +304,7 @@ function loadCatalog() {
     buy: buy,
     claimFree: claimFree,
     cardToShape: catalogCardToPrestigeShape,
+    redeemPending: redeemPending,
     cardId: cardId,
     saveReceipt: saveReceipt,
     clearReceipt: clearReceipt
