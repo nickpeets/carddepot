@@ -14,6 +14,60 @@
   "use strict";
   var TAG = "[depot] shop-view:";
   var Shop = window.DepotShop;
+
+  // --- Auth-gated pending-pack redemption (fixes the pre-auth silent no-op) ---
+  // boot()/mount() used to call Shop.redeemPending immediately at load, BEFORE the
+  // Supabase session was restored -> getUser() null -> redeem bailed -> silent catch.
+  // Now we run it only once we KNOW there is a signed-in user (already-authed OR on
+  // SIGNED_IN / INITIAL_SESSION), and we log loudly at every branch.
+  function _sbClient(){
+    try { return (typeof window.depotSB === 'function') ? window.depotSB() : (window.supabaseClient || null); }
+    catch (e) { return null; }
+  }
+  function redeemPendingWhenAuthed(catalog, ctx){
+    ctx = ctx || {};
+    if (!Shop.redeemPending){ console.warn(TAG + ' auto-redeem: Shop.redeemPending missing (build/export bug)'); return; }
+    var fired = false;
+    function fire(reason){
+      if (fired) return; fired = true;
+      console.log(TAG + ' auto-redeem firing (' + reason + ')');
+      try {
+        Shop.redeemPending(catalog, window.DepotShopView, { render: ctx.render, revealOne: ctx.revealOne })
+          .then(function(res){
+            if (res && res.redeemed){
+              console.log(TAG + ' auto-redeem OK: pack opened (' + ((res.cards && res.cards.length) || '?') + ' cards)');
+              if (ctx.onOpened) ctx.onOpened(res);
+            } else {
+              console.log(TAG + ' auto-redeem: no pending pack to open');
+            }
+          })
+          .catch(function(e){
+            // Post-debit failure: cards may not have inserted, but the RECEIPT IS KEPT.
+            console.error(TAG + ' auto-redeem POST-DEBIT FAILURE (receipt kept, money safe): ' + (e && (e.message || e)));
+          });
+      } catch (e) {
+        console.error(TAG + ' auto-redeem threw synchronously (receipt kept): ' + (e && (e.message || e)));
+      }
+    }
+    var c = _sbClient();
+    if (!c || !c.auth){ console.warn(TAG + ' auto-redeem: no auth client yet, will not redeem this load'); return; }
+    // Fire now if already signed in
+    try {
+      c.auth.getUser().then(function(r){
+        if (r && r.data && r.data.user){ fire('already-authed'); }
+        else { console.log(TAG + ' auto-redeem: no user yet, waiting for sign-in'); }
+      }).catch(function(e){ console.warn(TAG + ' auto-redeem getUser failed: ' + (e && (e.message || e))); });
+    } catch (e) { console.warn(TAG + ' auto-redeem getUser threw: ' + (e && (e.message || e))); }
+    // Re-fire once auth is (re)established
+    try {
+      if (c.auth.onAuthStateChange){
+        c.auth.onAuthStateChange(function(evt, session){
+          if ((evt === 'SIGNED_IN' || evt === 'INITIAL_SESSION') && session && session.user){ fire(evt); }
+        });
+      }
+    } catch (e) { console.warn(TAG + ' auto-redeem onAuthStateChange wiring failed: ' + (e && (e.message || e))); }
+  }
+
   var Eng  = window.DepotPackEngine;
   var CUR  = (window.DepotWallet && window.DepotWallet.CURRENCY) || "DD";
   var DOT  = " \u00b7 ";
@@ -140,6 +194,12 @@
     var context = opts.context || "shop";
     var onClaimed = (typeof opts.onClaimed === "function") ? opts.onClaimed : null;
     var catalog = opts.catalog || null;
+    // AUTH-GATED auto-redeem for the IN-BINDER tab (this mount() path had none).
+    // Deferred so render/runReveal (hoisted) are ready; helper waits for auth itself.
+    setTimeout(function(){ redeemPendingWhenAuthed(catalog, {
+      render: render, revealOne: runReveal,
+      onOpened: function(res){ try { setStatus("ok", "<b>Your saved pack was opened.</b>"); } catch(e){} try { Promise.resolve(Shop.getBalance()).then(function(b){ setBal(b); render(); }); } catch(e){} }
+    }); }, 0);
     var balance = null;
     var nextClaimAt = null;
     var cdTimer = null;
@@ -236,13 +296,12 @@
       Promise.all([catP, ready]).then(function(r){
         catalog = r[0] || [];
         // Auto-honor a debited-but-unopened pack (money-safety recovery).
-        try {
-          if (Shop.redeemPending) {
-            Shop.redeemPending(catalog, window.DepotShopView, { render: render, revealOne: runReveal }).then(function(res){
-              if (res && res.redeemed) { setStatus("ok", "<b>Your saved pack was opened.</b>"); Promise.resolve(Shop.getBalance()).then(function(b){ setBal(b); render(); }); }
-            });
-          }
-        } catch (e) { console.warn(TAG + " auto-redeem skipped: " + (e && e.message)); }
+      // AUTH-GATED: fire only once a signed-in user exists (already-authed OR on
+      // SIGNED_IN/INITIAL_SESSION). The old code fired at load pre-auth and bailed silently.
+      redeemPendingWhenAuthed(catalog, {
+        render: render, revealOne: runReveal,
+        onOpened: function(res){ setStatus("ok", "<b>Your saved pack was opened.</b>"); Promise.resolve(Shop.getBalance()).then(function(b){ setBal(b); render(); }); }
+      });
         Promise.resolve(Shop.getBalance()).then(function(b){ setBal(b); render(); }).catch(function(){ setBal(null); render(); });
         probeCooldown();
       }).catch(function(e){ setStatus("err","Shop failed to load."); console.error(TAG+" boot", e && e.message); });
