@@ -304,7 +304,7 @@ function loadCatalog() {
       });
     }).then(function(){
       if(typeof opts.render==='function'){ try{opts.render();}catch(e){} }
-      return playPackCeremony(view, cards, hitIndex, opts).then(function(){ clearReceipt(); console.log(TAG+' redeem: ceremony done, receipt cleared'); return {redeemed:true, count:cards.length}; });
+      return playPackCeremony(view, cards, hitIndex, Object.assign({}, opts, {tier: receipt.tier, seed: receipt.seed, held: true})).then(function(){ clearReceipt(); console.log(TAG+' redeem: ceremony done, receipt cleared'); return {redeemed:true, count:cards.length}; });
     }).catch(function(e){
       console.error(TAG+' redeem failed (receipt retained): ', e&&e.message||e);
       return {redeemed:false, error:(e&&e.message)||String(e)};
@@ -317,16 +317,30 @@ function loadCatalog() {
   }
   function playPackCeremony(view, cards, hitIndex, opts){
     opts = opts || {};
+    var tier = (opts.tier) || (opts.receipt && opts.receipt.tier) || 'bronze';
+    var seed = (opts.seed != null) ? opts.seed : (opts.receipt && opts.receipt.seed);
+    // Shelf this pack in PACK HISTORY (tier/seed/date/count only -- never contents).
+    try {
+      if(view && view.recordPackHistory && seed != null){
+        view.recordPackHistory({ tier: tier, seed: seed, count: (cards && cards.length) || 5 });
+        if(opts.onHistory){ try{opts.onHistory();}catch(e){} }
+      }
+    } catch(e){ console.warn(TAG+' history record failed: '+(e&&e.message)); }
+    // Preferred path: the held, blocking, player-paced session (ceremony v2).
+    if(view && typeof view.playPackSession === 'function'){
+      return view.playPackSession(cards, hitIndex, { tier: tier, held: (opts.held !== false), seed: seed });
+    }
+    // Legacy fallback: per-card auto-reveal loop (kept for safety if view is old).
     var revealOne = (typeof opts.revealOne === 'function') ? opts.revealOne : null;
     if(!revealOne && (!view||!view.buildReveal||!view.playCeremony)){ console.warn(TAG+' no DepotShopView ceremony; cards granted silently'); return Promise.resolve(); }
-    var order=[]; for(var i=0;i<cards.length;i++){ if(i!==hitIndex) order.push(i); }
-    if(typeof hitIndex==='number'&&cards[hitIndex]) order.push(hitIndex);
-    var chain=Promise.resolve();
-    order.forEach(function(idx){ chain=chain.then(function(){
-      var shaped=catalogCardToPrestigeShape(cards[idx], cards[idx].year);
-      var band=(window.DepotPrestige&&window.DepotPrestige.compute)?(window.DepotPrestige.compute(shaped).band||'plain'):'plain';
+    var order = []; for(var i=0;i<cards.length;i++){ if(i!==hitIndex) order.push(i); }
+    if(typeof hitIndex==='number' && cards[hitIndex]) order.push(hitIndex);
+    var chain = Promise.resolve();
+    order.forEach(function(idx){ chain = chain.then(function(){
+      var shaped = catalogCardToPrestigeShape(cards[idx], cards[idx].year);
+      var band = (window.DepotPrestige && window.DepotPrestige.compute) ? (window.DepotPrestige.compute(shaped).band||'plain'):'plain';
       if(revealOne){ return revealOne(cards[idx], band); }
-      var rev=view.buildReveal(cards[idx], band);
+      var rev = view.buildReveal(cards[idx], band);
       return view.playCeremony(rev);
     }); });
     return chain;

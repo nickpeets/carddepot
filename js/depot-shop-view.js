@@ -14,6 +14,7 @@
   "use strict";
   var TAG = "[depot] shop-view:";
   var Shop = window.DepotShop;
+  var _catalogRef = null;  // shared catalog for cosmetic REPLAY re-rolls
 
   // --- Auth-gated pending-pack redemption (fixes the pre-auth silent no-op) ---
   // boot()/mount() used to call Shop.redeemPending immediately at load, BEFORE the
@@ -237,7 +238,10 @@
 
     var freeUi = {
       pending:   function(){ setStatus("warn", "Opening your free daily pack\u2026"); },
-      claimed:   function(card, band, nca){ if(nca) nextClaimAt=new Date(nca); clearStatus(); runReveal(card, band); startTicker(); render(); },
+      claimed:   function(card, band, nca, cardId){ if(nca) nextClaimAt=new Date(nca); clearStatus();
+          var _fseed = (typeof cardId!=='undefined' && cardId!=null) ? cardId : ((Date.now())>>>0);
+          try { recordPackHistory({ tier:'free', seed:_fseed, count:1 }); } catch(e){}
+          playPackSession([card], 0, { tier:'free', held:false, seed:_fseed }).then(function(){ render(); }); startTicker(); render(); },
       cooldown:  function(nca){ if(nca) nextClaimAt=new Date(nca); setStatus("warn", "That free pull is on cooldown."); render(); startTicker(); },
       notSignedIn: function(){ setStatus("err", "Please sign in to claim your free card."); render(); },
       offline:   function(){ setStatus("warn", "Free pack service is offline. No cooldown was used."); render(); },
@@ -263,11 +267,55 @@
       };
     }
 
+    function fmtWhen(iso){
+      try { var d=new Date(iso); return d.toLocaleDateString(undefined,{month:'short',day:'numeric',year:'numeric'}); }
+      catch(e){ return ''; }
+    }
+    // A shelf of packs: tier + date + count only. Contents hidden until REPLAY.
+    function renderHistoryHtml(){
+      var list = loadHistory();
+      var inner = '';
+      if(!list.length){
+        inner = '<div class="dpc-hist-empty">No packs opened yet. Rip one above \u2014 it lands here for replay.</div>';
+      } else {
+        inner = '<div class="dpc-hist-list">';
+        for(var i=0;i<list.length;i++){
+          var e = list[i];
+          var t = (e.tier||'bronze');
+          var label = (t==='free'?'DAILY':t.toUpperCase())+' PACK';
+          inner += '<div class="dpc-hist-item dpc-hist-'+t+'" data-idx="'+i+'">' +
+                     '<div class="dpc-hist-spine"></div>' +
+                     '<div class="dpc-hist-meta">' +
+                       '<div class="dpc-hist-tier">'+label+'</div>' +
+                       '<div class="dpc-hist-when">'+fmtWhen(e.at)+DOT+(e.count||5)+' cards</div>' +
+                     '</div>' +
+                     '<button type="button" class="dpc-replaybtn" data-idx="'+i+'">REPLAY</button>' +
+                   '</div>';
+        }
+        inner += '</div>';
+      }
+      return '<div class="dpc-history"><h3>Pack History</h3>'+inner+'</div>';
+    }
+    function wireHistory(){
+      var btns = gridEl.querySelectorAll('.dpc-replaybtn');
+      var list = loadHistory();
+      for(var i=0;i<btns.length;i++){ (function(btn){
+        btn.addEventListener('click', function(){
+          var idx = parseInt(btn.getAttribute('data-idx'),10);
+          var e = list[idx];
+          if(!e) return;
+          replayPack(e);   // cosmetic re-roll from seed, ZERO DB writes
+        });
+      })(btns[i]); }
+    }
+
+
     function render() {
       var html = "";
       Shop.TIER_ORDER.forEach(function(t){ html += paidTileHtml(t, catalog, balance); });
       html += freeTileHtml(nextClaimAt);
-      gridEl.innerHTML = html;
+      gridEl.innerHTML = html + renderHistoryHtml();
+      wireHistory();
       var buys = gridEl.querySelectorAll("button.buy");
       for (var i=0;i<buys.length;i++){ (function(btn){ btn.addEventListener("click", function(){ var t=btn.getAttribute("data-tier"); clearStatus(); if(!catalog||!catalog.length){ setStatus("err","Catalog not loaded yet."); return; } Shop.buy(t, catalog, balance, makeBuyUi(t)); }); })(buys[i]); }
       var cf = gridEl.querySelector("button.claim-free");
@@ -294,7 +342,7 @@
       var ready = (window.DepotPrestige && window.DepotPrestige.ready) ? window.DepotPrestige.ready() : Promise.resolve();
       var catP = catalog ? Promise.resolve(catalog) : Shop.loadCatalog();
       Promise.all([catP, ready]).then(function(r){
-        catalog = r[0] || [];
+        catalog = r[0] || []; _catalogRef = catalog;
         // Auto-honor a debited-but-unopened pack (money-safety recovery).
       // AUTH-GATED: fire only once a signed-in user exists (already-authed OR on
       // SIGNED_IN/INITIAL_SESSION). The old code fired at load pre-auth and bailed silently.
@@ -316,5 +364,151 @@
     };
   }
 
-  window.DepotShopView = { mount: mount, buildReveal: buildReveal, playCeremony: playCeremony };
+    /* ===================================================================== */
+  /* PACK CEREMONY v2 + PACK HISTORY (feat/pack-ceremony-and-history)       */
+  /* Held, blocking, player-paced rip. Fixes the invisible-ceremony bug:    */
+  /* the old runReveal auto-played over a transparent scrim and auto-       */
+  /* dismissed. Here the pack opens HELD ("PACK IS READY / RIP IT"), the    */
+  /* player starts it, cards flip player-paced (hit last), and the player   */
+  /* closes it via COLLECT. Free daily keeps auto-reveal but gets the same  */
+  /* centered blocking modal. REPLAY re-rolls from the stored seed and      */
+  /* plays the full ceremony with ZERO DB writes.                           */
+  /* --------------------------------------------------------------------- */
+  var HISTORY_KEY = "depot.packHistory";
+  var TIER_CARDS  = { bronze: 5, silver: 5, gold: 5, free: 1 };
+
+  function loadHistory(){
+    try { var raw = window.localStorage.getItem(HISTORY_KEY); var a = raw ? JSON.parse(raw) : []; return Array.isArray(a) ? a : []; }
+    catch(e){ console.warn(TAG+" history read failed: "+(e&&e.message)); return []; }
+  }
+  function saveHistory(list){
+    try { window.localStorage.setItem(HISTORY_KEY, JSON.stringify(list.slice(0,60))); }
+    catch(e){ console.warn(TAG+" history write failed: "+(e&&e.message)); }
+  }
+  // Record a pack in history (idempotent per seed+tier). Stores ONLY tier/seed/date/count
+  // -- never the contents. Contents are re-rolled from the seed at REPLAY time.
+  function recordPackHistory(entry){
+    if(!entry || (entry.seed==null)) return;
+    var list = loadHistory();
+    var key = entry.tier+":"+entry.seed;
+    for(var i=0;i<list.length;i++){ if((list[i].tier+":"+list[i].seed)===key) return; } // already shelved
+    list.unshift({ tier: entry.tier||"bronze", seed: entry.seed,
+                   count: entry.count || TIER_CARDS[entry.tier] || 5,
+                   at: entry.at || new Date().toISOString() });
+    saveHistory(list);
+    console.log(TAG+" history: shelved "+key+" ("+list.length+" packs)");
+  }
+
+  // The blocking modal session. cards = array of card objects; hitIndex = the hit.
+  // opts: { tier, held (bool -> paid), seed, replay (bool), onCollect fn }
+  // Returns a Promise that resolves when the player COLLECTs (closes the modal).
+  function playPackSession(cards, hitIndex, opts){
+    opts = opts || {};
+    var tier = opts.tier || "bronze";
+    var held = (opts.held !== false);       // paid = held; free daily passes held:false
+    var isReplay = !!opts.replay;
+    var count = cards.length;
+
+    return new Promise(function(resolve){
+      var modal = document.createElement("div");
+      modal.className = "dpc-modal dpc-tier-"+tier+(held?" dpc-held":"");
+      modal.setAttribute("role","dialog");
+      modal.setAttribute("aria-modal","true");
+      var panel = document.createElement("div");
+      panel.className = "dpc-panel";
+      modal.appendChild(panel);
+      document.body.appendChild(modal);
+      requestAnimationFrame(function(){ modal.classList.add("dpc-in"); });
+
+      // reveal order: everything except the hit, then the hit LAST
+      var order = [];
+      for(var i=0;i<cards.length;i++){ if(i!==hitIndex) order.push(i); }
+      if(typeof hitIndex==="number" && cards[hitIndex]) order.push(hitIndex);
+
+      function tierLabel(){ return (tier==="free"?"DAILY":tier.toUpperCase())+" PACK \u00b7 "+count+" CARD"+(count===1?"":"S"); }
+
+      function bandOf(card){
+        try { var shaped=(Shop.cardToShape?Shop.cardToShape(card,card.year):card);
+              return (window.DepotPrestige&&window.DepotPrestige.compute)?(window.DepotPrestige.compute(shaped).band||"plain"):"plain"; }
+        catch(e){ return "plain"; }
+      }
+
+      function closeModal(){
+        modal.classList.remove("dpc-in");
+        setTimeout(function(){ if(modal.parentNode) modal.parentNode.removeChild(modal); }, 300);
+      }
+
+      // ----- RIPPING phase: reveal cards one at a time, player-paced -----
+      function startRip(){
+        panel.classList && modal.classList.remove("dpc-held");
+        panel.innerHTML = "";
+        if(isReplay){ var tag=document.createElement("div"); tag.className="dpc-replaytag"; tag.textContent="REPLAY"; panel.appendChild(tag); }
+        var stage = document.createElement("div"); stage.className="dpc-stagewrap";
+        var progress = document.createElement("div"); progress.className="dpc-progress";
+        var slot = document.createElement("div"); slot.className="dpc-cardslot";
+        var tapcue = document.createElement("div"); tapcue.className="dpc-tapcue"; tapcue.textContent="TAP TO REVEAL";
+        stage.appendChild(progress); stage.appendChild(slot); stage.appendChild(tapcue);
+        panel.appendChild(stage);
+        var collect = document.createElement("button"); collect.className="dpc-collect"; collect.type="button";
+        collect.textContent = isReplay ? "CLOSE" : "COLLECT";
+        panel.appendChild(collect);
+        collect.addEventListener("click", function(){ if(collect.classList.contains("dpc-ready")){ if(opts.onCollect){try{opts.onCollect();}catch(e){}} closeModal(); resolve({revealed:true}); } });
+
+        var pos = 0, animating = false;
+        function showNext(){
+          if(animating) return;
+          if(pos >= order.length){ tapcue.style.display="none"; collect.classList.add("dpc-ready"); return; }
+          animating = true;
+          var idx = order[pos];
+          progress.textContent = "CARD "+(pos+1)+" / "+order.length;
+          var card = cards[idx];
+          var rev = buildReveal(card, bandOf(card));
+          slot.innerHTML = "";
+          slot.appendChild(rev.node);
+          playCeremony(rev).then(function(){
+            animating = false; pos++;
+            if(pos >= order.length){ tapcue.style.display="none"; collect.classList.add("dpc-ready"); }
+            else { tapcue.textContent = "TAP FOR NEXT"; }
+          });
+        }
+        // advance on tap anywhere in the stage (only when not mid-animation)
+        stage.addEventListener("click", function(){ showNext(); });
+        showNext(); // first card auto-starts its flip on tap; kick the first one
+      }
+
+      if(held){
+        // ----- HELD phase: pack back + tier tease, NO content leak -----
+        var back = document.createElement("div"); back.className="dpc-packback";
+        var lbl = document.createElement("div"); lbl.className="dpc-pblabel"; lbl.textContent=(tier==="free"?"DAILY":tier.toUpperCase());
+        back.appendChild(lbl);
+        var head = document.createElement("div"); head.className="dpc-head"; head.textContent = isReplay ? "REPLAY \u2014 YOUR PACK" : "YOUR PACK IS READY";
+        var sub = document.createElement("div"); sub.className="dpc-sub"; sub.textContent = tierLabel();
+        var rip = document.createElement("button"); rip.className="dpc-ripbtn"; rip.type="button"; rip.textContent="RIP IT";
+        panel.appendChild(back); panel.appendChild(head); panel.appendChild(sub); panel.appendChild(rip);
+        rip.addEventListener("click", startRip);
+        back.addEventListener("click", startRip);
+      } else {
+        // free daily: same blocking modal, but skip the held gate (auto-start)
+        startRip();
+      }
+    });
+  }
+
+  // Regenerate a pack from a stored seed and play it cosmetically. ZERO DB writes.
+  function replayPack(entry){
+    if(!entry) return Promise.resolve();
+    var cat = _catalogRef || [];
+    try {
+      var pack = window.DepotPackEngine.rollPack({ tier: entry.tier, catalog: cat, seed: entry.seed, prestige: window.DepotPrestige });
+      var cards = pack.cards || [];
+      var hi = (typeof pack.hitIndex==="number") ? pack.hitIndex : (cards.length-1);
+      console.log(TAG+" REPLAY: re-rolled "+cards.length+" card(s) from seed "+entry.seed+" (cosmetic, no DB writes)");
+      return playPackSession(cards, hi, { tier: entry.tier, held: true, seed: entry.seed, replay: true });
+    } catch(e){
+      console.error(TAG+" REPLAY failed for seed "+entry.seed+": "+(e&&e.message));
+      return Promise.resolve();
+    }
+  }
+
+window.DepotShopView = { mount: mount, buildReveal: buildReveal, playCeremony: playCeremony, playPackSession: playPackSession, recordPackHistory: recordPackHistory, loadPackHistory: loadHistory, replayPack: replayPack };
 })();
