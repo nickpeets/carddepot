@@ -1,0 +1,317 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Preview — Wax-Pack Redesign (Card Depot)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+/* ============================================================
+   STATIC PREVIEW ONLY (mockups/, never a working path).
+   Wax-pack redesign for the PACK SHOP tiles. No live wiring.
+   Palette + font lifted from the live binder/shop:
+     card footprint 225x315 (5:7); Press Start 2P; navy/gold/cream.
+   Tier foils: bronze / silver / gold + a paper Free Daily.
+   One wrapper design, three surfaces:
+     (1) shop tile  (2) rip-modal held pack-back  (3) history thumb.
+   ============================================================ */
+:root{
+  --navy:#12233b; --navy-2:#0d1a2c; --panel:#15407f;
+  --gold:#ffd76b; --gold-deep:#d4a017; --cream:#f2ead8; --ink:#12233b;
+  --black:#0a0a0a; --white:#fff; --red:#c0392b; --green:#2e7d32; --green-d:#1b5e20;
+  /* tier foils */
+  --bronze-1:#8a5a2b; --bronze-2:#c8853b; --bronze-3:#f0c07a;
+  --silver-1:#8f9bb0; --silver-2:#c9d2e0; --silver-3:#ffffff;
+  --gold-1:#b8860b; --gold-2:#f8d000; --gold-3:#fff4b0;
+  --paper-1:#3c5a3c; --paper-2:#6f9e6f; --paper-3:#cfe6cf;
+}
+*{ box-sizing:border-box; margin:0; padding:0; }
+body{
+  font-family:'Press Start 2P',monospace; color:var(--cream);
+  background:
+    radial-gradient(circle at 30% 20%, #1c3a5e 0%, transparent 60%),
+    radial-gradient(circle at 80% 80%, #14243a 0%, transparent 55%),
+    var(--navy);
+  image-rendering:pixelated; min-height:100vh; padding:28px 18px 80px;
+  -webkit-font-smoothing:none;
+}
+a{ color:var(--gold); }
+.wrap{ max-width:1120px; margin:0 auto; }
+h1{ font-size:18px; color:var(--gold); text-shadow:3px 3px 0 var(--black); margin-bottom:8px; letter-spacing:1px; }
+.sub{ font-size:9px; line-height:1.9; color:#a9c1e0; margin-bottom:6px; }
+.note{ font-size:8px; line-height:2; color:#8fb0d8; background:rgba(0,0,0,.25); border-left:4px solid var(--gold); padding:10px 12px; margin:14px 0 26px; }
+.section-h{ font-size:12px; color:var(--gold); text-shadow:2px 2px 0 var(--black); margin:34px 0 6px; letter-spacing:1px; }
+.section-s{ font-size:8px; color:#8fb0d8; margin-bottom:16px; line-height:1.9; }
+.felt{
+  background:
+    repeating-linear-gradient(90deg,#2e7d32 0 26px,#2a722d 26px 52px);
+  border:5px solid var(--black); box-shadow:0 0 0 4px #123b16, 8px 8px 0 rgba(0,0,0,.35);
+  padding:26px; border-radius:2px;
+}
+.row{ display:grid; grid-template-columns:repeat(3, minmax(0,1fr)); gap:18px; justify-items:center; }
+.row.four{ grid-template-columns:repeat(4, minmax(0,1fr)); }
+@media (max-width:900px){ .row, .row.four{ grid-template-columns:repeat(2, minmax(0,1fr)); } }
+@media (max-width:560px){ .row, .row.four{ grid-template-columns:1fr; } }
+
+/* ---------- THE WAX PACK ---------- */
+.pack{
+  position:relative; width:225px; height:315px;
+  filter:drop-shadow(5px 5px 0 rgba(0,0,0,.5));
+  font-family:'Press Start 2P',monospace;
+  /* crimped/serrated wax-pack top & bottom via clip-path zig-zag */
+  --crimp:9px;
+  clip-path:polygon(
+    0% var(--crimp), 4% 0%, 8% var(--crimp), 12% 0%, 16% var(--crimp), 20% 0%, 24% var(--crimp), 28% 0%, 32% var(--crimp), 36% 0%, 40% var(--crimp), 44% 0%, 48% var(--crimp), 52% 0%, 56% var(--crimp), 60% 0%, 64% var(--crimp), 68% 0%, 72% var(--crimp), 76% 0%, 80% var(--crimp), 84% 0%, 88% var(--crimp), 92% 0%, 96% var(--crimp), 100% 0%,
+    100% calc(100% - var(--crimp)), 96% 100%, 92% calc(100% - var(--crimp)), 88% 100%, 84% calc(100% - var(--crimp)), 80% 100%, 76% calc(100% - var(--crimp)), 72% 100%, 68% calc(100% - var(--crimp)), 64% 100%, 60% calc(100% - var(--crimp)), 56% 100%, 52% calc(100% - var(--crimp)), 48% 100%, 44% calc(100% - var(--crimp)), 40% 100%, 36% calc(100% - var(--crimp)), 32% 100%, 28% calc(100% - var(--crimp)), 24% 100%, 20% calc(100% - var(--crimp)), 16% 100%, 12% calc(100% - var(--crimp)), 8% 100%, 4% calc(100% - var(--crimp)), 0% 100%
+  );
+  transition:transform .16s ease;
+}
+.pack:hover{ transform:translateY(-6px) scale(1.02); }
+.pack .body{
+  position:absolute; inset:0;
+  border:4px solid var(--black);
+  display:flex; flex-direction:column; align-items:center;
+  padding:26px 12px 24px; overflow:hidden;
+}
+/* metallic foil base: layered diagonal bands read as brushed metal */
+.tier-bronze .body{ background:
+  linear-gradient(135deg, var(--bronze-1) 0%, var(--bronze-3) 22%, var(--bronze-2) 40%, var(--bronze-1) 60%, var(--bronze-3) 78%, var(--bronze-2) 100%); }
+.tier-silver .body{ background:
+  linear-gradient(135deg, var(--silver-1) 0%, var(--silver-3) 22%, var(--silver-2) 40%, var(--silver-1) 60%, var(--silver-3) 78%, var(--silver-2) 100%); }
+.tier-gold .body{ background:
+  linear-gradient(135deg, var(--gold-1) 0%, var(--gold-3) 20%, var(--gold-2) 42%, var(--gold-1) 60%, var(--gold-3) 80%, var(--gold-2) 100%); }
+.tier-free .body{ background:
+  linear-gradient(160deg, var(--paper-1) 0%, var(--paper-3) 30%, var(--paper-2) 55%, var(--paper-1) 100%); }
+
+/* specular highlight bands (pixel-art shine): hard-edged diagonal stripes */
+.foil{ position:absolute; inset:0; pointer-events:none; mix-blend-mode:screen; opacity:.55;
+  background:repeating-linear-gradient(115deg,
+    rgba(255,255,255,0) 0 14px, rgba(255,255,255,.5) 14px 18px, rgba(255,255,255,0) 18px 34px); }
+.tier-free .foil{ opacity:.22; mix-blend-mode:overlay; }
+/* animated shimmer sweep on hover (CSS-only, cheap) */
+.sheen{ position:absolute; top:-40%; left:-60%; width:60%; height:180%;
+  transform:rotate(18deg); pointer-events:none;
+  background:linear-gradient(90deg, rgba(255,255,255,0) 0%, rgba(255,255,255,.85) 50%, rgba(255,255,255,0) 100%);
+  filter:blur(1px); opacity:0; }
+.pack:hover .sheen{ animation:sweep 1s ease forwards; }
+@keyframes sweep{ 0%{ left:-60%; opacity:0; } 15%{ opacity:.9; } 100%{ left:130%; opacity:0; } }
+
+/* dark manufacturer band top + wordmark */
+.brandbar{ position:relative; z-index:2; width:100%; text-align:center;
+  font-size:6px; color:var(--gold); letter-spacing:2px; text-shadow:1px 1px 0 var(--black);
+  border-bottom:3px solid rgba(0,0,0,.5); padding-bottom:6px; margin-bottom:10px; }
+.brandbar b{ color:var(--white); }
+.wordmark{ position:relative; z-index:2; text-align:center; line-height:1.15;
+  font-size:19px; color:var(--white); text-shadow:0 0 0 var(--black),3px 3px 0 var(--black), -1px -1px 0 rgba(255,255,255,.4);
+  margin:2px 0 4px; }
+.tier-gold .wordmark{ color:#3a2a00; text-shadow:2px 2px 0 var(--gold-3), 3px 3px 0 var(--black); }
+.tier-silver .wordmark{ color:#20303f; text-shadow:2px 2px 0 #fff, 3px 3px 0 var(--black); }
+.tier-free .wordmark{ font-size:16px; color:#eafbe9; text-shadow:2px 2px 0 var(--green-d),3px 3px 0 var(--black); }
+.tiername{ position:relative; z-index:2; font-size:8px; color:rgba(0,0,0,.6); letter-spacing:2px; margin-bottom:8px; }
+.tier-gold .tiername{ color:#5a3d00; }
+
+/* era wrapper graphic: pixel batter silhouette mid-swing */
+.art{ position:relative; z-index:2; width:120px; height:96px; margin:2px auto 6px; }
+.batter{ position:absolute; inset:0; }
+.batter i{ position:absolute; background:rgba(10,10,10,.82); image-rendering:pixelated; }
+/* silhouette built from chunky blocks (pixel language) */
+.b-head{ left:52px; top:8px; width:16px; height:16px; }
+.b-body{ left:46px; top:24px; width:28px; height:34px; }
+.b-arm1{ left:70px; top:20px; width:26px; height:8px; transform:rotate(-24deg); }
+.b-arm2{ left:30px; top:26px; width:22px; height:8px; transform:rotate(-8deg); }
+.b-bat{ left:88px; top:2px; width:8px; height:34px; transform:rotate(-38deg); background:var(--gold-deep); }
+.b-leg1{ left:44px; top:56px; width:10px; height:30px; transform:rotate(-12deg); }
+.b-leg2{ left:64px; top:56px; width:10px; height:30px; transform:rotate(14deg); }
+.b-plate{ left:34px; top:86px; width:56px; height:6px; background:rgba(255,255,255,.5); }
+
+/* starburst flash */
+.burst{ position:absolute; z-index:3; right:6px; top:70px; width:66px; height:66px;
+  display:flex; align-items:center; justify-content:center; text-align:center;
+  color:var(--red); font-size:8px; line-height:1.2; text-shadow:1px 1px 0 #fff;
+  background:var(--gold);
+  clip-path:polygon(50% 0,61% 22%,85% 15%,74% 38%,100% 50%,74% 62%,85% 85%,61% 78%,50% 100%,39% 78%,15% 85%,26% 62%,0 50%,26% 38%,15% 15%,39% 22%);
+  transform:rotate(-8deg); border:0; }
+.burst.small{ width:52px; height:52px; font-size:6px; right:auto; left:8px; top:66px; background:#fff; color:var(--red); transform:rotate(9deg); }
+
+/* footer strip: 5 cards + odds hint */
+.packfoot{ position:relative; z-index:2; margin-top:auto; width:100%; text-align:center;
+  font-size:6px; color:rgba(0,0,0,.72); letter-spacing:1px; line-height:2;
+  border-top:3px solid rgba(0,0,0,.5); padding-top:7px; }
+.tier-free .packfoot{ color:#0d260c; border-top-color:rgba(0,0,0,.4); }
+
+/* caption under each pack */
+.cap{ font-size:8px; color:#a9c1e0; text-align:center; margin-top:12px; line-height:1.8; }
+.cap b{ color:var(--gold); }
+
+/* ---- mobile column render: shrink pack to fit 1-col nicely ---- */
+.mini .pack{ transform:scale(.86); transform-origin:top center; }
+
+/* ---------- Surface 2: rip-modal held pack-back ---------- */
+.modal-demo{ display:flex; gap:26px; flex-wrap:wrap; align-items:flex-start; }
+.modal-card{ background:var(--navy-2); border:4px solid var(--black); box-shadow:6px 6px 0 rgba(0,0,0,.4);
+  width:300px; padding:20px; text-align:center; }
+.modal-card .hint{ font-size:7px; color:#a9c1e0; margin-top:12px; line-height:2; }
+.held{ transform:scale(.92); }
+
+/* ---------- Surface 3: history shelf thumbnails ---------- */
+.shelf{ display:flex; gap:12px; flex-wrap:wrap; background:var(--navy-2);
+  border:4px solid var(--black); padding:16px; box-shadow:5px 5px 0 rgba(0,0,0,.35); }
+.thumb{ display:flex; align-items:center; gap:10px; background:rgba(255,255,255,.04);
+  border:2px solid rgba(255,255,255,.12); padding:8px 12px 8px 8px; }
+.thumb .mini-pack{ width:40px; height:56px; flex:0 0 auto; border:2px solid var(--black); position:relative; overflow:hidden;
+  --crimp:4px;
+  clip-path:polygon(0 var(--crimp),8% 0,16% var(--crimp),24% 0,32% var(--crimp),40% 0,48% var(--crimp),56% 0,64% var(--crimp),72% 0,80% var(--crimp),88% 0,100% var(--crimp),100% calc(100% - var(--crimp)),88% 100%,80% calc(100% - var(--crimp)),72% 100%,64% calc(100% - var(--crimp)),56% 100%,48% calc(100% - var(--crimp)),40% 100%,32% calc(100% - var(--crimp)),24% 100%,16% calc(100% - var(--crimp)),8% 100%,0 calc(100% - var(--crimp))); }
+.thumb .meta{ text-align:left; font-size:7px; color:#cfe0f5; line-height:1.9; }
+.thumb .meta b{ color:var(--gold); font-size:8px; }
+
+.foot-note{ font-size:8px; color:#7f9ec8; margin-top:40px; line-height:2; border-top:2px solid rgba(255,255,255,.1); padding-top:18px; }
+.legend{ display:flex; gap:22px; flex-wrap:wrap; font-size:8px; color:#a9c1e0; margin:10px 0 4px; }
+.legend span{ display:inline-flex; align-items:center; gap:8px; }
+.sw{ width:16px; height:16px; border:2px solid var(--black); display:inline-block; }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <h1>PACK SHOP — WAX-PACK REDESIGN</h1>
+  <div class="sub">Static preview for eyeball. 1989-wax-box energy in the Depot's 8-bit navy/gold pixel language.</div>
+  <div class="note">
+    NOT wired to the live shop. Layout overflow fix already shipped separately (build e22bf86).<br>
+    Reveal timing / ceremony behavior untouched (parked per Nick). This page is art only — awaiting your verdict before it touches the live tiles.<br>
+    Hover any pack to see the foil shimmer sweep + lift.
+  </div>
+
+  <div class="legend">
+    <span><i class="sw" style="background:linear-gradient(135deg,var(--bronze-2),var(--bronze-3))"></i> Bronze foil</span>
+    <span><i class="sw" style="background:linear-gradient(135deg,var(--silver-2),var(--silver-3))"></i> Silver foil</span>
+    <span><i class="sw" style="background:linear-gradient(135deg,var(--gold-2),var(--gold-3))"></i> Gold foil</span>
+    <span><i class="sw" style="background:linear-gradient(160deg,var(--paper-2),var(--paper-3))"></i> Free Daily (paper)</span>
+  </div>
+
+  <div class="section-h">DESKTOP — all four packs on the felt</div>
+  <div class="section-s">Wrapper illustration, not a swatch: crimped wax folds top &amp; bottom, foil sheen, era batter graphic, starburst flashes, chunky tier wordmark, small Depot manufacturer mark.</div>
+
+  <div class="felt">
+    <div class="row four">
+      <!-- pack template repeated per tier -->
+      <div>
+        <div class="pack tier-bronze">
+          <div class="body">
+            <div class="foil"></div><div class="sheen"></div>
+            <div class="brandbar">THE <b>DEPOT</b> · CARD CO.</div>
+            <div class="wordmark">BRONZE</div>
+            <div class="tiername">PACK</div>
+            <div class="art"><div class="batter">
+              <i class="b-head"></i><i class="b-body"></i><i class="b-arm1"></i><i class="b-arm2"></i><i class="b-bat"></i><i class="b-leg1"></i><i class="b-leg2"></i><i class="b-plate"></i>
+            </div><div class="burst small">5<br>CARDS</div></div>
+            <div class="packfoot">5 CARDS · SERIES ONE<br>·150 DD·</div>
+          </div>
+        </div>
+        <div class="cap"><b>BRONZE</b> · the everyday rip</div>
+      </div>
+
+      <div>
+        <div class="pack tier-silver">
+          <div class="body">
+            <div class="foil"></div><div class="sheen"></div>
+            <div class="brandbar">THE <b>DEPOT</b> · CARD CO.</div>
+            <div class="wordmark">SILVER</div>
+            <div class="tiername">PACK</div>
+            <div class="art"><div class="batter">
+              <i class="b-head"></i><i class="b-body"></i><i class="b-arm1"></i><i class="b-arm2"></i><i class="b-bat"></i><i class="b-leg1"></i><i class="b-leg2"></i><i class="b-plate"></i>
+            </div><div class="burst small">5<br>CARDS</div></div>
+            <div class="packfoot">5 CARDS · SERIES ONE<br>·400 DD·</div>
+          </div>
+        </div>
+        <div class="cap"><b>SILVER</b> · better odds</div>
+      </div>
+
+      <div>
+        <div class="pack tier-gold">
+          <div class="body">
+            <div class="foil"></div><div class="sheen"></div>
+            <div class="brandbar">THE <b>DEPOT</b> · CARD CO.</div>
+            <div class="wordmark">GOLD</div>
+            <div class="tiername">PACK</div>
+            <div class="art"><div class="batter">
+              <i class="b-head"></i><i class="b-body"></i><i class="b-arm1"></i><i class="b-arm2"></i><i class="b-bat"></i><i class="b-leg1"></i><i class="b-leg2"></i><i class="b-plate"></i>
+            </div><div class="burst">1 HIT<br>INSIDE</div></div>
+            <div class="packfoot">5 CARDS · 1 GUARANTEED HIT<br>·900 DD·</div>
+          </div>
+        </div>
+        <div class="cap"><b>GOLD</b> · begging to be ripped</div>
+      </div>
+
+      <div>
+        <div class="pack tier-free">
+          <div class="body">
+            <div class="foil"></div><div class="sheen"></div>
+            <div class="brandbar">THE <b>DEPOT</b> · ON THE HOUSE</div>
+            <div class="wordmark">FREE<br>DAILY</div>
+            <div class="tiername">ONE PER DAY</div>
+            <div class="art"><div class="batter">
+              <i class="b-head"></i><i class="b-body"></i><i class="b-arm1"></i><i class="b-arm2"></i><i class="b-bat"></i><i class="b-leg1"></i><i class="b-leg2"></i><i class="b-plate"></i>
+            </div><div class="burst small" style="background:#fff;color:var(--green-d)">1<br>CARD</div></div>
+            <div class="packfoot">1 CARD · EVERY 24H<br>·FREE·</div>
+          </div>
+        </div>
+        <div class="cap"><b>FREE DAILY</b> · paper envelope, same craft</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="section-h">MOBILE — single column (≈360px)</div>
+  <div class="section-s">Same wrappers, stacked. Crimp + foil hold at small size.</div>
+  <div class="felt mini" style="max-width:360px">
+    <div class="row" style="grid-template-columns:1fr">
+      <div><div class="pack tier-gold"><div class="body">
+        <div class="foil"></div><div class="sheen"></div>
+        <div class="brandbar">THE <b>DEPOT</b> · CARD CO.</div>
+        <div class="wordmark">GOLD</div><div class="tiername">PACK</div>
+        <div class="art"><div class="batter"><i class="b-head"></i><i class="b-body"></i><i class="b-arm1"></i><i class="b-arm2"></i><i class="b-bat"></i><i class="b-leg1"></i><i class="b-leg2"></i><i class="b-plate"></i></div><div class="burst">1 HIT<br>INSIDE</div></div>
+        <div class="packfoot">5 CARDS · 1 GUARANTEED HIT<br>·900 DD·</div>
+      </div></div></div>
+      <div><div class="pack tier-free"><div class="body">
+        <div class="foil"></div><div class="sheen"></div>
+        <div class="brandbar">THE <b>DEPOT</b> · ON THE HOUSE</div>
+        <div class="wordmark">FREE<br>DAILY</div><div class="tiername">ONE PER DAY</div>
+        <div class="art"><div class="batter"><i class="b-head"></i><i class="b-body"></i><i class="b-arm1"></i><i class="b-arm2"></i><i class="b-bat"></i><i class="b-leg1"></i><i class="b-leg2"></i><i class="b-plate"></i></div><div class="burst small" style="background:#fff;color:var(--green-d)">1<br>CARD</div></div>
+        <div class="packfoot">1 CARD · EVERY 24H<br>·FREE·</div>
+      </div></div></div>
+    </div>
+  </div>
+
+  <div class="section-h">SURFACE 2 — rip-modal HELD pack-back</div>
+  <div class="section-s">Same wrapper art becomes the held pack before the rip. (Rip animation/timing itself is untouched.)</div>
+  <div class="modal-demo">
+    <div class="modal-card">
+      <div class="held"><div class="pack tier-gold" style="margin:0 auto"><div class="body">
+        <div class="foil"></div><div class="sheen"></div>
+        <div class="brandbar">THE <b>DEPOT</b> · CARD CO.</div>
+        <div class="wordmark">GOLD</div><div class="tiername">PACK</div>
+        <div class="art"><div class="batter"><i class="b-head"></i><i class="b-body"></i><i class="b-arm1"></i><i class="b-arm2"></i><i class="b-bat"></i><i class="b-leg1"></i><i class="b-leg2"></i><i class="b-plate"></i></div><div class="burst">1 HIT<br>INSIDE</div></div>
+        <div class="packfoot">TAP TO RIP</div>
+      </div></div></div>
+      <div class="hint">held state · gold foil catches the light</div>
+    </div>
+  </div>
+
+  <div class="section-h">SURFACE 3 — PACK HISTORY shelf thumbnails</div>
+  <div class="section-s">One design, three surfaces: the wrapper miniaturizes into the shelf.</div>
+  <div class="shelf">
+    <div class="thumb"><div class="mini-pack tier-bronze"><div class="body" style="padding:0"><div class="foil"></div></div></div><div class="meta"><b>BRONZE</b><br>Jul 12 · 5 cards</div></div>
+    <div class="thumb"><div class="mini-pack tier-silver"><div class="body" style="padding:0"><div class="foil"></div></div></div><div class="meta"><b>SILVER</b><br>Jul 12 · 5 cards</div></div>
+    <div class="thumb"><div class="mini-pack tier-gold"><div class="body" style="padding:0"><div class="foil"></div></div></div><div class="meta"><b>GOLD</b><br>Jul 13 · 5 cards · HIT</div></div>
+    <div class="thumb"><div class="mini-pack tier-free"><div class="body" style="padding:0"><div class="foil"></div></div></div><div class="meta"><b>FREE</b><br>Jul 13 · 1 card</div></div>
+  </div>
+
+  <div class="foot-note">
+    Preview only · mockups/pack-wax-redesign-preview.html · no live paths touched.<br>
+    Era-evoking, not brand-copying: generic batter silhouette + "CARD CO." manufacturer mark, no real trade dress or logos.<br>
+    On approval: port these wrappers into css/depot-shop-view.css (.dsv-tile/.dsv-back) behind the same tier classes, additive, live-verified.
+  </div>
+
+</div>
+</body>
+</html>
