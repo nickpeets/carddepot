@@ -248,6 +248,17 @@ function loadCatalog() {
     if(!receipt||receipt.status!=='debited') return Promise.resolve({redeemed:false});
     var client=sb();
     if(!client||!client.from){ console.warn(TAG+' redeem: no client'); return Promise.resolve({redeemed:false}); }
+    // RACE-SAFE (belt): a window-scoped in-flight latch keyed by seed so that
+    // concurrent auth events / mounts share ONE redemption attempt. Two helper
+    // instances each with their own fired-flag used to slip through here and
+    // double-grant; the latch closes that. (DB unique index below is the real
+    // guarantee -- see db/proposals/pack_seed_idempotency.sql.)
+    var __seedKey = 'seed:' + (receipt && receipt.seed);
+    window.__depotRedeemInFlight = window.__depotRedeemInFlight || {};
+    if (window.__depotRedeemInFlight[__seedKey]) {
+      console.log(TAG+' redeem: attempt already in flight for '+__seedKey+' -> sharing it (race latch)');
+      return window.__depotRedeemInFlight[__seedKey];
+    }
     // Honor the catalog we were given (raw array from loadCatalog), accept a {cards:[]} wrapper too,
   // else load it once and retry. Distinguish 'catalog unavailable' from 'no receipt' (handled above).
   var _cat = catalog || (opts && opts.catalog) || null;
@@ -262,7 +273,7 @@ function loadCatalog() {
   catalog = _cat;
     console.log(TAG+' redeeming pending pack', receipt);
     var ownerId, collectionId, pack, cards, hitIndex;
-    return client.auth.getUser().then(function(u){
+    var __chain = client.auth.getUser().then(function(u){
       ownerId=u&&u.data&&u.data.user?u.data.user.id:null;
       if(!ownerId) throw new Error('not signed in');
       return resolveCollection(client, ownerId);
@@ -277,7 +288,18 @@ function loadCatalog() {
       if(already>=cards.length){ console.log(TAG+' redeem: all '+cards.length+' cards already granted for seed '+receipt.seed+' -> ceremony only'); return {skipInsert:true}; }
       var toInsert=(already===0)?cards.map(function(c){return cardRow(c,ownerId,collectionId,receipt.seed);}):cards.slice(already).map(function(c){return cardRow(c,ownerId,collectionId,receipt.seed);});
       return client.from('cards').insert(toInsert).select('id').then(function(ins){
-        if(ins.error) throw new Error('card insert rejected: '+ins.error.message);
+        if(ins.error){
+          // DB idempotency: a unique-violation (Postgres 23505) on the
+          // (collection_id, pack_seed) index means a concurrent attempt
+          // already granted this seed. Treat as a CLEAN no-op (fail-loud
+          // log, NOT an error state) -- the pack is granted exactly once.
+          var __m = (ins.error.message||'')+' '+(ins.error.details||'');
+          if((ins.error.code+'')==='23505' || /duplicate key|already exists|unique constraint/i.test(__m)){
+            console.log(TAG+' redeem: DB rejected duplicate grant for seed '+(receipt&&receipt.seed)+' (unique-violation) -> already granted, clean no-op');
+            return {skipInsert:true};
+          }
+          throw new Error('card insert rejected: '+ins.error.message);
+        }
         console.log(TAG+' redeem: inserted '+((ins.data||[]).length)+' card(s) (had '+already+')');
         return {skipInsert:false};
       });
@@ -288,6 +310,11 @@ function loadCatalog() {
       console.error(TAG+' redeem failed (receipt retained): ', e&&e.message||e);
       return {redeemed:false, error:(e&&e.message)||String(e)};
     });
+    // store the shared attempt and clear the latch once it settles
+    window.__depotRedeemInFlight[__seedKey] = __chain;
+    __chain.then(function(){ if(window.__depotRedeemInFlight) delete window.__depotRedeemInFlight[__seedKey]; },
+               function(){ if(window.__depotRedeemInFlight) delete window.__depotRedeemInFlight[__seedKey]; });
+    return __chain;
   }
   function playPackCeremony(view, cards, hitIndex, opts){
     opts = opts || {};

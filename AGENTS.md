@@ -81,6 +81,8 @@ if (!uid) { console.warn('[season] no user id at attach; bailing'); return; }
 - Log the **reason and the missing value's name**, not just "return." A bail on a writeback (attach/record/seasons) must state which one and why (e.g. null client, null uid, RLS 0-rows).
 - Applies to new code and to any silent guard you touch. Do not add a silent guard, ever.
 
+- **Canonical incident — read-then-write is NOT idempotency.** Nick's bronze pack (seed `1335568119`) was granted TWICE. The client's guard was: `SELECT` cards for the seed → if count `< N`, `INSERT`. Two concurrent `INITIAL_SESSION` auth events fired at the same millisecond; both read zero, both inserted → ten cards instead of five. A read-then-write check *cannot* dedupe a race — the read is stale the instant another writer commits. **Only the database can guarantee once:** a partial unique index on `(collection_id, pack_seed)` (see `db/proposals/pack_seed_idempotency.sql`) makes the second insert fail loudly with Postgres `23505`, which the client then treats as a clean "already granted" no-op (logged, not an error). A window-scoped in-flight latch is the belt; the DB constraint is the suspenders. If you ever find yourself writing "check, then act" on money or grants, stop — push the invariant into the DB.
+
 ---
 
 ## 5. Deploy rules (GitHub Pages)
