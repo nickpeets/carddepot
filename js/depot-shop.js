@@ -281,26 +281,25 @@ function loadCatalog() {
       collectionId=cid;
       pack=window.DepotPackEngine.rollPack({tier:receipt.tier, catalog:catalog, seed:receipt.seed, prestige:window.DepotPrestige});
       cards=pack.cards; hitIndex=(typeof receipt.hitIndex==='number')?receipt.hitIndex:pack.hitIndex;
-      return client.from('cards').select('id,notes').eq('owner_id',ownerId).eq('source','pack').ilike('notes','%'+seedNote(receipt.seed)+'%');
-    }).then(function(existing){
-      if(existing.error) throw new Error('idempotency check failed: '+existing.error.message);
-      var already=(existing.data||[]).length;
-      if(already>=cards.length){ console.log(TAG+' redeem: all '+cards.length+' cards already granted for seed '+receipt.seed+' -> ceremony only'); return {skipInsert:true}; }
-      var toInsert=(already===0)?cards.map(function(c){return cardRow(c,ownerId,collectionId,receipt.seed);}):cards.slice(already).map(function(c){return cardRow(c,ownerId,collectionId,receipt.seed);});
-      return client.from('cards').insert(toInsert).select('id').then(function(ins){
-        if(ins.error){
-          // DB idempotency: a unique-violation (Postgres 23505) on the
-          // (collection_id, pack_seed) index means a concurrent attempt
-          // already granted this seed. Treat as a CLEAN no-op (fail-loud
-          // log, NOT an error state) -- the pack is granted exactly once.
-          var __m = (ins.error.message||'')+' '+(ins.error.details||'');
-          if((ins.error.code+'')==='23505' || /duplicate key|already exists|unique constraint/i.test(__m)){
-            console.log(TAG+' redeem: DB rejected duplicate grant for seed '+(receipt&&receipt.seed)+' (unique-violation) -> already granted, clean no-op');
-            return {skipInsert:true};
-          }
-          throw new Error('card insert rejected: '+ins.error.message);
+      return client.from('pack_grants').insert({ owner_id:ownerId, collection_id:collectionId, pack_seed:receipt.seed, tier:receipt.tier, card_count:cards.length }).select('id')
+    }).then(function(grant){
+      // PACK-LEVEL idempotency gate: the grant row is inserted FIRST. A
+      // unique-violation (23505) on pack_grants(collection_id, pack_seed)
+      // means this pack was already granted -> clean no-op, insert NO cards.
+      // The gate is the PACK, not the card row (5 cards share one seed).
+      if(grant.error){
+        var __gm = (grant.error.message||'')+' '+(grant.error.details||'');
+        if((grant.error.code+'')==='23505' || /duplicate key|already exists|unique constraint/i.test(__gm)){
+          console.log(TAG+' redeem: pack_grants rejected duplicate for seed '+receipt.seed+' (23505) -> pack already granted, clean no-op (no cards inserted)');
+          return {skipInsert:true};
         }
-        console.log(TAG+' redeem: inserted '+((ins.data||[]).length)+' card(s) (had '+already+')');
+        throw new Error('pack_grants insert rejected: '+grant.error.message);
+      }
+      // grant row landed -> we own this pack; now insert its cards
+      var toInsert=cards.map(function(c){return cardRow(c,ownerId,collectionId,receipt.seed);});
+      return client.from('cards').insert(toInsert).select('id').then(function(ins){
+        if(ins.error) throw new Error('card insert rejected: '+ins.error.message);
+        console.log(TAG+' redeem: inserted '+((ins.data||[]).length)+' card(s) after grant row');
         return {skipInsert:false};
       });
     }).then(function(){

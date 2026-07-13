@@ -1,55 +1,95 @@
 -- =====================================================================
--- Pack-seed idempotency: one grant per (collection, pack seed)
+-- Pack-grant idempotency: ONE grant per (collection, pack seed)
 -- =====================================================================
--- WHY: The client did a read-then-insert idempotency check ("are there
--- already N cards for this seed?"). Two concurrent auth events both read
--- zero and both inserted -> a double-grant (Nick's bronze pack, seed
--- 1335568119, landed twice). A read-then-write check can NEVER dedupe a
--- race. Only the database can, via a unique constraint that rejects the
--- second insert atomically.
+-- WHY (v2 redesign): The idempotency UNIT is the PACK, not the card row.
+-- A 5-card pack legitimately produces five cards that all share the same
+-- seed, so a unique index on cards(collection_id, pack_seed) can NEVER
+-- coexist with multi-card packs -- it rejects cards 2..5 of a valid pack.
+-- (Nick's table proved this: 5 correct rows, one per player, all seed
+-- 1335568119.)
 --
--- WHAT THIS DOES:
---   1. Adds a normalized pack_seed bigint column to public.cards.
---   2. Backfills it from the existing "packseed:<n>" tag in notes.
---   3. Adds a PARTIAL unique index on (collection_id, pack_seed) that only
---      applies where pack_seed IS NOT NULL -- so ordinary (non-pack) cards
---      and legacy pack cards without a seed tag are untouched.
+-- The correct gate is a separate LEDGER table with one row PER PACK:
+--   public.pack_grants, unique on (collection_id, pack_seed).
+-- Redemption inserts the grant row FIRST. A 23505 there means "pack
+-- already granted" -> clean no-op, insert no cards. Otherwise the grant
+-- row lands and the 5 cards follow. Two concurrent redemptions collide
+-- on the grant row BEFORE any card is written -> atomic at the pack level.
+--
+-- The cards table keeps its pack_seed column for provenance/joins, but
+-- carries NO unique constraint on it.
 --
 -- SAFETY:
---   - Run this in a transaction. If the backfill would create a duplicate
---     (i.e. a double-grant still exists), the CREATE UNIQUE INDEX will FAIL
---     LOUDLY and roll back -- clean the duplicates first, then re-run.
---   - Nick's collection currently has exactly one row per seed card
---     (duplicates already deleted), so this should apply cleanly.
+--   - Idempotent: uses IF NOT EXISTS / IF EXISTS / ON CONFLICT throughout.
+--   - Nothing is deleted. Nick's 5 cards stay exactly as they are.
+--   - Runs in a transaction.
 --
 -- RUN AS: Nick, in the Supabase SQL editor. DO NOT let the agent run this.
 -- =====================================================================
 
 BEGIN;
 
--- 1. Normalized column (nullable; only pack cards get a value).
+-- 0. Undo the flawed v1 index if it ever got created (it can't have, since
+--    it fails on any real pack -- but IF EXISTS makes this a safe no-op).
+DROP INDEX IF EXISTS public.cards_collection_pack_seed_uidx;
+
+-- 1. Cards keep a normalized pack_seed for provenance (NO unique on it).
 ALTER TABLE public.cards
   ADD COLUMN IF NOT EXISTS pack_seed bigint;
 
--- 2. Backfill from the notes tag "packseed:<digits>".
---    substring() pulls the first run of digits after the tag.
+--    Backfill from the notes tag "packseed:<digits>".
 UPDATE public.cards
    SET pack_seed = (substring(notes from 'packseed:([0-9]+)'))::bigint
  WHERE notes ~ 'packseed:[0-9]+'
    AND pack_seed IS NULL;
 
--- 3. Partial unique index: at most one row per (collection, seed).
---    WHERE pack_seed IS NOT NULL keeps it scoped to real pack grants.
-CREATE UNIQUE INDEX IF NOT EXISTS cards_collection_pack_seed_uidx
-  ON public.cards (collection_id, pack_seed)
-  WHERE pack_seed IS NOT NULL;
+-- 2. The idempotency LEDGER: one row per granted pack.
+CREATE TABLE IF NOT EXISTS public.pack_grants (
+  id            uuid        PRIMARY KEY DEFAULT gen_random_uuid(),
+  owner_id      uuid        NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  collection_id uuid        NOT NULL,
+  pack_seed     bigint      NOT NULL,
+  tier          text,
+  card_count    integer,
+  created_at    timestamptz NOT NULL DEFAULT now()
+);
+
+-- 3. THE GATE: at most one grant per (collection, seed). A concurrent
+--    second insert hits this and fails with Postgres 23505.
+CREATE UNIQUE INDEX IF NOT EXISTS pack_grants_collection_seed_uidx
+  ON public.pack_grants (collection_id, pack_seed);
+
+-- 4. RLS: an owner sees and writes only their own grant rows.
+ALTER TABLE public.pack_grants ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS pack_grants_select_own ON public.pack_grants;
+CREATE POLICY pack_grants_select_own ON public.pack_grants
+  FOR SELECT USING (auth.uid() = owner_id);
+
+DROP POLICY IF EXISTS pack_grants_insert_own ON public.pack_grants;
+CREATE POLICY pack_grants_insert_own ON public.pack_grants
+  FOR INSERT WITH CHECK (auth.uid() = owner_id);
+
+-- 5. Backfill ONE grant row for Nick's already-redeemed bronze pack
+--    (seed 1335568119) from his existing cards. ON CONFLICT DO NOTHING
+--    keeps this safe to re-run.
+INSERT INTO public.pack_grants (owner_id, collection_id, pack_seed, tier, card_count)
+SELECT c.owner_id,
+       c.collection_id,
+       1335568119::bigint     AS pack_seed,
+       'bronze'               AS tier,
+       count(*)::int          AS card_count
+  FROM public.cards c
+ WHERE c.notes ~ 'packseed:1335568119'
+ GROUP BY c.owner_id, c.collection_id
+ON CONFLICT (collection_id, pack_seed) DO NOTHING;
 
 COMMIT;
 
 -- =====================================================================
 -- OPTIONAL VERIFICATION (read-only) after commit:
---   SELECT collection_id, pack_seed, count(*)
---     FROM public.cards
---    WHERE pack_seed IS NOT NULL
---    GROUP BY 1,2 HAVING count(*) > 1;   -- expect zero rows
+--   -- exactly one grant row for the bronze pack, card_count = 5:
+--   SELECT collection_id, pack_seed, tier, card_count
+--     FROM public.pack_grants WHERE pack_seed = 1335568119;
+--   -- the 5 cards are untouched:
+--   SELECT count(*) FROM public.cards WHERE notes ~ 'packseed:1335568119';
 -- =====================================================================
