@@ -103,6 +103,8 @@ Pages deploys are flaky **server-side** in this repo — builds sometimes queue 
 4. Schema / data-loss / non-additive working-path change? **Pause for sign-off.**
 5. Merge with a `--no-ff` merge commit; **keep the branch**.
 6. Bump `js/version.js`; after merge, confirm live `[depot] build <hash>` matches.
+
+**CACHE-BUST RITUAL (atomic, added after the pack-redemption incident):** Every deploy bump updates `js/version.js` AND the `?v=<hash>` cache-bust query strings on every `js/*.js` and `css/*.css` include across ALL shells (`index.html`, `game/builder.html`, `game/index.html`, `game/shop.html`) together, in the SAME merge/bump. A `?v=` that drifts from the deployed build silently recreates the stranded-cache bug: clients keep serving old bundles even after a green deploy. This bit us on the pack-redemption deploy (`0fc08af` shipped; Nick's browser ran `55f832a`, so the new `redeemPending` never loaded and his paid pack silently no-opped). The include tags carry no cache-busting otherwise, and GitHub Pages caches `js`/`css`. Ritual: in the web-editor bump commit, find-and-replace the OLD `?v=<oldhash>` with the NEW `<newhash>` across all four HTML files in one multi-file commit, and set `js/version.js` BUILD to the same hash. Never let `?v=` and version.js diverge. The CDN Supabase `<script>` is left unversioned on purpose.
 7. Report: files, commit hashes, and the live-verified build hash.
 
 ## 7. Known tooling notes
