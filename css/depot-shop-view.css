@@ -190,3 +190,25 @@
   padding:9px 16px; border-radius:999px; background:linear-gradient(180deg,#ffd76b,#f0b93f); }
 .dpc-replaybtn:hover{ filter:brightness(1.06); }
 @media (prefers-reduced-motion: reduce){ .dpc-held .dpc-packback{ animation:none; } .dpc-tapcue{ animation:none; } }
+
+
+/* ============================================================
+   LAYOUT FIX (fix/pack-shop-gold-overflow): GOLD PACK overflow.
+   Root cause: .dsv-grid uses the binder's shared .grid
+   (grid-template-columns: repeat(3, 1fr)). The 4 pack tiles AND
+   the PACK HISTORY shelf (.dpc-history, whose inner .dpc-hist-item
+   has min-width:260px) are ALL children of that one grid. A grid
+   item's automatic minimum size is its min-content, so the 260px
+   history row inflated the SHARED middle column to 260px (225->260),
+   which cascaded to every row and pushed the fixed 225px GOLD tile
+   ~35px past the green-felt frame's right edge.
+   Fix: give grid items min-width:0 so no child can inflate a shared
+   1fr track; tiles cannot exceed their track; and on desktop let the
+   history shelf span the trailing columns (it no longer dictates
+   track width). Breakpoint-agnostic: does NOT touch the responsive
+   3->2->1 column collapse driven by .grid media queries. */
+.dsv-grid > *{ min-width:0; }
+.dsv-grid .dsv-tile{ max-width:100%; }
+@media (min-width:761px){
+     .dsv-grid .dpc-history{ grid-column:2 / -1; }
+}
