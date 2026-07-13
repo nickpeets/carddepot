@@ -188,7 +188,17 @@
         pending:   function(){ setStatus("warn", "Opening " + tier.toUpperCase() + " pack\u2026"); },
         insufficient: function(cost, bal, raw){ setStatus("err", "<b>" + esc(raw||"Insufficient funds.") + "</b> No pack purchased, no " + CUR + " spent."); if(bal!=null) setBal(bal); render(); },
         offline:   function(){ setStatus("warn", "Shop is temporarily offline. No " + CUR + " spent."); render(); },
-        savedNoRip:function(nb){ if(nb!=null) setBal(nb); setStatus("ok", "<b>Pack purchased.</b> Saved to your collection."); render(); },
+        savedNoRip:function(nb){ if(nb!=null) setBal(nb); setStatus("ok", "<b>PACK PURCHASED - SAVED.</b> Opening will begin next time you open the shop."); render(); },
+        // Honor the paid pack NOW: grant the 5 cards + play the rip ceremony.
+        rip:function(nb, receipt){
+          if(nb!=null) setBal(nb);
+          setStatus("ok", "<b>PACK PURCHASED - OPENING...</b>");
+          Shop.redeemPending(catalog, window.DepotShopView, { render: render, revealOne: runReveal }).then(function(res){
+            if(res && res.redeemed){ setStatus("ok", "<b>Pack opened.</b> Cards added to your collection."); }
+            else { setStatus("warn", "<b>Pack saved.</b> Opening will retry next shop load."); }
+            render();
+          });
+        },
         fail:      function(m){ setStatus("err", "Purchase failed: " + esc(m||"error")); render(); }
       };
     }
@@ -225,6 +235,14 @@
       var catP = catalog ? Promise.resolve(catalog) : Shop.loadCatalog();
       Promise.all([catP, ready]).then(function(r){
         catalog = r[0] || [];
+        // Auto-honor a debited-but-unopened pack (money-safety recovery).
+        try {
+          if (Shop.redeemPending) {
+            Shop.redeemPending(catalog, window.DepotShopView, { render: render, revealOne: runReveal }).then(function(res){
+              if (res && res.redeemed) { setStatus("ok", "<b>Your saved pack was opened.</b>"); Promise.resolve(Shop.getBalance()).then(function(b){ setBal(b); render(); }); }
+            });
+          }
+        } catch (e) { console.warn(TAG + " auto-redeem skipped: " + (e && e.message)); }
         Promise.resolve(Shop.getBalance()).then(function(b){ setBal(b); render(); }).catch(function(){ setBal(null); render(); });
         probeCooldown();
       }).catch(function(e){ setStatus("err","Shop failed to load."); console.error(TAG+" boot", e && e.message); });
