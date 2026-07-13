@@ -248,7 +248,18 @@ function loadCatalog() {
     if(!receipt||receipt.status!=='debited') return Promise.resolve({redeemed:false});
     var client=sb();
     if(!client||!client.from){ console.warn(TAG+' redeem: no client'); return Promise.resolve({redeemed:false}); }
-    if(!catalog||!catalog.ok){ console.warn(TAG+' redeem: catalog not ready'); return Promise.resolve({redeemed:false}); }
+    // Honor the catalog we were given (raw array from loadCatalog), accept a {cards:[]} wrapper too,
+  // else load it once and retry. Distinguish 'catalog unavailable' from 'no receipt' (handled above).
+  var _cat = catalog || (opts && opts.catalog) || null;
+  if (_cat && !Array.isArray(_cat) && Array.isArray(_cat.cards)) _cat = _cat.cards;
+  if (!Array.isArray(_cat) || _cat.length === 0) {
+    if (opts && opts.__catRetry) { console.error(TAG+' redeem: catalog unavailable after load (receipt kept, money safe)'); return Promise.resolve({redeemed:false, error:'catalog-unavailable'}); }
+    console.warn(TAG+' redeem: catalog empty on this surface, loading it now');
+    var _o = {}; for (var k in opts) { if (Object.prototype.hasOwnProperty.call(opts,k)) _o[k]=opts[k]; } _o.__catRetry = true;
+    return Promise.resolve(loadCatalog()).then(function(loaded){ return redeemPending(loaded, view, _o); })
+      .catch(function(e){ console.error(TAG+' redeem: catalog load failed (receipt kept, money safe): '+(e&&(e.message||e))); return {redeemed:false, error:'catalog-load-failed'}; });
+  }
+  catalog = _cat;
     console.log(TAG+' redeeming pending pack', receipt);
     var ownerId, collectionId, pack, cards, hitIndex;
     return client.auth.getUser().then(function(u){
