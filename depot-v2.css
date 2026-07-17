@@ -431,13 +431,15 @@ body.v2-body {
    ============================================================ */
 
 /* --- Binder grid card frames --- */
-.v2-body #binderGrid.grid{
+.v2-body #binderGrid.grid,
+.v2-body .v2-binder-grid{
   display:grid;
   grid-template-columns:repeat(auto-fill,minmax(150px,1fr));
   gap:18px;
   padding:8px 2px 4px;
 }
-.v2-body #binderGrid .card{
+.v2-body #binderGrid .card,
+.v2-body .v2-binder-grid .card{
   position:relative;
   border:3px solid var(--v2-navy);
   border-radius:var(--v2-radius-sm);
@@ -449,27 +451,34 @@ body.v2-body {
   cursor:pointer;
 }
 .v2-body #binderGrid .card:hover,
-.v2-body #binderGrid .card:focus-visible{
+.v2-body #binderGrid .card:focus-visible,
+.v2-body .v2-binder-grid .card:hover,
+.v2-body .v2-binder-grid .card:focus-visible{
   transform:translate(-2px,-2px);
   box-shadow:6px 6px 0 var(--v2-navy-ink);
   outline:none;
 }
-.v2-body #binderGrid .card:active{
+.v2-body #binderGrid .card:active,
+.v2-body .v2-binder-grid .card:active{
   transform:translate(1px,1px);
   box-shadow:var(--v2-hard-shadow-pressed);
 }
-.v2-body #binderGrid .card .frame{ border-radius:calc(var(--v2-radius-sm) - 3px) calc(var(--v2-radius-sm) - 3px) 0 0; overflow:hidden; }
-.v2-body #binderGrid .card .nameplate{
+.v2-body #binderGrid .card .frame,
+.v2-body .v2-binder-grid .card .frame{ border-radius:calc(var(--v2-radius-sm) - 3px) calc(var(--v2-radius-sm) - 3px) 0 0; overflow:hidden; }
+.v2-body #binderGrid .card .nameplate,
+.v2-body .v2-binder-grid .card .nameplate{
   font-family:var(--v2-font-body);
   color:var(--v2-navy-ink);
   border-top:2px solid var(--v2-navy);
   background:var(--v2-cream);
   padding:6px 8px;
 }
-.v2-body #binderGrid .card .nameplate .pos{ color:var(--v2-navy); opacity:.75; }
+.v2-body #binderGrid .card .nameplate .pos,
+.v2-body .v2-binder-grid .card .nameplate .pos{ color:var(--v2-navy); opacity:.75; }
 
 /* rare-pin reskinned to v2 gold pin */
-.v2-body #binderGrid .card .rare-pin{
+.v2-body #binderGrid .card .rare-pin,
+.v2-body .v2-binder-grid .card .rare-pin{
   position:absolute; top:-8px; right:-8px; z-index:3;
   background:var(--v2-gold); color:var(--v2-navy-ink);
   border:2px solid var(--v2-navy); border-radius:50%;
@@ -577,7 +586,7 @@ body.v2-body {
 
 /* --- Mobile ~390px --- */
 @media (max-width:430px){
-  .v2-body #binderGrid.grid{ grid-template-columns:repeat(2,1fr); gap:12px; }
+  .v2-body #binderGrid.grid, .v2-body .v2-binder-grid{ grid-template-columns:repeat(2,1fr); gap:12px; }
   .v2-body #spotMeta .v2-d4-row{ gap:6px; }
   .v2-body #spotMeta .v2-d4-lab{ min-width:100%; }
   .v2-body .set-picker{ overflow-x:auto; flex-wrap:nowrap; }
