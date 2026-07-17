@@ -95,7 +95,7 @@
       if (!host) { console.warn(TAG, 'mountChip: no identity block, skipping'); return; }
       var existing = host.querySelector('.depot-wallet-chip');
       if (bal == null) { if (existing) existing.remove(); console.warn(TAG, 'wallet chip hidden until DDL runs / user signs in'); return; }
-      var html = '<span class="depot-wallet-chip v2-coin-pill" title="Franchise balance"><span class="v2-coin" aria-hidden="true">🪙</span><span class="dw-amt v2-coin-amt">' + bal + '</span><span class="dw-cur">' + CURRENCY + '</span></span>';
+      var html = '<span class="depot-wallet-chip v2-coin-pill" title="Franchise balance"><span class="v2-coin" aria-hidden="true"><svg class="v2-coin-svg" viewBox="0 0 20 20" width="1em" height="1em" role="img" aria-hidden="true" focusable="false"><circle cx="10" cy="10" r="9" fill="#10456b"/><circle cx="10" cy="10" r="7" fill="#ffd94a"/><path d="M10 3a7 7 0 0 1 0 14z" fill="#e6a817"/><circle cx="10" cy="10" r="4.4" fill="none" stroke="#10456b" stroke-width="1.5"/><circle cx="10" cy="10" r="3.5" fill="#ffd94a"/><path d="M10 6.5a3.5 3.5 0 0 1 0 7z" fill="#e6a817"/><rect x="8" y="6.8" width="1.7" height="6.4" rx="0.5" fill="#fff0b0"/><rect x="10.4" y="6.8" width="1.2" height="6.4" rx="0.4" fill="#e6a817"/><path d="M6.5 5a7 7 0 0 1 2-1.5l0.7 1.7A5 5 0 0 0 7.4 6.4z" fill="#ffffff"/></svg></span><span class="dw-amt v2-coin-amt">' + bal + '</span><span class="dw-cur">' + CURRENCY + '</span></span>';
       if (existing) existing.outerHTML = html; else host.insertAdjacentHTML('beforeend', html);
       console.log(TAG, 'wallet chip mounted, balance', bal);
     });
