@@ -831,6 +831,25 @@ body{
 .depot-prestige-breakdown .dp-row{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px dotted rgba(0,0,0,.2);font-size:.85rem}
 .depot-prestige-breakdown .dp-total-row{font-weight:700;border-bottom:none;border-top:2px solid rgba(0,0,0,.3);margin-top:4px;padding-top:6px}
 .depot-prestige-breakdown .dp-note{margin-top:8px;font-size:.72rem;opacity:.75;font-style:italic}
+
+
+/* ==== Phase 2 cutover: card-detail (2b) demo skin — appended override, openSpot JS untouched ==== */
+.spotlight{ background:rgba(16,69,107,.55); }
+.spot-card{ background:#2eb2e6; border:3px solid #10456b; border-radius:16px; box-shadow:0 18px 40px rgba(16,69,107,.35); font-family:'Baloo 2',sans-serif; color:#10456b; }
+.spot-inner{ gap:18px; }
+.spot-face{ background:repeating-linear-gradient(45deg,rgba(16,69,107,.08) 0 8px,transparent 8px 16px); border:2px dashed rgba(16,69,107,.3); border-radius:12px; }
+.spot-face img{ border-radius:10px; }
+.spot-back{ background:repeating-linear-gradient(45deg,rgba(16,69,107,.08) 0 8px,transparent 8px 16px); }
+.spot-meta{ background:#fff7df; border:2px solid #10456b; border-radius:14px; color:#10456b; font-family:'Baloo 2',sans-serif; }
+.spot-name{ color:#10456b; font-family:'Baloo 2',sans-serif; font-size:18px; font-weight:800; }
+.spot-name-sub{ color:#10456b; font-family:'Baloo 2',sans-serif; }
+.spot-close{ background:#fff; border:3px solid #10456b; color:#10456b; border-radius:999px; font-weight:700; }
+/* D4 editable controls kept fully functional; give them the demo chip look */
+#d4GradeSel, #d4CondInput{ border:2px solid #10456b; border-radius:10px; font-family:'Baloo 2',sans-serif; color:#10456b; background:#dff1fb; }
+#d4GradeVal{ background:#10456b; color:#fff; border-radius:999px; font-family:'Baloo 2',sans-serif; font-weight:700; padding:3px 10px; }
+#d4StarBtn{ border-radius:999px; font-family:'Baloo 2',sans-serif; }
+#d4Status{ color:#1d6b2a; font-family:'Baloo 2',sans-serif; }
+
 </style>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 <!-- ===== DEPOT AUTH (Phase 1): Supabase client + auth UI styles ===== -->
@@ -1072,37 +1091,7 @@ body.logged-out #appFrame{display:none !important;}
 </div>
 
 <!-- BINDER -->
-<div class="stage" id="binderStage">
-  <nav class="rail">
-    <div class="rail-label">Eras</div>
-    <div id="eraTabs"></div>
-  </nav>
-  <div class="binder-wrap">
-    <div class="era-head">
-      <div class="era-title" id="eraTitle"></div>
-      <div class="era-blurb" id="eraBlurb"></div>
-      <div class="group-by" id="groupByBar">
-        <label for="groupBy">Group by</label>
-        <select id="groupBy" onchange="setGroupMode(this.value)">
-          <option value="era">Era</option>
-          <option value="year">Year</option>
-          <option value="brand">Brand</option>
-          <option value="team">Team</option>
-          <option value="player">Player</option>
-          <option value="decade">Decade</option>
-        </select>
-      </div>
-    </div>
-    <div class="page">
-      <div class="grid" id="binderGrid"></div>
-    </div>
-    <div class="page-nav">
-      <button id="prevPage" onclick="turnPage(-1)">‹ Prev page</button>
-      <span class="page-dots" id="pageDots"></span>
-      <button id="nextPage" onclick="turnPage(1)">Next page ›</button>
-    </div>
-  </div>
-</div>
+<div class="dc-binder" style="width:760px;max-width:100%;background:#2eb2e6;border-radius:16px;overflow:hidden"><div style="padding:16px 24px 0;display:flex;align-items:center;justify-content:space-between"><div style="display:flex;align-items:center;gap:12px"><div style="width:42px;height:42px;border-radius:12px;background:#ffd23e;border:3px solid #10456b;box-shadow:0 4px 0 #10456b;display:flex;align-items:center;justify-content:center;font-family:'Press Start 2P',monospace;font-size:14px;color:#10456b">D</div><div style="font-family:'Baloo 2',sans-serif;font-weight:800;font-size:24px;color:#fff;text-shadow:0 3px 0 #10456b">The Binder</div></div><div style="display:flex;gap:8px"><div class="dc-hoverbtn" style="font-family:'Baloo 2',sans-serif;font-weight:700;font-size:13px;color:#10456b;background:#fff;border:3px solid #10456b;border-radius:999px;padding:7px 16px;box-shadow:0 4px 0 #10456b;cursor:pointer;cursor:pointer" onclick="if(window.__depotOpenSeason){window.__depotOpenSeason();}else{window.location.href=&#39;game/builder.html&#39;;}" role="button">▶ Play Ball</div><div class="dc-hoverbtn" style="font-family:'Baloo 2',sans-serif;font-weight:800;font-size:13px;color:#10456b;background:linear-gradient(#fff8,#fff0 45%),#7be36b;border:3px solid #10456b;border-radius:999px;padding:7px 16px;box-shadow:0 4px 0 #10456b;cursor:pointer;cursor:pointer" onclick="openForm()" role="button">+ Add a card</div></div></div><div style="display:flex;gap:8px;padding:14px 24px 0;flex-wrap:wrap;align-items:center"><input style="flex:1;min-width:180px;background:#fff;border:3px solid #10456b;border-radius:999px;padding:8px 16px;font-family:'Baloo 2',sans-serif;font-weight:600;font-size:13px;color:#10456b;outline:none" placeholder="🔍 Search players, sets, years…" id="binderSearch" oninput="curSearch=this.value; if(typeof curPage!==&#39;undefined&#39;){curPage=0;} renderBinder();"><div style="display:flex;gap:8px;flex-wrap:wrap" id="eraTabs"></div></div><div style="margin:14px 24px 20px;background:#fff;border:4px solid #10456b;border-radius:20px;box-shadow:0 7px 0 #10456b;padding:16px"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px"><div style="font-family:'Baloo 2',sans-serif;font-weight:800;font-size:16px;color:#10456b" id="pageDots">Page 1 of 1</div><span id="eraTitle" style="margin-left:8px;font-weight:700;color:#10456b"></span><span id="eraBlurb" style="display:none"></span><div style="display:flex;gap:6px"><div class="dc-pager" style="width:32px;height:32px;border-radius:10px;background:#dff1fb;border:2px solid #10456b;display:flex;align-items:center;justify-content:center;font-weight:800;color:#10456b;cursor:pointer" id="prevPage" onclick="turnPage(-1)" role="button">‹</div><div class="dc-pager" style="width:32px;height:32px;border-radius:10px;background:#dff1fb;border:2px solid #10456b;display:flex;align-items:center;justify-content:center;font-weight:800;color:#10456b;cursor:pointer" id="nextPage" onclick="turnPage(1)" role="button">›</div></div></div><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px" id="binderGrid"></div></div></div>
 
 <!-- CAROUSEL -->
 <div class="carousel-stage" id="carouselStage">
@@ -1518,7 +1507,7 @@ if(depotSB()){
 let COLLECTION = normalizeEras(SEED.concat(USER_CARDS));
 function rebuild(){ COLLECTION = normalizeEras(SEED.concat(USER_CARDS)); document.getElementById('countChip').textContent=`${COLLECTION.length} cards`; }
 
-let mode="binder", curEra="all", curPage=0, curSet=null, spotIdx=null, groupMode="era";
+let mode="binder", curEra="all", curPage=0, curSet=null, spotIdx=null, groupMode="era"; var curSearch="";
 const PER_PAGE=9;
 
 function placeholderBg(i){return PLACEHOLDER[i%PLACEHOLDER.length]}
@@ -1527,28 +1516,127 @@ function cssUrl(u){ return String(u).replace(/["'()\\]/g, m=>'%'+m.charCodeAt(0)
 // Front/back image accessors (legacy cards used a single .photo => treat as front).
 function frontPhoto(c){ return (c && (c.photoFront || c.photo)) || ""; }
 function backPhoto(c){ return (c && c.photoBack) || ""; }
+/* ==== Phase 2 cutover: demo 3a/2b generators (extracted verbatim, namespaced dc*) ==== */
+const dcFILTERS = [{"label":"All","era":"all","color":"#fff","bg":"#10456b"},{"label":"Vintage","era":"vintage","color":"#10456b","bg":"#fff"},{"label":"Junk Wax","era":"junk","color":"#10456b","bg":"#fff"},{"label":"Modern","era":"modern","color":"#10456b","bg":"#fff"},{"label":"★ Stars","era":"stars","color":"#7a5b00","bg":"#ffd23e"}];
+const dcERA_TITLE = {"all":"All Eras","vintage":"Vintage","junk":"Junk Wax","modern":"Modern","stars":"Starred"};
+const dcEsc = function(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); };
+function dcStatPairs(){ return [['AVG','.264'],['HR','16'],['RBI','61'],['SB','16'],['GAMES','127']]; }
+function dcStatChips(c){ return [['YEAR',String(c.yr)],['ERA',dcERA_TITLE[eraFromYear(c.yr)]],['GRADE',c.grade||'\u2014'],['POS','CF']]; }
+function dcTileHTML(c){
+  var photo = c.photo
+    ? '<div style="position:absolute;inset:0;border-radius:8px;background-image:url(\"'+dcEsc(c.photo)+'\");background-size:cover;background-position:center"></div>'
+    : '<span style="font:9px ui-monospace,monospace;color:rgba(16,69,107,.45)">scan</span>';
+  var starBadge = c.star ? '<span style="position:absolute;top:4px;right:6px;font-size:14px;color:#f4823c">\u2605</span>' : '';
+  var gradeChip = c.grade ? '<span style="font-family:\'Baloo 2\',sans-serif;font-weight:800;font-size:10px;color:#fff;background:#10456b;border-radius:999px;padding:2px 7px">'+dcEsc(c.grade)+'</span>' : '';
+  return ''+
+  '<div class="dc-tile" style="background:#f2f9fd;border:3px solid #10456b;border-radius:14px;box-shadow:0 4px 0 #10456b;padding:9px;cursor:pointer">'+
+    '<div style="height:96px;border-radius:8px;background:repeating-linear-gradient(45deg,rgba(16,69,107,.08) 0 8px,transparent 8px 16px);display:flex;align-items:center;justify-content:center;position:relative">'+
+      photo + starBadge +
+    '</div>'+
+    '<div style="font-family:\'Baloo 2\',sans-serif;font-weight:700;font-size:13px;color:#10456b;margin-top:7px;line-height:1.15">'+dcEsc(c.name)+'</div>'+
+    '<div style="display:flex;justify-content:space-between;align-items:baseline">'+
+      '<span style="font-family:\'Baloo 2\',sans-serif;font-weight:600;font-size:11px;color:#5b7f97">'+dcEsc(c.set)+'</span>'+
+      gradeChip +
+    '</div>'+
+  '</div>';
+}
+function dcBinderHTML(id){
+  var filterPills = dcFILTERS.map(function(f,i){
+    return '<div class="dc-fpill dc-hoverbtn" data-i="'+i+'" style="font-family:\'Baloo 2\',sans-serif;font-weight:700;font-size:12px;color:'+f.color+';background:'+f.bg+';border:2px solid #10456b;border-radius:999px;padding:5px 13px;cursor:pointer">'+dcEsc(f.label)+'</div>';
+  }).join('');
+  return ''+
+  '<div class="dc-binder" style="width:760px;max-width:100%;background:#2eb2e6;border-radius:16px;overflow:hidden">'+
+    '<div style="padding:16px 24px 0;display:flex;align-items:center;justify-content:space-between">'+
+      '<div style="display:flex;align-items:center;gap:12px">'+
+        '<div style="width:42px;height:42px;border-radius:12px;background:#ffd23e;border:3px solid #10456b;box-shadow:0 4px 0 #10456b;display:flex;align-items:center;justify-content:center;font-family:\'Press Start 2P\',monospace;font-size:14px;color:#10456b">D</div>'+
+        '<div style="font-family:\'Baloo 2\',sans-serif;font-weight:800;font-size:24px;color:#fff;text-shadow:0 3px 0 #10456b">The Binder</div>'+
+      '</div>'+
+      '<div style="display:flex;gap:8px">'+
+        '<div class="dc-hoverbtn" title="Routes to the Play Ball hub (3c); placeholder \u2192 season surface" style="font-family:\'Baloo 2\',sans-serif;font-weight:700;font-size:13px;color:#10456b;background:#fff;border:3px solid #10456b;border-radius:999px;padding:7px 16px;box-shadow:0 4px 0 #10456b;cursor:pointer">\u25b6 Play Ball</div>'+
+        '<div class="dc-hoverbtn" style="font-family:\'Baloo 2\',sans-serif;font-weight:800;font-size:13px;color:#10456b;background:linear-gradient(#fff8,#fff0 45%),#7be36b;border:3px solid #10456b;border-radius:999px;padding:7px 16px;box-shadow:0 4px 0 #10456b;cursor:pointer">+ Add a card</div>'+
+      '</div>'+
+    '</div>'+
+    '<div style="display:flex;gap:8px;padding:14px 24px 0;flex-wrap:wrap;align-items:center">'+
+      '<input id="'+id+'-search" placeholder="\ud83d\udd0d Search players, sets, years\u2026" style="flex:1;min-width:180px;background:#fff;border:3px solid #10456b;border-radius:999px;padding:8px 16px;font-family:\'Baloo 2\',sans-serif;font-weight:600;font-size:13px;color:#10456b;outline:none">'+
+      '<div id="'+id+'-pills" style="display:flex;gap:8px;flex-wrap:wrap">'+filterPills+'</div>'+
+    '</div>'+
+    '<div style="margin:14px 24px 20px;background:#fff;border:4px solid #10456b;border-radius:20px;box-shadow:0 7px 0 #10456b;padding:16px">'+
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">'+
+        '<div id="'+id+'-meta" style="font-family:\'Baloo 2\',sans-serif;font-weight:800;font-size:16px;color:#10456b">Page 1 of 1</div>'+
+        '<div style="display:flex;gap:6px">'+
+          '<div class="dc-pager" style="width:32px;height:32px;border-radius:10px;background:#dff1fb;border:2px solid #10456b;display:flex;align-items:center;justify-content:center;font-weight:800;color:#10456b;cursor:pointer">\u2039</div>'+
+          '<div class="dc-pager" style="width:32px;height:32px;border-radius:10px;background:#dff1fb;border:2px solid #10456b;display:flex;align-items:center;justify-content:center;font-weight:800;color:#10456b;cursor:pointer">\u203a</div>'+
+        '</div>'+
+      '</div>'+
+      '<div id="'+id+'-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px"></div>'+
+    '</div>'+
+  '</div>';
+}
+function dcDetailHTML(c){
+  var season=dcStatPairs().map(function(p){ return '<div style="display:flex;gap:5px;align-items:baseline;font-family:\'Baloo 2\',sans-serif;font-weight:700;font-size:12px"><span style="color:#8fb2c6">'+p[0]+'</span><span style="color:#fff">'+p[1]+'</span></div>'; }).join('');
+  var chips=dcStatChips(c).map(function(p){ return '<div style="font-family:\'Baloo 2\',sans-serif;font-weight:700;font-size:11px;color:#10456b;background:#dff1fb;border:2px solid #10456b;border-radius:999px;padding:4px 10px">'+p[0]+' '+dcEsc(p[1])+'</div>'; }).join('');
+  return ''+
+  '<div style="width:760px;max-width:100%;background:#2eb2e6;border-radius:16px;overflow:hidden">'+
+    '<div style="padding:16px 24px 0;display:flex;align-items:center;justify-content:space-between">'+
+      '<div style="font-family:\'Baloo 2\',sans-serif;font-weight:800;font-size:24px;color:#fff;text-shadow:0 3px 0 #10456b">The Depot</div>'+
+      '<div class="dc-hoverbtn" style="font-family:\'Baloo 2\',sans-serif;font-weight:700;font-size:13px;color:#10456b;background:#fff;border:3px solid #10456b;border-radius:999px;padding:7px 16px;box-shadow:0 4px 0 #10456b;cursor:pointer">\u2039 Back to binder</div>'+
+    '</div>'+
+    '<div style="display:flex;gap:16px;padding:16px 24px 24px;align-items:flex-start">'+
+      '<div style="flex:none;width:230px;background:#fff;border:4px solid #10456b;border-radius:20px;box-shadow:0 7px 0 #10456b;padding:14px;position:relative">'+
+        (c.star?'<span style="position:absolute;top:-10px;right:-8px;font-size:24px;color:#ffd23e">\u2726</span>':'')+
+        '<div style="height:230px;border-radius:12px;background:repeating-linear-gradient(45deg,rgba(16,69,107,.08) 0 8px,transparent 8px 16px);border:2px dashed rgba(16,69,107,.3);display:flex;align-items:center;justify-content:center"><span style="font:10px ui-monospace,monospace;color:rgba(16,69,107,.5)">card scan \u2014 front</span></div>'+
+        '<div style="font-family:\'Baloo 2\',sans-serif;font-weight:600;font-size:11px;color:#8fb2c6;text-align:center;margin-top:6px">\u21bb click to flip the card over</div>'+
+        '<div style="background:#10456b;border-radius:12px;padding:10px 12px;margin-top:10px"><div style="font-family:\'Baloo 2\',sans-serif;font-weight:800;font-size:12px;color:#ffd23e;margin-bottom:4px">'+dcEsc(c.yr)+' SEASON</div><div style="display:flex;flex-wrap:wrap;gap:4px 12px">'+season+'</div></div>'+
+        '<div style="font-family:\'Baloo 2\',sans-serif;font-weight:800;font-size:18px;color:#10456b;margin-top:6px;line-height:1.1">'+dcEsc(c.name)+'</div>'+
+        '<div style="font-family:\'Baloo 2\',sans-serif;font-weight:600;font-size:13px;color:#5b7f97">'+dcEsc(c.set)+'</div>'+
+        '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px">'+chips+'</div>'+
+      '</div>'+
+      '<div style="flex:1;background:#fff;border:4px solid #10456b;border-radius:20px;box-shadow:0 7px 0 #10456b;padding:16px 18px">'+
+        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px"><div style="font-family:\'Baloo 2\',sans-serif;font-weight:800;font-size:19px;color:#10456b">The Dugout \ud83d\udcac</div><div style="display:flex;gap:6px"><div style="font-family:\'Baloo 2\',sans-serif;font-weight:700;font-size:11px;color:#fff;background:#10456b;border-radius:999px;padding:4px 12px;cursor:pointer">Hottest</div><div class="dc-pager" style="font-family:\'Baloo 2\',sans-serif;font-weight:700;font-size:11px;color:#10456b;background:#dff1fb;border-radius:999px;padding:4px 12px;cursor:pointer">Newest</div></div></div>'+
+        '<div style="font-family:\'Baloo 2\',sans-serif;font-weight:600;font-size:13px;color:#8fb2c6;padding:14px 0">The Dugout is a Phase 6 surface \u2014 comments render here in the final phase.</div>'+
+      '</div>'+
+    '</div>'+
+  '</div>';
+}
 function cardHTML(card, idx, skin){
-  const cphoto = frontPhoto(card);
-  const photoStyle = cphoto
-    ? `background-image:url("${cssUrl(cphoto)}")`
-    : `background-color:${placeholderBg(idx)}`;
-  return `<button class="card ${skin}" onclick="openSpot(${idx})" aria-label="${card.name}, ${card.yr} ${card.set}">
-    ${card.rare?'<span class="rare-pin" title="Key card">★</span>':''}${card.star?'<span class="v2-star-badge v2-anim-twinkle" title="Starred">★</span>':''}
-    <div class="frame">
-      ${cphoto ? `<img class="photo loaded-img" src="${escAttr(cphoto)}" alt="" loading="lazy" style="width:100%;height:100%;object-fit:cover;object-position:center top;display:block" onload="imgOk(this)" onerror="imgFail(this)">` : `<div class="photo" style="${photoStyle}"></div>`}
-      <div class="nameplate">${card.name}<span class="pos">${card.pos} · ${card.team}</span></div>
-    </div>
-  </button>`;
+  var resolved = (typeof frontPhoto==='function') ? frontPhoto(card) : (card.photo||'');
+  var c = Object.assign({}, card, { photo: resolved || '' });
+  var html = dcTileHTML(c);
+  // inject click-through to the live spotlight/card-detail
+  html = html.replace(/^(\s*<div\s+class=("|')dc-tile\2)/, '$1 onclick="openSpot('+idx+')" data-idx="'+idx+'"');
+  // make it feel clickable
+  html = html.replace(/(class=("|')dc-tile\2)/, '$1');
+  return html;
 }
 
 /* ---------- binder ---------- */
-function eraCards(era){ if(era==="all"){ return COLLECTION.slice().sort(function(a,b){ return String(a.player||"").toLowerCase().localeCompare(String(b.player||"").toLowerCase()); }); } return COLLECTION.filter(function(c){ return c.era===era; }); }
+function eraCards(era){
+  var q = (typeof curSearch==='string' ? curSearch : '').trim().toLowerCase();
+  var list = COLLECTION.filter(function(c){
+    var eraOk;
+    if(era==='stars'){ eraOk = !!c.star; }
+    else if(era==='all' || !era){ eraOk = true; }
+    else { eraOk = (c.era===era); }
+    if(!eraOk) return false;
+    if(!q) return true;
+    var hay = ((c.name||'')+' '+(c.set||'')+' '+(c.yr||'')+' '+(c.player||'')).toLowerCase();
+    return hay.indexOf(q) !== -1;
+  });
+  return list.slice().sort(function(a,b){ return String(a.player||'').localeCompare(String(b.player||'')); });
+}
 function renderEraTabs(){
-  document.getElementById('eraTabs').innerHTML = ERA_ORDER.map(k=>{
-    const e=ERAS[k], n=(k==="all"?COLLECTION.length:COLLECTION.filter(c=>c.era===k).length);
-    return `<button class="era-tab ${k===curEra?'active':''}" onclick="selectEra('${k}')">
-      ${e.title}<small>${e.range} · ${n} cards</small></button>`;
+  var host = document.getElementById('eraTabs');
+  if(!host) return;
+  var PILLS = [{"era":"all","label":"All","base":"font-family:'Baloo 2',sans-serif;font-weight:700;font-size:12px;color:#fff;background:#10456b;border:2px solid #10456b;border-radius:999px;padding:5px 13px;cursor:pointer"},{"era":"vintage","label":"Vintage","base":"font-family:'Baloo 2',sans-serif;font-weight:700;font-size:12px;color:#10456b;background:#fff;border:2px solid #10456b;border-radius:999px;padding:5px 13px;cursor:pointer"},{"era":"junk","label":"Junk Wax","base":"font-family:'Baloo 2',sans-serif;font-weight:700;font-size:12px;color:#10456b;background:#fff;border:2px solid #10456b;border-radius:999px;padding:5px 13px;cursor:pointer"},{"era":"modern","label":"Modern","base":"font-family:'Baloo 2',sans-serif;font-weight:700;font-size:12px;color:#10456b;background:#fff;border:2px solid #10456b;border-radius:999px;padding:5px 13px;cursor:pointer"},{"era":"stars","label":"★ Stars","base":"font-family:'Baloo 2',sans-serif;font-weight:700;font-size:12px;color:#7a5b00;background:#ffd23e;border:2px solid #10456b;border-radius:999px;padding:5px 13px;cursor:pointer"}];
+  var ACTIVE_STYLE = "font-family:'Baloo 2',sans-serif;font-weight:700;font-size:12px;color:#fff;background:#10456b;border:2px solid #10456b;border-radius:999px;padding:5px 13px;cursor:pointer";
+  var cur = (typeof curEra!=='undefined' && curEra) ? curEra : 'all';
+  var html = PILLS.map(function(p){
+    var isActive = (p.era===cur);
+    var style = isActive ? ACTIVE_STYLE : p.base;
+    return '<div class="dc-fpill" style="'+style+'" onclick="selectEra(\''+p.era+'\')">'+p.label+'</div>';
   }).join('');
+  host.setAttribute('style', "display:flex;gap:8px;flex-wrap:wrap");
+  host.innerHTML = html;
 }
 function selectEra(k){curEra=k;curPage=0;renderBinder()}
 function turnPage(d){
