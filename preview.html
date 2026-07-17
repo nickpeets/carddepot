@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>The Depot v2 - Phase 1 Preview</title>
+  <link rel="stylesheet" href="depot-v2.css?v=61d6794">
+  <style>
+    body { margin: 0; }
+    .pv-wrap { padding: 24px; display: flex; flex-direction: column; gap: 32px; }
+    .pv-label { font-family: 'Press Start 2P', monospace; font-size: 11px; color: #10456b; }
+    .pv-frame { border: 4px solid #10456b; border-radius: 20px; overflow: hidden; box-shadow: 0 7px 0 #10456b; }
+    .pv-desktop { width: 100%; max-width: 1100px; }
+    .pv-mobile { width: 390px; }
+    .pv-binder { padding: 18px; display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; background: #dff1fb; }
+    .pv-cardslot { aspect-ratio: 3/4; border: 3px solid #10456b; border-radius: 12px; background: repeating-linear-gradient(45deg, rgba(16,69,107,.08) 0 8px, transparent 8px 16px); box-shadow: 0 4px 0 #10456b; }
+  </style>
+</head>
+<body class="v2-body">
+  <div class="pv-wrap">
+    <div class="pv-label">DESKTOP - The Depot v2 shell (option 1b) over the binder</div>
+    <div class="pv-frame pv-desktop">
+      <div class="depot-bunting" aria-hidden="true"></div>
+      <div class="depot-shell">
+        <header class="depot-shell__header v2-header">
+          <div class="v2-logo-tile" aria-hidden="true">D</div>
+          <div class="v2-wordmark-wrap">
+            <div class="depot-wordmark v2-wordmark">THE <b>DEPOT</b></div>
+            <div class="v2-subtitle" data-depot-subtitle>412 cards - 139 pages</div>
+          </div>
+          <div class="depot-franchise v2-identity" data-depot-franchise>
+            <span class="name v2-club">PEETS CLUB</span>
+            <span class="record v2-record">S3 - 8-4</span>
+            <span class="depot-wallet-chip v2-coin-pill" title="Franchise balance"><span class="v2-coin" aria-hidden="true">🪙</span><span class="dw-amt v2-coin-amt">1250</span><span class="dw-cur">coins</span></span>
+          </div>
+          <div class="depot-account v2-account" data-depot-account>
+            <span class="depot-bell" aria-hidden="true">&#9679;</span>
+            <span class="email" data-depot-email>nick@depot</span>
+          </div>
+        </header>
+        <nav class="depot-nav v2-nav" data-depot-nav>
+          <a class="depot-tab v2-pill" data-mode="binder" aria-current="true">THE BINDER</a>
+          <a class="depot-tab v2-pill" data-mode="builder">LINEUP</a>
+          <a class="depot-tab v2-pill" data-mode="season">SEASON</a>
+          <a class="depot-tab v2-pill v2-pill--orange" data-mode="game">PLAY BALL</a>
+          <span class="spacer"></span>
+        </nav>
+        <main class="depot-stage">
+          <div class="pv-binder">
+            <div class="pv-cardslot"></div><div class="pv-cardslot"></div><div class="pv-cardslot"></div>
+            <div class="pv-cardslot"></div><div class="pv-cardslot"></div><div class="pv-cardslot"></div>
+            <div class="pv-cardslot"></div><div class="pv-cardslot"></div><div class="pv-cardslot"></div>
+          </div>
+        </main>
+      </div>
+    </div>
+
+    <div class="pv-label">MOBILE (390px) - responsive collapse</div>
+    <div class="pv-frame pv-mobile">
+      <div class="depot-bunting" aria-hidden="true"></div>
+      <div class="depot-shell">
+        <header class="depot-shell__header v2-header">
+          <div class="v2-logo-tile" aria-hidden="true">D</div>
+          <div class="v2-wordmark-wrap">
+            <div class="depot-wordmark v2-wordmark">THE <b>DEPOT</b></div>
+            <div class="v2-subtitle" data-depot-subtitle>412 cards</div>
+          </div>
+          <div class="depot-franchise v2-identity" data-depot-franchise>
+            <span class="name v2-club">PEETS CLUB</span>
+            <span class="record v2-record">8-4</span>
+            <span class="depot-wallet-chip v2-coin-pill" title="Franchise balance"><span class="v2-coin" aria-hidden="true">🪙</span><span class="dw-amt v2-coin-amt">1250</span><span class="dw-cur">coins</span></span>
+          </div>
+        </header>
+        <nav class="depot-nav v2-nav" data-depot-nav>
+          <a class="depot-tab v2-pill" data-mode="binder" aria-current="true">THE BINDER</a>
+          <a class="depot-tab v2-pill" data-mode="builder">LINEUP</a>
+          <a class="depot-tab v2-pill" data-mode="season">SEASON</a>
+          <a class="depot-tab v2-pill v2-pill--orange" data-mode="game">PLAY BALL</a>
+        </nav>
+        <main class="depot-stage">
+          <div class="pv-binder">
+            <div class="pv-cardslot"></div><div class="pv-cardslot"></div><div class="pv-cardslot"></div>
+            <div class="pv-cardslot"></div><div class="pv-cardslot"></div><div class="pv-cardslot"></div>
+          </div>
+        </main>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
