@@ -317,6 +317,11 @@
       if (HREF_FIX[m]) { tabs[i].setAttribute('href', HREF_FIX[m]); }
     }
 
+    // Header "+ Add a card" is bundle-relative here (under /game/); repoint to the root binder.
+    var addPill = document.querySelector('.depot-shell [data-depot-addcard]');
+    if (addPill) { addPill.setAttribute('href', '../index.html#add'); }
+    else { console.warn('[depot] game-shell: [data-depot-addcard] pill not found; add-card href not repointed'); }
+
     // The dedicated in-game BACK button is retired (its destinations now live permanently in
     // the shell nav). Do NOT relocate it into the nav; hide it (re-asserted by the recurring
     // guards per §9) and route its old season-writeback protection through the nav interceptor.
