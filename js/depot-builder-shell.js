@@ -91,6 +91,11 @@
       if (HREF_FIX[m]) { tabs[i].setAttribute('href', HREF_FIX[m]); }
     }
 
+    // Header "+ Add a card" lives under /game/; repoint it to the root binder's add form.
+    var addPill = document.querySelector('.depot-shell [data-depot-addcard]');
+    if (addPill) { addPill.setAttribute('href', '../index.html#add'); }
+    else { console.warn('[depot] builder-shell: [data-depot-addcard] pill not found; add-card href not repointed'); }
+
     ['loginView', 'builderView'].forEach(function (id) {
       var v = document.getElementById(id);
       if (v) { stage.appendChild(v); }
