@@ -15,18 +15,18 @@
   --v2-sky: #2eb2e6;
   --v2-sky-deep: #1a8fc4;
   --v2-navy: #10456b;
-  --v2-navy-ink: #0b3355;
-  --v2-cream: #fdf6e3;
-  --v2-panel: #eaf6fc;
-  --v2-gold: #ffd94a;
+  --v2-navy-ink: #072c47;
+  --v2-cream: #fff7df;
+  --v2-panel: #dff1fb;
+  --v2-gold: #ffd23e;
   --v2-gold-deep: #e6a817;
-  --v2-orange: #ff8c42;
-  --v2-orange-deep: #e56a1f;
-  --v2-green: #3fae5a;
-  --v2-green-deep: #2e8746;
-  --v2-red: #e05252;
+  --v2-orange: #f4823c;
+  --v2-orange-deep: #c9560f;
+  --v2-green: #7be36b;
+  --v2-green-deep: #1d6b2a;
+  --v2-red: #e2543e;
   --v2-white: #ffffff;
-  --v2-shadow: rgba(11, 51, 85, .9);
+  --v2-shadow: rgba(16, 69, 107, .9);
 
   /* shape system */
   --v2-border: 4px solid var(--v2-navy);
