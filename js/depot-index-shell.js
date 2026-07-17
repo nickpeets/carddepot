@@ -68,6 +68,20 @@
          if (topbar) { topbar.style.display = 'none'; }
          else { console.warn('[depot] index-shell: .topbar not found to retire'); }
 
+       // Fold the binder's own "+ Add a card" into the unified shell header: hide the
+       // redundant #m-add in the .modes context nav and wire the shell pill to openForm().
+       var mAdd = document.getElementById('m-add');
+       if (mAdd) { mAdd.style.display = 'none'; }
+       else { console.warn('[depot] index-shell: #m-add not found to fold into header'); }
+       var addPill = frame.querySelector('[data-depot-addcard]');
+       if (addPill) {
+           addPill.addEventListener('click', function (e) {
+               if (typeof window.openForm === 'function') { e.preventDefault(); window.openForm(); }
+               else { console.warn('[depot] index-shell: window.openForm missing; header + Add a card falls back to href'); }
+           });
+       } else { console.warn('[depot] index-shell: header [data-depot-addcard] pill not found; add-card lives only in .modes'); }
+       
+
       console.log('[depot] index-shell: binder wearing shared shell (active=binder)');
    }
 
