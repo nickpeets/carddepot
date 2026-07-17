@@ -10,7 +10,7 @@
 (function () {
   'use strict';
   var TAG = '[depot] wallet:';
-  var CURRENCY = 'DD';
+  var CURRENCY = 'coins';
 
   var BASE_WIN = 100, WIN_MULT = 1.8, SHUTOUT = 50, STREAK_STEP = 15, STREAK_CAP = 8;
   var LOSS_FLAT = 15, EXHIBITION_WIN = 25;
@@ -95,7 +95,7 @@
       if (!host) { console.warn(TAG, 'mountChip: no identity block, skipping'); return; }
       var existing = host.querySelector('.depot-wallet-chip');
       if (bal == null) { if (existing) existing.remove(); console.warn(TAG, 'wallet chip hidden until DDL runs / user signs in'); return; }
-      var html = '<span class="depot-wallet-chip" title="Franchise balance"><span class="dw-amt">' + bal + '</span><span class="dw-cur">' + CURRENCY + '</span></span>';
+      var html = '<span class="depot-wallet-chip v2-coin-pill" title="Franchise balance"><span class="v2-coin" aria-hidden="true">🪙</span><span class="dw-amt v2-coin-amt">' + bal + '</span><span class="dw-cur">' + CURRENCY + '</span></span>';
       if (existing) existing.outerHTML = html; else host.insertAdjacentHTML('beforeend', html);
       console.log(TAG, 'wallet chip mounted, balance', bal);
     });
