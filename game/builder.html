@@ -1636,11 +1636,11 @@
       var total=window.DepotPrestige.lineupTotal(cards);
       var win=window.DepotPrestige.projectedWin(total);
       setLS('lsPrestige', String(total));
-      setLS('lsPayout', '$'+win.toLocaleString()+' DD');
+      setLS('lsPayout', (window.DepotWallet && DepotWallet.fmt) ? DepotWallet.fmt(win) : (win.toLocaleString()+' coins'));
       setLS('lsFormula', '100 + '+total+'&times;1.8');
-      setLS('lsFormulaSub', '= '+win.toLocaleString()+' DD (Slice A)');
+      setLS('lsFormulaSub', '= '+win.toLocaleString()+' coins (Slice A)');
       if(_prevTotal===null || total===_prevTotal){ setLS('lsPace','&mdash;'); }
-      else { var d=win-window.DepotPrestige.projectedWin(_prevTotal); setLS('lsPace', (d>=0?'+':'')+d.toLocaleString()+' DD'); }
+      else { var d=win-window.DepotPrestige.projectedWin(_prevTotal); setLS('lsPace', (d>=0?'+':'')+d.toLocaleString()+' coins'); }
       _prevTotal=total;
     }catch(e){ console.warn(TAG,'update failed:',e&&e.message); }
   }
