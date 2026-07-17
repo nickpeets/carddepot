@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Depot v2 — Phase 2 Preview (Binder + Card Detail)</title>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;500;600;700;800&family=Press+Start+2P&family=VT323&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="depot-v2.css">
+<style>
+  body{ margin:0; background:var(--v2-sky, #2eb2e6); }
+  .pv-wrap{ max-width:1100px; margin:0 auto; padding:24px 18px 60px; }
+  .pv-h{ font-family:var(--v2-font-8bit); color:var(--v2-navy-ink); font-size:16px; margin:22px 0 6px; }
+  .pv-sub{ font-family:var(--v2-font-body); color:var(--v2-navy-ink); opacity:.8; margin:0 0 14px; font-size:14px; }
+  .pv-note{ font-family:var(--v2-font-body); background:var(--v2-cream); border:2px solid var(--v2-navy); border-radius:10px; padding:10px 14px; margin:8px 0 22px; color:var(--v2-navy-ink); font-size:13px; }
+  .pv-mobile-frame{ width:390px; border:6px solid var(--v2-navy-ink); border-radius:26px; margin:10px 0; padding:10px; background:var(--v2-sky); box-shadow:8px 8px 0 rgba(0,0,0,.2); }
+  .pv-detail-mock{ display:flex; gap:24px; flex-wrap:wrap; align-items:flex-start; }
+  .pv-spotcard{ width:300px; }
+  .spot-face{ border:4px solid var(--v2-navy); border-radius:14px; background:var(--v2-white); aspect-ratio:5/7; display:flex; flex-direction:column; overflow:hidden; box-shadow:var(--v2-hard-shadow); }
+  .spot-face .photo{ flex:1; background:linear-gradient(160deg,#bfe3f5,#7fc0e0); }
+  .spot-name{ font-family:var(--v2-font-8bit); font-size:11px; color:var(--v2-navy-ink); padding:8px; border-top:2px solid var(--v2-navy); background:var(--v2-cream); }
+  .pv-meta{ flex:1; min-width:280px; }
+  #spotMeta, [id^=spotMeta]{ font-family:var(--v2-font-body); color:var(--v2-navy-ink); }
+  .spot-name-big{ font-family:var(--v2-font-8bit); font-size:14px; color:var(--v2-navy-ink); }
+  .hint{ display:block; font-size:11px; opacity:.6; margin:8px 0; }
+  .card .photo{ aspect-ratio:5/7; background:linear-gradient(160deg,#bfe3f5,#7fc0e0); }
+  .card .nameplate{ font-size:12px; }
+  .card .nameplate .pos{ display:block; font-size:10px; }
+  .statgrid-wrap{ margin:8px 0; }
+  .statgrid{ display:grid; grid-template-columns:repeat(4,1fr); gap:4px; font-size:11px; }
+  .statgrid div{ background:var(--v2-panel); border:1px solid var(--v2-navy); border-radius:4px; padding:2px 4px; text-align:center; }
+</style>
+</head>
+<body class="v2-body">
+<div class="pv-wrap">
+  <div class="pv-h">PHASE 2 PREVIEW — BINDER + CARD DETAIL</div>
+  <p class="pv-sub">Static mock with representative data. No live DB. Shows v2 card frames, star badges (D4), era/group pills, and the evolved card-detail with grade / star / condition-notes surfaces — including blank/default states.</p>
+
+  <div class="pv-h" style="font-size:13px">Binder grid — desktop</div>
+  <div class="pv-note">Mix of cards: some starred (gold twinkle badge, top-left), some "key" (rare-pin, top-right), some plain. Hover to see the frame lift.</div>
+  <div class="era-head" style="margin-bottom:10px">
+    <div id="eraTabs" style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px"></div>
+    <div class="group-by"><label>Group by</label><select id="groupBy"><option>Era</option><option>Year</option><option>Team</option></select></div>
+  </div>
+  <div class="grid" id="gridDesktop"></div>
+
+  <div class="pv-h" style="font-size:13px">Card detail — desktop (a graded, starred card)</div>
+  <div class="pv-detail-mock">
+    <div class="pv-spotcard">
+      <div class="spot-face"><div class="photo"></div><div class="spot-name">KEN GRIFFEY JR<br>1989 · Upper Deck</div></div>
+    </div>
+    <div class="pv-meta"><div id="spotMetaFilled"></div></div>
+  </div>
+
+  <div class="pv-h" style="font-size:13px">Card detail — desktop (a blank card: no grade / no star / no notes)</div>
+  <div class="pv-detail-mock">
+    <div class="pv-spotcard">
+      <div class="spot-face"><div class="photo"></div><div class="spot-name">JOE CARTER<br>1991 · Score</div></div>
+    </div>
+    <div class="pv-meta"><div id="spotMetaBlank"></div></div>
+  </div>
+
+  <div class="pv-h" style="font-size:13px">Mobile ~390px — binder grid + detail</div>
+  <div class="pv-mobile-frame">
+    <div class="grid" id="gridMobile"></div>
+    <div style="margin-top:14px" id="spotMetaMobile"></div>
+  </div>
+</div>
+
+<script>
+var SAMPLE = [
+  { name:'Ken Griffey Jr', pos:'CF', team:'Mariners', yr:1989, set:'Upper Deck', rare:true, star:true, grade:'9', condNotes:'Sharp corners, slight off-center left.' },
+  { name:'Nolan Ryan', pos:'P', team:'Rangers', yr:1990, set:'Topps', rare:false, star:true, grade:'GEM 10', condNotes:null },
+  { name:'Frank Thomas', pos:'1B', team:'White Sox', yr:1990, set:'Leaf', rare:true, star:false, grade:'8', condNotes:'Print line on back.' },
+  { name:'Joe Carter', pos:'RF', team:'Blue Jays', yr:1991, set:'Score', rare:false, star:false, grade:null, condNotes:null },
+  { name:'Cal Ripken Jr', pos:'SS', team:'Orioles', yr:1991, set:'Fleer', rare:false, star:false, grade:null, condNotes:null },
+  { name:'Barry Bonds', pos:'LF', team:'Pirates', yr:1992, set:'Donruss', rare:false, star:true, grade:'7', condNotes:'Corner wear top-right.' },
+  { name:'Chipper Jones', pos:'3B', team:'Braves', yr:1993, set:'SP', rare:true, star:false, grade:null, condNotes:null },
+  { name:'Derek Jeter', pos:'SS', team:'Yankees', yr:1993, set:'SP Foil', rare:true, star:true, grade:'AUTH', condNotes:'Authenticated; surface scratch.' }
+];
+function escAttr(s){ return String(s==null?'':s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
+function cardHTML(card){
+  return '<button class="card">' +
+    (card.rare?'<span class="rare-pin" title="Key card">\u2605</span>':'') +
+    (card.star?'<span class="v2-star-badge v2-anim-twinkle" title="Starred">\u2605</span>':'') +
+    '<div class="frame"><div class="photo"></div></div>' +
+    '<div class="nameplate">'+escAttr(card.name)+'<span class="pos">'+escAttr(card.pos)+' \u00b7 '+escAttr(card.yr)+'</span></div>' +
+  '</button>';
+}
+function fillGrid(id){ document.getElementById(id).innerHTML = SAMPLE.map(function(c){return cardHTML(c);}).join(''); }
+fillGrid('gridDesktop'); fillGrid('gridMobile');
+document.getElementById('eraTabs').innerHTML =
+  '<button class="active">All eras</button><button>Vintage</button><button>Junk wax</button><button>Modern</button>';
+
+var GRADES = ['','1','2','3','4','5','6','7','8','9','10','GEM 10','AUTH'];
+function statBlock(c){
+  return '<div class="statgrid-wrap"><div class="statgrid">'+
+    ['AVG .302','HR 40','RBI 108','OPS .945','WAR 6.1','G 152','H 180','SB 12'].map(function(s){return '<div>'+s+'</div>';}).join('')+
+    '</div></div>';
+}
+function d4Block(c){
+  var grade = c.grade;
+  var gradeVal = '<span class="v2-grade-val '+(grade?'':'is-blank')+'">'+(grade?escAttr(grade):'\u2014')+'</span>';
+  var gradeSel = '<select class="v2-grade-sel" style="width:auto">'+GRADES.map(function(g){return '<option'+(String(grade||'')===g?' selected':'')+'>'+(g===''?'\u2014 none \u2014':g)+'</option>';}).join('')+'</select>';
+  var starBtn = '<button type="button" class="v2-star-toggle" aria-pressed="'+(c.star?'true':'false')+'"><span class="v2-star-badge--inline v2-anim-twinkle" style="'+(c.star?'':'filter:grayscale(1);opacity:.5')+'">\u2605</span> '+(c.star?'Starred':'Mark star')+'</button>';
+  var notes = '<textarea class="v2-cond-input" placeholder="Condition notes (corners, centering, flaws\u2026)">'+(c.condNotes?escAttr(c.condNotes):'')+'</textarea>';
+  return '<div class="v2-d4">'+
+    '<div class="v2-d4-row"><span class="v2-d4-lab">Grade</span>'+gradeVal+gradeSel+'</div>'+
+    '<div class="v2-d4-row"><span class="v2-d4-lab">Star</span>'+starBtn+'</div>'+
+    '<div class="v2-d4-row" style="align-items:flex-start"><span class="v2-d4-lab">Notes</span>'+notes+'</div>'+
+    '<div class="v2-d4-status"></div>'+
+  '</div>';
+}
+function metaHTML(c){
+  return '<div class="spot-name-big">'+escAttr(c.name)+'</div>'+
+    '<div style="font-size:13px;opacity:.8">'+escAttr(c.pos)+' \u00b7 '+escAttr(c.team)+' \u00b7 '+escAttr(c.yr)+' '+escAttr(c.set)+'</div>'+
+    statBlock(c)+
+    '<span class="hint">click card to flip \u00b7 esc to close</span>'+
+    d4Block(c);
+}
+document.getElementById('spotMetaFilled').innerHTML = metaHTML(SAMPLE[0]);
+document.getElementById('spotMetaBlank').innerHTML  = metaHTML(SAMPLE[3]);
+document.getElementById('spotMetaMobile').innerHTML = metaHTML(SAMPLE[1]);
+</script>
+</body>
+</html>
