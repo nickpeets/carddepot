@@ -78,7 +78,7 @@
     var de = html();
     var changed = false;
     if (!de.classList.contains('depot-game')) { de.classList.add('depot-game'); changed = true; }
-    if (!de.classList.contains('depot-game-dressed')) { de.classList.add('depot-game-dressed'); changed = true; }
+    if (!de.classList.contains('depot-game-dressed')) { de.classList.add('depot-game-dressed'); html().classList.add('v2-body'); changed = true; }
     // The bundle may have swapped <html>; keep the observer pointed at the live node.
     ensureHtmlObserver();
     // The bundle may have re-created the BACK button; keep it suppressed.
@@ -101,6 +101,20 @@
       htmlObs.observe(de, { attributes: true, attributeFilter: ['class'] });
       observedHtml = de;
     } catch (e) { console.warn('[depot] game-shell: html observer failed: ' + e); }
+  }
+
+  // v2 reskin: mirror ensureStylesheet for depot-v2.css (bundler strips static <link>). Injected fresh,
+  // idempotent (skip if already present), appended AFTER depot-style.css so v2 tokens layer on top.
+  function ensureV2Stylesheet() {
+    try {
+      if (document.getElementById('depot-v2-css')) { return; }
+      var link = document.createElement('link');
+      link.id = 'depot-v2-css';
+      link.rel = 'stylesheet';
+      link.href = '../depot-v2.css';
+      (document.head || html()).appendChild(link);
+      console.log('[depot] game-shell: depot-v2.css injected at runtime');
+    } catch (e) { console.warn('[depot] game-shell: ensureV2Stylesheet threw: ' + e); }
   }
 
   // The bundler strips the shipped static <link>, so inject css/depot-style.css at runtime.
@@ -280,8 +294,8 @@
   }
 
   function mountShell() {
-    html().classList.add('depot-game');
-    ensureStylesheet();
+    html().classList.add('depot-game'); html().classList.add('v2-body');
+    ensureStylesheet(); ensureV2Stylesheet();
     if (mounted && document.querySelector('.depot-shell')) {
       assertScope();
       return;
@@ -353,7 +367,7 @@
   }
 
   function boot() {
-    ensureStylesheet();
+    ensureStylesheet(); ensureV2Stylesheet();
     if (gameReady()) { mountShell(); }
     obs = new MutationObserver(function () { tick(); if (mounted) { watchdog(); } });
     obs.observe(document.body || html(), { childList: true, subtree: true });
