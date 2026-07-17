@@ -64,9 +64,11 @@
           '<div class="v2-subtitle" data-depot-subtitle></div>' +
         '</div>' +
       '<span class="v2-spacer" aria-hidden="true"></span>' +
-          '<div class="depot-franchise v2-identity is-anon" data-depot-franchise>' +
-            '<span class="name v2-club">LOG IN</span>' +
-            '<span class="record v2-record"></span>' +
+                    '<div class="depot-franchise v2-identity v2-plate-10a is-anon" data-depot-franchise>' +
+                  '<div class="dc-record">' +
+                    '<span class="dc-team name">LOG IN</span>' +
+                    '<span class="dc-line"><span class="dc-wl record"></span><span class="dc-season" data-depot-season></span><span class="dc-streak is-empty" data-depot-streak></span></span>' +
+                  '</div>' +
           '</div>' +
           '<div class="depot-account v2-account" data-depot-account>' +
             '<span class="depot-bell" aria-hidden="true">&#9679;</span>' +
@@ -106,8 +108,17 @@
     box.classList.remove('is-anon');
     box.querySelector('.name').textContent = String(info.name).toUpperCase();
     var _pfx = info.recordPrefix ? String(info.recordPrefix) : '';
-    box.querySelector('.record').textContent = _pfx + w + '-' + l;
-  }
+box.querySelector('.record').textContent = w + '-' + l;
+        var _seasonEl = box.querySelector('[data-depot-season]');
+        if (_seasonEl){ var _sn = _pfx ? _pfx.replace(/[^0-9]/g, '') : ''; _seasonEl.textContent = _sn ? ('SEASON ' + _sn) : ''; }
+        else { console.warn('[depot] shell.setFranchise: no [data-depot-season] in plate; season label skipped'); }
+        var _streakEl = box.querySelector('[data-depot-streak]');
+        if (_streakEl){
+                  var _stk = (info.streak != null) ? String(info.streak) : '';
+                  if (_stk){ _streakEl.textContent = _stk + ' \uD83D\uDD25'; _streakEl.classList.remove('is-empty'); }
+                  else { _streakEl.textContent = ''; _streakEl.classList.add('is-empty'); }
+        } else { console.warn('[depot] shell.setFranchise: no [data-depot-streak] in plate; streak chip skipped'); }
+        }
 
   function setAnonymous(){
     var box = q('[data-depot-franchise]');
@@ -115,6 +126,8 @@
     box.classList.add('is-anon');
     box.querySelector('.name').textContent = 'LOG IN';
     box.querySelector('.record').textContent = '';
+    var _sEl = box.querySelector('[data-depot-season]'); if (_sEl){ _sEl.textContent = ''; }
+      var _kEl = box.querySelector('[data-depot-streak]'); if (_kEl){ _kEl.textContent = ''; _kEl.classList.add('is-empty'); }
     var email = q('[data-depot-email]');
     if (email){ email.textContent = ''; }
   }
