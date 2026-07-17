@@ -1,0 +1,10 @@
+# tools/library-ingest runtime deps
+# Dry-run (census + parse + match + review CSV) needs only Pillow.
+# Committing (upload + manifest) additionally needs the supabase client.
+
+Pillow>=10.0.0          # image decode + downscale-only resize (JPEG q82)
+supabase>=2.4.0         # service-role Storage upload + card_library / manifest writes
+
+# Testing (optional):
+#   pytest>=8.0.0
+# test_ingest.py also runs standalone with plain stdlib: python test_ingest.py
