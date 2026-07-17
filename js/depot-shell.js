@@ -46,7 +46,7 @@
     for (var i = 0; i < TABS.length; i++){
       var t = TABS[i];
       var on = (t.mode === active);
-      html += '<a class="depot-tab" data-mode="' + t.mode + '" href="' + t.href + '"' +
+      html += '<a class="depot-tab v2-pill' + (t.mode === 'game' ? ' v2-pill--orange' : '') + '" data-mode="' + t.mode + '" href="' + t.href + '"' +
               (on ? ' aria-current="true"' : '') + '>' + esc(t.label) + '</a>';
     }
     return html;
@@ -57,18 +57,22 @@
     return '' +
       '<div class="depot-bunting" aria-hidden="true"></div>' +
       '<div class="depot-shell">' +
-        '<header class="depot-shell__header">' +
-          '<div class="depot-wordmark">' + wordmark + '</div>' +
-          '<div class="depot-franchise is-anon" data-depot-franchise>' +
-            '<span class="name">LOG IN</span>' +
-            '<span class="record"></span>' +
+        '<header class="depot-shell__header v2-header">' +
+          '<div class="v2-logo-tile" aria-hidden="true">D</div>' +
+        '<div class="v2-wordmark-wrap">' +
+          '<div class="depot-wordmark v2-wordmark">' + wordmark + '</div>' +
+          '<div class="v2-subtitle" data-depot-subtitle></div>' +
+        '</div>' +
+          '<div class="depot-franchise v2-identity is-anon" data-depot-franchise>' +
+            '<span class="name v2-club">LOG IN</span>' +
+            '<span class="record v2-record"></span>' +
           '</div>' +
-          '<div class="depot-account" data-depot-account>' +
+          '<div class="depot-account v2-account" data-depot-account>' +
             '<span class="depot-bell" aria-hidden="true">&#9679;</span>' +
             '<span class="email" data-depot-email></span>' +
           '</div>' +
         '</header>' +
-        '<nav class="depot-nav" data-depot-nav>' + tabsHtml(opts.active) +
+        '<nav class="depot-nav v2-nav" data-depot-nav>' + tabsHtml(opts.active) +
           '<span class="spacer"></span>' +
         '</nav>' +
         '<main class="depot-stage" data-depot-stage></main>' +
