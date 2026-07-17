@@ -424,3 +424,161 @@ body.v2-body {
   .v2-anim-floaty, .v2-anim-twinkle, .v2-anim-ripshake, .v2-anim-baselight,
   .v2-cloud { animation: none; }
 }
+
+
+/* ============================================================
+   PHASE 2 — BINDER + CARD DETAIL (additive; data-path selectors untouched)
+   ============================================================ */
+
+/* --- Binder grid card frames --- */
+.v2-body #binderGrid.grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(150px,1fr));
+  gap:18px;
+  padding:8px 2px 4px;
+}
+.v2-body #binderGrid .card{
+  position:relative;
+  border:3px solid var(--v2-navy);
+  border-radius:var(--v2-radius-sm);
+  background:var(--v2-white);
+  box-shadow:var(--v2-hard-shadow);
+  padding:0;
+  overflow:visible;
+  transition:transform .12s ease, box-shadow .12s ease;
+  cursor:pointer;
+}
+.v2-body #binderGrid .card:hover,
+.v2-body #binderGrid .card:focus-visible{
+  transform:translate(-2px,-2px);
+  box-shadow:6px 6px 0 var(--v2-navy-ink);
+  outline:none;
+}
+.v2-body #binderGrid .card:active{
+  transform:translate(1px,1px);
+  box-shadow:var(--v2-hard-shadow-pressed);
+}
+.v2-body #binderGrid .card .frame{ border-radius:calc(var(--v2-radius-sm) - 3px) calc(var(--v2-radius-sm) - 3px) 0 0; overflow:hidden; }
+.v2-body #binderGrid .card .nameplate{
+  font-family:var(--v2-font-body);
+  color:var(--v2-navy-ink);
+  border-top:2px solid var(--v2-navy);
+  background:var(--v2-cream);
+  padding:6px 8px;
+}
+.v2-body #binderGrid .card .nameplate .pos{ color:var(--v2-navy); opacity:.75; }
+
+/* rare-pin reskinned to v2 gold pin */
+.v2-body #binderGrid .card .rare-pin{
+  position:absolute; top:-8px; right:-8px; z-index:3;
+  background:var(--v2-gold); color:var(--v2-navy-ink);
+  border:2px solid var(--v2-navy); border-radius:50%;
+  width:26px; height:26px; display:grid; place-items:center;
+  box-shadow:2px 2px 0 var(--v2-navy-ink); font-size:13px;
+}
+
+/* --- Star badge (is_star) on binder card frames --- */
+.v2-body .v2-star-badge{
+  position:absolute; top:-9px; left:-9px; z-index:4;
+  width:28px; height:28px; display:grid; place-items:center;
+  background:var(--v2-gold); color:var(--v2-navy-ink);
+  border:2px solid var(--v2-navy); border-radius:50%;
+  box-shadow:2px 2px 0 var(--v2-navy-ink);
+  font-size:15px; line-height:1;
+}
+.v2-body #spotMeta .v2-star-badge--inline{ position:static; display:inline-grid; vertical-align:middle; }
+
+/* --- Era rail + Group By as v2 pills --- */
+.v2-body #eraTabs button, .v2-body #eraTabs .era-tab{
+  font-family:var(--v2-font-body); font-weight:700;
+  border:2px solid var(--v2-navy); border-radius:999px;
+  background:var(--v2-white); color:var(--v2-navy-ink);
+  padding:6px 14px; margin:4px 0; cursor:pointer;
+  box-shadow:2px 2px 0 var(--v2-navy-ink); transition:transform .1s;
+}
+.v2-body #eraTabs button:hover{ transform:translateY(-1px); }
+.v2-body #eraTabs button.active, .v2-body #eraTabs .era-tab.active{
+  background:var(--v2-gold); color:var(--v2-navy-ink);
+}
+.v2-body .group-by{ display:flex; align-items:center; gap:8px; }
+.v2-body .group-by label{ font-family:var(--v2-font-body); font-weight:700; color:var(--v2-navy-ink); text-transform:uppercase; font-size:12px; letter-spacing:.5px; }
+.v2-body #groupBy{
+  font-family:var(--v2-font-body); font-weight:700;
+  border:2px solid var(--v2-navy); border-radius:999px;
+  background:var(--v2-white); color:var(--v2-navy-ink);
+  padding:5px 12px; box-shadow:2px 2px 0 var(--v2-navy-ink); cursor:pointer;
+}
+
+/* --- By-Set view + Add-a-Card --- */
+.v2-body .set-picker{ display:flex; flex-wrap:wrap; gap:8px; }
+.v2-body .set-picker button, .v2-body .set-picker .set-chip{
+  font-family:var(--v2-font-body); font-weight:700;
+  border:2px solid var(--v2-navy); border-radius:999px;
+  background:var(--v2-white); color:var(--v2-navy-ink);
+  padding:5px 12px; box-shadow:2px 2px 0 var(--v2-navy-ink); cursor:pointer;
+}
+.v2-body .set-picker .active{ background:var(--v2-sky); }
+.v2-body #m-add, .v2-body .add-card-btn{
+  font-family:var(--v2-font-body); font-weight:800;
+  border:3px solid var(--v2-navy); border-radius:var(--v2-radius-sm);
+  background:var(--v2-green); color:var(--v2-white);
+  padding:8px 16px; box-shadow:var(--v2-hard-shadow); cursor:pointer;
+}
+.v2-body #m-add:active, .v2-body .add-card-btn:active{ box-shadow:var(--v2-hard-shadow-pressed); transform:translate(1px,1px); }
+
+/* --- Card detail (evolved spotlight) D4 surfaces --- */
+.v2-body #spotMeta .v2-d4{
+  margin-top:12px; padding-top:12px;
+  border-top:2px dashed var(--v2-navy);
+  display:flex; flex-direction:column; gap:10px;
+  font-family:var(--v2-font-body);
+}
+.v2-body #spotMeta .v2-d4-row{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+.v2-body #spotMeta .v2-d4-lab{
+  font-weight:800; text-transform:uppercase; font-size:11px; letter-spacing:.6px;
+  color:var(--v2-navy); min-width:64px;
+}
+.v2-body #spotMeta .v2-grade-val{
+  font-family:var(--v2-font-8bit); font-size:13px;
+  background:var(--v2-gold); color:var(--v2-navy-ink);
+  border:2px solid var(--v2-navy); border-radius:6px;
+  padding:2px 8px; box-shadow:2px 2px 0 var(--v2-navy-ink);
+}
+.v2-body #spotMeta .v2-grade-val.is-blank{ background:var(--v2-panel); color:var(--v2-navy); opacity:.7; box-shadow:none; }
+.v2-body #spotMeta select.v2-grade-sel,
+.v2-body #spotMeta input.v2-cond-input,
+.v2-body #spotMeta textarea.v2-cond-input{
+  font-family:var(--v2-font-body); font-size:13px;
+  border:2px solid var(--v2-navy); border-radius:6px;
+  background:var(--v2-white); color:var(--v2-navy-ink);
+  padding:5px 8px; width:100%; box-sizing:border-box;
+}
+.v2-body #spotMeta textarea.v2-cond-input{ min-height:52px; resize:vertical; }
+.v2-body #spotMeta .v2-cond-input::placeholder{ color:var(--v2-navy); opacity:.45; }
+
+/* star toggle */
+.v2-body #spotMeta .v2-star-toggle{
+  font-family:var(--v2-font-body); font-weight:800; cursor:pointer;
+  border:2px solid var(--v2-navy); border-radius:999px;
+  padding:5px 12px; box-shadow:2px 2px 0 var(--v2-navy-ink);
+  background:var(--v2-white); color:var(--v2-navy-ink);
+  display:inline-flex; align-items:center; gap:6px;
+}
+.v2-body #spotMeta .v2-star-toggle[aria-pressed="true"]{ background:var(--v2-gold); }
+.v2-body #spotMeta .v2-star-toggle:active{ box-shadow:var(--v2-hard-shadow-pressed); transform:translate(1px,1px); }
+
+/* save state */
+.v2-body #spotMeta .v2-d4-status{ font-size:11px; font-weight:700; min-height:14px; }
+.v2-body #spotMeta .v2-d4-status.ok{ color:var(--v2-green-deep); }
+.v2-body #spotMeta .v2-d4-status.err{ color:var(--v2-red); }
+
+/* card flip already provided by v2-anim-flip; ensure spotCard uses 3d */
+.v2-body #spotCard{ transform-style:preserve-3d; }
+
+/* --- Mobile ~390px --- */
+@media (max-width:430px){
+  .v2-body #binderGrid.grid{ grid-template-columns:repeat(2,1fr); gap:12px; }
+  .v2-body #spotMeta .v2-d4-row{ gap:6px; }
+  .v2-body #spotMeta .v2-d4-lab{ min-width:100%; }
+  .v2-body .set-picker{ overflow-x:auto; flex-wrap:nowrap; }
+}
