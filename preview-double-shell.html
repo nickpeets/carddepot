@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Preview — v2 unified header (double-shell fix)</title>
+  <link rel="stylesheet" href="css/depot-style.css">
+  <link rel="stylesheet" href="depot-v2.css">
+  <style>
+    body.v2-body{padding-bottom:60px}
+    .pv-note{font-family:'Baloo 2',sans-serif;color:#072c47;background:#fff7df;border:3px solid #10456b;border-radius:12px;box-shadow:0 4px 0 rgba(16,69,107,.9);padding:8px 14px;margin:14px 24px;font-weight:700;font-size:13px}
+    .pv-binder{margin:6px 24px 24px}
+    .pv-searchrow{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:10px 0}
+    .pv-search{flex:1 1 260px;background:#fff;border:3px solid #10456b;border-radius:999px;padding:8px 16px;font-family:'Baloo 2',sans-serif;font-weight:600;color:#8fb2c6;font-size:13px}
+    .pv-eras{display:flex;flex-wrap:wrap;gap:8px}
+    .pv-era{font-family:'Baloo 2',sans-serif;font-weight:700;font-size:12px;border:2px solid #10456b;border-radius:999px;background:#fff;color:#072c47;padding:5px 13px;box-shadow:2px 2px 0 #072c47}
+    .pv-era.on{background:#ffd23e}
+    .pv-hero{display:flex;justify-content:space-between;align-items:center;background:#0c3556;color:#fff;border:3px solid #10456b;border-radius:14px;padding:10px 16px;margin:12px 0;font-family:'Baloo 2',sans-serif;font-weight:700;box-shadow:0 5px 0 rgba(16,69,107,.9)}
+    .pv-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:18px}
+    .pv-card{border:3px solid #10456b;border-radius:12px;background:#fff;box-shadow:0 7px 0 rgba(16,69,107,.9);overflow:hidden}
+    .pv-scan{height:130px;background:repeating-linear-gradient(45deg,#dff1fb,#dff1fb 8px,#cde6f4 8px,#cde6f4 16px);display:grid;place-items:center;color:#5b7f97;font-family:'Press Start 2P',monospace;font-size:9px}
+    .pv-plate{border-top:2px solid #10456b;background:#fff7df;padding:6px 8px;font-family:'Baloo 2',sans-serif;color:#072c47}
+    .pv-plate b{display:block;font-size:13px}
+    .pv-plate span{font-size:11px;opacity:.75}
+    .pv-second{margin:24px}
+    .pv-h{font-family:'Baloo 2',sans-serif;font-weight:800;color:#072c47;margin:0 24px}
+    </style>
+  </head>
+  <body>
+    <div id="appFrame"></div>
+
+    <script>
+      // ---- Preview stubs: NO live DB. Represent the signed-in shell state with sample data. ----
+      window.depotSB = function(){ return null; };
+      window.depotUserCached = null;
+    </script>
+    <script src="js/depot-shell.js"></script>
+    <script>
+      (function(){
+        var frame = document.getElementById('appFrame');
+        // Mount the REAL shell render (unified header), skipping the live franchise resolve.
+        window.DepotShell.mount({ el: frame, active: 'binder', autoFranchise: false });
+
+        // Simulate resolveRecord -> setFranchise (S1 hybrid record) and the wallet coin pill (mountChip).
+        window.DepotShell.setFranchise({ name: 'DEPOT DUCKS', wins: 8, losses: 0, recordPrefix: 'S1 \u00b7 ' });
+        var email = frame.querySelector('[data-depot-email]');
+        if (email){ email.textContent = 'nick@thedepot.cards'; }
+        var loginBtn = document.createElement('button'); loginBtn.className='auth-btn'; loginBtn.textContent='Log out';
+        frame.querySelector('[data-depot-account]').appendChild(loginBtn);
+        var host = frame.querySelector('[data-depot-franchise]');
+        host.insertAdjacentHTML('beforeend', '<span class="depot-wallet-chip v2-coin-pill" title="Franchise balance"><span class="v2-coin" aria-hidden="true">\uD83E\uDE99</span><span class="dw-amt v2-coin-amt">1240</span><span class="dw-cur">coins</span></span>');
+
+        // Binder body under the single header: search + era pills + hero + grid (content chrome KEPT).
+        var eras = ['All','Vintage','Junk Wax','Modern','\u2605 Stars'];
+        var cards = [
+          {p:'Ken Griffey Jr.', s:'1989 Upper Deck', g:'PSA 9'},
+          {p:'Frank Thomas', s:'1990 Leaf', g:''},
+          {p:'Chipper Jones', s:'1991 Topps', g:'PSA 8'},
+          {p:'Nolan Ryan', s:'1980 Topps', g:''},
+          {p:'Cal Ripken Jr.', s:'1982 Topps', g:'PSA 7'},
+          {p:'Barry Bonds', s:'1993 Fleer', g:''}
+          ];
+        var eraHtml = eras.map(function(e,i){ return '<span class="pv-era'+(i===2?' on':'')+'">'+e+'</span>'; }).join('');
+        var cardHtml = cards.map(function(c){
+          var chip = c.g ? '<span>'+c.g+'</span>' : '<span></span>';
+          return '<div class="pv-card"><div class="pv-scan">scan</div><div class="pv-plate"><b>'+c.p+'</b><span>'+c.s+'</span> '+chip+'</div></div>';
+        }).join('');
+        var body = '<div class="pv-note">Preview only \u00b7 sample data, no live DB. Unified v2 header (single source) with the binder body below \u2014 no duplicate header strip.</div>'+
+          '<div class="pv-binder">'+
+          '<div class="pv-searchrow"><div class="pv-search">\uD83D\uDD0D Search players, sets, years\u2026</div><div class="pv-eras">'+eraHtml+'</div></div>'+
+          '<div class="pv-hero"><span>Page 4 of 139 \u00b7 Junk Wax Era</span><span>\u2039 \u203A</span></div>'+
+          '<div class="pv-grid">'+cardHtml+'</div>'+
+          '</div>';
+        var stage = window.DepotShell.stageEl();
+        stage.insertAdjacentHTML('beforeend', body);
+
+        console.log('[preview] unified header mounted with sample signed-in state');
+      })();
+    </script>
+  </body>
+</html>
+  </body>
