@@ -92,3 +92,24 @@ Full spec in design/redesign-v2/README.md under "Design Tokens"; implemented ver
 5. PREVIEW GATE before any working-path merge: live preview (binder minimum, desktop + mobile) for Nick's taste; then section 2 sign-off, one no-ff merge with the branch-tip label + cache-bust ritual (AGENTS section 6), deploy, live-verify all four pages + no console errors + wallet/auth/season paths intact.
 
 Phase 1 does NOT require the D4 schema (that gates Phase 2).
+
+---
+
+## 7. Phase 2 build spec (this session) - Binder (3a) + Card detail (2b)
+
+Method correction after the first Phase 2 pass was rejected ("so rough, not a lot like the demo"): EXTRACT, do not rebuild. The committed demo (design/redesign-v2/Card Depot Redesign.dc.html) is the source of truth. The skin is lifted wholesale from the demo's actual inline styles + component markup (options 3a and 2b), adapting only the wiring (data hooks, real selectors, live data). No transcribing the spec into hand-rolled CSS.
+
+### 7.1 What survives from the first pass (DATA work - untouched)
+The D4 read path stands: rowToCard maps grade, is_star (to star) and condition_notes (to condNotes) onto the card object. The D4 write path stands: depotUpdateCard(card, patch) -> sb.from('cards').update(patch), with save handlers d4SetGrade ({grade}), d4ToggleStar ({is_star}), d4SetCond ({condition_notes}) and d4Status feedback. The D1 coin display sweep and the photo write path (depotUpdateCardPhoto) are unaffected. Only the SKIN was re-cut from the demo's actual cloth.
+
+### 7.2 Deviation from demo (recorded so it does not read as drift later)
+The binder filter pills are ERA buckets - All / Vintage / Junk Wax / Modern / star Stars - NOT the demo's Topps / Upper Deck / Donruss / star Stars. Rationale: the demo's brand labels were sample-data flavor. Nick's login-landing screenshot (the tiebreaker: "this is what you see when you log in") shows era labels, and eras are the app's real binder filter model (ERA_ORDER = all/vintage/junk/modern; eraFromYear: yr<=1985 vintage, <=1993 junk, else modern). Brand filtering already lives in "Group by". The star Stars pill is new functionality filtering on the D4 is_star column. Everything else in 3a/2b is lifted from the demo verbatim.
+
+### 7.3 Token-drift correction (folded into css/depot-v2.css this pass)
+The Phase 1 token values had drifted off the demo's actual palette - likely half the "rough on sight" verdict, since the whole shell inherits them. Snapped the tokens back to the demo's verbatim hex so all Phase-1 shell surfaces inherit the correction (not just the binder). Changes: --v2-gold #ffd94a to #ffd23e; --v2-green #3fae5a to #7be36b; --v2-green-deep #2e8746 to #1d6b2a; --v2-orange #ff8c42 to #f4823c; --v2-orange-deep #e56a1f to #c9560f; --v2-red #e05252 to #e2543e; --v2-navy-ink #0b3355 to #072c47 (demo darker navy); --v2-panel #eaf6fc to #dff1fb (demo chip bg); --v2-cream #fdf6e3 to #fff7df (demo gold tint); --v2-shadow rgba(11,51,85,.9) to rgba(16,69,107,.9) (demo hard-shadow navy #10456b). --v2-navy (#10456b), --v2-sky (#2eb2e6), --v2-white, radii and fonts already matched the demo and were left as-is.
+
+### 7.4 Navigation intent
+Login lands ON THE BINDER (3a is the landing view). Play Ball routes to the 3c Play Ball hub (next match / standings / league-season). 3c is a later phase; for now the button routes to the existing season surface as the placeholder.
+
+### 7.5 Preview + gate
+preview-phase2.html is re-cut from the extracted 3a + 2b components (same static-sample convention as the Phase 1 preview: self-contained, representative SAMPLE data, no live DB). It wires the era filter, the star Stars pill (is_star), search (player/set/year, client-side), the PSA chip (D4 grade; blank = no chip, matching the demo's clean look) and the diagonal-stripe scan placeholder for photoless cards (real photos render in-frame when present). HOLD at the preview gate for Nick's re-eyeball. The bar: side-by-side with the demo, indistinguishable. The index.html cardHTML / openSpot merge work does NOT ship until sign-off.
