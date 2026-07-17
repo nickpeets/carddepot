@@ -1342,7 +1342,10 @@ function cardToRow(c){
     notes: packNotes(c),
     tcdb_url: c.tcdb_url || null,
     photo_front_path: c.photoFront || null,
-    photo_back_path: c.photoBack || null
+    photo_back_path: c.photoBack || null,
+    grade: (c.grade != null && c.grade !== '' ? c.grade : null),
+    is_star: !!c.star,
+    condition_notes: (c.condNotes != null && c.condNotes !== '' ? c.condNotes : null)
   };
 }
 function rowToCard(r){
@@ -1364,7 +1367,10 @@ function rowToCard(r){
     photoBack: r.photo_back_path || '',
     tcdb_url: r.tcdb_url || '',
     stats: u.meta.stats || {},
-    bio: u.bio || ''
+    bio: u.bio || '',
+    grade: (r.grade != null ? r.grade : null),
+    star: !!r.is_star,
+    condNotes: (r.condition_notes != null ? r.condition_notes : null)
   };
 }
 async function depotEnsureCollection(){
@@ -1417,6 +1423,62 @@ async function depotDeleteCard(c){
   if(del.error){ console.warn('[DepotData] delete error', del.error); toast('Could not delete the card on the server.'); return false; }
   return true;
 }
+
+/* ---- Phase 2 D4: owner-scoped card metadata write (matches persistRookieYear shape) ---- */
+async function depotUpdateCard(card, patch){
+  try{
+    const sb = depotSB();
+    if(!sb || !depotLoggedIn()){ toast('Sign in to edit card details.'); return false; }
+    const res = await sb.from('cards').update(patch).eq('id', card.id);
+    if(res && res.error){ console.warn('[DepotData] update error', res.error); return false; }
+    console.log('[depot] card update ok', card.id, Object.keys(patch).join(','));
+    return true;
+  }catch(e){ console.warn('[DepotData] update threw', e); return false; }
+}
+function d4Status(ok, msg){
+  const el = document.getElementById('d4Status');
+  if(!el) return;
+  el.className = 'v2-d4-status ' + (ok ? 'ok' : 'err');
+  el.textContent = msg || (ok ? 'Saved' : 'Save failed');
+  if(ok){ setTimeout(function(){ if(el) el.textContent=''; el.className='v2-d4-status'; }, 1800); }
+}
+async function d4SetGrade(val){
+  const c = COLLECTION[spotIdx]; if(!c) return;
+  const clean = (val==null || val==='') ? null : String(val);
+  const prev = (c.grade!=null ? c.grade : null);
+  c.grade = clean;
+  const gv = document.getElementById('d4GradeVal');
+  if(gv){ gv.textContent = clean ? clean : '—'; gv.className = 'v2-grade-val' + (clean?'':' is-blank'); }
+  const ok = await depotUpdateCard(c, { grade: clean });
+  if(!ok){ c.grade = prev; if(gv){ gv.textContent = prev?prev:'—'; gv.className='v2-grade-val'+(prev?'':' is-blank'); } }
+  d4Status(ok, ok ? 'Grade saved' : 'Grade not saved');
+}
+async function d4ToggleStar(){
+  const c = COLLECTION[spotIdx]; if(!c) return;
+  const next = !c.star;
+  c.star = next;
+  const btn = document.getElementById('d4StarBtn');
+  if(btn){
+    btn.setAttribute('aria-pressed', next?'true':'false');
+    btn.innerHTML = '<span class="v2-star-badge--inline v2-anim-twinkle" style="'+(next?'':'filter:grayscale(1);opacity:.5')+'">\u2605</span> ' + (next?'Starred':'Mark star');
+  }
+  const ok = await depotUpdateCard(c, { is_star: next });
+  if(!ok){
+    c.star = !next;
+    if(btn){ btn.setAttribute('aria-pressed', (!next)?'true':'false'); btn.innerHTML = '<span class="v2-star-badge--inline v2-anim-twinkle" style="'+((!next)?'':'filter:grayscale(1);opacity:.5')+'">\u2605</span> ' + ((!next)?'Starred':'Mark star'); }
+  }
+  d4Status(ok, ok ? (next?'Starred':'Star removed') : 'Star not saved');
+}
+async function d4SetCond(val){
+  const c = COLLECTION[spotIdx]; if(!c) return;
+  const clean = (val==null || String(val).trim()==='') ? null : String(val);
+  const prev = (c.condNotes!=null ? c.condNotes : null);
+  c.condNotes = clean;
+  const ok = await depotUpdateCard(c, { condition_notes: clean });
+  if(!ok){ c.condNotes = prev; }
+  d4Status(ok, ok ? 'Notes saved' : 'Notes not saved');
+}
+
 async function depotUpdateCardPhoto(c){
   const sb = depotSB();
   const frontSrc = (typeof c.photoFront==='string' && c.photoFront.indexOf('data:')===0) ? c.photoFront : null;
@@ -1471,7 +1533,7 @@ function cardHTML(card, idx, skin){
     ? `background-image:url("${cssUrl(cphoto)}")`
     : `background-color:${placeholderBg(idx)}`;
   return `<button class="card ${skin}" onclick="openSpot(${idx})" aria-label="${card.name}, ${card.yr} ${card.set}">
-    ${card.rare?'<span class="rare-pin" title="Key card">★</span>':''}
+    ${card.rare?'<span class="rare-pin" title="Key card">★</span>':''}${card.star?'<span class="v2-star-badge v2-anim-twinkle" title="Starred">★</span>':''}
     <div class="frame">
       ${cphoto ? `<img class="photo loaded-img" src="${escAttr(cphoto)}" alt="" loading="lazy" style="width:100%;height:100%;object-fit:cover;object-position:center top;display:block" onload="imgOk(this)" onerror="imgFail(this)">` : `<div class="photo" style="${photoStyle}"></div>`}
       <div class="nameplate">${card.name}<span class="pos">${card.pos} · ${card.team}</span></div>
@@ -1681,7 +1743,7 @@ function openSpot(idx){
         </div>`;
   document.getElementById('spotMeta').innerHTML=`${c.name?`<div class="spot-name">${c.name}</div>`:''}<span class="hint">click card to flip · esc to close</span>`
     + (cphoto?'':`<div style="margin-top:.5rem"><button class="btn-google" style="width:auto;padding:.45rem 1rem;font-size:.72rem" onclick="findImageFor(${idx},event)">Find this card on Google Images ↗</button></div>`)
-        + `<div class="spot-remove"><button class="btn-ghost" onclick="removeFromDepot(${idx},event)">Remove from depot</button></div>`;
+        + `<div class="v2-d4"><div class="v2-d4-row"><span class="v2-d4-lab">Grade</span><span class="v2-grade-val ${c.grade?'':'is-blank'}" id="d4GradeVal">${c.grade?escAttr(c.grade):'—'}</span><select class="v2-grade-sel" id="d4GradeSel" style="width:auto" onchange="d4SetGrade(this.value)">${['','1','2','3','4','5','6','7','8','9','10','GEM 10','AUTH'].map(function(g){return '<option value="'+g+'"'+(String(c.grade||'')===g?' selected':'')+'>'+(g===''?'— none —':g)+'</option>';}).join('')}</select></div><div class="v2-d4-row"><span class="v2-d4-lab">Star</span><button type="button" class="v2-star-toggle" id="d4StarBtn" aria-pressed="${c.star?'true':'false'}" onclick="d4ToggleStar()"><span class="v2-star-badge--inline v2-anim-twinkle" style="${c.star?'':'filter:grayscale(1);opacity:.5'}">★</span> ${c.star?'Starred':'Mark star'}</button></div><div class="v2-d4-row" style="align-items:flex-start"><span class="v2-d4-lab">Notes</span><textarea class="v2-cond-input" id="d4CondInput" placeholder="Condition notes (corners, centering, flaws…)" onchange="d4SetCond(this.value)">${c.condNotes?escAttr(c.condNotes):''}</textarea></div><div class="v2-d4-status" id="d4Status"></div></div>` + `<div class="spot-remove"><button class="btn-ghost" onclick="removeFromDepot(${idx},event)">Remove from depot</button></div>`;
   document.getElementById('spotCard').classList.remove('flipped');
   document.getElementById('spotlight').classList.add('open');
 }
