@@ -1,0 +1,15 @@
+# corpus binaries -- never commit card-set zips or extracted images
+zips/
+*.zip
+extracted/
+*.jpg
+*.jpeg
+
+# run artifacts (per-zip review + resumable ledger)
+unmapped_*.csv
+manifest_*.jsonl
+
+# python
+__pycache__/
+*.pyc
+.venv/
