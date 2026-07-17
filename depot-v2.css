@@ -1,0 +1,426 @@
+/* ============================================================
+   CARD DEPOT — REDESIGN V2 · PHASE 1 FOUNDATION
+   "The Depot" GBA chunky-plastic token system
+   Source: design/redesign-v2/ handoff (canonical option 1b shell)
+   Authored clean for upload (web-editor corruption workaround).
+   ============================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;500;600;700;800&family=Press+Start+2P&family=VT323&display=swap');
+
+/* ------------------------------------------------------------
+   1. TOKENS
+   ------------------------------------------------------------ */
+:root {
+  /* palette */
+  --v2-sky: #2eb2e6;
+  --v2-sky-deep: #1a8fc4;
+  --v2-navy: #10456b;
+  --v2-navy-ink: #0b3355;
+  --v2-cream: #fdf6e3;
+  --v2-panel: #eaf6fc;
+  --v2-gold: #ffd94a;
+  --v2-gold-deep: #e6a817;
+  --v2-orange: #ff8c42;
+  --v2-orange-deep: #e56a1f;
+  --v2-green: #3fae5a;
+  --v2-green-deep: #2e8746;
+  --v2-red: #e05252;
+  --v2-white: #ffffff;
+  --v2-shadow: rgba(11, 51, 85, .9);
+
+  /* shape system */
+  --v2-border: 4px solid var(--v2-navy);
+  --v2-radius: 20px;
+  --v2-radius-sm: 12px;
+  --v2-radius-hero: 28px;
+  --v2-hard-shadow: 0 7px 0 var(--v2-shadow);
+  --v2-hard-shadow-pressed: 0 2px 0 var(--v2-shadow);
+
+  /* type */
+  --v2-font-body: 'Baloo 2', 'Trebuchet MS', sans-serif;
+  --v2-font-8bit: 'Press Start 2P', monospace;
+  --v2-font-led: 'VT323', monospace;
+}
+
+/* ------------------------------------------------------------
+   2. PAGE CANVAS
+   ------------------------------------------------------------ */
+.v2-body,
+body.v2-body {
+  background: linear-gradient(180deg, var(--v2-sky) 0%, var(--v2-sky-deep) 100%);
+  min-height: 100vh;
+  font-family: var(--v2-font-body);
+  color: var(--v2-navy-ink);
+  margin: 0;
+}
+
+/* floating cloud decorations */
+.v2-cloud {
+  position: absolute;
+  background: var(--v2-white);
+  border-radius: 999px;
+  opacity: .85;
+  pointer-events: none;
+  animation: v2-floaty 7s ease-in-out infinite;
+}
+.v2-cloud::before,
+.v2-cloud::after {
+  content: '';
+  position: absolute;
+  background: var(--v2-white);
+  border-radius: 999px;
+}
+.v2-cloud::before { width: 55%; height: 120%; left: 12%; top: -55%; }
+.v2-cloud::after  { width: 45%; height: 100%; right: 12%; top: -35%; }
+
+/* ------------------------------------------------------------
+   3. CHUNKY PLASTIC PRIMITIVES
+   ------------------------------------------------------------ */
+.v2-panel {
+  background: var(--v2-panel);
+  border: var(--v2-border);
+  border-radius: var(--v2-radius);
+  box-shadow: var(--v2-hard-shadow);
+}
+.v2-panel--cream { background: var(--v2-cream); }
+.v2-panel--white { background: var(--v2-white); }
+.v2-panel--hero  { border-radius: var(--v2-radius-hero); }
+.v2-panel--sm    { border-radius: var(--v2-radius-sm); }
+
+/* ------------------------------------------------------------
+   4. GLOSSY PILL BUTTONS
+   ------------------------------------------------------------ */
+.v2-pill {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--v2-font-body);
+  font-weight: 800;
+  font-size: 18px;
+  line-height: 1;
+  color: var(--v2-white);
+  background: var(--v2-sky);
+  border: var(--v2-border);
+  border-radius: 999px;
+  padding: 12px 22px;
+  box-shadow: var(--v2-hard-shadow);
+  cursor: pointer;
+  text-decoration: none;
+  user-select: none;
+  transition: transform .08s ease, box-shadow .08s ease, filter .12s ease;
+  overflow: hidden;
+}
+/* cellophane sheen */
+.v2-pill::before {
+  content: '';
+  position: absolute;
+  inset: 0 0 45% 0;
+  border-radius: inherit;
+  background: linear-gradient(180deg,
+    rgba(255, 255, 255, .55) 0%,
+    rgba(255, 255, 255, .12) 70%,
+    transparent 100%);
+  pointer-events: none;
+}
+.v2-pill:hover  { filter: brightness(1.05); }
+.v2-pill:active,
+.v2-pill.is-pressed {
+  transform: translateY(5px);
+  box-shadow: var(--v2-hard-shadow-pressed);
+}
+.v2-pill:disabled,
+.v2-pill.is-disabled {
+  filter: saturate(.4) brightness(.9);
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* variants */
+.v2-pill--gold   { background: var(--v2-gold);   color: var(--v2-navy-ink); }
+.v2-pill--green  { background: var(--v2-green); }
+.v2-pill--orange { background: var(--v2-orange); }
+.v2-pill--sky    { background: var(--v2-sky); }
+.v2-pill--navy   { background: var(--v2-navy); }
+.v2-pill--red    { background: var(--v2-red); }
+
+/* active nav state */
+.v2-pill.is-active {
+  background: var(--v2-gold);
+  color: var(--v2-navy-ink);
+}
+
+/* small pill */
+.v2-pill--sm { font-size: 14px; padding: 8px 16px; border-width: 3px; box-shadow: 0 5px 0 var(--v2-shadow); }
+.v2-pill--sm:active { transform: translateY(3px); box-shadow: 0 2px 0 var(--v2-shadow); }
+
+/* ------------------------------------------------------------
+   5. TYPOGRAPHY ACCENTS
+   ------------------------------------------------------------ */
+.v2-8bit {
+  font-family: var(--v2-font-8bit);
+  font-size: 12px;
+  line-height: 1.6;
+  letter-spacing: .02em;
+}
+.v2-8bit--xs { font-size: 10px; }
+.v2-8bit--lg { font-size: 14px; }
+
+.v2-led {
+  font-family: var(--v2-font-led);
+  font-size: 28px;
+  line-height: 1;
+  color: var(--v2-navy-ink);
+  text-shadow: 0 0 6px rgba(46, 178, 230, .55);
+}
+
+.v2-display {
+  font-family: var(--v2-font-body);
+  font-weight: 800;
+  color: var(--v2-white);
+  text-shadow:
+    -2px -2px 0 var(--v2-navy), 2px -2px 0 var(--v2-navy),
+    -2px  2px 0 var(--v2-navy), 2px  2px 0 var(--v2-navy),
+    0 5px 0 var(--v2-shadow);
+}
+
+/* ------------------------------------------------------------
+   6. HEADER — CANONICAL OPTION 1b
+   ------------------------------------------------------------ */
+.v2-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+  padding: 18px 24px 10px;
+  position: relative;
+  z-index: 5;
+}
+
+.v2-logo-tile {
+  width: 58px;
+  height: 58px;
+  flex: 0 0 auto;
+  display: grid;
+  place-items: center;
+  background: var(--v2-gold);
+  border: var(--v2-border);
+  border-radius: 16px;
+  box-shadow: var(--v2-hard-shadow);
+  font-family: var(--v2-font-8bit);
+  font-size: 26px;
+  color: var(--v2-navy-ink);
+}
+
+.v2-wordmark-wrap { display: flex; flex-direction: column; gap: 2px; }
+.v2-wordmark {
+  font-family: var(--v2-font-body);
+  font-weight: 800;
+  font-size: 34px;
+  line-height: 1;
+  color: var(--v2-white);
+  text-shadow:
+    -2px -2px 0 var(--v2-navy), 2px -2px 0 var(--v2-navy),
+    -2px  2px 0 var(--v2-navy), 2px  2px 0 var(--v2-navy),
+    0 5px 0 var(--v2-shadow);
+}
+.v2-subtitle {
+  font-family: var(--v2-font-body);
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--v2-navy-ink);
+  opacity: .85;
+}
+
+.v2-header .v2-spacer { flex: 1 1 auto; }
+
+/* coin pill (D1 — display-layer currency) */
+.v2-coin-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--v2-gold);
+  border: var(--v2-border);
+  border-radius: 999px;
+  padding: 8px 18px;
+  box-shadow: var(--v2-hard-shadow);
+  color: var(--v2-navy-ink);
+}
+.v2-coin-pill .v2-coin { font-size: 20px; line-height: 1; }
+.v2-coin-pill .v2-coin-amt {
+  font-family: var(--v2-font-led);
+  font-size: 26px;
+  line-height: 1;
+}
+
+/* identity block (franchise · record) */
+.v2-identity {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 2px;
+  background: var(--v2-white);
+  border: var(--v2-border);
+  border-radius: var(--v2-radius-sm);
+  padding: 8px 14px;
+  box-shadow: var(--v2-hard-shadow);
+}
+.v2-identity .v2-club { font-weight: 800; font-size: 15px; color: var(--v2-navy-ink); }
+.v2-identity .v2-record { font-family: var(--v2-font-led); font-size: 22px; line-height: 1; color: var(--v2-navy-ink); }
+
+/* account cluster */
+.v2-account {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--v2-navy-ink);
+}
+
+/* ------------------------------------------------------------
+   7. NAV PILL ROW
+   ------------------------------------------------------------ */
+.v2-nav {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  padding: 8px 24px 18px;
+  position: relative;
+  z-index: 5;
+}
+.v2-nav .v2-pill { font-size: 16px; padding: 10px 20px; }
+
+/* ------------------------------------------------------------
+   8. CARD & BANNER PRIMITIVES (shell-reach only, Phase 1)
+   ------------------------------------------------------------ */
+.v2-card-frame {
+  background: var(--v2-white);
+  border: var(--v2-border);
+  border-radius: var(--v2-radius-sm);
+  box-shadow: var(--v2-hard-shadow);
+  overflow: hidden;
+}
+
+.v2-banner {
+  display: inline-block;
+  background: var(--v2-gold);
+  border: var(--v2-border);
+  border-radius: var(--v2-radius-sm);
+  box-shadow: var(--v2-hard-shadow);
+  font-weight: 800;
+  padding: 10px 18px;
+  color: var(--v2-navy-ink);
+  animation: v2-bannerpop .45s cubic-bezier(.2, 1.6, .4, 1) both;
+}
+
+.v2-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: var(--v2-panel);
+  border: 3px solid var(--v2-navy);
+  border-radius: 999px;
+  padding: 4px 12px;
+  font-weight: 700;
+  font-size: 13px;
+  color: var(--v2-navy-ink);
+  box-shadow: 0 4px 0 var(--v2-shadow);
+}
+
+/* ------------------------------------------------------------
+   9. ANIMATION VOCABULARY
+   ------------------------------------------------------------ */
+@keyframes v2-floaty {
+  0%, 100% { transform: translateY(0); }
+  50%      { transform: translateY(-9px); }
+}
+@keyframes v2-twinkle {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50%      { opacity: .35; transform: scale(.72); }
+}
+@keyframes v2-bannerpop {
+  0%   { transform: scale(.6) rotate(-3deg); opacity: 0; }
+  70%  { transform: scale(1.06) rotate(1deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0); opacity: 1; }
+}
+@keyframes v2-outshake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-7px) rotate(-1.5deg); }
+  40% { transform: translateX(6px) rotate(1.2deg); }
+  60% { transform: translateX(-4px); }
+  80% { transform: translateX(3px); }
+}
+@keyframes v2-ripshake {
+  0%, 100% { transform: rotate(0); }
+  25% { transform: rotate(-2.4deg); }
+  50% { transform: rotate(2deg); }
+  75% { transform: rotate(-1.2deg); }
+}
+@keyframes v2-tearoff {
+  0%   { transform: translateY(0) rotate(0); opacity: 1; }
+  100% { transform: translateY(-90px) rotate(-14deg); opacity: 0; }
+}
+@keyframes v2-cardpop {
+  0%   { transform: translateY(26px) scale(.82); opacity: 0; }
+  70%  { transform: translateY(-6px) scale(1.05); opacity: 1; }
+  100% { transform: translateY(0) scale(1); opacity: 1; }
+}
+@keyframes v2-starburst {
+  0%   { transform: scale(0) rotate(0); opacity: 1; }
+  80%  { transform: scale(1.25) rotate(18deg); opacity: 1; }
+  100% { transform: scale(1.4) rotate(24deg); opacity: 0; }
+}
+@keyframes v2-pitchfly {
+  0%   { transform: translate(0, 0) scale(.55); opacity: 0; }
+  15%  { opacity: 1; }
+  100% { transform: translate(var(--v2-pitch-x, 0px), var(--v2-pitch-y, 190px)) scale(1); opacity: 1; }
+}
+@keyframes v2-windup {
+  0%   { transform: rotate(0); }
+  40%  { transform: rotate(-9deg); }
+  70%  { transform: rotate(5deg); }
+  100% { transform: rotate(0); }
+}
+@keyframes v2-baselight {
+  0%, 100% { filter: drop-shadow(0 0 0 rgba(255, 217, 74, 0)); }
+  50%      { filter: drop-shadow(0 0 10px rgba(255, 217, 74, .95)); }
+}
+@keyframes v2-flipIn {
+  0%   { transform: rotateY(90deg); opacity: 0; }
+  100% { transform: rotateY(0); opacity: 1; }
+}
+
+/* helper classes to invoke */
+.v2-anim-floaty    { animation: v2-floaty 6s ease-in-out infinite; }
+.v2-anim-twinkle   { animation: v2-twinkle 1.8s ease-in-out infinite; }
+.v2-anim-outshake  { animation: v2-outshake .5s ease both; }
+.v2-anim-ripshake  { animation: v2-ripshake .6s ease infinite; }
+.v2-anim-tearoff   { animation: v2-tearoff .55s ease both; }
+.v2-anim-cardpop   { animation: v2-cardpop .5s cubic-bezier(.2, 1.5, .4, 1) both; }
+.v2-anim-starburst { animation: v2-starburst .7s ease both; }
+.v2-anim-windup    { animation: v2-windup .8s ease both; }
+.v2-anim-baselight { animation: v2-baselight 1.6s ease-in-out infinite; }
+.v2-anim-flip      { animation: v2-flipIn .45s ease both; backface-visibility: hidden; }
+
+/* ------------------------------------------------------------
+   10. RESPONSIVE
+   ------------------------------------------------------------ */
+@media (max-width: 760px) {
+  .v2-header { padding: 12px 14px 6px; gap: 10px; }
+  .v2-wordmark { font-size: 26px; }
+  .v2-logo-tile { width: 48px; height: 48px; font-size: 20px; }
+  .v2-subtitle { font-size: 12px; }
+  .v2-nav { padding: 6px 14px 12px; gap: 8px; }
+  .v2-nav .v2-pill { font-size: 14px; padding: 9px 16px; }
+  .v2-coin-pill { padding: 6px 14px; }
+  .v2-coin-pill .v2-coin-amt { font-size: 22px; }
+  .v2-identity .v2-record { font-size: 18px; }
+}
+
+/* accessibility: honor reduced motion */
+@media (prefers-reduced-motion: reduce) {
+  .v2-anim-floaty, .v2-anim-twinkle, .v2-anim-ripshake, .v2-anim-baselight,
+  .v2-cloud { animation: none; }
+}
