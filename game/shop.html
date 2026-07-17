@@ -69,7 +69,7 @@
   var grid = document.getElementById('shopGrid');
   var balEl = document.getElementById('shopBal');
   var statusEl = document.getElementById('shopStatus');
-  var CUR = (window.DepotWallet && window.DepotWallet.CURRENCY) || 'DD';
+  var CUR = (window.DepotWallet && window.DepotWallet.CURRENCY) || 'coins';
 
   function fmt(n) { return (n == null ? '\u2014' : String(n)) + ' ' + CUR; }
   function setStatus(kind, html) {
@@ -294,7 +294,7 @@
 
   function refreshBalance() {
     Shop.getBalance().then(function (bal) {
-      _balance = bal; balEl.textContent = fmt(bal);
+      _balance = bal; balEl.textContent = fmt(bal) + ' ' + CUR;
       console.log(LOG + ' balance = ' + bal);
       renderGrid();
     }).catch(function () { balEl.textContent = fmt(null); renderGrid(); });
