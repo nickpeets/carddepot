@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <script src="../js/version.js?v=c33635d"></script>
-  <script src="../js/depot-core.js?v=c33635d"></script>
+  <script src="../js/version.js?v=ff10680"></script>
+  <script src="../js/depot-core.js?v=ff10680"></script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>The Depot &mdash; Lineup Builder</title>
@@ -10,10 +10,10 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="season.js?v=c33635d" defer></script>
-  <link rel="stylesheet" href="../css/depot-style.css?v=c33635d">
+<script src="season.js?v=ff10680" defer></script>
+  <link rel="stylesheet" href="../css/depot-style.css?v=ff10680">
     <link rel="stylesheet" href="../depot-v2.css">
-  <script src="../js/depot-shell.js?v=c33635d" defer></script>
+  <script src="../js/depot-shell.js?v=ff10680" defer></script>
   <style>
   :root{
     /* The Depot palette — lightened for a brighter, more readable builder */
@@ -1584,10 +1584,10 @@
   }
   /* ===== end SEASON MODE play handler ===== */
 </script>
-<script src="../js/depot-builder-shell.js?v=c33635d"></script>
-<script src="../js/depot-prestige.js?v=c33635d"></script>
-<script src="../js/depot-pixel-card.js?v=c33635d"></script>
-<script src="../js/depot-wallet.js?v=c33635d"></script>
+<script src="../js/depot-builder-shell.js?v=ff10680"></script>
+<script src="../js/depot-prestige.js?v=ff10680"></script>
+<script src="../js/depot-pixel-card.js?v=ff10680"></script>
+<script src="../js/depot-wallet.js?v=ff10680"></script>
 <script>
 /* Franchise Economy Slice A: mount wallet chip on the builder. Additive, graceful until DDL. */
 (function(){
@@ -1636,11 +1636,11 @@
       var total=window.DepotPrestige.lineupTotal(cards);
       var win=window.DepotPrestige.projectedWin(total);
       setLS('lsPrestige', String(total));
-      setLS('lsPayout', '$'+win.toLocaleString()+' DD');
+      setLS('lsPayout', (window.DepotWallet && DepotWallet.fmt) ? DepotWallet.fmt(win) : (win.toLocaleString()+' coins'));
       setLS('lsFormula', '100 + '+total+'&times;1.8');
-      setLS('lsFormulaSub', '= '+win.toLocaleString()+' DD (Slice A)');
+      setLS('lsFormulaSub', '= '+win.toLocaleString()+' coins (Slice A)');
       if(_prevTotal===null || total===_prevTotal){ setLS('lsPace','&mdash;'); }
-      else { var d=win-window.DepotPrestige.projectedWin(_prevTotal); setLS('lsPace', (d>=0?'+':'')+d.toLocaleString()+' DD'); }
+      else { var d=win-window.DepotPrestige.projectedWin(_prevTotal); setLS('lsPace', (d>=0?'+':'')+d.toLocaleString()+' coins'); }
       _prevTotal=total;
     }catch(e){ console.warn(TAG,'update failed:',e&&e.message); }
   }
