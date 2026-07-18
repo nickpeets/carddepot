@@ -63,6 +63,7 @@
           '<div class="depot-wordmark v2-wordmark">' + wordmark + '</div>' +
           '<div class="v2-subtitle" data-depot-subtitle></div>' +
         '</div>' +
+      '<span class="v2-spacer" aria-hidden="true"></span>' +
           '<div class="depot-franchise v2-identity is-anon" data-depot-franchise>' +
             '<span class="name v2-club">LOG IN</span>' +
             '<span class="record v2-record"></span>' +
@@ -71,6 +72,7 @@
             '<span class="depot-bell" aria-hidden="true">&#9679;</span>' +
             '<span class="email" data-depot-email></span>' +
           '</div>' +
+      '<a class="v2-pill v2-pill--green v2-pill--sm depot-add-card" data-depot-addcard href="index.html#add">+ Add a card</a>' +
         '</header>' +
         '<nav class="depot-nav v2-nav" data-depot-nav>' + tabsHtml(opts.active) +
           '<span class="spacer"></span>' +
