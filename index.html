@@ -1,18 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <script src="js/version.js?v=f646a71"></script>
-  <script src="js/depot-core.js?v=f646a71"></script>
+  <script src="js/version.js?v=0c1fe85"></script>
+  <script src="js/depot-core.js?v=0c1fe85"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>The Depot</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Spectral:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/depot-style.css?v=f646a71">
-  <link rel="stylesheet" href="css/season.css?v=f646a71">
-    <script src="js/depot-shell.js?v=f646a71"></script>
-  <script src="js/depot-season-shell.js?v=f646a71"></script>
+  <link rel="stylesheet" href="css/depot-style.css?v=0c1fe85">
+  <link rel="stylesheet" href="css/season.css?v=0c1fe85">
+    <script src="js/depot-shell.js?v=0c1fe85"></script>
+  <script src="js/depot-season-shell.js?v=0c1fe85"></script>
   <style>
 :root{
   --leather:#5a2118;
@@ -429,7 +429,7 @@ button:focus-visible,[tabindex]:focus-visible{outline:3px solid var(--brass);out
   box-shadow:3px 3px 0 #000;padding:.4rem .55rem;font-size:.5rem;
 }
 .modes{padding:1.2rem 2rem;gap:.9rem;flex-wrap:wrap}
-.mode-btn{
+.mode-btn{border-radius:999px;
   font-family:'Press Start 2P',monospace !important;
   text-transform:uppercase;letter-spacing:0;font-size:.55rem;line-height:1.5;
   color:#fff;background:var(--sb-blue);
@@ -1036,7 +1036,7 @@ body{
 </style>
 <!-- /PHASE5-SHARE-CSS -->
 
-  <link rel="stylesheet" href="css/depot-shop-view.css?v=f646a71">
+  <link rel="stylesheet" href="css/depot-shop-view.css?v=0c1fe85">
     <link rel="stylesheet" href="depot-v2.css">
 </head>
 <body class="v2-body">
@@ -1553,16 +1553,6 @@ function dcBinderHTML(id){
   }).join('');
   return ''+
   '<div class="dc-binder" style="width:760px;max-width:100%;background:#2eb2e6;border-radius:16px;overflow:hidden">'+
-    '<div style="padding:16px 24px 0;display:flex;align-items:center;justify-content:space-between">'+
-      '<div style="display:flex;align-items:center;gap:12px">'+
-        '<div style="width:42px;height:42px;border-radius:12px;background:#ffd23e;border:3px solid #10456b;box-shadow:0 4px 0 #10456b;display:flex;align-items:center;justify-content:center;font-family:\'Press Start 2P\',monospace;font-size:14px;color:#10456b">D</div>'+
-        '<div style="font-family:\'Baloo 2\',sans-serif;font-weight:800;font-size:24px;color:#fff;text-shadow:0 3px 0 #10456b">The Binder</div>'+
-      '</div>'+
-      '<div style="display:flex;gap:8px">'+
-        '<div class="dc-hoverbtn" title="Routes to the Play Ball hub (3c); placeholder \u2192 season surface" style="font-family:\'Baloo 2\',sans-serif;font-weight:700;font-size:13px;color:#10456b;background:#fff;border:3px solid #10456b;border-radius:999px;padding:7px 16px;box-shadow:0 4px 0 #10456b;cursor:pointer">\u25b6 Play Ball</div>'+
-        '<div class="dc-hoverbtn" style="font-family:\'Baloo 2\',sans-serif;font-weight:800;font-size:13px;color:#10456b;background:linear-gradient(#fff8,#fff0 45%),#7be36b;border:3px solid #10456b;border-radius:999px;padding:7px 16px;box-shadow:0 4px 0 #10456b;cursor:pointer">+ Add a card</div>'+
-      '</div>'+
-    '</div>'+
     '<div style="display:flex;gap:8px;padding:14px 24px 0;flex-wrap:wrap;align-items:center">'+
       '<input id="'+id+'-search" placeholder="\ud83d\udd0d Search players, sets, years\u2026" style="flex:1;min-width:180px;background:#fff;border:3px solid #10456b;border-radius:999px;padding:8px 16px;font-family:\'Baloo 2\',sans-serif;font-weight:600;font-size:13px;color:#10456b;outline:none">'+
       '<div id="'+id+'-pills" style="display:flex;gap:8px;flex-wrap:wrap">'+filterPills+'</div>'+
@@ -2975,15 +2965,15 @@ setAuthUI(false);
   });
 })();
 </script>
-<script src="game/season.js?v=f646a71" defer></script>
-<script src="js/depot-index-shell.js?v=f646a71"></script>
-<script src="js/depot-prestige.js?v=f646a71"></script>
-<script src="js/depot-wallet.js?v=f646a71"></script>
-  <script src="js/depot-pack-engine.js?v=f646a71"></script>
-  <script src="js/depot-pixel-card.js?v=f646a71"></script>
-  <script src="js/depot-shop.js?v=f646a71"></script>
-  <script src="js/depot-shop-view.js?v=f646a71"></script>
-  <script src="js/depot-binder-shop.js?v=f646a71"></script>
+<script src="game/season.js?v=0c1fe85" defer></script>
+<script src="js/depot-index-shell.js?v=0c1fe85"></script>
+<script src="js/depot-prestige.js?v=0c1fe85"></script>
+<script src="js/depot-wallet.js?v=0c1fe85"></script>
+  <script src="js/depot-pack-engine.js?v=0c1fe85"></script>
+  <script src="js/depot-pixel-card.js?v=0c1fe85"></script>
+  <script src="js/depot-shop.js?v=0c1fe85"></script>
+  <script src="js/depot-shop-view.js?v=0c1fe85"></script>
+  <script src="js/depot-binder-shop.js?v=0c1fe85"></script>
 <script>
 /* Franchise Economy Slice A: arm wallet chip + payout hook. Additive, fail-loud, graceful until DDL. */
 (function(){
