@@ -69,6 +69,10 @@
                     '<span class="dc-team name">LOG IN</span>' +
                     '<span class="dc-line"><span class="dc-wl record"></span><span class="dc-season" data-depot-season></span><span class="dc-streak is-empty" data-depot-streak></span></span>' +
                   '</div>' +
+                  '<div class="dc-div"></div>' +
+                  '<div class="dc-coins">' +
+                    '<div class="dw-mount" data-depot-wallet></div>' +
+                  '</div>' +
           '</div>' +
           '<div class="depot-account v2-account" data-depot-account>' +
             '<span class="depot-bell" aria-hidden="true">&#9679;</span>' +
@@ -115,6 +119,7 @@ box.querySelector('.record').textContent = w + '-' + l;
         var _streakEl = box.querySelector('[data-depot-streak]');
         if (_streakEl){
                   var _stk = (info.streak != null) ? String(info.streak) : '';
+                  if (typeof _stk === 'string') _stk = _stk.replace(/(\uD83D\uDD25\s*){2,}$/u, '\uD83D\uDD25');
                   if (_stk){ _streakEl.textContent = _stk + ' \uD83D\uDD25'; _streakEl.classList.remove('is-empty'); }
                   else { _streakEl.textContent = ''; _streakEl.classList.add('is-empty'); }
         } else { console.warn('[depot] shell.setFranchise: no [data-depot-streak] in plate; streak chip skipped'); }
@@ -223,6 +228,10 @@ function mount(opts){
     // Auto-resolve franchise/record unless caller opts out.
     if (opts.autoFranchise !== false){ refreshFranchise(); }
     return _root;
+    try {
+      var __coinHost = el && el.querySelector ? el.querySelector('.dw-mount[data-depot-wallet]') : null;
+      if (__coinHost && window.DepotWallet && DepotWallet.mountChip) DepotWallet.mountChip(__coinHost);
+    } catch(e){ console.error('[shell] coin mount failed', e); }
   }
 
   window.DepotShell = {
