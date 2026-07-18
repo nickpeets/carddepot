@@ -23,6 +23,7 @@ The prototype file is an exploration canvas containing multiple iterations group
 | Playable game (broadcast field) | 8a | Final (7a/6a/5a are earlier versions) |
 | Lineup Card page | 9a | Final |
 | Substitution overlay | 9b | Final (also embedded live in 8a) |
+| Header team box + coin | 10a | Added from session instruction; pending Nick's confirmation |
 
 ## Fidelity
 **High-fidelity.** Colors, typography, spacing, borders, shadows, copy, and interactions are final intent. Recreate pixel-perfectly with the codebase's patterns. Card images are dashed-border placeholders — production should show real card scans in those slots.
@@ -172,6 +173,11 @@ State machine: `idle → open → done`.
 - Body: left card = outgoing player ("DUE UP" or "ON THE MOUND" — reflects live batter/pitcher), orange ⇄, right = candidate cards (bench or pen; selected = gold tint + orange border).
 - Warning line: pinch hitter — "Pinch hitter takes the lineup spot for the rest of the game."; pitching — "Starter is done for the day — no re-entry."
 - Confirm: green "Send him in" (45% opacity until a pick is made) → green success bar "✔ Yount steps in for Mattingly. The dugout approves." + "Back to the game" closes.
+
+### 10a. Header team box + coin (option 10a)
+- Provenance note: added from a session instruction; content verbatim as provided; pending Nick's confirmation against his design export. Not present in the earlier committed README revision.
+
+- Sits in the dark-navy (#0d2b4d) top header bar, center of the row (wordmark left, account/actions right; all three groups flex:none; white-space:nowrap so nothing wraps). White plate (3px #072c47 border, radius 14, box-shadow: 0 5px 0 #072c47) with two sections split by a 2px #dff1fb divider. Record section: Press Start 2P "DEPOT DUCKS" team name 10px navy; row below = VT323 W-L "8-3" 22px green + "SEASON 3" 11px muted + streak "W3" 11px orange (team name / record are live data). Coins pill: glossy gold pill (linear-gradient(#fff8,#fff0 45%),#ffd23e, 3px #072c47, radius 999, 0 4px 0 #072c47) holding the coin + VT323 "1,240" 26px + "coins" label, both #7a5b00. The coin: a Mario-style gold coin, ~30px, in a perspective:200px wrapper with a transform-style:preserve-3d inner that runs coinspin; two identical faces (front + rotateY(180deg) back, both backface-visibility:hidden) so it reads as a real coin edge-flipping. Each face: round, radial-gradient(circle at 34% 30%, #ffe98a 0 22%, #ffd23e 40%, #f0b41c 62%, #cf8f0a 82%, #a86f06 100%) body; 2.5px #6b4a00 rim; inset 0 0 0 2px #ffe98a bright inner-edge highlight + inset 0 -3px 0 rgba(122,74,0,.35) bottom shading; engraved inner ring (absolute inset 5px, 2px #b97e08 circle); embossed Press Start 2P "$" 11px #8a5c00 with 1px 1px 0 #ffe98a highlight; two square #fff8dc sparkle pixels top-left (4px and 3px, no blur); a single white glint square (coinglint) flashes over the top-right during the spin. Animation added to the stylesheet: coinspin (0%,72% rotateY(0); 86% rotateY(180deg); 100% rotateY(360deg)) idles most of the cycle then a quick full flip, coinspin 4.5s ease-in-out infinite; coinglint (0%,70%,100% opacity 0; 78%,92% opacity 1) blinks only during the flip, coinglint 4.5s infinite. Honor prefers-reduced-motion (coin static). Coin economy ties to Play Ball payouts; suggested enhancement (not yet built): a coin bounce + count-up when coins are earned.
 
 ## State Management
 - **Collection**: cards (player, set, year, number, grade, condition notes, front/back scans, star flag, season-stat line), organized into binder pages of 9; filters by set + stars; search.
