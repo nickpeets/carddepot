@@ -2,7 +2,7 @@
  *
  * Renders the persistent chrome frame worn by all four modes: bunting strip,
  * header (wordmark + franchise identity + account cluster) and the mode nav
- * (THE BINDER / LINEUP / SEASON / PLAY BALL). Static-friendly: no build step, no
+ * (THE BINDER / PACK SHOP / PLAY BALL). Static-friendly: no build step, no
  * framework. Include this script + css/depot-style.css on any page and call
  * window.DepotShell.mount(...).
  *
@@ -29,10 +29,9 @@
   'use strict';
 
   var TABS = [
-    { mode: 'binder',  label: 'THE BINDER', href: 'index.html' },
-    { mode: 'builder', label: 'LINEUP',     href: 'game/builder.html' },
-    { mode: 'season',  label: 'SEASON',     href: 'index.html?season=1' },
-    { mode: 'game',    label: 'PLAY BALL',  href: 'game/index.html' }
+    { mode: 'binder', label: 'THE BINDER', href: 'index.html' },
+    { mode: 'shop',   label: 'PACK SHOP',  href: 'game/shop.html' },
+    { mode: 'game',   label: 'PLAY BALL',  href: 'game/index.html' }
   ];
 
   var _root = null;   // the .depot-shell element we manage
@@ -91,6 +90,7 @@
 
   function setActive(mode){
     if (!_root){ console.warn('[depot] shell.setActive: shell not mounted; ignoring'); return; }
+    _root.setAttribute('data-depot-active', (mode || 'binder'));
     var tabs = _root.querySelectorAll('.depot-tab');
     for (var i = 0; i < tabs.length; i++){
       var on = (tabs[i].getAttribute('data-mode') === mode);
@@ -222,6 +222,7 @@ function mount(opts){
     if (_mounted){ console.warn('[depot] shell.mount: already mounted; ignoring second mount'); return _root; }
     el.insertAdjacentHTML('afterbegin', shellHtml({ active: opts.active, wordmark: opts.wordmark }));
     _root = el.querySelector('.depot-shell');
+    if (_root) { _root.setAttribute('data-depot-active', (opts.active || 'binder')); }
     _mounted = true;
     attachNavCarry(_root);
     console.log('[depot] depot-shell mounted (active=' + (opts.active || 'none') + ')');
