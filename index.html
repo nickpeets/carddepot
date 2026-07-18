@@ -429,7 +429,7 @@ button:focus-visible,[tabindex]:focus-visible{outline:3px solid var(--brass);out
   box-shadow:3px 3px 0 #000;padding:.4rem .55rem;font-size:.5rem;
 }
 .modes{padding:1.2rem 2rem;gap:.9rem;flex-wrap:wrap}
-.mode-btn{
+.mode-btn{border-radius:999px;
   font-family:'Press Start 2P',monospace !important;
   text-transform:uppercase;letter-spacing:0;font-size:.55rem;line-height:1.5;
   color:#fff;background:var(--sb-blue);
@@ -1553,16 +1553,6 @@ function dcBinderHTML(id){
   }).join('');
   return ''+
   '<div class="dc-binder" style="width:760px;max-width:100%;background:#2eb2e6;border-radius:16px;overflow:hidden">'+
-    '<div style="padding:16px 24px 0;display:flex;align-items:center;justify-content:space-between">'+
-      '<div style="display:flex;align-items:center;gap:12px">'+
-        '<div style="width:42px;height:42px;border-radius:12px;background:#ffd23e;border:3px solid #10456b;box-shadow:0 4px 0 #10456b;display:flex;align-items:center;justify-content:center;font-family:\'Press Start 2P\',monospace;font-size:14px;color:#10456b">D</div>'+
-        '<div style="font-family:\'Baloo 2\',sans-serif;font-weight:800;font-size:24px;color:#fff;text-shadow:0 3px 0 #10456b">The Binder</div>'+
-      '</div>'+
-      '<div style="display:flex;gap:8px">'+
-        '<div class="dc-hoverbtn" title="Routes to the Play Ball hub (3c); placeholder \u2192 season surface" style="font-family:\'Baloo 2\',sans-serif;font-weight:700;font-size:13px;color:#10456b;background:#fff;border:3px solid #10456b;border-radius:999px;padding:7px 16px;box-shadow:0 4px 0 #10456b;cursor:pointer">\u25b6 Play Ball</div>'+
-        '<div class="dc-hoverbtn" style="font-family:\'Baloo 2\',sans-serif;font-weight:800;font-size:13px;color:#10456b;background:linear-gradient(#fff8,#fff0 45%),#7be36b;border:3px solid #10456b;border-radius:999px;padding:7px 16px;box-shadow:0 4px 0 #10456b;cursor:pointer">+ Add a card</div>'+
-      '</div>'+
-    '</div>'+
     '<div style="display:flex;gap:8px;padding:14px 24px 0;flex-wrap:wrap;align-items:center">'+
       '<input id="'+id+'-search" placeholder="\ud83d\udd0d Search players, sets, years\u2026" style="flex:1;min-width:180px;background:#fff;border:3px solid #10456b;border-radius:999px;padding:8px 16px;font-family:\'Baloo 2\',sans-serif;font-weight:600;font-size:13px;color:#10456b;outline:none">'+
       '<div id="'+id+'-pills" style="display:flex;gap:8px;flex-wrap:wrap">'+filterPills+'</div>'+
