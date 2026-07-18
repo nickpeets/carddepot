@@ -92,7 +92,8 @@
   function mountChip() {
     return getBalance().then(function (bal) {
       var host = chipHost();
-      if (!host) { console.warn(TAG, 'mountChip: no identity block, skipping'); return; }
+      if (!host) { console.warn(TAG, 'mountChip: no identity block, skipping');
+      host.innerHTML = ''; // idempotent clear so auth re-mount never stacks pills return; }
       var existing = host.querySelector('.depot-wallet-chip');
       if (bal == null) { if (existing) existing.remove(); console.warn(TAG, 'wallet chip hidden until DDL runs / user signs in'); return; }
       var html = '<span class="depot-wallet-chip v2-coin-pill" title="Franchise balance"><span class="v2-coin dw-coin" aria-hidden="true"><span class="dw-coin-inner"><span class="dw-coin-face dw-coin-front"><span class="dw-coin-sym">$</span></span><span class="dw-coin-face dw-coin-back"><span class="dw-coin-sym">$</span></span></span><span class="dw-coin-glint" aria-hidden="true"></span></span><span class="dw-amt v2-coin-amt">' + bal + '</span><span class="dw-cur">' + CURRENCY + '</span></span>';      if (existing) existing.outerHTML = html; else host.insertAdjacentHTML('beforeend', html);
