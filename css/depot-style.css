@@ -77,12 +77,12 @@ a{color:inherit;text-decoration:none}
 
 .depot-shell__header{
   display:flex;align-items:center;gap:var(--sp4);
-  background:var(--depot-navy);
-  border-bottom:4px solid var(--depot-black);
-  box-shadow:var(--pixel-shadow-lg);
+  background:transparent;
+  border-bottom:none;
+  box-shadow:none;
   padding:20px 24px;
 }
-.depot-wordmark{font-size:var(--fs-wordmark);color:var(--depot-white);white-space:nowrap}
+.depot-wordmark{font-size:var(--fs-wordmark);color:var(--depot-navy);white-space:nowrap}
 .depot-wordmark b{color:var(--depot-gold)}
 
 /* franchise identity block — franchise name + season record, pinned once signed in */
@@ -99,7 +99,7 @@ a{color:inherit;text-decoration:none}
 .depot-franchise.is-anon .name{color:var(--depot-cream);opacity:.85}
 .depot-franchise.is-anon .record{display:none}
 
-.depot-account{margin-left:auto;display:flex;align-items:center;gap:14px;font-size:var(--fs-micro);color:var(--depot-cream)}
+.depot-account{margin-left:auto;display:flex;align-items:center;gap:14px;font-size:var(--fs-micro);color:var(--depot-navy)}
 .depot-bell{position:relative;color:var(--depot-gold)}
 .depot-bell .dot{position:absolute;top:-6px;right:-8px;background:var(--depot-red);color:#fff;font-size:7px;padding:2px 4px;border:2px solid #000}
 
@@ -467,3 +467,9 @@ html.depot-game .depot-nav #sim-controls{
   font-size:.95em; color:#0d2d5c; background:#ffd23e;
   border:2px solid #0d2d5c; padding:.15em .6em;
 }
+
+
+/* ===== v2 sky-shell: header on sky; game HUD keeps light text on navy ===== */
+/* On the dark game HUD, restore light text (sky-header rules above set navy text). */
+html.depot-game .depot-wordmark{ color:var(--depot-white); }
+html.depot-game .depot-account{ color:var(--depot-cream); }
