@@ -1,18 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <script src="js/version.js?v=b101db0"></script>
-  <script src="js/depot-core.js?v=b101db0"></script>
+  <script src="js/version.js?v=0f70871"></script>
+  <script src="js/depot-core.js?v=0f70871"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>The Depot</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Spectral:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/depot-style.css?v=b101db0">
-  <link rel="stylesheet" href="css/season.css?v=b101db0">
-    <script src="js/depot-shell.js?v=b101db0"></script>
-  <script src="js/depot-season-shell.js?v=b101db0"></script>
+  <link rel="stylesheet" href="css/depot-style.css?v=0f70871">
+  <link rel="stylesheet" href="css/season.css?v=0f70871">
+    <script src="js/depot-shell.js?v=0f70871"></script>
+  <script src="js/depot-season-shell.js?v=0f70871"></script>
   <style>
 :root{
   --leather:#5a2118;
@@ -685,6 +685,24 @@ body{
 #appFrame > .topbar{
   margin:0 auto 0 0;max-width:760px;border-top:none;border-left:none;border-right:none;
 }
+
+    /* BUG FIX (fix/v2-header-panel-column-email-repaint): the LIVE header/nav are the
+       v2 shell (.depot-shell__header.v2-header / .depot-nav.v2-nav), NOT the retired
+       display:none .topbar above. Constrain them to the SAME centered column as the
+       binder panel (.dc-binder is a hard-coded width:760px, flush-left inside #appFrame)
+       so the D-tile's left edge == panel left and Log out's right edge == panel right.
+       Measured live: panel 760px @ [142.5, 902.5]; header/nav were 1100px w/ Log out
+       overhanging +316px. Zeroing the 24px side padding lands content on the panel edges. */
+    #appFrame > .depot-shell > .depot-shell__header.v2-header,
+    #appFrame > .depot-shell > .depot-nav.v2-nav{
+      max-width:760px;
+      margin-left:0;
+      margin-right:auto;
+      padding-left:0;
+      padding-right:0;
+      box-sizing:border-box;
+    }
+
 /* Toolbar row: tabs + group dropdown live just under header */
 #appFrame > .modes{
   background:#0a2148;
@@ -1035,8 +1053,8 @@ body{
 </style>
 <!-- /PHASE5-SHARE-CSS -->
 
-  <link rel="stylesheet" href="css/depot-shop-view.css?v=b101db0">
-    <link rel="stylesheet" href="depot-v2.css?v=b101db0">
+  <link rel="stylesheet" href="css/depot-shop-view.css?v=0f70871">
+    <link rel="stylesheet" href="depot-v2.css?v=0f70871">
 </head>
 <body class="v2-body">
   <div id="sharedUnavailable"><div class="su-card"><div class="su-title">Not available</div><div class="su-sub">This collection isn&rsquo;t available.</div></div></div>
@@ -2958,15 +2976,15 @@ setAuthUI(false);
   });
 })();
 </script>
-<script src="game/season.js?v=b101db0" defer></script>
-<script src="js/depot-index-shell.js?v=b101db0"></script>
-<script src="js/depot-prestige.js?v=b101db0"></script>
-<script src="js/depot-wallet.js?v=b101db0"></script>
-  <script src="js/depot-pack-engine.js?v=b101db0"></script>
-  <script src="js/depot-pixel-card.js?v=b101db0"></script>
-  <script src="js/depot-shop.js?v=b101db0"></script>
-  <script src="js/depot-shop-view.js?v=b101db0"></script>
-  <script src="js/depot-binder-shop.js?v=b101db0"></script>
+<script src="game/season.js?v=0f70871" defer></script>
+<script src="js/depot-index-shell.js?v=0f70871"></script>
+<script src="js/depot-prestige.js?v=0f70871"></script>
+<script src="js/depot-wallet.js?v=0f70871"></script>
+  <script src="js/depot-pack-engine.js?v=0f70871"></script>
+  <script src="js/depot-pixel-card.js?v=0f70871"></script>
+  <script src="js/depot-shop.js?v=0f70871"></script>
+  <script src="js/depot-shop-view.js?v=0f70871"></script>
+  <script src="js/depot-binder-shop.js?v=0f70871"></script>
 <script>
 /* Franchise Economy Slice A: arm wallet chip + payout hook. Additive, fail-loud, graceful until DDL. */
 (function(){
