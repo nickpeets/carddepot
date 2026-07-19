@@ -54,7 +54,6 @@
   function shellHtml(opts){
     var wordmark = opts.wordmark || 'THE <b>DEPOT</b>';
     return '' +
-      '<div class="depot-bunting" aria-hidden="true"></div>' +
       '<div class="depot-shell">' +
         '<header class="depot-shell__header v2-header">' +
           '<div class="v2-logo-tile" aria-hidden="true">D</div>' +
@@ -67,7 +66,6 @@
             '<span class="depot-bell" aria-hidden="true">&#9679;</span>' +
             '<span class="email" data-depot-email></span>' +
           '</div>' +
-      '<a class="v2-pill v2-pill--green v2-pill--sm depot-add-card" data-depot-addcard href="index.html#add">+ Add a card</a>' +
         '</header>' +
         '<nav class="depot-nav v2-nav" data-depot-nav>' + tabsHtml(opts.active) +
           '<span class="spacer"></span>' +
