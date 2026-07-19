@@ -683,7 +683,7 @@ body{
 }
 /* Header bar spans the frame top (keep blue + bunting from reskin) */
 #appFrame > .topbar{
-  margin:0;border-top:none;border-left:none;border-right:none;
+  margin:0 auto 0 0;max-width:760px;border-top:none;border-left:none;border-right:none;
 }
 /* Toolbar row: tabs + group dropdown live just under header */
 #appFrame > .modes{
@@ -934,7 +934,7 @@ body{
   function renderSession(session){
     var loggedIn = !!(session && session.user);
     var emailEl=$('authEmail'), loginBtn=$('authLoginBtn'), logoutBtn=$('authLogoutBtn'), playBtn=$('homePlayBtn'); var seasonBtn=$('depotSeasonBtn');
-    if(!emailEl) return;
+    if(!emailEl){ if(document.readyState==="loading"){ document.addEventListener("DOMContentLoaded", function(){ renderSession(session); }, { once:true }); } else { setTimeout(function(){ renderSession(session); }, 0); } return; }
     if(loggedIn){
       emailEl.textContent = session.user.email || 'signed in';
       emailEl.style.display=''; loginBtn.style.display='none'; logoutBtn.style.display=''; if(playBtn) playBtn.style.display=''; if(seasonBtn) seasonBtn.style.display='';
