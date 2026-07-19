@@ -693,15 +693,20 @@ body{
        so the D-tile's left edge == panel left and Log out's right edge == panel right.
        Measured live: panel 760px @ [142.5, 902.5]; header/nav were 1100px w/ Log out
        overhanging +316px. Zeroing the 24px side padding lands content on the panel edges. */
+    /* Center the shared column (header + nav) on the page (equal sky margins),
+       matching the centered .dc-binder panel below it. Was left-pinned (margin-right:auto). */
     #appFrame > .depot-shell > .depot-shell__header.v2-header,
     #appFrame > .depot-shell > .depot-nav.v2-nav{
       max-width:760px;
-      margin-left:0;
+      margin-left:auto;
       margin-right:auto;
       padding-left:0;
       padding-right:0;
       box-sizing:border-box;
     }
+    /* Center the binder panel itself on the page too (it carries an inline width:760px,
+       previously left-aligned inside #appFrame -> asymmetric sky margins). */
+    #appFrame > .dc-binder{ margin-left:auto; margin-right:auto; }
 
 /* Toolbar row: tabs + group dropdown live just under header */
 #appFrame > .modes{
@@ -771,9 +776,58 @@ body{
 }
 @media (max-width:460px){
   .grid{grid-template-columns:1fr !important;}
-  #eraTabs{flex-direction:column;}
-  #eraTabs .era-tab{width:100%;}
+  /* (removed) #eraTabs column-stack + full-width era-tab: replaced by the
+     wrapping-row mobile layout in the (max-width:600px) block below. */
 }
+
+    /* ======================================================================
+       MOBILE BINDER LAYOUT (<=600px) - added in fix/binder-center-column-mobile-layout.
+       The binder previously had no real mobile layout: the desktop toolbar was
+       squeezed into the narrow panel (search floated left, filter pills stacked
+       as a vertical column on the right, +Add-a-card collapsed into an oval, the
+       Page/Group-by controls crammed, cards too tall/narrow). This lays it out as
+       stacked full-width rows with the pills wrapping horizontally and a 2-up grid.
+       Selectors target the binder's two unnamed wrapper divs (search row = first
+       child of .dc-binder; content area = second child) + stable inner ids.
+       ====================================================================== */
+    @media (max-width:600px){
+      /* Search row: stack vertically -> search full-width, pills wrap below it */
+      #appFrame > .dc-binder > div:first-child{
+        flex-direction:column !important;
+        align-items:stretch !important;
+        gap:10px !important;
+        padding:14px 16px 0 !important;
+      }
+      #binderSearch{ width:100% !important; box-sizing:border-box !important; }
+      /* Filter pills: a horizontal WRAPPING row (undo the old vertical stack) */
+      #eraTabs{
+        flex-direction:row !important;
+        flex-wrap:wrap !important;
+        justify-content:flex-start !important;
+        gap:8px !important;
+        width:100% !important;
+      }
+      #eraTabs .dc-fpill, #eraTabs .era-tab{ width:auto !important; flex:0 0 auto !important; }
+      /* Content area: tighter phone padding */
+      #appFrame > .dc-binder > div:nth-child(2){ padding:12px 16px 18px !important; }
+      /* Toolbar (Page N / prev-next / Group by / +Add a card): let it wrap cleanly */
+      #appFrame > .dc-binder > div:nth-child(2) > div:first-child{
+        flex-wrap:wrap !important;
+        justify-content:flex-start !important;
+        gap:10px !important;
+      }
+      #groupByBar{ margin-left:0 !important; flex-wrap:wrap !important; gap:8px !important; }
+      /* +Add a card: keep the pill shape, never wrap into an oval */
+      .depot-add-card{
+        white-space:nowrap !important;
+        flex:0 0 auto !important;
+        width:auto !important;
+        height:auto !important;
+      }
+      /* Cards: 2-up with sensible proportions (was a cramped 3-up) */
+      #binderGrid{ grid-template-columns:repeat(2,1fr) !important; gap:12px !important; }
+    }
+
 @media (prefers-reduced-motion:reduce){
   #appFrame, .page, .card{transition:none !important;animation:none !important;}
 }
