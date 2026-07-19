@@ -1,18 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <script src="js/version.js?v=c7d3e10"></script>
-  <script src="js/depot-core.js?v=c7d3e10"></script>
+  <script src="js/version.js?v=d8e4f21"></script>
+  <script src="js/depot-core.js?v=d8e4f21"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>The Depot</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Spectral:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/depot-style.css?v=c7d3e10">
-  <link rel="stylesheet" href="css/season.css?v=c7d3e10">
-    <script src="js/depot-shell.js?v=c7d3e10"></script>
-  <script src="js/depot-season-shell.js?v=c7d3e10"></script>
+  <link rel="stylesheet" href="css/depot-style.css?v=d8e4f21">
+  <link rel="stylesheet" href="css/season.css?v=d8e4f21">
+    <script src="js/depot-shell.js?v=d8e4f21"></script>
+  <script src="js/depot-season-shell.js?v=d8e4f21"></script>
   <style>
 :root{
   --leather:#5a2118;
@@ -1035,8 +1035,8 @@ body{
 </style>
 <!-- /PHASE5-SHARE-CSS -->
 
-  <link rel="stylesheet" href="css/depot-shop-view.css?v=c7d3e10">
-    <link rel="stylesheet" href="depot-v2.css?v=c7d3e10">
+  <link rel="stylesheet" href="css/depot-shop-view.css?v=d8e4f21">
+    <link rel="stylesheet" href="depot-v2.css?v=d8e4f21">
 </head>
 <body class="v2-body">
   <div id="sharedUnavailable"><div class="su-card"><div class="su-title">Not available</div><div class="su-sub">This collection isn&rsquo;t available.</div></div></div>
@@ -2955,15 +2955,15 @@ setAuthUI(false);
   });
 })();
 </script>
-<script src="game/season.js?v=c7d3e10" defer></script>
-<script src="js/depot-index-shell.js?v=c7d3e10"></script>
-<script src="js/depot-prestige.js?v=c7d3e10"></script>
-<script src="js/depot-wallet.js?v=c7d3e10"></script>
-  <script src="js/depot-pack-engine.js?v=c7d3e10"></script>
-  <script src="js/depot-pixel-card.js?v=c7d3e10"></script>
-  <script src="js/depot-shop.js?v=c7d3e10"></script>
-  <script src="js/depot-shop-view.js?v=c7d3e10"></script>
-  <script src="js/depot-binder-shop.js?v=c7d3e10"></script>
+<script src="game/season.js?v=d8e4f21" defer></script>
+<script src="js/depot-index-shell.js?v=d8e4f21"></script>
+<script src="js/depot-prestige.js?v=d8e4f21"></script>
+<script src="js/depot-wallet.js?v=d8e4f21"></script>
+  <script src="js/depot-pack-engine.js?v=d8e4f21"></script>
+  <script src="js/depot-pixel-card.js?v=d8e4f21"></script>
+  <script src="js/depot-shop.js?v=d8e4f21"></script>
+  <script src="js/depot-shop-view.js?v=d8e4f21"></script>
+  <script src="js/depot-binder-shop.js?v=d8e4f21"></script>
 <script>
 /* Franchise Economy Slice A: arm wallet chip + payout hook. Additive, fail-loud, graceful until DDL. */
 (function(){
@@ -3009,12 +3009,12 @@ setAuthUI(false);
 <!-- fix(binder): group-by=set -> clean labeled sections; tighten grouped grid. Additive, fail-safe. -->
 <style id="depot-groupby-fix">
   /* Grouped view: each section spans the full panel width and stacks vertically */
-  #binderGrid:has(.group-section){ display:block; }
-  .group-section{ width:auto; margin:0 0 18px; }
-  .group-section:last-child{ margin-bottom:0; }
+  #binderGrid:has(.group-section){ display:block !important; }
+  .group-section{ width:auto !important; margin:0 0 18px !important; }
+  .group-section:last-child{ margin-bottom:0 !important; }
   /* Cards under each section header: normal card columns, tight rows (no cavernous gaps) */
-  .group-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)); gap:12px; }
-  .group-grid .slot{ aspect-ratio:auto; min-height:0; }
+  .group-grid{ display:grid !important; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)) !important; gap:12px !important; }
+  .group-grid .slot{ aspect-ratio:auto !important; min-height:0 !important; }
 </style>
 <script>
 /* Route Group By = Set through the labeled-sections grid (renderGrouped) instead of the
