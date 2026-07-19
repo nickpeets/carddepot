@@ -1623,7 +1623,7 @@ function renderEraTabs(){
     var style = isActive ? ACTIVE_STYLE : INACTIVE_STYLE;
     return '<div class="dc-fpill" style="'+style+'" onclick="selectEra(\''+p.era+'\')">'+p.label+'</div>';
   }).join('');
-  host.setAttribute('style', "display:flex;gap:8px;flex-wrap:wrap");
+  host.setAttribute('style', "display:flex;gap:8px;flex-wrap:wrap;justify-content:center");
   host.innerHTML = html;
 }
 function selectEra(k){curEra=k;curPage=0;renderBinder()}
@@ -2766,6 +2766,8 @@ setAuthUI(false);
 
   /* ---- (1) TOP BAR: reflow so every control stays visible ---- */
   .topbar{
+    max-width:760px;
+    margin-right:auto;
     flex-wrap:wrap;
     align-items:center;
     row-gap:.6rem;

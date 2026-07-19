@@ -192,10 +192,10 @@ a{color:inherit;text-decoration:none}
   .depot-franchise{order:3;flex-basis:100%;flex-direction:row;justify-content:space-between}
   .depot-wordmark{font-size:16px}
   /* mode nav becomes a fixed bottom tab bar (four modes one thumb-tap apart) */
-  .depot-nav{position:fixed;left:0;right:0;bottom:0;z-index:50;
+  html.depot-game .depot-nav{position:fixed;left:0;right:0;bottom:0;z-index:50;
     background:var(--depot-navy);border-top:4px solid #000;box-shadow:0 -4px 0 #000;
     justify-content:space-between;gap:4px;padding:6px 8px;flex-wrap:nowrap;overflow-x:auto}
-  .depot-nav .spacer{display:none}
+  html.depot-game .depot-nav .spacer{display:none}
   .depot-tab{flex:1;font-size:9px;padding:10px 4px;box-shadow:none;text-align:center;min-width:64px;min-height:44px}
   .depot-stage{padding:0 14px}
   .grid.cols3,.grid.cols4{grid-template-columns:1fr}
