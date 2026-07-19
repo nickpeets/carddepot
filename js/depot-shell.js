@@ -28,6 +28,9 @@
 (function () {
   'use strict';
 
+  // Depth-correct base for nav hrefs: '../' when running from a /game/ subpage, else ''.
+  function navBase(){ try { return /\/game\//.test(location.pathname) ? '../' : ''; } catch(e){ return ''; } }
+
   var TABS = [
     { mode: 'binder', label: 'THE BINDER', href: 'index.html' },
     { mode: 'shop',   label: 'PACK SHOP',  href: 'game/shop.html' },
@@ -45,7 +48,7 @@
     for (var i = 0; i < TABS.length; i++){
       var t = TABS[i];
       var on = (t.mode === active);
-      html += '<a class="depot-tab v2-pill' + (t.mode === 'game' ? ' v2-pill--orange' : '') + '" data-mode="' + t.mode + '" href="' + t.href + '"' +
+      html += '<a class="depot-tab v2-pill' + (t.mode === 'game' ? ' v2-pill--orange' : '') + '" data-mode="' + t.mode + '" href="' + navBase() + t.href + '"' +
               (on ? ' aria-current="true"' : '') + '>' + esc(t.label) + '</a>';
     }
     return html;

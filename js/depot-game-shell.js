@@ -40,6 +40,7 @@
   var HREF_FIX = {
     binder: '../index.html',
     builder: 'builder.html',
+      shop:    'shop.html',
     season: '../index.html?season=1',
     game: 'index.html'
   };
