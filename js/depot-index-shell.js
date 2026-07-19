@@ -82,7 +82,35 @@
        } else { console.warn('[depot] index-shell: header [data-depot-addcard] pill not found; add-card lives only in .modes'); }
        
 
-      console.log('[depot] index-shell: binder wearing shared shell (active=binder)');
+      // BUG FIX (fix/v2-header-panel-column-email-repaint): the visible header email is the
+  // v2 shell span [data-depot-email], painted ONLY by DepotShell.refreshFranchise() which
+  // runs ONCE at mount. On a fresh sign-in, depotUserCached is null at mount, so resolveRecord
+  // returns null -> setAnonymous() blanks the email, and NOTHING repaints it until a manual
+  // page refresh. (Prior fixes edited the retired display:none #authEmail/renderSession path,
+  // which has no visible effect.) Fix: re-run refreshFranchise() on auth-state changes so the
+  // email lands without a refresh. Traced live: blanking the span and firing INITIAL_SESSION/
+  // SIGNED_IN via this listener repaints it (0 -> populated). Fail-loud per AGENTS.md.
+  try {
+    var _sb = (typeof window.depotSB === 'function') ? window.depotSB() : null;
+    if (!_sb || !_sb.auth || typeof _sb.auth.onAuthStateChange !== 'function') {
+      console.warn('[depot] index-shell: no depotSB auth channel; header email will not repaint on sign-in');
+    } else {
+      _sb.auth.onAuthStateChange(function (event) {
+        if (event === 'SIGNED_IN' || event === 'INITIAL_SESSION' || event === 'TOKEN_REFRESHED' || event === 'USER_UPDATED' || event === 'SIGNED_OUT') {
+          if (window.DepotShell && typeof window.DepotShell.refreshFranchise === 'function') {
+            window.DepotShell.refreshFranchise();
+          } else {
+            console.warn('[depot] index-shell: auth change ' + event + ' but DepotShell.refreshFranchise missing; header not repainted');
+          }
+        }
+      });
+      console.log('[depot] index-shell: header repaint wired to auth-state changes');
+    }
+  } catch (e) {
+    console.warn('[depot] index-shell: failed to wire auth-state header repaint:', e);
+  }
+
+  console.log('[depot] index-shell: binder wearing shared shell (active=binder)');
    }
 
    if (document.readyState === 'loading') {
