@@ -63,16 +63,6 @@
           '<div class="v2-subtitle" data-depot-subtitle></div>' +
         '</div>' +
       '<span class="v2-spacer" aria-hidden="true"></span>' +
-                    '<div class="depot-franchise v2-identity v2-plate-10a is-anon" data-depot-franchise>' +
-                  '<div class="dc-record">' +
-                    '<span class="dc-team name">LOG IN</span>' +
-                    '<span class="dc-line"><span class="dc-wl record"></span><span class="dc-season" data-depot-season></span><span class="dc-streak is-empty" data-depot-streak></span></span>' +
-                  '</div>' +
-                  '<div class="dc-div"></div>' +
-                  '<div class="dc-coins">' +
-                    '<div class="dw-mount" data-depot-wallet></div>' +
-                  '</div>' +
-          '</div>' +
           '<div class="depot-account v2-account" data-depot-account>' +
             '<span class="depot-bell" aria-hidden="true">&#9679;</span>' +
             '<span class="email" data-depot-email></span>' +
