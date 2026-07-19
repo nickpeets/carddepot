@@ -105,8 +105,8 @@ a{color:inherit;text-decoration:none}
 
 /* ---- mode nav (Depot / Builder / Season / Play Ball) ----------------------- */
 .depot-nav{
-  display:flex;gap:var(--sp2);flex-wrap:wrap;align-items:center;
-  padding:var(--sp3) 24px;
+  display:flex;justify-content:center;gap:var(--sp2);flex-wrap:wrap;align-items:center;
+  padding:var(--sp3) 24px var(--sp1);
 }
 .depot-tab{
   font-family:inherit;font-size:var(--fs-nav);cursor:pointer;

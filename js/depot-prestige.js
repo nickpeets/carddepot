@@ -183,7 +183,10 @@
     if (!host) { console.warn(TAG, 'spotlight: no host element, skipping breakdown'); return; }
     var prev = host.querySelector('.depot-prestige-breakdown');
     if (prev) prev.remove();
-    host.insertAdjacentHTML('beforeend', breakdownHTML(compute(coll[idx])));
+    var _pbHtml = breakdownHTML(compute(coll[idx]));
+  var _anchor = host.querySelector('.spot-remove');
+  if (_anchor) { _anchor.insertAdjacentHTML('beforebegin', _pbHtml); }
+  else { host.insertAdjacentHTML('beforeend', _pbHtml); }
   }
 
   var _spotHooked = false;
