@@ -934,7 +934,7 @@ body{
   function renderSession(session){
     var loggedIn = !!(session && session.user);
     var emailEl=$('authEmail'), loginBtn=$('authLoginBtn'), logoutBtn=$('authLogoutBtn'), playBtn=$('homePlayBtn'); var seasonBtn=$('depotSeasonBtn');
-    if(!emailEl) return;
+    if(!emailEl){ if(document.readyState==='loading'){ document.addEventListener('DOMContentLoaded', function(){ renderSession(session); }, { once:true }); } else { setTimeout(function(){ renderSession(session); }, 0); } return; }
     if(loggedIn){
       emailEl.textContent = session.user.email || 'signed in';
       emailEl.style.display=''; loginBtn.style.display='none'; logoutBtn.style.display=''; if(playBtn) playBtn.style.display=''; if(seasonBtn) seasonBtn.style.display='';
@@ -1623,7 +1623,7 @@ function renderEraTabs(){
     var style = isActive ? ACTIVE_STYLE : INACTIVE_STYLE;
     return '<div class="dc-fpill" style="'+style+'" onclick="selectEra(\''+p.era+'\')">'+p.label+'</div>';
   }).join('');
-  host.setAttribute('style', "display:flex;gap:8px;flex-wrap:wrap");
+  host.setAttribute('style', "display:flex;gap:8px;flex-wrap:wrap;justify-content:center");
   host.innerHTML = html;
 }
 function selectEra(k){curEra=k;curPage=0;renderBinder()}
@@ -2778,7 +2778,7 @@ setAuthUI(false);
     flex-basis:100%;
     margin-left:0;
     flex-wrap:wrap;
-    justify-content:flex-start;
+    justify-content:flex-end;
     gap:.5rem;
   }
   .auth-area .auth-email{ max-width:60vw; }
