@@ -1,18 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <script src="js/version.js?v=77df556"></script>
-  <script src="js/depot-core.js?v=77df556"></script>
+  <script src="js/version.js?v=4baf31b"></script>
+  <script src="js/depot-core.js?v=4baf31b"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>The Depot</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Spectral:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/depot-style.css?v=77df556">
-  <link rel="stylesheet" href="css/season.css?v=77df556">
-    <script src="js/depot-shell.js?v=77df556"></script>
-  <script src="js/depot-season-shell.js?v=77df556"></script>
+  <link rel="stylesheet" href="css/depot-style.css?v=4baf31b">
+  <link rel="stylesheet" href="css/season.css?v=4baf31b">
+    <script src="js/depot-shell.js?v=4baf31b"></script>
+  <script src="js/depot-season-shell.js?v=4baf31b"></script>
   <style>
 :root{
   --leather:#5a2118;
@@ -668,18 +668,18 @@ button:focus-visible,[tabindex]:focus-visible{outline:3px solid var(--brass);out
 
 
 /* ===== BINDER LAYOUT RESTRUCTURE — contained scoreboard cabinet (CSS-only) ===== */
-html{background:#1a1a2e !important;}
+html{background:#2eb2e6 !important;}
 body{
-  background:#1a1a2e !important;
-  margin:0;padding:2rem 1rem !important;min-height:100vh;
+  background:#2eb2e6 !important;
+  margin:0;padding:0 !important;min-height:100vh;
 }
 /* Centered cabinet frame around the whole app */
 #appFrame{
   max-width:1100px;margin:0 auto;width:100%;
-  background:var(--sb-blue);
-  border:4px solid #000;
-  box-shadow:8px 8px 0 #000, 0 0 0 2px #000;
-  overflow:hidden;
+  background:transparent;
+  border:none;
+  box-shadow:none;
+  overflow:visible;
 }
 /* Header bar spans the frame top (keep blue + bunting from reskin) */
 #appFrame > .topbar{
@@ -1035,8 +1035,8 @@ body{
 </style>
 <!-- /PHASE5-SHARE-CSS -->
 
-  <link rel="stylesheet" href="css/depot-shop-view.css?v=77df556">
-    <link rel="stylesheet" href="depot-v2.css">
+  <link rel="stylesheet" href="css/depot-shop-view.css?v=4baf31b">
+    <link rel="stylesheet" href="depot-v2.css?v=4baf31b">
 </head>
 <body class="v2-body">
   <div id="sharedUnavailable"><div class="su-card"><div class="su-title">Not available</div><div class="su-sub">This collection isn&rsquo;t available.</div></div></div>
@@ -1044,13 +1044,13 @@ body{
 <!-- Phase 4: login-required gate. Logged-out users see ONLY this; no collection. -->
 <style>
 #loginGate{display:none;position:fixed;inset:0;z-index:40;align-items:center;justify-content:center;
-  background:#1a1a2e;padding:2rem;}
+  background:#2eb2e6;padding:2rem;}
 #loginGate.show{display:flex;}
-#loginGate .lg-card{background:var(--sb-blue,#0d2d5c);border:4px solid #000;box-shadow:8px 8px 0 #000;
+#loginGate .lg-card{background:#ffffff;border:4px solid #0d2d5c;box-shadow:0 10px 30px rgba(13,45,92,.25);
   max-width:460px;width:100%;padding:2.2rem 1.8rem;text-align:center;}
 #loginGate .lg-title{font-family:'Press Start 2P',monospace;color:var(--brass,#f8d000);font-size:1rem;
   line-height:1.6;text-shadow:3px 3px 0 #000;margin-bottom:1rem;}
-#loginGate .lg-sub{font-family:'Press Start 2P',monospace;color:#dfeaff;font-size:.5rem;line-height:1.9;
+#loginGate .lg-sub{font-family:'Press Start 2P',monospace;color:#0d2d5c;font-size:.5rem;line-height:1.9;
   margin-bottom:1.6rem;}
 #loginGate .lg-btn{font-family:'Press Start 2P',monospace;font-size:.6rem;color:#000;background:var(--brass,#f8d000);
   border:3px solid #000;box-shadow:3px 3px 0 #000;padding:.8rem 1.2rem;cursor:pointer;}
@@ -1085,14 +1085,10 @@ body.logged-out #appFrame{display:none !important;}
 
 
 <!-- BINDER -->
-<div class="dc-binder" style="width:760px;max-width:100%;background:#2eb2e6;border-radius:16px;overflow:hidden"><div style="padding:16px 24px 0;display:flex;align-items:center;justify-content:space-between"><div style="display:flex;align-items:center;gap:12px"><div style="width:42px;height:42px;border-radius:12px;background:#ffd23e;border:3px solid #10456b;box-shadow:0 4px 0 #10456b;display:flex;align-items:center;justify-content:center;font-family:'Press Start 2P',monospace;font-size:14px;color:#10456b">D</div><div style="font-family:'Baloo 2',sans-serif;font-weight:800;font-size:24px;color:#fff;text-shadow:0 3px 0 #10456b">The Binder</div></div><div style="display:flex;gap:8px"><div class="dc-hoverbtn" style="font-family:'Baloo 2',sans-serif;font-weight:700;font-size:13px;color:#10456b;background:#fff;border:3px solid #10456b;border-radius:999px;padding:7px 16px;box-shadow:0 4px 0 #10456b;cursor:pointer;cursor:pointer" onclick="if(window.__depotOpenSeason){window.__depotOpenSeason();}else{window.location.href=&#39;game/builder.html&#39;;}" role="button">▶ Play Ball</div><div class="dc-hoverbtn" style="font-family:'Baloo 2',sans-serif;font-weight:800;font-size:13px;color:#10456b;background:linear-gradient(#fff8,#fff0 45%),#7be36b;border:3px solid #10456b;border-radius:999px;padding:7px 16px;box-shadow:0 4px 0 #10456b;cursor:pointer;cursor:pointer" onclick="openForm()" role="button">+ Add a card</div></div></div><div style="display:flex;gap:8px;padding:14px 24px 0;flex-wrap:wrap;align-items:center"><input style="flex:1;min-width:180px;background:#fff;border:3px solid #10456b;border-radius:999px;padding:8px 16px;font-family:'Baloo 2',sans-serif;font-weight:600;font-size:13px;color:#10456b;outline:none" placeholder="🔍 Search players, sets, years…" id="binderSearch" oninput="curSearch=this.value; if(typeof curPage!==&#39;undefined&#39;){curPage=0;} renderBinder();"><div style="display:flex;gap:8px;flex-wrap:wrap" id="eraTabs"></div></div><div style="margin:14px 24px 20px;background:#fff;border:4px solid #10456b;border-radius:20px;box-shadow:0 7px 0 #10456b;padding:16px"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px"><div style="font-family:'Baloo 2',sans-serif;font-weight:800;font-size:16px;color:#10456b" id="pageDots">Page 1 of 1</div><span id="eraTitle" style="margin-left:8px;font-weight:700;color:#10456b"></span><span id="eraBlurb" style="display:none"></span><div style="display:flex;gap:6px"><div class="dc-pager" style="width:32px;height:32px;border-radius:10px;background:#dff1fb;border:2px solid #10456b;display:flex;align-items:center;justify-content:center;font-weight:800;color:#10456b;cursor:pointer" id="prevPage" onclick="turnPage(-1)" role="button">‹</div><div class="dc-pager" style="width:32px;height:32px;border-radius:10px;background:#dff1fb;border:2px solid #10456b;display:flex;align-items:center;justify-content:center;font-weight:800;color:#10456b;cursor:pointer" id="nextPage" onclick="turnPage(1)" role="button">›</div></div><div id="groupByBar" style="display:flex;align-items:center;gap:6px;margin-left:auto"><label style="font-family:'Baloo 2',sans-serif;color:#10456b;font-weight:700;font-size:12px">Group by</label><select style="font-family:'Baloo 2',sans-serif;border:2px solid #10456b;border-radius:999px;color:#10456b;background:#dff1fb;padding:4px 10px;font-weight:700;font-size:12px" id="groupBy" onchange="setGroupMode(this.value)">
-          <option value="era">Era</option>
+<div class="dc-binder" style="width:760px;max-width:100%;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 8px 28px rgba(13,45,92,.18)"><div style="padding:16px 24px 0;display:flex;align-items:center;justify-content:space-between"><div style="display:flex;align-items:center;gap:12px"><div style="width:42px;height:42px;border-radius:12px;background:#ffd23e;border:3px solid #10456b;box-shadow:0 4px 0 #10456b;display:flex;align-items:center;justify-content:center;font-family:'Press Start 2P',monospace;font-size:14px;color:#10456b">D</div><div style="font-family:'Baloo 2',sans-serif;font-weight:800;font-size:24px;color:#10456b;text-shadow:0 2px 0 #ffd23e">The Binder</div></div><div style="display:flex;gap:8px"><div class="dc-hoverbtn" style="font-family:'Baloo 2',sans-serif;font-weight:700;font-size:13px;color:#10456b;background:#fff;border:3px solid #10456b;border-radius:999px;padding:7px 16px;box-shadow:0 4px 0 #10456b;cursor:pointer;cursor:pointer" onclick="if(window.__depotOpenSeason){window.__depotOpenSeason();}else{window.location.href=&#39;game/builder.html&#39;;}" role="button">▶ Play Ball</div><div class="dc-hoverbtn" style="font-family:'Baloo 2',sans-serif;font-weight:800;font-size:13px;color:#10456b;background:linear-gradient(#fff8,#fff0 45%),#7be36b;border:3px solid #10456b;border-radius:999px;padding:7px 16px;box-shadow:0 4px 0 #10456b;cursor:pointer;cursor:pointer" onclick="openForm()" role="button">+ Add a card</div></div></div><div style="display:flex;gap:8px;padding:14px 24px 0;flex-wrap:wrap;align-items:center"><input style="flex:1;min-width:180px;background:#fff;border:3px solid #10456b;border-radius:999px;padding:8px 16px;font-family:'Baloo 2',sans-serif;font-weight:600;font-size:13px;color:#10456b;outline:none" placeholder="🔍 Search players, sets, years…" id="binderSearch" oninput="curSearch=this.value; if(typeof curPage!==&#39;undefined&#39;){curPage=0;} renderBinder();"><div style="display:flex;gap:8px;flex-wrap:wrap" id="eraTabs"></div></div><div style="margin:14px 24px 20px;background:#fff;border:4px solid #10456b;border-radius:20px;box-shadow:0 7px 0 #10456b;padding:16px"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px"><div style="font-family:'Baloo 2',sans-serif;font-weight:800;font-size:16px;color:#10456b" id="pageDots">Page 1 of 1</div><span id="eraTitle" style="margin-left:8px;font-weight:700;color:#10456b"></span><span id="eraBlurb" style="display:none"></span><div style="display:flex;gap:6px"><div class="dc-pager" style="width:32px;height:32px;border-radius:10px;background:#dff1fb;border:2px solid #10456b;display:flex;align-items:center;justify-content:center;font-weight:800;color:#10456b;cursor:pointer" id="prevPage" onclick="turnPage(-1)" role="button">‹</div><div class="dc-pager" style="width:32px;height:32px;border-radius:10px;background:#dff1fb;border:2px solid #10456b;display:flex;align-items:center;justify-content:center;font-weight:800;color:#10456b;cursor:pointer" id="nextPage" onclick="turnPage(1)" role="button">›</div></div><div id="groupByBar" style="display:flex;align-items:center;gap:6px;margin-left:auto"><label style="font-family:'Baloo 2',sans-serif;color:#10456b;font-weight:700;font-size:12px">Group by</label><select style="font-family:'Baloo 2',sans-serif;border:2px solid #10456b;border-radius:999px;color:#10456b;background:#dff1fb;padding:4px 10px;font-weight:700;font-size:12px" id="groupBy" onchange="setGroupMode(this.value)">
           <option value="year">Year</option>
-          <option value="brand">Brand</option>
-          <option value="team">Team</option>
-          <option value="player">Player</option>
-          <option value="decade">Decade</option>
-        <option value="set">By Set</option></select></div></div><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px" id="binderGrid"></div></div></div>
+          <option value="set">Set</option>
+          <option value="era">Era</option></select></div></div><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px" id="binderGrid"></div></div></div>
 
 <!-- CAROUSEL -->
 <div class="carousel-stage" id="carouselStage">
@@ -1546,7 +1542,7 @@ function dcBinderHTML(id){
     return '<div class="dc-fpill dc-hoverbtn" data-i="'+i+'" style="font-family:\'Baloo 2\',sans-serif;font-weight:700;font-size:12px;color:'+f.color+';background:'+f.bg+';border:2px solid #10456b;border-radius:999px;padding:5px 13px;cursor:pointer">'+dcEsc(f.label)+'</div>';
   }).join('');
   return ''+
-  '<div class="dc-binder" style="width:760px;max-width:100%;background:#2eb2e6;border-radius:16px;overflow:hidden">'+
+  '<div class="dc-binder" style="width:760px;max-width:100%;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 8px 28px rgba(13,45,92,.18)">'+
     '<div style="display:flex;gap:8px;padding:14px 24px 0;flex-wrap:wrap;align-items:center">'+
       '<input id="'+id+'-search" placeholder="\ud83d\udd0d Search players, sets, years\u2026" style="flex:1;min-width:180px;background:#fff;border:3px solid #10456b;border-radius:999px;padding:8px 16px;font-family:\'Baloo 2\',sans-serif;font-weight:600;font-size:13px;color:#10456b;outline:none">'+
       '<div id="'+id+'-pills" style="display:flex;gap:8px;flex-wrap:wrap">'+filterPills+'</div>'+
@@ -1567,9 +1563,9 @@ function dcDetailHTML(c){
   var season=dcStatPairs().map(function(p){ return '<div style="display:flex;gap:5px;align-items:baseline;font-family:\'Baloo 2\',sans-serif;font-weight:700;font-size:12px"><span style="color:#8fb2c6">'+p[0]+'</span><span style="color:#fff">'+p[1]+'</span></div>'; }).join('');
   var chips=dcStatChips(c).map(function(p){ return '<div style="font-family:\'Baloo 2\',sans-serif;font-weight:700;font-size:11px;color:#10456b;background:#dff1fb;border:2px solid #10456b;border-radius:999px;padding:4px 10px">'+p[0]+' '+dcEsc(p[1])+'</div>'; }).join('');
   return ''+
-  '<div style="width:760px;max-width:100%;background:#2eb2e6;border-radius:16px;overflow:hidden">'+
+  '<div style="width:760px;max-width:100%;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 8px 28px rgba(13,45,92,.18)">'+
     '<div style="padding:16px 24px 0;display:flex;align-items:center;justify-content:space-between">'+
-      '<div style="font-family:\'Baloo 2\',sans-serif;font-weight:800;font-size:24px;color:#fff;text-shadow:0 3px 0 #10456b">The Depot</div>'+
+      '<div style="font-family:\'Baloo 2\',sans-serif;font-weight:800;font-size:24px;color:#10456b;text-shadow:0 2px 0 #ffd23e">The Depot</div>'+
       '<div class="dc-hoverbtn" style="font-family:\'Baloo 2\',sans-serif;font-weight:700;font-size:13px;color:#10456b;background:#fff;border:3px solid #10456b;border-radius:999px;padding:7px 16px;box-shadow:0 4px 0 #10456b;cursor:pointer">\u2039 Back to binder</div>'+
     '</div>'+
     '<div style="display:flex;gap:16px;padding:16px 24px 24px;align-items:flex-start">'+
@@ -2959,15 +2955,15 @@ setAuthUI(false);
   });
 })();
 </script>
-<script src="game/season.js?v=77df556" defer></script>
-<script src="js/depot-index-shell.js?v=77df556"></script>
-<script src="js/depot-prestige.js?v=77df556"></script>
-<script src="js/depot-wallet.js?v=77df556"></script>
-  <script src="js/depot-pack-engine.js?v=77df556"></script>
-  <script src="js/depot-pixel-card.js?v=77df556"></script>
-  <script src="js/depot-shop.js?v=77df556"></script>
-  <script src="js/depot-shop-view.js?v=77df556"></script>
-  <script src="js/depot-binder-shop.js?v=77df556"></script>
+<script src="game/season.js?v=4baf31b" defer></script>
+<script src="js/depot-index-shell.js?v=4baf31b"></script>
+<script src="js/depot-prestige.js?v=4baf31b"></script>
+<script src="js/depot-wallet.js?v=4baf31b"></script>
+  <script src="js/depot-pack-engine.js?v=4baf31b"></script>
+  <script src="js/depot-pixel-card.js?v=4baf31b"></script>
+  <script src="js/depot-shop.js?v=4baf31b"></script>
+  <script src="js/depot-shop-view.js?v=4baf31b"></script>
+  <script src="js/depot-binder-shop.js?v=4baf31b"></script>
 <script>
 /* Franchise Economy Slice A: arm wallet chip + payout hook. Additive, fail-loud, graceful until DDL. */
 (function(){

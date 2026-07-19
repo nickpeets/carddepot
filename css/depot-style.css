@@ -50,8 +50,8 @@
 *{box-sizing:border-box}
 html,body{margin:0;padding:0}
 body{
-  background:var(--depot-navy-bg);
-  color:var(--depot-cream);
+  background:#2eb2e6;
+  color:var(--depot-navy);
   font-family:'Press Start 2P','JetBrains Mono',monospace;
   font-size:var(--fs-body);
   line-height:1.6;
@@ -77,12 +77,12 @@ a{color:inherit;text-decoration:none}
 
 .depot-shell__header{
   display:flex;align-items:center;gap:var(--sp4);
-  background:var(--depot-navy);
-  border-bottom:4px solid var(--depot-black);
-  box-shadow:var(--pixel-shadow-lg);
+  background:transparent;
+  border-bottom:none;
+  box-shadow:none;
   padding:20px 24px;
 }
-.depot-wordmark{font-size:var(--fs-wordmark);color:var(--depot-white);white-space:nowrap}
+.depot-wordmark{font-size:var(--fs-wordmark);color:var(--depot-navy);white-space:nowrap}
 .depot-wordmark b{color:var(--depot-gold)}
 
 /* franchise identity block — franchise name + season record, pinned once signed in */
@@ -99,7 +99,7 @@ a{color:inherit;text-decoration:none}
 .depot-franchise.is-anon .name{color:var(--depot-cream);opacity:.85}
 .depot-franchise.is-anon .record{display:none}
 
-.depot-account{margin-left:auto;display:flex;align-items:center;gap:14px;font-size:var(--fs-micro);color:var(--depot-cream)}
+.depot-account{margin-left:auto;display:flex;align-items:center;gap:14px;font-size:var(--fs-micro);color:var(--depot-navy)}
 .depot-bell{position:relative;color:var(--depot-gold)}
 .depot-bell .dot{position:absolute;top:-6px;right:-8px;background:var(--depot-red);color:#fff;font-size:7px;padding:2px 4px;border:2px solid #000}
 
@@ -446,3 +446,30 @@ html.depot-game .depot-nav #sim-controls{
 .depot-payday .dw-pay-bal b{ font-size:18px; }
 .depot-wallet-chip{ display:inline-flex; align-items:baseline; gap:.25em; margin-left:.6em; padding:.12em .5em; border-radius:999px; background:rgba(212,175,55,.15); border:1px solid rgba(212,175,55,.5); font-weight:700; font-size:.8em; color:#e8c86a; vertical-align:middle; }
 .depot-wallet-chip .dw-cur{ opacity:.7; font-size:.85em; font-weight:600; }
+
+
+/* ===== v2 sky-shell: context-aware coin (data-depot-active) ===== */
+/* Coin chip sits on the sky header now; ensure legibility + context sizing. */
+.depot-wallet-chip{ transition:transform .12s ease, box-shadow .12s ease; }
+/* Quiet in the binder: small, tucked, understated. */
+.depot-shell[data-depot-active="binder"] .depot-wallet-chip{
+  font-size:.72em; color:#0d2d5c; background:rgba(255,255,255,.65);
+  border:1px solid rgba(13,45,92,.35);
+}
+/* Loud on the pack shop: big, bright, unmissable. */
+.depot-shell[data-depot-active="shop"] .depot-wallet-chip{
+  font-size:1.15em; color:#7a5200; background:#ffd23e;
+  border:2px solid #0d2d5c; padding:.2em .7em;
+  box-shadow:0 3px 0 #0d2d5c;
+}
+/* Prominent in Play Ball (lineup/payout preview): clear and confident. */
+.depot-shell[data-depot-active="game"] .depot-wallet-chip{
+  font-size:.95em; color:#0d2d5c; background:#ffd23e;
+  border:2px solid #0d2d5c; padding:.15em .6em;
+}
+
+
+/* ===== v2 sky-shell: header on sky; game HUD keeps light text on navy ===== */
+/* On the dark game HUD, restore light text (sky-header rules above set navy text). */
+html.depot-game .depot-wordmark{ color:var(--depot-white); }
+html.depot-game .depot-account{ color:var(--depot-cream); }
