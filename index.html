@@ -14,6 +14,16 @@
     <script src="js/depot-shell.js?v=827a521"></script>
   <script src="js/depot-season-shell.js?v=827a521"></script>
   <style>
+    /* binder tile portrait redesign v2 (additive, contract-safe) */
+    :root{--binder-cols:3}
+    #binderGrid{grid-template-columns:repeat(var(--binder-cols,3),1fr) !important}
+    .dc-tile{position:relative}
+    .dc-tile > div:first-child{aspect-ratio:5/7 !important;height:auto !important;width:100% !important}
+    .dc-tile > div:first-child > div{background-size:contain !important;background-repeat:no-repeat;background-position:center}
+    .dc-tile.has-art > div:nth-child(2){display:none !important}
+    .dc-tile.has-art > div:nth-child(3){position:absolute;left:6px;bottom:6px;margin:0 !important}
+    .dc-tile.has-art > div:nth-child(3) > span:first-child{display:none !important}
+    /* end v2 */
 :root{
   --leather:#5a2118;
   --leather-dark:#3d160f;
