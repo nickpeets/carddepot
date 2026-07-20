@@ -3042,6 +3042,3164 @@ setAuthUI(false);
   <script src="js/depot-shop-view.js?v=276d06c"></script>
   <script src="js/depot-binder-shop.js?v=276d06c"></script>
   <script src="js/depot-library-art.js?v=276d06c"></script>
+  <script src="js/depot-card-detail-2b.js?v=276d06c"></script>
+<script>
+/* Franchise Economy Slice A: arm wallet chip + payout hook. Additive, fail-loud, graceful until DDL. */
+(function(){
+  var TAG='[depot] wallet-boot:';
+  var tries=0;
+  function boot(){
+    tries++;
+    if(!window.DepotWallet){ if(tries<40){ setTimeout(boot,150); } else { console.warn(TAG,'DepotWallet not present; giving up'); } return; }
+    try{ window.DepotWallet.ready(); }catch(e){ console.warn(TAG,'ready() failed:', e && e.message); }
+  }
+  if(document.readyState==='loading'){ document.addEventListener('DOMContentLoaded',boot); } else { boot(); }
+  // Re-mount the chip when the shell identity block (re)renders.
+  try{
+      var _moBusy=false;
+      var _remount=function(){
+        if(_moBusy || !window.DepotWallet) return;
+        _moBusy=true; mo.disconnect();
+        var p; try{ p=window.DepotWallet.mountChip(); }catch(e){ console.warn(TAG,'mountChip failed:', e && e.message); }
+        var done=function(){ try{ mo.observe(document.body,{childList:true,subtree:true}); }catch(_e){} _moBusy=false; };
+        if(p && typeof p.then==='function') p.then(done, done); else done();
+      };
+      var mo=new MutationObserver(function(){ _remount(); });
+      mo.observe(document.body,{childList:true,subtree:true});
+    }catch(e){ console.warn(TAG,'observer setup failed:', e && e.message); }
+})();
+</script>
+<script>
+/* Franchise Economy Slice A: wire prestige into the binder + spotlight. Additive, fail-loud. */
+(function(){
+  var TAG='[depot] prestige-boot:';
+  function boot(){
+    if(!window.DepotPrestige){ console.warn(TAG,'DepotPrestige not present; skipping'); return; }
+    window.DepotPrestige.ready().then(function(){
+      try{ window.DepotPrestige.hookSpotlight(); }catch(e){ console.warn(TAG,'hookSpotlight failed:',e&&e.message); }
+        console.log(TAG,'wired');
+    });
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot); else boot();
+})();
+</script>
+  <!-- ===== end SEASON MODE view ===== -->
+
+<!-- fix(binder): group-by=set -> clean labeled sections; tighten grouped grid. Additive, fail-safe. -->
+<style id="depot-groupby-fix">
+  /* Grouped view: each section spans the full panel width and stacks vertically */
+  #binderGrid:has(.group-section){ display:block !important; }
+  .group-section{ width:auto !important; margin:0 0 18px !important; }
+  .group-section:last-child{ margin-bottom:0 !important; }
+  /* Cards under each section header: normal card columns, tight rows (no cavernous gaps) */
+  .group-grid{ display:grid !important; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)) !important; gap:12px !important; }
+  .group-grid .slot{ aspect-ratio:auto !important; min-height:0 !important; }
+</style>
+<script>
+/* Route Group By = Set through the labeled-sections grid (renderGrouped) instead of the
+   separate set carousel, and give 'set' a real grouping key (YEAR + SET). Additive + guarded. */
+(function(){
+  function boot(){
+    if(window.__depotSetGroupFix) return;
+    if(typeof window.groupKeyFor!=='function' || typeof window.renderGrouped!=='function') { return setTimeout(boot,150); }
+    var sel=document.querySelector('#groupBy');
+    if(!sel){ return setTimeout(boot,150); }
+    window.__depotSetGroupFix=true;
+
+    /* 1) 'set' grouping key: label = "YEAR SET" (e.g. "1969 Topps") */
+    var origKey=window.groupKeyFor;
+    window.groupKeyFor=function(card,mode){
+      if(mode==='brand' && card){var brand=(card.brand||card.set||'Unknown');return { key:brand, label:brand, sort:brand };}if(mode==='set' && card){
+        var yr=card.yr||'';
+        var set=card.set||'Unknown';
+        var label=(yr? yr+' ' : '')+set;
+        return { key:label, label:label, sort:(Number(yr)||0)*1000+(String(set).charCodeAt(0)||0) };
+      }
+      return origKey.apply(this, arguments);
+    };
+
+    var carousel=function(){ return document.querySelector('#carouselStage'); };
+
+    /* 2) Own the groupBy change handler (clone strips the carousel-diverting listener) */
+    var fresh=sel.cloneNode(true);
+    fresh.value=sel.value;
+    sel.parentNode.replaceChild(fresh, sel);
+    fresh.addEventListener('change', function(){
+      var mode=fresh.value;
+      if(mode==='set'||mode==='brand'){
+        var cs=carousel(); if(cs) cs.style.display='none';
+        var bg=document.querySelector('#binderGrid'); if(bg) bg.style.display='';
+        try{ window.renderGrouped(); }catch(e){}
+        var et=document.querySelector('#eraTitle'); if(et) et.textContent='Grouped by set';
+      } else {
+        var cs2=carousel(); if(cs2) cs2.style.display='none';
+        try{ window.renderBinder(); }catch(e){}
+      }
+    });
+
+    /* 3) Safety net: if anything re-shows the carousel while in set mode, re-hide it */
+    var cs0=carousel();
+    if(cs0 && window.MutationObserver){
+      new MutationObserver(function(){
+        if(document.querySelector('#groupBy') && document.querySelector('#groupBy').value==='set'){
+          if(getComputedStyle(cs0).display!=='none') cs0.style.display='none';
+        }
+      }).observe(cs0,{attributes:true,attributeFilter:['style','class']});
+    }
+
+    /* If page loads already in set mode, render it correctly now */
+    if(fresh.value==='set'||fresh.value==='brand') fresh.dispatchEvent(new Event('change',{bubbles:true}));
+  }
+  if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',boot); else boot();
+})();
+</script>
+
+</body>
+</html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <script src="js/version.js?v=276d06c"></script>
+  <script src="js/depot-core.js?v=276d06c"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>The Depot</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Spectral:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="css/depot-style.css?v=276d06c">
+  <link rel="stylesheet" href="css/season.css?v=276d06c">
+    <script src="js/depot-shell.js?v=276d06c"></script>
+  <script src="js/depot-season-shell.js?v=276d06c"></script>
+  <style>
+:root{
+  --leather:#5a2118;
+  --leather-dark:#3d160f;
+  --leather-light:#6e2c20;
+  --cream:#f2ead8;
+  --cream-dim:#e4d9c1;
+  --ink:#2a2018;
+  --ink-soft:#5e5345;
+  --brass:#c79a3b;
+  --brass-deep:#a07820;
+  --felt:#1f3a2e;
+  --paper:#fbf6ea;
+  --shadow:rgba(30,15,8,.35);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{
+  font-family:'Spectral',Georgia,serif;
+  background:
+    radial-gradient(circle at 30% 20%, #6e2c20 0%, transparent 60%),
+    radial-gradient(circle at 80% 80%, #4a1c14 0%, transparent 55%),
+    var(--leather);
+  color:var(--ink);
+  min-height:100vh;
+  -webkit-font-smoothing:antialiased;
+}
+button{font-family:inherit;cursor:pointer;border:none;background:none;color:inherit}
+button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--brass);outline-offset:2px}
+
+/* ---------- top bar ---------- */
+.topbar{
+  display:flex;align-items:baseline;gap:1.25rem;
+  padding:1.4rem 2rem 1.1rem;
+  border-bottom:1px solid rgba(199,154,59,.3);
+}
+.brand{
+  font-family:'Oswald',sans-serif;font-weight:700;letter-spacing:.04em;
+  font-size:1.9rem;color:var(--cream);text-transform:uppercase;
+  line-height:1;
+}
+.brand .the{color:var(--brass);font-weight:500;font-size:1.1rem;vertical-align:.35em;margin-right:.3rem}
+.tagline{font-style:italic;color:var(--cream-dim);font-size:.95rem;opacity:.8}
+.count-chip{
+  margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:.8rem;
+  color:var(--brass);border:1px solid rgba(199,154,59,.4);
+  padding:.35rem .7rem;border-radius:4px;letter-spacing:.03em;
+}
+
+/* ---------- mode toggle ---------- */
+.modes{display:flex;gap:.5rem;padding:1rem 2rem 0;flex-wrap:wrap}
+.mode-btn{
+  font-family:'Oswald',sans-serif;text-transform:uppercase;letter-spacing:.08em;
+  font-size:.82rem;font-weight:500;color:var(--cream-dim);
+  padding:.55rem 1.1rem;border:1px solid rgba(199,154,59,.3);border-radius:5px;
+  background:rgba(0,0,0,.12);transition:all .18s;
+}
+.mode-btn:hover{color:var(--cream);border-color:rgba(199,154,59,.6)}
+.mode-btn.active{background:var(--brass);color:var(--leather-dark);border-color:var(--brass);font-weight:600}
+
+/* ---------- era rail ---------- */
+.stage{display:flex;gap:0;padding:1.25rem 2rem 3rem;align-items:flex-start}
+.rail{flex:0 0 150px;display:flex;flex-direction:column;gap:.4rem;position:sticky;top:1rem}
+.rail-label{font-family:'Oswald',sans-serif;text-transform:uppercase;letter-spacing:.12em;font-size:.68rem;color:var(--brass);margin-bottom:.3rem;padding-left:.2rem}
+.era-tab{
+  text-align:left;font-family:'Oswald',sans-serif;font-size:.9rem;letter-spacing:.02em;
+  color:var(--cream-dim);padding:.6rem .75rem;border-radius:5px;border-left:3px solid transparent;
+  transition:all .16s;line-height:1.15;
+}
+.era-tab small{display:block;font-family:'JetBrains Mono',monospace;font-size:.62rem;opacity:.6;margin-top:.15rem}
+.era-tab:hover{background:rgba(0,0,0,.15);color:var(--cream)}
+.era-tab.active{background:rgba(0,0,0,.22);color:var(--brass);border-left-color:var(--brass)}
+
+/* ---------- binder ---------- */
+.binder-wrap{flex:1;min-width:0;display:flex;flex-direction:column;align-items:center}
+.era-head{width:100%;margin-bottom:1rem;text-align:center}
+.era-title{font-family:'Oswald',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.05em;font-size:1.5rem;color:var(--cream)}
+.era-blurb{font-style:italic;color:var(--cream-dim);opacity:.85;font-size:.95rem;margin-top:.2rem}
+.group-by{display:flex;align-items:center;gap:.5rem;margin-top:.6rem;font-size:.9rem;color:var(--cream-dim)}
+.group-by label{text-transform:uppercase;letter-spacing:.06em;font-size:.78rem;opacity:.8}
+.group-by select{background:rgba(0,0,0,.25);color:var(--cream);border:1px solid var(--cream-dim);border-radius:6px;padding:.25rem .5rem;font:inherit}
+.group-section{margin:0 0 1.6rem}
+.group-head{display:flex;align-items:center;gap:.5rem;font-size:1.05rem;color:var(--cream);border-bottom:1px solid rgba(255,255,255,.15);padding-bottom:.3rem;margin:.4rem 0 .8rem}
+.group-count{font-size:.78rem;background:rgba(255,255,255,.12);border-radius:999px;padding:.05rem .5rem;color:var(--cream-dim)}
+.group-grid{margin-bottom:.4rem}
+.group-empty{color:var(--cream-dim);font-style:italic}
+
+.page{
+  background:
+    repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.012) 3px),
+    var(--paper);
+  border-radius:6px;padding:1.4rem;
+  box-shadow:0 16px 40px var(--shadow), inset 0 0 0 1px rgba(0,0,0,.04);
+  width:100%;max-width:680px;position:relative;
+  border:1px solid rgba(0,0,0,.08);
+}
+.page::before{
+  content:"";position:absolute;left:14px;top:8%;bottom:8%;width:2px;
+  background:repeating-linear-gradient(0deg,rgba(0,0,0,.18) 0 6px,transparent 6px 22px);
+  border-radius:2px;
+}
+.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:.85rem;margin-left:1rem}
+
+.slot{border-radius:6px;position:relative}
+.slot.empty{
+  border:1.5px dashed rgba(0,0,0,.13);border-radius:6px;
+  display:flex;align-items:center;justify-content:center;
+  color:rgba(0,0,0,.18);font-family:'JetBrains Mono',monospace;font-size:.7rem;
+}
+
+/* ---------- card face ---------- */
+.card{
+  width:100%;height:100%;border-radius:6px;overflow:hidden;cursor:pointer;
+  position:relative;transition:transform .18s ease, box-shadow .18s ease;
+  box-shadow:0 3px 8px rgba(0,0,0,.22);text-align:left;display:block;
+  border:1px solid rgba(0,0,0,.15);
+}
+.card:hover{transform:translateY(-5px) scale(1.02);box-shadow:0 12px 22px rgba(0,0,0,.3);z-index:2}
+.card .frame{position:absolute;inset:0;display:flex;flex-direction:column}
+.card .photo{
+  flex:1;background-size:cover;background-position:center top;position:relative;
+}
+.card .nameplate{
+  padding:.3rem .45rem;font-family:'Oswald',sans-serif;font-weight:600;
+  font-size:.66rem;line-height:1.05;text-transform:uppercase;letter-spacing:.01em;
+}
+.card .pos{font-family:'JetBrains Mono',monospace;font-size:.54rem;opacity:.8;display:block;font-weight:400;letter-spacing:0}
+.rare-pin{
+  position:absolute;top:5px;right:5px;width:16px;height:16px;border-radius:50%;
+  background:var(--brass);color:var(--leather-dark);font-size:.6rem;
+  display:flex;align-items:center;justify-content:center;font-weight:700;
+  box-shadow:0 1px 3px rgba(0,0,0,.4);z-index:3;font-family:'Oswald',sans-serif;
+}
+
+/* era-specific card skins */
+.skin-vintage .nameplate{background:#d9c89a;color:#3a2c12;border-top:2px solid #b8472e}
+.skin-vintage .photo{background-color:#c7b48a;filter:saturate(.85)}
+.skin-junk .nameplate{background:#1c1c1c;color:#fff}
+.skin-junk .photo{background-color:#2a3f55}
+.skin-junk .card{border-color:#000}
+.skin-modern .nameplate{background:linear-gradient(90deg,#0d2436,#16456a);color:#cfe6f5}
+.skin-modern .photo{background-color:#21323f}
+
+.page-nav{display:flex;align-items:center;justify-content:center;gap:1.5rem;margin-top:1.1rem}
+.page-nav button{
+  font-family:'Oswald',sans-serif;text-transform:uppercase;letter-spacing:.06em;font-size:.8rem;
+  color:var(--cream-dim);padding:.5rem .9rem;border:1px solid rgba(199,154,59,.3);border-radius:5px;
+  transition:all .15s;
+}
+.page-nav button:hover:not(:disabled){color:var(--cream);border-color:var(--brass)}
+.page-nav button:disabled{opacity:.3;cursor:default}
+.page-dots{font-family:'JetBrains Mono',monospace;font-size:.8rem;color:var(--brass)}
+
+/* ---------- carousel ---------- */
+.carousel-stage{padding:1.5rem 2rem 3rem;display:none;flex-direction:column;align-items:center}
+.set-picker{display:flex;gap:.5rem;flex-wrap:wrap;justify-content:center;margin-bottom:1.5rem;max-width:760px}
+.set-pill{
+  font-family:'Oswald',sans-serif;font-size:.8rem;letter-spacing:.02em;color:var(--cream-dim);
+  padding:.5rem .9rem;border:1px solid rgba(199,154,59,.3);border-radius:20px;transition:all .15s;
+}
+.set-pill:hover{color:var(--cream);border-color:rgba(199,154,59,.6)}
+.set-pill.active{background:var(--brass);color:var(--leather-dark);border-color:var(--brass);font-weight:600}
+.set-pill small{font-family:'JetBrains Mono',monospace;opacity:.65;margin-left:.35rem;font-size:.68rem}
+
+.carousel-head{text-align:center;margin-bottom:1.2rem}
+.carousel-head .set-name{font-family:'Oswald',sans-serif;font-weight:700;text-transform:uppercase;letter-spacing:.04em;font-size:1.6rem;color:var(--cream)}
+.carousel-head .set-meta{font-family:'JetBrains Mono',monospace;font-size:.75rem;color:var(--brass);margin-top:.25rem}
+
+.reel{display:flex;align-items:center;gap:1.5rem;width:100%;justify-content:center}
+.reel-track{display:flex;gap:1rem;overflow-x:auto;padding:1.5rem .5rem;scroll-snap-type:x mandatory;max-width:760px;scrollbar-width:thin;scrollbar-color:var(--brass) transparent}
+.reel-track::-webkit-scrollbar{height:8px}
+.reel-track::-webkit-scrollbar-thumb{background:var(--brass);border-radius:4px}
+.reel-card{flex:0 0 170px;aspect-ratio:5/7;scroll-snap-align:center;transition:transform .2s;}
+.reel-arrow{
+  flex:0 0 auto;width:44px;height:44px;border-radius:50%;
+  border:1px solid rgba(199,154,59,.4);color:var(--brass);font-size:1.2rem;
+  display:flex;align-items:center;justify-content:center;transition:all .15s;
+}
+.reel-arrow:hover{background:var(--brass);color:var(--leather-dark)}
+
+/* ---------- spotlight ---------- */
+.spotlight{
+  position:fixed;inset:0;background:rgba(20,8,4,.82);backdrop-filter:blur(6px);
+  display:none;align-items:center;justify-content:center;z-index:50;padding:2rem;
+}
+.spotlight.open{display:flex}
+.spot-card{
+  position:relative;perspective:1600px;width:min(340px,80vw);aspect-ratio:5/7;cursor:pointer;
+}
+.spot-inner{position:relative;width:100%;height:100%;transition:transform .7s;transform-style:preserve-3d}
+.spot-card.flipped .spot-inner{transform:rotateY(180deg)}
+.spot-face{
+  position:absolute;inset:0;backface-visibility:hidden;border-radius:12px;overflow:hidden;
+  box-shadow:0 0 0 1px rgba(199,154,59,.5),0 30px 70px rgba(0,0,0,.6),0 0 60px rgba(199,154,59,.15);
+}
+.spot-back{transform:rotateY(180deg);background:var(--paper);padding:1.1rem 1.1rem .9rem;display:flex;flex-direction:column;overflow-y:auto}
+.back-head{display:flex;align-items:baseline;justify-content:space-between;gap:.5rem;border-bottom:2px solid var(--leather);padding-bottom:.4rem;margin-bottom:.35rem}
+.back-head h3{font-family:'Oswald',sans-serif;text-transform:uppercase;font-size:1.05rem;color:var(--ink);line-height:1}
+.back-badge{font-family:'JetBrains Mono',monospace;font-size:.56rem;letter-spacing:.04em;color:var(--cream);background:var(--leather);padding:.2rem .4rem;border-radius:3px;white-space:nowrap}
+.back-sub{font-family:'JetBrains Mono',monospace;font-size:.66rem;color:var(--brass);margin-bottom:.7rem}
+.statgrid-wrap{overflow-x:auto;margin:0 -.2rem .6rem;scrollbar-width:thin;scrollbar-color:var(--brass) transparent}
+.statgrid-wrap::-webkit-scrollbar{height:5px}
+.statgrid-wrap::-webkit-scrollbar-thumb{background:var(--brass);border-radius:3px}
+.statgrid{border-collapse:collapse;font-family:'JetBrains Mono',monospace;width:100%}
+.statgrid caption{caption-side:top;text-align:left;font-family:'Spectral',serif;font-style:italic;font-size:.7rem;color:var(--ink-soft);margin-bottom:.3rem}
+.statgrid th{font-size:.56rem;letter-spacing:.02em;color:var(--cream);background:var(--leather-light);padding:.28rem .4rem;text-align:center;font-weight:500;border:1px solid var(--leather)}
+.statgrid td{font-size:.72rem;color:var(--ink);padding:.32rem .4rem;text-align:center;border:1px solid rgba(0,0,0,.12);background:#fff}
+.no-stats{font-family:'Spectral',serif;font-style:italic;font-size:.78rem;color:var(--ink-soft);padding:.5rem 0}
+.spot-back .bio{font-style:italic;font-size:.78rem;color:var(--ink-soft);line-height:1.4;margin-bottom:.5rem}
+.back-foot{margin-top:auto;padding-top:.4rem}
+.btn-bref{width:100%;font-family:'Oswald',sans-serif;text-transform:uppercase;letter-spacing:.04em;font-size:.68rem;padding:.5rem;background:#fff;color:var(--leather);border:1px solid var(--leather);border-radius:5px}
+.btn-bref:hover{background:var(--leather);color:var(--cream)}
+.spot-meta{
+  position:absolute;bottom:-3.2rem;left:0;right:0;text-align:center;
+  font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--cream-dim);
+}
+.spot-meta .hint{color:var(--brass);opacity:.8}
+.spot-close{
+  position:absolute;top:8px;right:8px;z-index:6;width:36px;height:36px;border-radius:50%;
+  border:1px solid rgba(199,154,59,.4);color:var(--cream);font-size:1.3rem;
+  display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.3);
+}
+.spot-close:hover{background:var(--brass);color:var(--leather-dark)}
+
+/* ---------- add-card form ---------- */
+.form-scrim{
+  position:fixed;inset:0;background:rgba(20,8,4,.82);backdrop-filter:blur(6px);
+  display:none;align-items:center;justify-content:center;z-index:60;padding:1.5rem;
+}
+.form-scrim.open{display:flex}
+.form-card{
+  background:var(--paper);border-radius:12px;width:min(720px,96vw);max-height:92vh;overflow-y:auto;
+  box-shadow:0 30px 70px rgba(0,0,0,.6),0 0 0 1px rgba(199,154,59,.4);
+}
+.form-head{display:flex;align-items:center;justify-content:space-between;padding:1.1rem 1.4rem;border-bottom:2px solid var(--leather)}
+.form-head h2{font-family:'Oswald',sans-serif;text-transform:uppercase;letter-spacing:.04em;font-size:1.3rem;color:var(--ink)}
+.form-body{display:flex;gap:1.5rem;padding:1.3rem 1.4rem}
+.rolodex{background:linear-gradient(180deg,#f6efe0,#efe6d2);border:1px solid var(--brass);border-radius:8px;padding:.8rem .9rem;margin-bottom:.4rem}
+.rolodex-head{font-family:'Oswald',sans-serif;text-transform:uppercase;letter-spacing:.05em;font-size:.72rem;color:var(--leather);display:flex;align-items:center;gap:.35rem;margin-bottom:.55rem}
+.rolodex-tag{margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:.56rem;background:var(--leather);color:var(--cream);padding:.15rem .4rem;border-radius:3px;letter-spacing:.02em}
+.rolo-row{display:flex;gap:.4rem}
+.rolo-row input{flex:1;font-family:'Spectral',serif;font-size:.88rem;padding:.45rem .55rem;border:1px solid rgba(0,0,0,.2);border-radius:5px;background:#fff}
+.rolo-row button{flex:0 0 auto;font-family:'Oswald',sans-serif;text-transform:uppercase;font-size:.72rem;letter-spacing:.04em;padding:0 1rem;background:var(--leather);color:var(--cream);border-radius:5px}
+.rolo-list{margin-top:.5rem;max-height:140px;overflow-y:auto;border:1px solid rgba(0,0,0,.12);border-radius:5px;background:#fff}
+.rolo-player{padding:.45rem .6rem;font-size:.82rem;cursor:pointer;border-bottom:1px solid rgba(0,0,0,.06);display:flex;justify-content:space-between;gap:.5rem}
+.rolo-player:last-child{border-bottom:none}
+.rolo-player:hover{background:var(--cream-dim)}
+.rolo-player .meta{font-family:'JetBrains Mono',monospace;font-size:.66rem;color:var(--ink-soft)}
+.rolo-player.sel{background:var(--brass);color:var(--leather-dark)}
+.rolo-years{margin-top:.55rem;display:flex;flex-wrap:wrap;gap:.3rem}
+.rolo-brand{margin-top:.55rem;display:flex;flex-wrap:wrap;align-items:center;gap:.4rem}
+.rolo-brand-label{font-family:'Oswald',sans-serif;font-size:.66rem;text-transform:uppercase;color:var(--leather);letter-spacing:.04em;width:100%}
+.rolo-brand select,.rolo-brand input{font-family:'Spectral',serif;font-size:.82rem;padding:.35rem .45rem;border:1px solid rgba(0,0,0,.2);border-radius:5px;background:#fff;color:var(--ink)}
+.rolo-brand select{flex:1;min-width:130px}
+.rolo-brand input[type=number]{width:70px}
+.rolo-brand input#rolo-brand-custom{flex:1;min-width:120px}
+.rolo-yr{font-family:'JetBrains Mono',monospace;font-size:.72rem;padding:.3rem .55rem;border:1px solid rgba(0,0,0,.2);border-radius:4px;cursor:pointer;background:#fff;color:var(--ink)}
+.rolo-yr:hover{border-color:var(--brass);background:var(--cream-dim)}
+.rolo-yr.sel{background:var(--leather);color:var(--cream);border-color:var(--leather)}
+.rolo-status{font-family:'Spectral',serif;font-style:italic;font-size:.74rem;color:var(--ink-soft);margin-top:.45rem;min-height:1rem}
+.rolo-status.err{color:#9a3324}
+.rolo-status.ok{color:#2c6b4f}
+.form-left{flex:1.1;display:flex;flex-direction:column;gap:.7rem}
+.form-right{flex:.9;display:flex;flex-direction:column}
+.fl-row{display:flex;gap:.7rem}
+.fl-field{display:flex;flex-direction:column;gap:.25rem;flex:1}
+.fl-field label{font-family:'Oswald',sans-serif;text-transform:uppercase;letter-spacing:.06em;font-size:.66rem;color:var(--leather)}
+.hintmini{text-transform:none;letter-spacing:0;font-family:'Spectral',serif;font-style:italic;color:var(--ink-soft);opacity:.7;font-size:.72rem}
+.fl-field input,.fl-field select,.fl-field textarea,.form-right input{
+  font-family:'Spectral',serif;font-size:.9rem;color:var(--ink);background:#fff;
+  border:1px solid rgba(0,0,0,.18);border-radius:5px;padding:.45rem .55rem;width:100%;
+}
+.fl-field input:focus,.fl-field select:focus,.fl-field textarea:focus,.form-right input:focus{outline:2px solid var(--brass);outline-offset:0;border-color:var(--brass)}
+.fl-field textarea{resize:vertical;font-family:'Spectral',serif}
+.key-toggle{display:flex;align-items:center;gap:.4rem;font-family:'Oswald',sans-serif;font-size:.78rem;color:var(--leather);text-transform:uppercase;letter-spacing:.04em;white-space:nowrap;cursor:pointer;padding:.45rem 0}
+.key-toggle input{width:auto}
+.form-right label{font-family:'Oswald',sans-serif;text-transform:uppercase;letter-spacing:.06em;font-size:.66rem;color:var(--leather);margin-bottom:.35rem;display:block}
+.preview{aspect-ratio:5/7;border-radius:8px;border:1.5px dashed rgba(0,0,0,.2);background:#e9e0cc center/cover no-repeat;display:flex;align-items:center;justify-content:center;margin-bottom:.7rem;overflow:hidden}
+.preview.has-img{border-style:solid;border-color:var(--brass)}
+.ph-text{font-family:'JetBrains Mono',monospace;font-size:.72rem;color:rgba(0,0,0,.3)}
+.img-tabs{display:flex;gap:.3rem;margin-bottom:.6rem}
+.img-tab{flex:1;font-family:'Oswald',sans-serif;font-size:.72rem;text-transform:uppercase;letter-spacing:.03em;padding:.4rem;border:1px solid rgba(0,0,0,.18);border-radius:5px;color:var(--ink-soft);background:#fff}
+.img-tab.active{background:var(--leather);color:var(--cream);border-color:var(--leather)}
+.slot-tabs{display:flex;gap:.3rem;margin-bottom:.5rem}
+.slot-tab{flex:1;font-family:'Oswald',sans-serif;font-size:.72rem;text-transform:uppercase;letter-spacing:.03em;padding:.4rem;border:1px solid rgba(0,0,0,.18);border-radius:5px;color:var(--ink-soft);background:#fff;cursor:pointer}
+.slot-tab.active{background:var(--brass);color:var(--cream);border-color:var(--brass)}
+.preview-row{display:flex;gap:.5rem;margin-bottom:.7rem}
+.preview-slot{flex:1;display:flex;flex-direction:column;gap:.25rem;min-width:0}
+.preview-slot .preview{margin-bottom:0;cursor:pointer}
+.preview-slot.active-slot .preview{border-color:var(--brass);box-shadow:0 0 0 2px var(--brass)}
+.slot-cap{font-family:'Oswald',sans-serif;text-transform:uppercase;letter-spacing:.06em;font-size:.6rem;color:var(--leather);text-align:center}
+.spot-back-img{flex:none;width:100%;aspect-ratio:5/7;border-radius:6px;overflow:hidden;margin-bottom:.6rem;background:#e9e0cc center top/cover no-repeat;box-shadow:0 0 0 1px rgba(0,0,0,.12)}
+.spot-back-img img{width:100%;height:100%;object-fit:cover;object-position:center top;display:block}
+.spot-back-scroll{flex:none;overflow:visible;scrollbar-width:thin;scrollbar-color:var(--brass) transparent}
+.spot-back-scroll::-webkit-scrollbar{width:5px}
+.spot-back-scroll::-webkit-scrollbar-thumb{background:var(--brass);border-radius:3px}
+.img-pane input[type=file]{font-size:.78rem;font-family:'Spectral',serif}
+.pane-note{font-family:'Spectral',serif;font-style:italic;font-size:.74rem;color:var(--ink-soft);margin-top:.5rem;line-height:1.4}
+.search-wrap{display:flex;gap:.4rem}
+.btn-google{width:100%;font-family:'Oswald',sans-serif;text-transform:uppercase;letter-spacing:.04em;font-size:.8rem;padding:.6rem;background:var(--leather);color:var(--cream);border-radius:5px;font-weight:500}
+.btn-google:hover{background:var(--leather-light)}
+.search-wrap button{flex:0 0 auto;font-family:'Oswald',sans-serif;text-transform:uppercase;font-size:.72rem;padding:0 .8rem;background:var(--leather);color:var(--cream);border-radius:5px}
+.search-results{display:grid;grid-template-columns:repeat(3,1fr);gap:.4rem;margin-top:.5rem}
+.search-results img{width:100%;aspect-ratio:5/7;object-fit:cover;border-radius:4px;cursor:pointer;border:2px solid transparent}
+.search-results img:hover{border-color:var(--brass)}
+.form-foot{display:flex;justify-content:flex-end;gap:.7rem;padding:1rem 1.4rem;border-top:1px solid rgba(0,0,0,.12)}
+.btn-ghost{font-family:'Oswald',sans-serif;text-transform:uppercase;letter-spacing:.05em;font-size:.82rem;color:var(--ink-soft);padding:.55rem 1.1rem;border:1px solid rgba(0,0,0,.2);border-radius:5px}
+.btn-solid{font-family:'Oswald',sans-serif;text-transform:uppercase;letter-spacing:.05em;font-size:.82rem;color:var(--cream);background:var(--leather);padding:.55rem 1.3rem;border-radius:5px;font-weight:600}
+.btn-solid:hover{background:var(--leather-light)}
+.toast{position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);background:var(--felt);color:var(--cream);font-family:'Oswald',sans-serif;letter-spacing:.04em;font-size:.85rem;padding:.7rem 1.3rem;border-radius:6px;box-shadow:0 8px 24px rgba(0,0,0,.4);z-index:80;opacity:0;transition:opacity .25s;pointer-events:none}
+.toast.show{opacity:1}
+
+@media (max-width:640px){
+  .form-body{flex-direction:column}
+  .stage{flex-direction:column;padding:1rem}
+  .rail{flex-direction:row;flex-wrap:wrap;position:static;width:100%;margin-bottom:1rem}
+  .rail-label{width:100%}
+  .era-tab{flex:1;min-width:120px}
+  .grid{margin-left:0}
+  .page::before{display:none}
+  .grid{gap:.5rem}
+  .brand{font-size:1.4rem}
+}
+@media (prefers-reduced-motion:reduce){
+  *{transition:none!important;scroll-behavior:auto}
+  .spot-inner{transition:transform .01s!important}
+}
+/* ---- card-accurate rolodex + grafted image-error + remove button ---- */
+.img-missing{display:flex;align-items:center;justify-content:center;text-align:center;background:#e9e0cc!important}
+.ph-text.err{color:#9a3b1f;line-height:1.35;font-size:.7rem;padding:.4rem}
+.spot-remove{margin-top:.55rem}
+.spot-meta .btn-ghost{display:inline-block;width:auto;padding:.4rem 1rem;font-size:.68rem;cursor:pointer}
+.rolo-yr.nocard{opacity:.7;border-style:dashed;border-color:rgba(0,0,0,.28)}
+.rolo-yr.nocard:hover{border-color:var(--brass);background:var(--cream-dim)}
+.rolo-num-list{font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--ink-soft);margin-top:.25rem}
+.drop-hot{outline:3px dashed var(--brass,#c79a3b);outline-offset:-6px;box-shadow:0 0 0 9999px rgba(199,154,59,.08) inset;transition:outline-color .1s}
+
+
+/* ============================================================
+   RBI BASEBALL / 8-BIT NES RESKIN  (CSS-only override layer)
+   Appended last so it wins the cascade. No markup/JS/ID changes.
+   ============================================================ */
+:root{
+  --leather:#2d6a2d;
+  --leather-dark:#1d4a1d;
+  --leather-light:#3a833a;
+  --cream:#e8e4d0;
+  --cream-dim:#cfc9b0;
+  --ink:#16110a;
+  --ink-soft:#3a3225;
+  --brass:#f8d000;
+  --brass-deep:#c9a800;
+  --felt:#2d6a2d;
+  --paper:#e8e4d0;
+  --shadow:rgba(0,0,0,.55);
+  --sb-blue:#0d2d5c;
+  --sb-blue-lite:#15407f;
+  --rbi-black:#000;
+}
+.rbi-font, .pixel-font{font-family:'Press Start 2P',monospace;}
+body{
+  font-family:'Press Start 2P','Oswald',sans-serif !important;
+  background:
+    repeating-linear-gradient(90deg,
+      #2d6a2d 0, #2d6a2d 38px,
+      #287f28 38px, #287f28 76px) !important;
+  color:var(--ink);
+  image-rendering:pixelated;
+}
+img{image-rendering:pixelated;}
+
+button:focus-visible,[tabindex]:focus-visible{outline:3px solid var(--brass);outline-offset:2px}
+.topbar{
+  position:relative;
+  background:var(--sb-blue);
+  border-bottom:4px solid #000;
+  box-shadow:0 4px 0 0 #000;
+  padding:1.6rem 2rem 1.2rem;
+  align-items:center;
+}
+.topbar::before{
+  content:"";position:absolute;top:0;left:0;right:0;height:14px;
+  background:
+    repeating-linear-gradient(90deg,
+      #c1121f 0,#c1121f 28px,
+      #ffffff 28px,#ffffff 56px,
+      #0d2d5c 56px,#0d2d5c 84px,
+      #ffffff 84px,#ffffff 112px);
+  border-bottom:3px solid #000;
+}
+.topbar::after{
+  display:none; /* removed stray white circle near login button */
+  content:"";position:absolute;right:1.4rem;top:50%;transform:translateY(-30%);
+  width:40px;height:40px;background:#fff;border:3px solid #000;border-radius:50% !important;
+  box-shadow:
+    inset 7px 0 0 -4px #c1121f,
+    inset -7px 0 0 -4px #c1121f,
+    3px 3px 0 #000;
+}
+.brand{
+  font-family:'Press Start 2P',monospace !important;
+  color:var(--brass);
+  font-size:1.15rem;line-height:1.4;text-shadow:3px 3px 0 #000;
+  display:flex;align-items:center;gap:.5rem;letter-spacing:0;
+}
+.brand .the{color:#fff;font-size:.7rem;text-shadow:2px 2px 0 #000;margin-right:.1rem}
+.tagline{
+  font-family:'Press Start 2P',monospace !important;
+  color:#dfeaff;font-size:.5rem;line-height:1.5;letter-spacing:0;font-style:normal;
+}
+.count-chip{
+  font-family:'Press Start 2P',monospace !important;
+  background:var(--brass);color:#000;border:3px solid #000;
+  box-shadow:3px 3px 0 #000;padding:.4rem .55rem;font-size:.5rem;
+}
+.modes{padding:1.2rem 2rem;gap:.9rem;flex-wrap:wrap}
+.mode-btn{border-radius:999px;
+  font-family:'Press Start 2P',monospace !important;
+  text-transform:uppercase;letter-spacing:0;font-size:.55rem;line-height:1.5;
+  color:#fff;background:var(--sb-blue);
+  border:3px solid #000 !important;box-shadow:3px 3px 0 #000;
+  padding:.7rem .85rem;transition:none;
+}
+.mode-btn:hover{background:var(--sb-blue-lite);color:var(--brass)}
+.mode-btn.active{background:var(--brass);color:#000}
+.mode-btn:active{transform:translate(3px,3px);box-shadow:0 0 0 #000}
+.rail-label{
+  font-family:'Press Start 2P',monospace !important;color:var(--brass);
+  font-size:.55rem;letter-spacing:0;text-shadow:2px 2px 0 #000;margin-bottom:.6rem;
+}
+.era-tab{
+  font-family:'Press Start 2P',monospace !important;font-size:.55rem;line-height:1.7;
+  color:#fff;background:var(--sb-blue);border:3px solid #000 !important;border-left:3px solid #000 !important;
+  box-shadow:3px 3px 0 #000;padding:.6rem .6rem;margin-bottom:.7rem;transition:none;letter-spacing:0;
+}
+.era-tab small{font-family:'Press Start 2P',monospace;font-size:.42rem;color:#bcd2f5;opacity:1;line-height:2}
+.era-tab:hover{background:var(--sb-blue-lite);color:var(--brass)}
+.era-tab.active{background:var(--brass);color:#000;border-color:#000}
+.era-tab.active small{color:#3a2c00}
+.era-title, .group-head, .carousel-head .set-name, .form-head h2, .rolodex-head{
+  font-family:'Press Start 2P',monospace !important;letter-spacing:0;
+}
+.era-title{
+  position:relative;color:var(--brass);font-size:.95rem;line-height:1.5;
+  text-shadow:3px 3px 0 #000;padding-left:1.6rem;
+}
+.era-title::before, .group-head::before, .carousel-head .set-name::before{
+  content:"";display:inline-block;width:14px;height:14px;margin-right:.6rem;
+  background:var(--brass);border:2px solid #000;transform:rotate(45deg);
+  vertical-align:middle;
+}
+.era-title::before{position:absolute;left:0;top:.35rem;}
+.era-blurb{font-family:'Oswald',sans-serif;font-style:normal;color:#eafaea;font-size:.92rem;opacity:.95}
+.group-by{color:#fff}
+.group-by label{font-family:'Press Start 2P',monospace !important;font-size:.5rem;letter-spacing:0;color:var(--brass);opacity:1;text-shadow:2px 2px 0 #000}
+.group-by select{
+  font-family:'Press Start 2P',monospace !important;font-size:.5rem;
+  background:var(--sb-blue);color:#fff;border:3px solid #000 !important;
+  box-shadow:3px 3px 0 #000;padding:.5rem .6rem;
+}
+.group-head{color:var(--brass);font-size:.7rem;line-height:1.6;border-bottom:3px solid #000;text-shadow:2px 2px 0 #000;background:transparent}
+.group-count{font-family:'Press Start 2P',monospace;background:var(--brass);color:#000;border:2px solid #000;font-size:.45rem;padding:.25rem .45rem}
+.group-empty{font-family:'Oswald',sans-serif;color:#eafaea}
+.binder-wrap, .carousel-stage{position:relative}
+.page{
+  background:
+    repeating-linear-gradient(90deg,
+      #2d6a2d 0,#2d6a2d 34px,
+      #2f742f 34px,#2f742f 68px) !important;
+  border:4px solid #000 !important;box-shadow:6px 6px 0 #000;
+  padding:1.4rem;max-width:680px;
+}
+.page::before{display:none !important;}
+.slot.empty{
+  background:rgba(0,0,0,.18);border:3px dashed #000 !important;
+  display:flex;align-items:center;justify-content:center;
+  font-family:'Press Start 2P',monospace !important;font-size:0;color:transparent;position:relative;
+}
+.slot.empty::after{
+  content:"ADD CARD";font-family:'Press Start 2P',monospace;font-size:.5rem;
+  color:#e8e4d0;text-align:center;line-height:1.6;letter-spacing:0;
+}
+.slot.empty:nth-child(even)::after{
+  display:none; /* removed stray white circle in empty pockets */
+  content:"";width:34px;height:34px;background:#fff;border:3px solid #000;border-radius:50% !important;
+  box-shadow:inset 6px 0 0 -3px #c1121f, inset -6px 0 0 -3px #c1121f;
+}
+.card{
+  border:4px solid #000 !important;box-shadow:4px 4px 0 #000;
+  background:var(--cream);transition:transform .12s steps(2);
+}
+.card:hover{transform:translate(-2px,-2px);box-shadow:6px 6px 0 #000}
+.card .nameplate{
+  font-family:'Press Start 2P',monospace !important;font-weight:400;
+  font-size:.42rem;line-height:1.6;letter-spacing:0;text-transform:uppercase;
+  background:var(--sb-blue) !important;color:#fff !important;border-top:3px solid #000 !important;
+  padding:.4rem .4rem;
+}
+.card .pos{font-family:'Press Start 2P',monospace !important;font-size:.36rem;color:var(--brass) !important;opacity:1;margin-top:.25rem}
+.skin-vintage .nameplate, .skin-junk .nameplate, .skin-modern .nameplate{
+  background:var(--sb-blue) !important;color:#fff !important;border-top:3px solid #000 !important;
+}
+.skin-vintage .photo{background-color:#8a6f3a !important;filter:none}
+.skin-junk .photo{background-color:#244055 !important}
+.skin-modern .photo{background-color:#1c3a4a !important}
+.skin-junk .card{border-color:#000 !important}
+.rare-pin{
+  background:var(--brass) !important;color:#000 !important;border:2px solid #000;
+  border-radius:0 !important;width:18px;height:18px;font-size:.7rem;line-height:14px;
+  box-shadow:2px 2px 0 #000;top:4px;right:4px;
+}
+.page-nav button{
+  font-family:'Press Start 2P',monospace !important;font-size:.5rem;letter-spacing:0;
+  color:#fff;background:var(--sb-blue);border:3px solid #000 !important;box-shadow:3px 3px 0 #000;padding:.55rem .7rem;
+}
+.page-nav button:hover:not(:disabled){background:var(--sb-blue-lite);color:var(--brass)}
+.page-dots{font-family:'Press Start 2P',monospace;font-size:.5rem;color:#fff;text-shadow:2px 2px 0 #000}
+
+.set-picker{gap:.7rem}
+.set-pill{
+  font-family:'Press Start 2P',monospace !important;font-size:.5rem;letter-spacing:0;line-height:1.6;
+  color:#fff;background:var(--sb-blue);border:3px solid #000 !important;box-shadow:3px 3px 0 #000;padding:.55rem .7rem;transition:none;
+}
+.set-pill:hover{background:var(--sb-blue-lite);color:var(--brass)}
+.set-pill.active{background:var(--brass);color:#000}
+.set-pill small{font-family:'Press Start 2P',monospace;font-size:.4rem}
+.carousel-head .set-name{position:relative;color:var(--brass);font-size:.9rem;line-height:1.5;text-shadow:3px 3px 0 #000}
+.carousel-head .set-meta{font-family:'Press Start 2P',monospace !important;font-size:.45rem;color:#eafaea;line-height:1.8}
+.reel{position:relative}
+.reel-track::-webkit-scrollbar-thumb{background:var(--brass);border:2px solid #000}
+.reel-card{border:3px solid #000;box-shadow:3px 3px 0 #000}
+.reel-arrow{
+  width:46px;height:46px;border-radius:0 !important;border:3px solid #000 !important;
+  background:var(--sb-blue);color:var(--brass);box-shadow:3px 3px 0 #000;font-family:'Press Start 2P',monospace;font-size:.7rem;transition:none;
+}
+.reel-arrow:hover{background:var(--brass);color:#000}
+.spotlight{background:rgba(13,45,92,.88);backdrop-filter:none}
+.spot-face{border:4px solid #000 !important;box-shadow:6px 6px 0 #000;background:var(--cream)}
+.spot-close{
+  font-family:'Press Start 2P',monospace !important;font-size:.7rem;
+  background:var(--brass);color:#000;border:3px solid #000 !important;box-shadow:3px 3px 0 #000;
+  width:auto;height:auto;padding:.5rem .6rem;border-radius:0 !important;
+}
+.spot-close:hover{background:#fff}
+.spot-back{background:var(--cream);padding:1.1rem}
+.back-head{border-bottom:3px solid #000;align-items:center}
+.back-head h3{font-family:'Press Start 2P',monospace !important;font-size:.7rem;line-height:1.5;color:var(--sb-blue);letter-spacing:0}
+.back-badge{font-family:'Press Start 2P',monospace !important;font-size:.42rem;background:var(--brass);color:#000;border:2px solid #000;padding:.25rem .4rem}
+.back-sub{font-family:'Oswald',sans-serif;color:var(--ink-soft);font-size:.85rem}
+.statgrid{font-family:'JetBrains Mono','Courier New',monospace !important;border:3px solid #000}
+.statgrid caption{font-family:'Oswald',sans-serif !important;font-style:normal;font-size:.78rem;color:var(--ink-soft);font-weight:600}
+.statgrid th{
+  font-family:'JetBrains Mono',monospace !important;font-size:.6rem;letter-spacing:0;
+  background:var(--sb-blue) !important;color:#fff !important;border:1px solid #000 !important;padding:.3rem .42rem;
+}
+.statgrid td{font-family:'JetBrains Mono',monospace !important;font-size:.74rem;color:var(--ink);border:1px solid #000 !important;background:#fff;padding:.32rem .42rem}
+.no-stats{font-family:'Oswald',sans-serif !important;font-style:normal;color:var(--ink-soft)}
+.spot-back .bio{font-family:'Oswald',sans-serif;color:var(--ink-soft);font-size:.86rem}
+.statgrid-wrap::-webkit-scrollbar-thumb,.spot-back-scroll::-webkit-scrollbar-thumb{background:var(--brass);border:1px solid #000}
+.btn-bref{
+  font-family:'Press Start 2P',monospace !important;font-size:.42rem;line-height:1.6;
+  color:#fff;background:var(--sb-blue);border:3px solid #000 !important;box-shadow:2px 2px 0 #000;padding:.5rem .6rem;
+}
+.btn-bref:hover{background:var(--sb-blue-lite);color:var(--brass)}
+.spot-meta{font-family:'Press Start 2P',monospace !important;font-size:.42rem;color:#fff}
+.spot-meta .hint{color:#cfe0ff}
+.form-scrim{background:rgba(13,45,92,.9)}
+.form-card{
+  background:var(--cream);border:4px solid #000 !important;box-shadow:8px 8px 0 #000;
+  width:min(720px,96vw);
+}
+.form-head{background:var(--sb-blue);border-bottom:4px solid #000;padding:1rem 1.2rem}
+.form-head h2{font-family:'Press Start 2P',monospace !important;font-size:.85rem;line-height:1.5;color:var(--brass);text-shadow:2px 2px 0 #000;letter-spacing:0}
+.fl-field label, .form-right label, .rolo-brand-label, .slot-cap, .rolodex-tag, .img-tab, .slot-tab, .pane-note, .hintmini, .key-toggle{
+  font-family:'Press Start 2P',monospace !important;letter-spacing:0;
+}
+.fl-field label, .form-right label{font-size:.5rem;line-height:1.6;color:var(--sb-blue);text-transform:uppercase}
+.hintmini, .pane-note{font-size:.42rem;color:var(--ink-soft);line-height:1.7}
+.fl-field input,.fl-field select,.fl-field textarea,.form-right input{
+  font-family:'Oswald',sans-serif !important;font-size:.92rem;color:var(--ink);
+  background:#fff;border:3px solid #000 !important;box-shadow:2px 2px 0 #000 inset;padding:.5rem .6rem;
+}
+.fl-field input:focus,.fl-field select:focus,.fl-field textarea:focus,.form-right input:focus{outline:3px solid var(--brass);outline-offset:0}
+.fl-field textarea{min-height:4rem}
+.preview{border:3px solid #000 !important;background:#cfc9b0 center/cover no-repeat}
+.preview.has-img{border-style:solid}
+.ph-text{font-family:'Press Start 2P',monospace !important;font-size:.45rem;color:var(--ink-soft);line-height:1.7;text-align:center}
+.ph-text.err, .rolo-status.err{color:#c1121f}
+.img-tab, .slot-tab{font-size:.45rem;color:#fff;background:var(--sb-blue);border:3px solid #000 !important;box-shadow:2px 2px 0 #000;padding:.45rem .55rem}
+.img-tab.active, .slot-tab.active{background:var(--brass);color:#000}
+.preview-slot.active-slot .preview{border-color:var(--brass) !important;box-shadow:3px 3px 0 var(--brass)}
+.slot-cap{font-size:.42rem;color:var(--sb-blue)}
+.key-toggle{font-size:.45rem;color:var(--sb-blue);line-height:1.7}
+.rolodex{background:rgba(13,45,92,.06);border:3px solid #000;box-shadow:3px 3px 0 #000;padding:.8rem}
+.rolodex-head{font-family:'Press Start 2P',monospace !important;font-size:.5rem;line-height:1.7;color:var(--sb-blue)}
+.rolodex-tag{font-family:'Press Start 2P',monospace !important;font-size:.4rem;background:var(--brass);color:#000;border:2px solid #000;padding:.2rem .4rem}
+.rolo-row input{font-family:'Oswald',sans-serif !important;border:3px solid #000 !important;background:#fff;padding:.5rem .6rem}
+.rolo-row button, .search-wrap button, .btn-google{
+  font-family:'Press Start 2P',monospace !important;font-size:.45rem;color:#fff;background:var(--sb-blue);
+  border:3px solid #000 !important;box-shadow:2px 2px 0 #000;padding:.5rem .6rem;
+}
+.rolo-row button:hover, .btn-google:hover{background:var(--sb-blue-lite);color:var(--brass)}
+.rolo-player{font-family:'Oswald',sans-serif;border-bottom:2px solid rgba(0,0,0,.15)}
+.rolo-player.sel, .rolo-player:hover{background:rgba(248,208,0,.25)}
+.rolo-player .meta{font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--ink-soft)}
+.rolo-yr, .rolo-num-list>*{font-family:'Press Start 2P',monospace !important;font-size:.45rem;border:2px solid #000 !important;background:#fff;color:var(--ink);padding:.4rem .45rem}
+.rolo-yr:hover{background:rgba(248,208,0,.3)}
+.rolo-yr.sel{background:var(--brass);color:#000}
+.rolo-yr.nocard{opacity:.4}
+.rolo-brand-label{font-size:.45rem;color:var(--sb-blue)}
+.rolo-brand select,.rolo-brand input{font-family:'Oswald',sans-serif !important;border:3px solid #000 !important;background:#fff;padding:.45rem}
+.rolo-status{font-family:'Press Start 2P',monospace !important;font-size:.42rem;line-height:1.7}
+.rolo-status.ok{color:#1d4a1d}
+.search-results img{border:3px solid #000;box-shadow:2px 2px 0 #000}
+.search-results img:hover{border-color:var(--brass)}
+.form-foot{border-top:3px solid #000}
+.btn-ghost{
+  font-family:'Press Start 2P',monospace !important;font-size:.5rem;color:var(--sb-blue);
+  background:#fff;border:3px solid #000 !important;box-shadow:3px 3px 0 #000;padding:.6rem .85rem;
+}
+.btn-ghost:hover{background:var(--cream-dim)}
+.btn-solid{
+  font-family:'Press Start 2P',monospace !important;font-size:.5rem;letter-spacing:0;
+  color:#000;background:var(--brass);border:3px solid #000 !important;box-shadow:3px 3px 0 #000;padding:.6rem 1rem;
+}
+.btn-solid:hover{background:#ffe24d}
+.btn-solid:active,.btn-ghost:active,.mode-btn:active{transform:translate(3px,3px);box-shadow:0 0 0 #000}
+.spot-remove{font-family:'Press Start 2P',monospace !important;font-size:.42rem;color:#fff;background:#c1121f;border:3px solid #000 !important;box-shadow:2px 2px 0 #000;padding:.45rem .55rem}
+.toast{
+  font-family:'Press Start 2P',monospace !important;font-size:.5rem;line-height:1.6;
+  background:var(--sb-blue);color:#fff;border:3px solid #000 !important;box-shadow:4px 4px 0 #000;
+}
+@media (max-width:640px){
+  .brand{font-size:.85rem}
+  .modes{padding:.9rem 1rem}
+  .mode-btn{font-size:.5rem;padding:.6rem .6rem}
+  .era-tab{font-size:.5rem}
+  .era-title{font-size:.7rem}
+  .page{padding:1rem;box-shadow:4px 4px 0 #000}
+  .card .nameplate{font-size:.4rem}
+  .card .pos{font-size:.34rem}
+  .form-head h2{font-size:.65rem}
+  .back-head h3{font-size:.6rem}
+  .group-by select,.group-by label{font-size:.45rem}
+  .statgrid th{font-size:.55rem}
+  .statgrid td{font-size:.68rem}
+}
+@media (prefers-reduced-motion:reduce){
+  .card,.card:hover,.mode-btn:active,.btn-solid:active,.btn-ghost:active{transition:none !important;transform:none !important}
+  *{scroll-behavior:auto !important}
+}
+/* ===== END RBI RESKIN ===== */
+
+
+/* ===== BINDER LAYOUT RESTRUCTURE — contained scoreboard cabinet (CSS-only) ===== */
+html{background:#2eb2e6 !important;}
+body{
+  background:#2eb2e6 !important;
+  margin:0;padding:0 !important;min-height:100vh;
+}
+/* Centered cabinet frame around the whole app */
+#appFrame{
+  max-width:1100px;margin:0 auto;width:100%;
+  background:transparent;
+  border:none;
+  box-shadow:none;
+  overflow:visible;
+}
+/* Header bar spans the frame top (keep blue + bunting from reskin) */
+#appFrame > .topbar{
+  margin:0 auto 0 0;max-width:760px;border-top:none;border-left:none;border-right:none;
+}
+
+    /* BUG FIX (fix/v2-header-panel-column-email-repaint): the LIVE header/nav are the
+       v2 shell (.depot-shell__header.v2-header / .depot-nav.v2-nav), NOT the retired
+       display:none .topbar above. Constrain them to the SAME centered column as the
+       binder panel (.dc-binder is a hard-coded width:760px, flush-left inside #appFrame)
+       so the D-tile's left edge == panel left and Log out's right edge == panel right.
+       Measured live: panel 760px @ [142.5, 902.5]; header/nav were 1100px w/ Log out
+       overhanging +316px. Zeroing the 24px side padding lands content on the panel edges. */
+    /* Center the shared column (header + nav) on the page (equal sky margins),
+       matching the centered .dc-binder panel below it. Was left-pinned (margin-right:auto). */
+    #appFrame > .depot-shell > .depot-shell__header.v2-header,
+    #appFrame > .depot-shell > .depot-nav.v2-nav{
+      max-width:760px;
+      margin-left:auto;
+      margin-right:auto;
+      padding-left:0;
+      padding-right:0;
+      box-sizing:border-box;
+    }
+    /* Center the binder panel itself on the page too (it carries an inline width:760px,
+       previously left-aligned inside #appFrame -> asymmetric sky margins). */
+    #appFrame > .dc-binder{ margin-left:auto; margin-right:auto; }
+
+/* Toolbar row: tabs + group dropdown live just under header */
+#appFrame > .modes{
+  background:#0a2148;
+  border-bottom:3px solid #000;
+  padding:.7rem 1.2rem !important;
+  margin:0;
+}
+/* --- Remove the left era sidebar; stage becomes a single column --- */
+#binderStage.stage[data-hidden]{ display:none !important; }
+  #binderStage.stage:not([data-hidden]){
+    display:block !important;
+  padding:1.2rem 1.4rem 1.6rem !important;
+  background:transparent;
+}
+/* Hide the vertical rail layout; relocate era tabs to a horizontal strip */
+.stage > .rail{
+  flex:none !important;position:static !important;width:auto !important;
+  display:block;margin:0 0 1rem 0;
+}
+.rail .rail-label{display:none !important;}
+/* Era tabs as a horizontal scoreboard button row (era navigation, top of binder) */
+#eraTabs{
+  display:flex !important;flex-wrap:wrap;gap:.6rem;justify-content:center;
+}
+#eraTabs .era-tab{
+  margin-bottom:0 !important;flex:0 1 auto;text-align:center;
+}
+#eraTabs .era-tab small{display:block;font-size:.5rem;opacity:.85;margin-top:.25rem;}
+/* Binder wrap fills the column, centered */
+.binder-wrap{width:100%;align-items:center;}
+.era-head{width:100%;max-width:760px;}
+/* Era title header over the cards (one era at a time) */
+.era-head .era-title{font-size:1rem;}
+.era-head .era-blurb{
+  font-family:'Press Start 2P',monospace;font-size:.5rem;line-height:1.7;
+  color:var(--brass);opacity:1;font-style:normal;margin-top:.5rem;
+  text-shadow:2px 2px 0 #000;
+}
+.era-head .group-by{justify-content:center;margin-top:.7rem;}
+/* Contained field-green binder page (3 across) */
+.page{
+  margin:0 auto;max-width:760px !important;
+}
+.grid{grid-template-columns:repeat(3,1fr) !important;margin-left:0 !important;gap:1rem !important;}
+/* Cards: portrait baseball-card ratio for classic 9-pocket page */
+.slot{aspect-ratio:auto !important;}
+/* Footer nav bar */
+.page-nav{
+  margin-top:1.2rem !important;background:#0a2148;border:3px solid #000;
+  box-shadow:4px 4px 0 #000;padding:.6rem 1rem;justify-content:space-between;
+  max-width:760px;width:100%;margin-left:auto;margin-right:auto;
+}
+.page-nav #pageDots{order:0;}
+/* --- BY SET view: contained inside frame, consistent treatment --- */
+#carouselStage.carousel-stage{
+  padding:1.4rem 1.4rem 1.8rem !important;background:transparent;
+}
+/* Add-card and spotlight remain full-screen overlays above the frame (unchanged behavior) */
+/* ===== Mobile: frame goes full-width, cards reflow to fewer columns ===== */
+@media (max-width:760px){
+  body{padding:0 !important;}
+  #appFrame{max-width:100%;border-left:none;border-right:none;box-shadow:0 6px 0 #000;}
+  #binderStage.stage{padding:1rem .7rem 1.3rem !important;}
+  .page{padding:1rem !important;}
+  .grid{grid-template-columns:repeat(2,1fr) !important;gap:.7rem !important;}
+}
+@media (max-width:460px){
+  .grid{grid-template-columns:1fr !important;}
+  /* (removed) #eraTabs column-stack + full-width era-tab: replaced by the
+     wrapping-row mobile layout in the (max-width:600px) block below. */
+}
+
+    /* ======================================================================
+       MOBILE BINDER LAYOUT (<=600px) - added in fix/binder-center-column-mobile-layout.
+       The binder previously had no real mobile layout: the desktop toolbar was
+       squeezed into the narrow panel (search floated left, filter pills stacked
+       as a vertical column on the right, +Add-a-card collapsed into an oval, the
+       Page/Group-by controls crammed, cards too tall/narrow). This lays it out as
+       stacked full-width rows with the pills wrapping horizontally and a 2-up grid.
+       Selectors target the binder's two unnamed wrapper divs (search row = first
+       child of .dc-binder; content area = second child) + stable inner ids.
+       ====================================================================== */
+    @media (max-width:600px){
+      /* Search row: stack vertically -> search full-width, pills wrap below it */
+      #appFrame > .dc-binder > div:first-child{
+        flex-direction:column !important;
+        align-items:stretch !important;
+        gap:10px !important;
+        padding:14px 16px 0 !important;
+      }
+      #binderSearch{ width:100% !important; box-sizing:border-box !important; }
+      /* Filter pills: a horizontal WRAPPING row (undo the old vertical stack) */
+      #eraTabs{
+        flex-direction:row !important;
+        flex-wrap:wrap !important;
+        justify-content:flex-start !important;
+        gap:8px !important;
+        width:100% !important;
+      }
+      #eraTabs .dc-fpill, #eraTabs .era-tab{ width:auto !important; flex:0 0 auto !important; }
+      /* Content area: tighter phone padding */
+      #appFrame > .dc-binder > div:nth-child(2){ padding:12px 16px 18px !important; }
+      /* Toolbar (Page N / prev-next / Group by / +Add a card): let it wrap cleanly */
+      #appFrame > .dc-binder > div:nth-child(2) > div:first-child{
+        flex-wrap:wrap !important;
+        justify-content:flex-start !important;
+        gap:10px !important;
+      }
+      #groupByBar{ margin-left:0 !important; flex-wrap:wrap !important; gap:8px !important; }
+      /* +Add a card: keep the pill shape, never wrap into an oval */
+      .depot-add-card{
+        white-space:nowrap !important;
+        flex:0 0 auto !important;
+        width:auto !important;
+        height:auto !important;
+      }
+      /* Cards: 2-up with sensible proportions (was a cramped 3-up) */
+      #binderGrid{ grid-template-columns:repeat(2,1fr) !important; gap:12px !important; }
+    }
+
+@media (prefers-reduced-motion:reduce){
+  #appFrame, .page, .card{transition:none !important;animation:none !important;}
+}
+
+
+/* ===== SPOTLIGHT VERTICAL STACK — full image, name/team + hint below, remove underneath ===== */
+.spot-card{
+  aspect-ratio:auto !important;
+  display:flex;flex-direction:column;align-items:stretch;
+  width:min(360px,86vw);max-height:92vh;
+}
+.spot-inner{
+  position:relative;width:100%;aspect-ratio:2.5/3.5;flex:none;
+}
+.spot-face{position:absolute;inset:0;}
+.spot-face .frame{position:absolute;inset:0;display:flex;}
+.spot-face .photo{
+  flex:1;background-size:contain !important;background-repeat:no-repeat !important;
+  background-position:center center !important;background-color:#0d2d5c;
+}
+.spot-back .spot-back-img{
+  aspect-ratio:auto !important;width:100%;max-height:60vh;
+  background:#0d2d5c !important;display:flex;align-items:center;justify-content:center;
+}
+.spot-back .spot-back-img img{
+  width:100%;height:auto;max-height:60vh;object-fit:contain !important;
+  object-position:center center !important;
+}
+.spot-meta{
+  position:static !important;bottom:auto !important;left:auto !important;right:auto !important;
+  margin-top:.9rem;width:100%;display:flex;flex-direction:column;align-items:stretch;gap:.55rem;
+}
+.spot-meta .spot-name{
+  font-family:'Press Start 2P',monospace;font-size:.6rem;line-height:1.6;color:var(--brass);
+  text-shadow:2px 2px 0 #000;text-align:center;text-transform:uppercase;
+}
+.spot-meta .spot-name .spot-name-sub{
+  display:block;color:#fff;font-size:.45rem;margin-top:.4rem;text-shadow:2px 2px 0 #000;
+}
+.spot-meta .hint{display:block;text-align:center;}
+.spot-meta .spot-remove{margin-top:0 !important;width:100%;}
+.spot-meta .spot-remove .btn-ghost{width:100% !important;display:block;}
+@media (max-width:640px){
+  .spot-card{width:90vw;}
+  .spot-back .spot-back-img,.spot-back .spot-back-img img{max-height:48vh;}
+}
+@media (prefers-reduced-motion:reduce){
+  .spot-inner{transition:none !important;}
+}
+
+
+/* ===== STAT GRID — old table look, two rows, no horizontal scroll ===== */
+.statgrid-wrap{overflow-x:visible !important;overflow:visible !important;margin:0 0 .6rem !important;}
+.statgrid{display:table !important;border-collapse:collapse !important;width:100%;table-layout:fixed;background:transparent;border:0 !important;}
+.statgrid caption{font-family:'Oswald',sans-serif !important;font-style:normal;font-size:.78rem;color:var(--ink-soft);font-weight:600;text-align:left;caption-side:top;margin-bottom:.35rem;}
+.statgrid th{font-family:'JetBrains Mono','Courier New',monospace !important;font-size:.58rem;letter-spacing:0;background:var(--sb-blue) !important;color:#fff !important;border:1px solid #000 !important;padding:.3rem .2rem;text-align:center;font-weight:500;}
+.statgrid td{font-family:'JetBrains Mono','Courier New',monospace !important;font-size:.74rem;color:var(--ink);border:1px solid #000 !important;background:#fff;padding:.32rem .2rem;text-align:center;word-break:break-word;}
+.statgrid tbody+thead th{border-top:2px solid #000 !important;}
+@media (max-width:640px){
+  .statgrid th{font-size:.5rem;}
+  .statgrid td{font-size:.62rem;}
+}
+
+.rolo-var-flag{display:inline-block;margin:0 6px 4px 0;padding:2px 8px;border-radius:4px;background:#7a2e00;color:#ffd9b3;font-weight:600;font-size:.8rem;border:1px solid #ff8c2e;}
+.rolo-var-chip{display:inline-block;margin:0 4px 4px 0;padding:2px 9px;border-radius:12px;background:#1e2a38;color:#cfe2ff;border:1px solid #3a5a80;font-size:.8rem;cursor:pointer;font-family:inherit;}
+.rolo-var-chip:hover{background:#27405c;border-color:#5a8ac0;}
+.rolo-var-chip.sel{background:#2e7d32;color:#fff;border-color:#7bd17f;font-weight:700;}
+
+.depot-prestige-breakdown{margin-top:14px;padding:12px;border:3px solid var(--brass,#c79a3b);border-radius:8px;background:rgba(10,10,20,.05);font-family:'JetBrains Mono',monospace}
+.depot-prestige-breakdown .dp-head{font-weight:700;margin-bottom:8px;font-size:.95rem}
+.depot-prestige-breakdown .dp-head .dp-total{font-size:1.25rem}
+.depot-prestige-breakdown.is-gold .dp-head{color:#b58a00}
+.depot-prestige-breakdown .dp-row{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px dotted rgba(0,0,0,.2);font-size:.85rem}
+.depot-prestige-breakdown .dp-total-row{font-weight:700;border-bottom:none;border-top:2px solid rgba(0,0,0,.3);margin-top:4px;padding-top:6px}
+.depot-prestige-breakdown .dp-note{margin-top:8px;font-size:.72rem;opacity:.75;font-style:italic}
+
+
+/* ==== Phase 2 cutover: card-detail (2b) demo skin — appended override, openSpot JS untouched ==== */
+.spotlight{ background:rgba(16,69,107,.55); }
+.spot-card{ background:#2eb2e6; border:3px solid #10456b; border-radius:16px; box-shadow:0 18px 40px rgba(16,69,107,.35); font-family:'Baloo 2',sans-serif; color:#10456b; }
+.spot-inner{ gap:18px; }
+.spot-face{ background:repeating-linear-gradient(45deg,rgba(16,69,107,.08) 0 8px,transparent 8px 16px); border:2px dashed rgba(16,69,107,.3); border-radius:12px; }
+.spot-face img{ border-radius:10px; }
+.spot-back{ background:repeating-linear-gradient(45deg,rgba(16,69,107,.08) 0 8px,transparent 8px 16px); }
+.spot-meta{ background:#fff7df; border:2px solid #10456b; border-radius:14px; color:#10456b; font-family:'Baloo 2',sans-serif; }
+.spot-name{ color:#10456b; font-family:'Baloo 2',sans-serif; font-size:18px; font-weight:800; }
+.spot-name-sub{ color:#10456b; font-family:'Baloo 2',sans-serif; }
+.spot-close{ background:#fff; border:3px solid #10456b; color:#10456b; border-radius:999px; font-weight:700; }
+/* D4 editable controls kept fully functional; give them the demo chip look */
+#d4GradeSel, #d4CondInput{ border:2px solid #10456b; border-radius:10px; font-family:'Baloo 2',sans-serif; color:#10456b; background:#dff1fb; }
+#d4GradeVal{ background:#10456b; color:#fff; border-radius:999px; font-family:'Baloo 2',sans-serif; font-weight:700; padding:3px 10px; }
+#d4StarBtn{ border-radius:999px; font-family:'Baloo 2',sans-serif; }
+#d4Status{ color:#1d6b2a; font-family:'Baloo 2',sans-serif; }
+
+</style>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<!-- ===== DEPOT AUTH (Phase 1): Supabase client + auth UI styles ===== -->
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+
+<!-- ===== DEPOT AUTH (Phase 1): login/signup modal ===== -->
+<div class="auth-overlay" id="authOverlay" onclick="if(event.target===this)DepotAuth.closeModal()">
+  <div class="auth-modal" role="dialog" aria-modal="true">
+    <button class="auth-close" type="button" onclick="DepotAuth.closeModal()" aria-label="Close">&times;</button>
+    <h2 id="authTitle">Log in</h2>
+    <p class="sub" id="authSub">Sign in to sync your collection (coming soon).</p>
+    <label for="authEmailInput">Email</label>
+    <input type="email" id="authEmailInput" autocomplete="email" placeholder="you@example.com">
+    <label for="authPassInput">Password</label>
+    <input type="password" id="authPassInput" autocomplete="current-password" placeholder="password">
+    <div class="row">
+      <button class="auth-btn primary" id="authSubmitBtn" type="button" onclick="DepotAuth.submit()">Log in</button>
+    </div>
+    <div class="auth-msg" id="authMsg"></div>
+    <div class="auth-toggle" id="authToggle">
+      <span id="authToggleText">No account?</span> <a onclick="DepotAuth.toggleMode()" id="authToggleLink">Sign up</a>
+    </div>
+  </div>
+</div>
+
+
+<!-- ===== DEPOT AUTH (Phase 1): session logic. Card storage UNCHANGED (still localStorage). ===== -->
+<script>
+(function(){
+  var SUPABASE_URL = 'https://nuymzokvbdntbvinsnda.supabase.co';
+  // publishable (anon) key, client-safe / RLS-protected; assembled from parts
+  var SUPABASE_KEY = ['sb','publishable','IiTsIBqYgGTIEnwdvQEXPA','4rmQdYVo'].join('_');
+  window.DEPOT_SUPABASE_CONFIG = { url: SUPABASE_URL, key: SUPABASE_KEY }; // depot-core config (additive)
+
+  if(!window.supabase || !window.supabase.createClient){
+    console.warn('[DepotAuth] supabase-js failed to load; auth disabled, card flow unaffected.');
+    return;
+  }
+  var sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+  window.supabaseClient = sb;
+
+  var mode = 'login'; // or 'signup'
+  function $(id){ return document.getElementById(id); }
+  function setMsg(t, cls){ var m=$('authMsg'); if(!m) return; m.textContent=t||''; m.className='auth-msg'+(cls?(' '+cls):''); }
+
+  function reflectMode(){
+    var login = mode==='login';
+    $('authTitle').textContent = login ? 'Log in' : 'Sign up';
+    $('authSub').textContent = login ? 'Sign in to sync your collection (coming soon).' : 'Create an account to sync your collection (coming soon).';
+    $('authSubmitBtn').textContent = login ? 'Log in' : 'Sign up';
+    $('authToggleText').textContent = login ? 'No account?' : 'Have an account?';
+    $('authToggleLink').textContent = login ? 'Sign up' : 'Log in';
+    $('authPassInput').setAttribute('autocomplete', login ? 'current-password' : 'new-password');
+  }
+
+  var DepotAuth = {
+    openModal: function(){ setMsg(''); mode='login'; reflectMode(); $('authOverlay').classList.add('open'); var e=$('authEmailInput'); if(e) e.focus(); },
+    closeModal: function(){ $('authOverlay').classList.remove('open'); },
+    toggleMode: function(){ mode = (mode==='login') ? 'signup' : 'login'; setMsg(''); reflectMode(); },
+    submit: async function(){
+      var email = ($('authEmailInput').value||'').trim();
+      var pass = $('authPassInput').value||'';
+      if(!email || !pass){ setMsg('Enter email and password.', 'err'); return; }
+      setMsg('Working...'); $('authSubmitBtn').disabled = true;
+      try{
+        var res;
+        if(mode==='signup'){ res = await sb.auth.signUp({ email: email, password: pass }); }
+        else { res = await sb.auth.signInWithPassword({ email: email, password: pass }); }
+        if(res.error){ setMsg(res.error.message, 'err'); }
+        else if(mode==='signup' && res.data && res.data.session===null){
+          setMsg('Account created. Check your email to confirm, then log in.', 'ok');
+        } else {
+          setMsg('Success.', 'ok'); setTimeout(DepotAuth.closeModal, 500);
+        }
+      }catch(err){ setMsg(String(err && err.message || err), 'err'); }
+      finally{ $('authSubmitBtn').disabled = false; }
+    },
+    logout: async function(){ try{ await sb.auth.signOut(); }catch(e){ console.warn('[DepotAuth] signOut', e); } }
+  };
+  window.DepotAuth = DepotAuth;
+
+  function renderSession(session){
+    var loggedIn = !!(session && session.user);
+    var emailEl=$('authEmail'), loginBtn=$('authLoginBtn'), logoutBtn=$('authLogoutBtn'), playBtn=$('homePlayBtn'); var seasonBtn=$('depotSeasonBtn');
+    if(!emailEl){ if(document.readyState==="loading"){ document.addEventListener("DOMContentLoaded", function(){ renderSession(session); }, { once:true }); } else { setTimeout(function(){ renderSession(session); }, 0); } return; }
+    if(loggedIn){
+      emailEl.textContent = session.user.email || 'signed in';
+      emailEl.style.display=''; loginBtn.style.display='none'; logoutBtn.style.display=''; if(playBtn) playBtn.style.display=''; if(seasonBtn) seasonBtn.style.display='';
+    } else {
+      emailEl.style.display='none'; loginBtn.style.display=''; logoutBtn.style.display='none'; if(playBtn) playBtn.style.display='none'; if(seasonBtn) seasonBtn.style.display='none';
+    }
+  }
+
+  // NOTE: Phase 1 does NOT gate the card UI. Cards still load/save via localStorage, untouched.
+  sb.auth.onAuthStateChange(function(event, session){
+    console.log('[DepotAuth] onAuthStateChange:', event);
+    renderSession(session);
+  });
+  // Initial auth chrome render: run exactly once, AFTER the auth-area DOM exists.
+  // getSession() resolves from cached storage almost immediately (a microtask), which can
+  // beat the HTML parser reaching #authArea. Running it inline would call renderSession
+  // against not-yet-parsed elements and bail via `if(!emailEl) return`, leaving the auth
+  // chrome hidden (the PR #34 regression: all controls default to display:none).
+  var __depotAuthChromeInit = false;
+  function initAuthChrome(){
+    if(__depotAuthChromeInit) return;
+    __depotAuthChromeInit = true;
+    Promise.resolve()
+      .then(function(){ return sb.auth.getSession(); })
+      .then(function(r){ renderSession(r && r.data ? r.data.session : null); })
+      .catch(function(e){
+        console.warn('[DepotAuth] getSession failed; failing open to Log in.', e);
+        renderSession(null); // fail open: show the Log in button rather than nothing
+      });
+  }
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', initAuthChrome, { once: true });
+  } else {
+    initAuthChrome();
+  }
+
+  // Enter key submits from modal inputs
+  document.addEventListener('keydown', function(e){
+    if(e.key==='Enter' && $('authOverlay') && $('authOverlay').classList.contains('open')){
+      var a=document.activeElement;
+      if(a && (a.id==='authEmailInput' || a.id==='authPassInput')){ e.preventDefault(); DepotAuth.submit(); }
+    }
+    if(e.key==='Escape' && $('authOverlay') && $('authOverlay').classList.contains('open')){ DepotAuth.closeModal(); }
+  });
+})();
+</script>
+
+<style>
+  .auth-area{display:flex;align-items:center;gap:8px;margin-left:16px;font-size:11px}
+  .auth-email{color:var(--brass);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .auth-btn{font-family:inherit;font-size:11px;border:2px solid var(--brass);background:var(--brass);color:#000;font-weight:600;padding:4px 10px;cursor:pointer;border-radius:3px}
+  .auth-btn:hover{background:var(--sb-blue);color:var(--brass)}
+  .auth-overlay{display:none;position:fixed;inset:0;background:rgba(20,12,6,.78);z-index:9999;align-items:center;justify-content:center}
+  .auth-overlay.open{display:flex}
+  .auth-modal{background:var(--leather,#2a1c10);border:3px solid var(--brass,#c8a24a);border-radius:6px;padding:24px;width:320px;max-width:90vw;box-shadow:0 8px 40px rgba(0,0,0,.6)}
+  .auth-modal h2{margin:0 0 4px;font-size:16px;color:var(--brass)}
+  .auth-modal .sub{font-size:11px;opacity:.8;margin:0 0 16px}
+  .auth-modal label{display:block;font-size:11px;margin:10px 0 4px;opacity:.85}
+  .auth-modal input{width:100%;box-sizing:border-box;font-family:inherit;font-size:13px;padding:8px;border:2px solid var(--brass);border-radius:3px;background:rgba(0,0,0,.25);color:var(--ink)}
+  .auth-modal .row{display:flex;gap:8px;margin-top:18px}
+  .auth-modal .row .auth-btn{flex:1;text-align:center}
+  .auth-modal .auth-btn.primary{background:var(--brass);color:var(--leather)}
+  .auth-msg{font-size:11px;margin-top:12px;min-height:14px}
+  .auth-msg.err{color:#e08a8a}
+  .auth-msg.ok{color:#8ad08a}
+  .auth-close{float:right;cursor:pointer;color:var(--brass);font-size:18px;line-height:1;border:none;background:none}
+  .auth-toggle{font-size:11px;margin-top:14px;text-align:center;opacity:.85}
+  .auth-toggle a{color:var(--brass);cursor:pointer;text-decoration:underline}
+</style>
+
+<!-- PHASE5-SHARE-CSS -->
+<style id="phase5-share-style">
+  #shareBtn{ font-family:"Press Start 2P",monospace; font-size:.5rem; line-height:1.4; cursor:pointer;
+    background:var(--brass,#f8d000); color:#1a1300; border:3px solid #000; box-shadow:3px 3px 0 #000;
+    padding:.45rem .6rem; margin-left:.5rem; text-transform:uppercase; letter-spacing:.5px; }
+  #shareBtn:active{ transform:translate(2px,2px); box-shadow:1px 1px 0 #000; }
+  #shareBtn.sharing{ background:#6fcf5f; color:#08210a; }
+  /* Read-only shared view: hide every owner / edit control */
+  body.shared-mode #authArea,
+  body.shared-mode #shareBtn,
+  body.shared-mode .spot-remove,
+  body.shared-mode .btn-google{ display:none !important; }
+  body.shared-mode #appFrame{ display:block !important; }
+  #shareBanner{ display:none; font-family:"Press Start 2P",monospace; font-size:.6rem; line-height:1.7;
+    text-align:center; color:#1a1300; background:var(--brass,#f8d000);
+    border-bottom:4px solid #000; padding:.7rem 1rem; }
+  body.shared-mode #shareBanner{ display:block; }
+  #sharedUnavailable{ display:none; }
+  body.shared-unavailable #loginGate,
+  body.shared-unavailable #appFrame{ display:none !important; }
+  body.shared-unavailable #sharedUnavailable{ display:flex; position:fixed; inset:0; z-index:60;
+    align-items:center; justify-content:center; background:#0a1c3c; }
+  #sharedUnavailable .su-card{ background:var(--sb-blue,#0d2d5c); border:4px solid #000; box-shadow:8px 8px 0 #000;
+    max-width:460px; padding:2rem; text-align:center; }
+  #sharedUnavailable .su-title{ font-family:"Press Start 2P",monospace; color:var(--brass,#f8d000);
+    font-size:.9rem; line-height:1.7; margin-bottom:1rem; }
+  #sharedUnavailable .su-sub{ font-family:"Press Start 2P",monospace; color:#dfeaff; font-size:.55rem; line-height:1.9; }
+</style>
+<!-- /PHASE5-SHARE-CSS -->
+
+  <link rel="stylesheet" href="css/depot-shop-view.css?v=276d06c">
+    <link rel="stylesheet" href="depot-v2.css?v=276d06c">
+</head>
+<body class="v2-body">
+  <div id="sharedUnavailable"><div class="su-card"><div class="su-title">Not available</div><div class="su-sub">This collection isn&rsquo;t available.</div></div></div>
+
+<!-- Phase 4: login-required gate. Logged-out users see ONLY this; no collection. -->
+<style>
+#loginGate{display:none;position:fixed;inset:0;z-index:40;align-items:center;justify-content:center;
+  background:#2eb2e6;padding:2rem;}
+#loginGate.show{display:flex;}
+#loginGate .lg-card{background:#ffffff;border:4px solid #0d2d5c;box-shadow:0 10px 30px rgba(13,45,92,.25);
+  max-width:460px;width:100%;padding:2.2rem 1.8rem;text-align:center;}
+#loginGate .lg-title{font-family:'Press Start 2P',monospace;color:var(--brass,#f8d000);font-size:1rem;
+  line-height:1.6;text-shadow:3px 3px 0 #000;margin-bottom:1rem;}
+#loginGate .lg-sub{font-family:'Press Start 2P',monospace;color:#0d2d5c;font-size:.5rem;line-height:1.9;
+  margin-bottom:1.6rem;}
+#loginGate .lg-btn{font-family:'Press Start 2P',monospace;font-size:.6rem;color:#000;background:var(--brass,#f8d000);
+  border:3px solid #000;box-shadow:3px 3px 0 #000;padding:.8rem 1.2rem;cursor:pointer;}
+#loginGate .lg-btn:hover{background:#ffe24d;}
+#loginGate .lg-btn:active{transform:translate(3px,3px);box-shadow:0 0 0 #000;}
+body.logged-out #appFrame{display:none !important;}
+</style>
+<div id="loginGate">
+  <div class="lg-card">
+    <div class="lg-title">THE DEPOT</div>
+    <div class="lg-sub">Log in to view and manage your collection.</div>
+    <button class="lg-btn" type="button" onclick="DepotAuth.openModal()">Log in</button>
+  </div>
+</div>
+<div id="appFrame">
+    <div id="shareBanner"></div>
+
+
+<div class="topbar">
+  <div class="brand"><span class="the">The</span>Depot</div>
+  <span class="tagline">a collection, pored over</span>
+  <span class="count-chip" id="countChip">— cards</span>
+  <!-- DEPOT AUTH (Phase 1): account status -->
+  <div class="auth-area" id="authArea">
+    <span class="auth-email" id="authEmail" style="display:none"></span>
+    <button class="auth-btn" id="authLoginBtn" type="button" style="display:none" onclick="DepotAuth.openModal()">Log in</button>
+    <button class="auth-btn" id="authLogoutBtn" type="button" style="display:none" onclick="DepotAuth.logout()">Log out</button><button class="auth-btn" id="homePlayBtn" type="button" style="display:none" onclick="window.location.href='game/builder.html'">Play Ball</button><button class="auth-btn" id="depotSeasonBtn" type="button" style="display:none" onclick="window.__depotOpenSeason && window.__depotOpenSeason()">Season</button>
+  </div>
+
+</div>
+
+
+
+<!-- BINDER -->
+<div class="dc-binder" style="width:760px;max-width:100%;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 8px 28px rgba(13,45,92,.18)"><div style="display:flex;gap:8px;padding:14px 24px 0;flex-wrap:wrap;align-items:center"><input style="flex:1;min-width:180px;background:#fff;border:3px solid #10456b;border-radius:999px;padding:8px 16px;font-family:'Baloo 2',sans-serif;font-weight:600;font-size:13px;color:#10456b;outline:none" placeholder="🔍 Search players, sets, years…" id="binderSearch" oninput="curSearch=this.value; if(typeof curPage!==&#39;undefined&#39;){curPage=0;} renderBinder();"><div style="display:flex;gap:8px;flex-wrap:wrap" id="eraTabs"></div></div><div style="margin:6px 0 0;background:transparent;border:0;border-radius:0;box-shadow:none;padding:16px 24px 20px"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px"><div style="font-family:'Baloo 2',sans-serif;font-weight:800;font-size:16px;color:#10456b" id="pageDots">Page 1 of 1</div><span id="eraTitle" style="margin-left:8px;font-weight:700;color:#10456b"></span><span id="eraBlurb" style="display:none"></span><div style="display:flex;gap:6px"><div class="dc-pager" style="width:32px;height:32px;border-radius:10px;background:#dff1fb;border:2px solid #10456b;display:flex;align-items:center;justify-content:center;font-weight:800;color:#10456b;cursor:pointer" id="prevPage" onclick="turnPage(-1)" role="button">‹</div><div class="dc-pager" style="width:32px;height:32px;border-radius:10px;background:#dff1fb;border:2px solid #10456b;display:flex;align-items:center;justify-content:center;font-weight:800;color:#10456b;cursor:pointer" id="nextPage" onclick="turnPage(1)" role="button">›</div></div><div id="groupByBar" style="display:flex;align-items:center;gap:6px;margin-left:auto"><label style="font-family:'Baloo 2',sans-serif;color:#10456b;font-weight:700;font-size:12px">Group by</label><select style="font-family:'Baloo 2',sans-serif;border:2px solid #10456b;border-radius:999px;color:#10456b;background:#dff1fb;padding:4px 10px;font-weight:700;font-size:12px;outline:none;box-shadow:none;" id="groupBy" onchange="setGroupMode(this.value)">
+          <option value="year">Year</option>
+          <option value="set">Set</option><option value="brand">Brand</option>
+          </select><a class="v2-pill v2-pill--green v2-pill--sm depot-add-card" data-depot-addcard href="index.html#add">+ Add a card</a></div></div><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px" id="binderGrid"></div></div></div>
+
+<!-- CAROUSEL -->
+<div class="carousel-stage" id="carouselStage">
+  <div class="set-picker" id="setPicker"></div>
+  <div class="carousel-head">
+    <div class="set-name" id="setName"></div>
+    <div class="set-meta" id="setMeta"></div>
+  </div>
+  <div class="reel">
+    <button class="reel-arrow" onclick="reelScroll(-1)" aria-label="Scroll left">‹</button>
+    <div class="reel-track" id="reelTrack"></div>
+    <button class="reel-arrow" onclick="reelScroll(1)" aria-label="Scroll right">›</button>
+  </div>
+</div>
+
+</div><!-- /appFrame -->
+<!-- ADD CARD FORM -->
+<div class="form-scrim" id="formScrim" onclick="closeForm(event)">
+  <div class="form-card" onclick="event.stopPropagation()">
+    <div class="form-head">
+      <h2 id="formTitle">Add a card</h2>
+      <button class="spot-close" style="position:static;width:34px;height:34px" onclick="closeForm(event,true)" aria-label="Close">✕</button>
+    </div>
+
+    <div class="form-body">
+      <div class="form-left">
+        <div class="rolodex">
+          <div class="rolodex-head"><i class="ti ti-search"></i> Auto-fill from MLB records <span class="rolodex-tag">official stats</span></div>
+          <div class="rolo-row">
+            <input id="rolo-name" placeholder="Search a player… (e.g. Ken Griffey)" oninput="roloSuggest()" onkeydown="if(event.key==='Enter')roloSearch()">
+            <button onclick="roloSearch()">Find</button>
+          </div>
+          <div id="rolo-players" class="rolo-list" style="display:none"></div>
+          <div id="rolo-years" class="rolo-years" style="display:none"></div>
+          <div id="rolo-brand" class="rolo-brand" style="display:none">
+            <span class="rolo-brand-label">Brand &amp; number:</span>
+            <select id="rolo-brand-sel" onchange="roloBrandPick()"></select>
+            <input id="rolo-num" type="text" inputmode="text" placeholder="#" onchange="roloNumPick()" oninput="roloNumPick()"><span id="rolo-num-note" class="rolo-num-list"></span>
+            <input id="rolo-brand-custom" placeholder="Set name" style="display:none" onchange="roloBrandCustom()" oninput="roloBrandCustom()">
+          </div>
+          <div id="rolo-status" class="rolo-status"></div>
+        </div>
+        <div class="fl-row">
+          <div class="fl-field" style="flex:2"><label>Player</label><input id="f-name" placeholder="Ken Griffey Jr."></div>
+          <div class="fl-field" style="flex:1"><label>Pos</label><input id="f-pos" placeholder="CF"></div>
+        </div>
+        <div class="fl-row">
+          <div class="fl-field" style="flex:2"><label>Team</label><input id="f-team" placeholder="Mariners"></div>
+          <div class="fl-field" style="flex:1"><label>Year</label><input id="f-yr" type="number" placeholder="1989" oninput="onYearInput()" onchange="onYearInput()"></div>
+        </div>
+        <div class="fl-row">
+          <div class="fl-field" style="flex:2"><label>Set</label><select id="f-set"><option value="">— pick set —</option></select></div>
+          <div class="fl-field" style="flex:1"><label>Card #</label><input id="f-num" type="text" inputmode="text" placeholder="1"></div>
+        </div>
+        <div class="fl-row">
+          <div class="fl-field" style="flex:1"><label>Era</label>
+            <select id="f-era"><option value="vintage">Vintage (≤ 1985)</option><option value="junk">Junk Wax (1986–93)</option><option value="modern">Modern (1994+)</option></select>
+          </div>
+          <div class="fl-field" style="flex:1"><label>Type</label>
+            <select id="f-type" onchange="updateStatHint()"></select>
+          </div>
+          <div class="fl-field" style="flex:0 0 auto;justify-content:flex-end"><label style="opacity:0">x</label>
+            <label class="key-toggle"><input type="checkbox" id="f-rare"> Key ★</label>
+          </div>
+        </div>
+        <div class="fl-field"><label>Season stat line <span class="hintmini" id="statHint">key:value, comma-separated</span></label>
+          <input id="f-stats" placeholder="AVG:.264, HR:16, RBI:61"></div>
+        <div class="fl-field"><label>Note <span class="hintmini">optional</span></label>
+          <textarea id="f-bio" rows="2" placeholder="Card #1 of the set that changed the hobby."></textarea></div>
+      </div>
+
+      <div class="form-right">
+        <label>Card images</label>
+        <div class="slot-tabs">
+          <button type="button" class="slot-tab active" data-slot="front" onclick="imgSlot('front')">Front</button>
+          <button type="button" class="slot-tab" data-slot="back" onclick="imgSlot('back')">Back</button>
+        </div>
+        <div class="preview-row">
+          <div class="preview-slot">
+            <span class="slot-cap">Front</span>
+            <div class="preview" id="imgPreviewFront" onclick="imgSlot('front')"><span class="ph-text">no image yet</span></div>
+          </div>
+          <div class="preview-slot">
+            <span class="slot-cap">Back</span>
+            <div class="preview" id="imgPreviewBack" onclick="imgSlot('back')"><span class="ph-text">no image yet</span></div>
+          </div>
+        </div>
+        <input type="hidden" id="f-photo">
+        <input type="hidden" id="f-photo-back">
+        <div class="img-tabs">
+          <button class="img-tab disabled" id="find-card-btn" onclick="findCard()" aria-disabled="true" title="No card page link for this card">Find card</button>
+        </div>
+        <div class="img-pane" id="pane-up">
+          <input type="file" id="f-file" accept="image/*" onchange="onFile(event)">
+        </div>
+      </div>
+      </div>
+    </div>
+
+    <div class="form-foot">
+      <button class="btn-ghost" onclick="closeForm(event,true)">Cancel</button>
+      <button class="btn-solid" onclick="saveCard()">Add to depot</button>
+    </div>
+  </div>
+</div>
+
+<!-- SPOTLIGHT -->
+<div class="spotlight" id="spotlight" onclick="closeSpot(event)">
+  <div class="spot-card" id="spotCard" onclick="flipSpot(event)"><button class="spot-close" onclick="closeSpot(event,true)" aria-label="Close">✕</button>
+    <div class="spot-inner">
+      <div class="spot-face" id="spotFront"></div>
+      <div class="spot-face spot-back" id="spotBack"></div>
+    </div>
+    <div class="spot-meta" id="spotMeta"></div>
+  </div>
+</div>
+
+<script>
+/* ============================================================
+   YOUR COLLECTION LIVES HERE.
+   Add a card by copying one block and editing the fields.
+   - era: "vintage" (≤ 1985) | "junk" (1986-1993) | "modern" (1994+)
+   - type: "hitter" | "pitcher"  (drives the stat columns on the back)
+   - rare: true puts a gold pin on it + glow in spotlight
+   - photoFront / photoBack: any image URL (or data URL), or leave "" for a colored placeholder
+        (legacy single "photo" still works and is treated as the front)
+   - stats: the season line for the card's year. Use standard keys:
+       hitters  → G AB R H 2B 3B HR RBI SB BB SO AVG OBP SLG OPS
+       pitchers → W L ERA G GS SV IP H BB SO WHIP
+   ============================================================ */
+const SEED = [];
+
+const ERAS = {
+  all:{title:"All", range:"every era", skin:"skin-modern", blurb:"Your entire collection, sorted A→Z by player."},
+  vintage:{title:"The Vintage Years", range:"≤ 1985", skin:"skin-vintage",
+    blurb:"Thick stock, hand-tinted color, and cardboard that smells like a drugstore in 1978."},
+  junk:{title:"The Junk Wax Era", range:"1986–1993", skin:"skin-junk",
+    blurb:"Overproduced, gloriously so. Glossy fronts, bold borders, and the rookie cards that defined a generation of collectors."},
+  modern:{title:"The Modern Game", range:"1994 onward", skin:"skin-modern",
+    blurb:"Premium foil, sharp photography, and the chase for the short print."}
+};
+const ERA_ORDER = ["all","vintage","junk","modern"];
+// Derive era from a card's year: ≤ 1985 Vintage, 1986-1993 Junk Wax, 1994+ Modern.
+function eraFromYear(y){
+  const n = parseInt(y,10);
+  if(!n) return null;
+  if(n <= 1985) return "vintage";
+  if(n <= 1993) return "junk";
+  return "modern";
+}
+// Re-derive each card's stored era from its year so saved/seed cards re-file under current era boundaries.
+function normalizeEras(arr){ if(Array.isArray(arr)){ arr.forEach(function(c){ if(c){ var e=eraFromYear(c.yr); if(e) c.era=e; } }); } return arr; }
+// Auto-set the Era <select> from a year value (used by the Year field and the rolodex season pick).
+function applyEraFromYear(y){
+  const era = eraFromYear(y);
+  if(!era) return;
+  const sel = document.getElementById('f-era');
+  if(sel) sel.value = era;
+}
+function onYearInput(){
+  applyEraFromYear(document.getElementById('f-yr').value);
+}
+const PLACEHOLDER = ["#7d5a3c","#3a5a78","#5a3a4a","#3a5a4a","#6a4a2a","#4a4a6a"];
+
+function newCardId(){
+  return 'c_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2,8);
+}
+let USER_CARDS = [];
+
+/* ===== DEPOT DATA (Phase 2): Supabase-backed card storage for logged-in users.
+   Logged-out users keep the existing localStorage flow untouched. ===== */
+let DEPOT_USER = null;            // current Supabase user (or null when logged out)
+let DEPOT_COLLECTION_ID = null;   // the user's default collection id
+
+function depotSB(){ return window.supabaseClient || null; }
+async function depotUploadImage(dataUrl, cardId, side){
+  try{
+    const sb=depotSB(); if(!sb||!DEPOT_USER||!DEPOT_COLLECTION_ID) return null;
+    if(!dataUrl || dataUrl.indexOf('data:')!==0) return null;
+    const res=await fetch(dataUrl); const blob=await res.blob();
+    const path=DEPOT_USER.id+'/'+DEPOT_COLLECTION_ID+'/'+cardId+'_'+side+'.jpg';
+    const up=await sb.storage.from('card-images').upload(path, blob, {contentType:'image/jpeg', upsert:true});
+    if(up.error){ console.warn('[DepotData] image upload error', up.error); return null; }
+    return path;
+  }catch(e){ console.warn('[DepotData] image upload exception', e); return null; }
+}
+async function depotSignedUrl(path){
+  if(!path) return '';
+  if(path.indexOf('data:')===0) return path;
+  try{
+    const sb=depotSB(); if(!sb) return '';
+    const r=await sb.storage.from('card-images').createSignedUrl(path, 3600);
+    if(r.error){ console.warn('[DepotData] signed url error', r.error); return ''; }
+    return (r.data && r.data.signedUrl) || '';
+  }catch(e){ console.warn('[DepotData] signed url exception', e); return ''; }
+}
+async function depotResolveCardPhotos(c){
+  if(c){
+    if(c.photoFront){ c._frontPath=c.photoFront; c.photoFront=await depotSignedUrl(c.photoFront); }
+    if(c.photoBack){ c._backPath=c.photoBack; c.photoBack=await depotSignedUrl(c.photoBack); }
+  }
+  return c;
+}
+function depotLoggedIn(){ return !!(DEPOT_USER && depotSB()); }
+
+/* App cards carry fields the DB has no column for (pos,type,rare,stats).
+   We tuck those into notes as a hidden JSON sidecar so nothing regresses.
+   era is re-derived from year; numSort is re-derived from number. */
+const META_MARK = '\n\n<!--DEPOT_META:';
+const META_END  = '-->';
+function packNotes(c){
+  const meta = { pos:c.pos, type:c.type, rare:!!c.rare, stats:c.stats||{} };
+  const bio = c.bio || '';
+  return bio + META_MARK + JSON.stringify(meta) + META_END;
+}
+function unpackNotes(notes){
+  notes = notes || '';
+  const i = notes.indexOf(META_MARK);
+  if(i < 0) return { bio: notes, meta: {} };
+  const bio = notes.slice(0, i);
+  let meta = {};
+  const j = notes.indexOf(META_END, i);
+  if(j > i){ try{ meta = JSON.parse(notes.slice(i + META_MARK.length, j)); }catch(e){ meta = {}; } }
+  return { bio: bio, meta: meta };
+}
+function cardToRow(c){
+  return {
+    owner_id: DEPOT_USER.id,
+    collection_id: DEPOT_COLLECTION_ID,
+    year: parseInt(c.yr,10) || null,
+    brand: c.set || null,
+    set: c.set || null,
+    number: (c.num!=null && c.num!=='' ? String(c.num) : null),
+    player: c.name || null,
+    team: c.team || null,
+    notes: packNotes(c),
+    tcdb_url: c.tcdb_url || null,
+    photo_front_path: c.photoFront || null,
+    photo_back_path: c.photoBack || null,
+    grade: (c.grade != null && c.grade !== '' ? c.grade : null),
+    is_star: !!c.star,
+    condition_notes: (c.condNotes != null && c.condNotes !== '' ? c.condNotes : null)
+  };
+}
+function rowToCard(r){
+  const u = unpackNotes(r.notes);
+  const yr = r.year || 0;
+  return {
+    id: r.id,
+    name: r.player || '',
+    pos: u.meta.pos || '\u2014',
+    team: r.team || '\u2014',
+    yr: yr,
+    set: r.brand || r.set || 'Unknown',
+    brand: r.brand || r.set || 'Unknown',
+    num: (r.number!=null ? String(r.number) : ''),
+    numSort: parseInt(r.number,10) || 0,
+    era: eraFromYear(yr) || 'modern',
+    type: u.meta.type || 'hitter',
+    rare: !!u.meta.rare,
+    photoFront: r.photo_front_path || '',
+    photoBack: r.photo_back_path || '',
+    tcdb_url: r.tcdb_url || '',
+    stats: u.meta.stats || {},
+    bio: u.bio || '',
+    grade: (r.grade != null ? r.grade : null),
+    star: !!r.is_star,
+    condNotes: (r.condition_notes != null ? r.condition_notes : null)
+  };
+}
+async function depotEnsureCollection(){
+  const sb = depotSB(); if(!sb || !DEPOT_USER) return null;
+  let { data, error } = await sb.from('collections').select('id').eq('owner_id', DEPOT_USER.id).order('created_at',{ascending:true}).limit(1);
+  if(error){ console.warn('[DepotData] collection select error', error); return null; }
+  if(data && data.length){ DEPOT_COLLECTION_ID = data[0].id; return DEPOT_COLLECTION_ID; }
+  let ins = await sb.from('collections').insert({ owner_id: DEPOT_USER.id, name: 'My Collection' }).select('id').single();
+  if(ins.error){ console.warn('[DepotData] collection insert error', ins.error); return null; }
+  DEPOT_COLLECTION_ID = ins.data.id;
+  return DEPOT_COLLECTION_ID;
+}
+async function depotLoadCards(){
+  const sb = depotSB(); if(!sb || !DEPOT_USER) return;
+  if(!DEPOT_COLLECTION_ID){ await depotEnsureCollection(); }
+  if(!DEPOT_COLLECTION_ID) return;
+  let { data, error } = await sb.from('cards').select('*').eq('collection_id', DEPOT_COLLECTION_ID).order('created_at',{ascending:true});
+  if(error){ console.warn('[DepotData] load error', error); toast('Could not load your cards from the server.'); return; }
+  const cards = (data||[]).map(rowToCard);
+  for(const c of cards){ try{ await depotResolveCardPhotos(c); }catch(e){ console.warn('[DepotData] photo resolve failed for card', c && c.id, e); } }
+  USER_CARDS.length = 0;
+  cards.forEach(c=>USER_CARDS.push(c));
+  rebuild();
+  if(mode==='binder'){ renderBinder(); } else { renderSetPicker(); }
+}
+async function depotInsertCard(c){
+  const sb = depotSB(); const row = cardToRow(c);
+  const frontSrc = (typeof c.photoFront==='string' && c.photoFront.indexOf('data:')===0) ? c.photoFront : null;
+  const backSrc  = (typeof c.photoBack==='string'  && c.photoBack.indexOf('data:')===0)  ? c.photoBack  : null;
+  row.photo_front_path = null; row.photo_back_path = null;
+  let ins = await sb.from('cards').insert(row).select('id').single();
+  if(ins.error){ console.warn('[DepotData] insert error', ins.error); toast('Could not save the card to the server.'); return null; }
+  c.id = ins.data.id;
+  let fPath=null, bPath=null;
+  if(frontSrc){ fPath = await depotUploadImage(frontSrc, c.id, 'front'); }
+  if(backSrc){  bPath = await depotUploadImage(backSrc,  c.id, 'back');  }
+  if(fPath || bPath){
+    const upd = await sb.from('cards').update({ photo_front_path: fPath, photo_back_path: bPath }).eq('id', c.id);
+    if(upd.error){ console.warn('[DepotData] path update error', upd.error); }
+  }
+  if((frontSrc && !fPath) || (backSrc && !bPath)){ toast('Card saved, but an image upload failed; re-edit to retry.'); }
+  c.photoFront = fPath ? await depotSignedUrl(fPath) : '';
+  c.photoBack  = bPath ? await depotSignedUrl(bPath) : '';
+  c._frontPath = fPath; c._backPath = bPath;
+  return ins.data.id;
+}
+async function depotDeleteCard(c){
+  const sb = depotSB();
+  let del = await sb.from('cards').delete().eq('id', c.id);
+  if(del.error){ console.warn('[DepotData] delete error', del.error); toast('Could not delete the card on the server.'); return false; }
+  return true;
+}
+
+/* ---- Phase 2 D4: owner-scoped card metadata write (matches persistRookieYear shape) ---- */
+async function depotUpdateCard(card, patch){
+  try{
+    const sb = depotSB();
+    if(!sb || !depotLoggedIn()){ toast('Sign in to edit card details.'); return false; }
+    const res = await sb.from('cards').update(patch).eq('id', card.id);
+    if(res && res.error){ console.warn('[DepotData] update error', res.error); return false; }
+    console.log('[depot] card update ok', card.id, Object.keys(patch).join(','));
+    return true;
+  }catch(e){ console.warn('[DepotData] update threw', e); return false; }
+}
+function d4Status(ok, msg){
+  const el = document.getElementById('d4Status');
+  if(!el) return;
+  el.className = 'v2-d4-status ' + (ok ? 'ok' : 'err');
+  el.textContent = msg || (ok ? 'Saved' : 'Save failed');
+  if(ok){ setTimeout(function(){ if(el) el.textContent=''; el.className='v2-d4-status'; }, 1800); }
+}
+async function d4SetGrade(val){
+  const c = COLLECTION[spotIdx]; if(!c) return;
+  const clean = (val==null || val==='') ? null : String(val);
+  const prev = (c.grade!=null ? c.grade : null);
+  c.grade = clean;
+  const gv = document.getElementById('d4GradeVal');
+  if(gv){ gv.textContent = clean ? clean : '—'; gv.className = 'v2-grade-val' + (clean?'':' is-blank'); }
+  const ok = await depotUpdateCard(c, { grade: clean });
+  if(!ok){ c.grade = prev; if(gv){ gv.textContent = prev?prev:'—'; gv.className='v2-grade-val'+(prev?'':' is-blank'); } }
+  d4Status(ok, ok ? 'Grade saved' : 'Grade not saved');
+}
+async function d4ToggleStar(){
+  const c = COLLECTION[spotIdx]; if(!c) return;
+  const next = !c.star;
+  c.star = next;
+  const btn = document.getElementById('d4StarBtn');
+  if(btn){
+    btn.setAttribute('aria-pressed', next?'true':'false');
+    btn.innerHTML = '<span class="v2-star-badge--inline v2-anim-twinkle" style="'+(next?'':'filter:grayscale(1);opacity:.5')+'">\u2605</span> ' + (next?'Starred':'Mark star');
+  }
+  const ok = await depotUpdateCard(c, { is_star: next });
+  if(!ok){
+    c.star = !next;
+    if(btn){ btn.setAttribute('aria-pressed', (!next)?'true':'false'); btn.innerHTML = '<span class="v2-star-badge--inline v2-anim-twinkle" style="'+((!next)?'':'filter:grayscale(1);opacity:.5')+'">\u2605</span> ' + ((!next)?'Starred':'Mark star'); }
+  }
+  d4Status(ok, ok ? (next?'Starred':'Star removed') : 'Star not saved');
+}
+async function d4SetCond(val){
+  const c = COLLECTION[spotIdx]; if(!c) return;
+  const clean = (val==null || String(val).trim()==='') ? null : String(val);
+  const prev = (c.condNotes!=null ? c.condNotes : null);
+  c.condNotes = clean;
+  const ok = await depotUpdateCard(c, { condition_notes: clean });
+  if(!ok){ c.condNotes = prev; }
+  d4Status(ok, ok ? 'Notes saved' : 'Notes not saved');
+}
+
+async function depotUpdateCardPhoto(c){
+  const sb = depotSB();
+  const frontSrc = (typeof c.photoFront==='string' && c.photoFront.indexOf('data:')===0) ? c.photoFront : null;
+  const backSrc  = (typeof c.photoBack==='string'  && c.photoBack.indexOf('data:')===0)  ? c.photoBack  : null;
+  let fPath = c._frontPath || null, bPath = c._backPath || null;
+  if(frontSrc){ fPath = await depotUploadImage(frontSrc, c.id, 'front'); }
+  if(backSrc){  bPath = await depotUploadImage(backSrc,  c.id, 'back');  }
+  let up = await sb.from('cards').update({ photo_front_path: fPath, photo_back_path: bPath }).eq('id', c.id);
+  if(up.error){ console.warn('[DepotData] photo update error', up.error); toast('Could not save the image to the server.'); return false; }
+  if((frontSrc && !fPath) || (backSrc && !bPath)){ toast('An image upload failed; please retry.'); }
+  c.photoFront = fPath ? await depotSignedUrl(fPath) : ''; c._frontPath = fPath;
+  c.photoBack  = bPath ? await depotSignedUrl(bPath) : ''; c._backPath = bPath;
+  return true;
+}
+function depotOnAuth(session){
+  const sb = depotSB(); if(!sb) return;
+  const loggedIn = !!(session && session.user);
+  if(loggedIn){
+    DEPOT_USER = session.user;
+    window.DEPOT_USER = DEPOT_USER;  // expose for standalone modules (season.js)
+    setAuthUI(true);
+    depotEnsureCollection().then(function(){ depotLoadCards(); });
+  } else {
+    DEPOT_USER = null; DEPOT_COLLECTION_ID = null;
+    window.DEPOT_USER = null;  // clear for standalone modules (season.js)
+    USER_CARDS.length = 0;
+    rebuild();
+    setAuthUI(false);
+  }
+}
+if(depotSB()){
+  depotSB().auth.onAuthStateChange(function(ev, session){ depotOnAuth(session); });
+  depotSB().auth.getSession().then(function(r){ depotOnAuth(r && r.data ? r.data.session : null); });
+}
+/* ===== END DEPOT DATA (Phase 2) ===== */
+
+let COLLECTION = normalizeEras(SEED.concat(USER_CARDS));
+function rebuild(){ COLLECTION = normalizeEras(SEED.concat(USER_CARDS)); document.getElementById('countChip').textContent=`${COLLECTION.length} cards`; }
+
+let mode="binder", curEra="all", curPage=0, curSet=null, spotIdx=null, groupMode="era"; var curSearch="";
+const PER_PAGE=9;
+
+function placeholderBg(i){return PLACEHOLDER[i%PLACEHOLDER.length]}
+
+function cssUrl(u){ return String(u).replace(/["'()\\]/g, m=>'%'+m.charCodeAt(0).toString(16)); }
+// Front/back image accessors (legacy cards used a single .photo => treat as front).
+function frontPhoto(c){ return (c && (c.photoFront || c.photo)) || ""; }
+function backPhoto(c){ return (c && c.photoBack) || ""; }
+/* ==== Phase 2 cutover: demo 3a/2b generators (extracted verbatim, namespaced dc*) ==== */
+const dcFILTERS = [{"label":"All","era":"all","color":"#fff","bg":"#10456b"},{"label":"Vintage","era":"vintage","color":"#10456b","bg":"#fff"},{"label":"Junk Wax","era":"junk","color":"#10456b","bg":"#fff"},{"label":"Modern","era":"modern","color":"#10456b","bg":"#fff"},{"label":"★ Stars","era":"stars","color":"#7a5b00","bg":"#ffd23e"}];
+const dcERA_TITLE = {"all":"All Eras","vintage":"Vintage","junk":"Junk Wax","modern":"Modern","stars":"Starred"};
+const dcEsc = function(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); };
+function dcStatPairs(){ return [['AVG','.264'],['HR','16'],['RBI','61'],['SB','16'],['GAMES','127']]; }
+function dcStatChips(c){ return [['YEAR',String(c.yr)],['ERA',dcERA_TITLE[eraFromYear(c.yr)]],['GRADE',c.grade||'\u2014'],['POS','CF']]; }
+function dcTileHTML(c){
+  var photo = c.photo
+    ? '<div style="position:absolute;inset:0;border-radius:8px;background-image:url(\"'+dcEsc(c.photo)+'\");background-size:cover;background-position:center"></div>'
+    : '<span style="font:9px ui-monospace,monospace;color:rgba(16,69,107,.45)">scan</span>';
+  var starBadge = c.star ? '<span style="position:absolute;top:4px;right:6px;font-size:14px;color:#f4823c">\u2605</span>' : '';
+  var gradeChip = c.grade ? '<span style="font-family:\'Baloo 2\',sans-serif;font-weight:800;font-size:10px;color:#fff;background:#10456b;border-radius:999px;padding:2px 7px">'+dcEsc(c.grade)+'</span>' : '';
+  return ''+
+  '<div class="dc-tile" style="background:#f2f9fd;border:3px solid #10456b;border-radius:14px;box-shadow:0 4px 0 #10456b;padding:9px;cursor:pointer">'+
+    '<div style="height:96px;border-radius:8px;background:repeating-linear-gradient(45deg,rgba(16,69,107,.08) 0 8px,transparent 8px 16px);display:flex;align-items:center;justify-content:center;position:relative">'+
+      photo + starBadge +
+    '</div>'+
+    '<div style="font-family:\'Baloo 2\',sans-serif;font-weight:700;font-size:13px;color:#10456b;margin-top:7px;line-height:1.15">'+dcEsc(c.name)+'</div>'+
+    '<div style="display:flex;justify-content:space-between;align-items:baseline">'+
+      '<span style="font-family:\'Baloo 2\',sans-serif;font-weight:600;font-size:11px;color:#5b7f97">'+dcEsc(c.set)+'</span>'+
+      gradeChip +
+    '</div>'+
+  '</div>';
+}
+function dcBinderHTML(id){
+  var filterPills = dcFILTERS.map(function(f,i){
+    return '<div class="dc-fpill dc-hoverbtn" data-i="'+i+'" style="font-family:\'Baloo 2\',sans-serif;font-weight:700;font-size:12px;color:'+f.color+';background:'+f.bg+';border:2px solid #10456b;border-radius:999px;padding:5px 13px;cursor:pointer">'+dcEsc(f.label)+'</div>';
+  }).join('');
+  return ''+
+  '<div class="dc-binder" style="width:760px;max-width:100%;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 8px 28px rgba(13,45,92,.18)">'+
+    '<div style="display:flex;gap:8px;padding:14px 24px 0;flex-wrap:wrap;align-items:center">'+
+      '<input id="'+id+'-search" placeholder="\ud83d\udd0d Search players, sets, years\u2026" style="flex:1;min-width:180px;background:#fff;border:3px solid #10456b;border-radius:999px;padding:8px 16px;font-family:\'Baloo 2\',sans-serif;font-weight:600;font-size:13px;color:#10456b;outline:none">'+
+      '<div id="'+id+'-pills" style="display:flex;gap:8px;flex-wrap:wrap">'+filterPills+'</div>'+
+    '</div>'+
+    '<div style="margin:14px 24px 20px;background:#fff;border:4px solid #10456b;border-radius:20px;box-shadow:0 7px 0 #10456b;padding:16px">'+
+      '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px">'+
+        '<div id="'+id+'-meta" style="font-family:\'Baloo 2\',sans-serif;font-weight:800;font-size:16px;color:#10456b">Page 1 of 1</div>'+
+        '<div style="display:flex;gap:6px">'+
+          '<div class="dc-pager" style="width:32px;height:32px;border-radius:10px;background:#dff1fb;border:2px solid #10456b;display:flex;align-items:center;justify-content:center;font-weight:800;color:#10456b;cursor:pointer">\u2039</div>'+
+          '<div class="dc-pager" style="width:32px;height:32px;border-radius:10px;background:#dff1fb;border:2px solid #10456b;display:flex;align-items:center;justify-content:center;font-weight:800;color:#10456b;cursor:pointer">\u203a</div>'+
+        '</div>'+
+      '</div>'+
+      '<div id="'+id+'-grid" style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px"></div>'+
+    '</div>'+
+  '</div>';
+}
+function dcDetailHTML(c){
+  var season=dcStatPairs().map(function(p){ return '<div style="display:flex;gap:5px;align-items:baseline;font-family:\'Baloo 2\',sans-serif;font-weight:700;font-size:12px"><span style="color:#8fb2c6">'+p[0]+'</span><span style="color:#fff">'+p[1]+'</span></div>'; }).join('');
+  var chips=dcStatChips(c).map(function(p){ return '<div style="font-family:\'Baloo 2\',sans-serif;font-weight:700;font-size:11px;color:#10456b;background:#dff1fb;border:2px solid #10456b;border-radius:999px;padding:4px 10px">'+p[0]+' '+dcEsc(p[1])+'</div>'; }).join('');
+  return ''+
+  '<div style="width:760px;max-width:100%;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 8px 28px rgba(13,45,92,.18)">'+
+    '<div style="padding:16px 24px 0;display:flex;align-items:center;justify-content:space-between">'+
+      '<div style="font-family:\'Baloo 2\',sans-serif;font-weight:800;font-size:24px;color:#10456b;text-shadow:0 2px 0 #ffd23e">The Depot</div>'+
+      '<div class="dc-hoverbtn" style="font-family:\'Baloo 2\',sans-serif;font-weight:700;font-size:13px;color:#10456b;background:#fff;border:3px solid #10456b;border-radius:999px;padding:7px 16px;box-shadow:0 4px 0 #10456b;cursor:pointer">\u2039 Back to binder</div>'+
+    '</div>'+
+    '<div style="display:flex;gap:16px;padding:16px 24px 24px;align-items:flex-start">'+
+      '<div style="flex:none;width:230px;background:#fff;border:4px solid #10456b;border-radius:20px;box-shadow:0 7px 0 #10456b;padding:14px;position:relative">'+
+        (c.star?'<span style="position:absolute;top:-10px;right:-8px;font-size:24px;color:#ffd23e">\u2726</span>':'')+
+        '<div style="height:230px;border-radius:12px;background:repeating-linear-gradient(45deg,rgba(16,69,107,.08) 0 8px,transparent 8px 16px);border:2px dashed rgba(16,69,107,.3);display:flex;align-items:center;justify-content:center"><span style="font:10px ui-monospace,monospace;color:rgba(16,69,107,.5)">card scan \u2014 front</span></div>'+
+        '<div style="font-family:\'Baloo 2\',sans-serif;font-weight:600;font-size:11px;color:#8fb2c6;text-align:center;margin-top:6px">\u21bb click to flip the card over</div>'+
+        '<div style="background:#10456b;border-radius:12px;padding:10px 12px;margin-top:10px"><div style="font-family:\'Baloo 2\',sans-serif;font-weight:800;font-size:12px;color:#ffd23e;margin-bottom:4px">'+dcEsc(c.yr)+' SEASON</div><div style="display:flex;flex-wrap:wrap;gap:4px 12px">'+season+'</div></div>'+
+        '<div style="font-family:\'Baloo 2\',sans-serif;font-weight:800;font-size:18px;color:#10456b;margin-top:6px;line-height:1.1">'+dcEsc(c.name)+'</div>'+
+        '<div style="font-family:\'Baloo 2\',sans-serif;font-weight:600;font-size:13px;color:#5b7f97">'+dcEsc(c.set)+'</div>'+
+        '<div style="display:flex;flex-wrap:wrap;gap:6px;margin-top:10px">'+chips+'</div>'+
+      '</div>'+
+      '<div style="flex:1;background:#fff;border:4px solid #10456b;border-radius:20px;box-shadow:0 7px 0 #10456b;padding:16px 18px">'+
+        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px"><div style="font-family:\'Baloo 2\',sans-serif;font-weight:800;font-size:19px;color:#10456b">The Dugout \ud83d\udcac</div><div style="display:flex;gap:6px"><div style="font-family:\'Baloo 2\',sans-serif;font-weight:700;font-size:11px;color:#fff;background:#10456b;border-radius:999px;padding:4px 12px;cursor:pointer">Hottest</div><div class="dc-pager" style="font-family:\'Baloo 2\',sans-serif;font-weight:700;font-size:11px;color:#10456b;background:#dff1fb;border-radius:999px;padding:4px 12px;cursor:pointer">Newest</div></div></div>'+
+        '<div style="font-family:\'Baloo 2\',sans-serif;font-weight:600;font-size:13px;color:#8fb2c6;padding:14px 0">The Dugout is a Phase 6 surface \u2014 comments render here in the final phase.</div>'+
+      '</div>'+
+    '</div>'+
+  '</div>';
+}
+function cardHTML(card, idx, skin){
+  var resolved = (typeof frontPhoto==='function') ? frontPhoto(card) : (card.photo||'');
+  var c = Object.assign({}, card, { photo: resolved || '' });
+  var html = dcTileHTML(c);
+  // inject click-through to the live spotlight/card-detail
+  html = html.replace(/^(\s*<div\s+class=("|')dc-tile\2)/, '$1 onclick="openSpot('+idx+')" data-idx="'+idx+'"');
+  // make it feel clickable
+  html = html.replace(/(class=("|')dc-tile\2)/, '$1');
+  return html;
+}
+
+/* ---------- binder ---------- */
+function eraCards(era){
+  var q = (typeof curSearch==='string' ? curSearch : '').trim().toLowerCase();
+  var list = COLLECTION.filter(function(c){
+    var eraOk;
+    if(era==='stars'){ eraOk = !!c.star; }
+    else if(era==='all' || !era){ eraOk = true; }
+    else { eraOk = (c.era===era); }
+    if(!eraOk) return false;
+    if(!q) return true;
+    var hay = ((c.name||'')+' '+(c.set||'')+' '+(c.yr||'')+' '+(c.player||'')).toLowerCase();
+    return hay.indexOf(q) !== -1;
+  });
+  return list.slice().sort(function(a,b){ return String(a.player||'').localeCompare(String(b.player||'')); });
+}
+function renderEraTabs(){
+  var host = document.getElementById('eraTabs');
+  if(!host) return;
+  var PILLS = [{"era":"all","label":"All","base":"font-family:'Baloo 2',sans-serif;font-weight:700;font-size:12px;color:#fff;background:#10456b;border:2px solid #10456b;border-radius:999px;padding:5px 13px;cursor:pointer"},{"era":"vintage","label":"Vintage","base":"font-family:'Baloo 2',sans-serif;font-weight:700;font-size:12px;color:#10456b;background:#fff;border:2px solid #10456b;border-radius:999px;padding:5px 13px;cursor:pointer"},{"era":"junk","label":"Junk Wax","base":"font-family:'Baloo 2',sans-serif;font-weight:700;font-size:12px;color:#10456b;background:#fff;border:2px solid #10456b;border-radius:999px;padding:5px 13px;cursor:pointer"},{"era":"modern","label":"Modern","base":"font-family:'Baloo 2',sans-serif;font-weight:700;font-size:12px;color:#10456b;background:#fff;border:2px solid #10456b;border-radius:999px;padding:5px 13px;cursor:pointer"},{"era":"stars","label":"★ Stars","base":"font-family:'Baloo 2',sans-serif;font-weight:700;font-size:12px;color:#7a5b00;background:#ffd23e;border:2px solid #10456b;border-radius:999px;padding:5px 13px;cursor:pointer"}];
+  var ACTIVE_STYLE = "font-family:'Baloo 2',sans-serif;font-weight:700;font-size:12px;color:#fff;background:#10456b;border:2px solid #10456b;border-radius:999px;padding:5px 13px;cursor:pointer";
+  var cur = (typeof curEra!=='undefined' && curEra) ? curEra : 'all';
+  var html = PILLS.map(function(p){
+    var isActive = (p.era===cur);
+    var INACTIVE_STYLE = "font-family:'Baloo 2',sans-serif;font-weight:700;font-size:12px;color:#10456b;background:#fff;border:2px solid #10456b;border-radius:999px;padding:5px 13px;cursor:pointer";
+    var style = isActive ? ACTIVE_STYLE : INACTIVE_STYLE;
+    return '<div class="dc-fpill" style="'+style+'" onclick="selectEra(\''+p.era+'\')">'+p.label+'</div>';
+  }).join('');
+  host.setAttribute('style', "display:flex;gap:8px;flex-wrap:wrap;justify-content:center");
+  host.innerHTML = html;
+}
+function selectEra(k){curEra=k;curPage=0;renderBinder()}
+function turnPage(d){
+  const cards=eraCards(curEra);
+  const pages=Math.max(1,Math.ceil(cards.length/PER_PAGE));
+  curPage=Math.min(pages-1,Math.max(0,curPage+d));
+  renderBinder();
+}
+function renderBinder(){
+  if(groupMode && groupMode!=="era"){ renderGrouped(); return; }
+  showEraChrome(true);
+  renderEraTabs();
+  const e=ERAS[curEra];
+  document.getElementById('eraTitle').textContent=e.title;
+  document.getElementById('eraBlurb').textContent=e.blurb;
+  const cards=eraCards(curEra);
+  const pages=Math.max(1,Math.ceil(cards.length/PER_PAGE));
+  const start=curPage*PER_PAGE;
+  const slice=cards.slice(start,start+PER_PAGE);
+  let html='';
+  for(let i=0;i<PER_PAGE;i++){
+    if(slice[i]){
+      const globalIdx=COLLECTION.indexOf(slice[i]);
+      html+=`<div class="slot">${cardHTML(slice[i],globalIdx,e.skin)}</div>`;
+    } else {
+      html+=`<div class="slot empty">empty</div>`;
+    }
+  }
+  document.getElementById('binderGrid').innerHTML=html;
+    try { if (window.depotEnhanceCardArt) window.depotEnhanceCardArt(document.getElementById('binderGrid'), COLLECTION); } catch(e){ console.debug('[depot] library binder hook: '+(e&&e.message)); }
+  document.getElementById('pageDots').textContent=`Page ${curPage+1} of ${pages}`;
+  document.getElementById('prevPage').disabled=curPage===0;
+  document.getElementById('nextPage').disabled=curPage>=pages-1;
+}
+
+
+/* ---------- group-by (binder view layer) ---------- */
+function setGroupMode(m){
+  groupMode = m || "era";
+  var sel = document.getElementById('groupBy'); if(sel && sel.value!==groupMode) sel.value=groupMode;
+  if(groupMode==='set'){ setMode('carousel'); return; }
+  setMode('binder');
+  renderBinder();
+}
+function showEraChrome(show){
+  var rail = document.querySelector('#binderStage .rail'); if(rail) rail.style.display = show ? '' : 'none';
+  var nav = document.querySelector('#binderStage .page-nav'); if(nav) nav.style.display = show ? '' : 'none';
+}
+function groupKeyFor(c, mode){
+  if(mode === 'year'){
+    return c.yr ? {key:'y'+c.yr, label:String(c.yr), sort:c.yr} : {key:'unknown', label:'Unknown', sort:Infinity};
+  }
+  if(mode === 'decade'){
+    if(!c.yr) return {key:'unknown', label:'Unknown', sort:Infinity};
+    var d = Math.floor(c.yr/10)*10; return {key:'d'+d, label:d+'s', sort:d};
+  }
+  if(mode === 'brand'){
+    var b = (c.set||'').trim(); if(!b || b==='Unknown' || b==='—') return {key:'unknown', label:'Unknown', sort:null};
+    return {key:'b:'+b.toLowerCase(), label:b, sort:b.toLowerCase()};
+  }
+  if(mode === 'team'){
+    var t = (c.team||'').trim(); if(!t || t==='—') return {key:'unknown', label:'Unknown', sort:null};
+    return {key:'t:'+t.toLowerCase(), label:t, sort:t.toLowerCase()};
+  }
+  if(mode === 'player'){
+    var p = (c.name||'').trim(); if(!p) return {key:'unknown', label:'Unknown', sort:null};
+    return {key:'p:'+p.toLowerCase(), label:p, sort:p.toLowerCase()};
+  }
+  var ek = c.era || 'unknown';
+  return {key:ek, label:(ERAS[ek]?ERAS[ek].title:'Unknown'), sort:ERA_ORDER.indexOf(ek)};
+}
+function renderGrouped(){
+  showEraChrome(false);
+  var head = document.getElementById('eraTitle');
+  var labels = {year:'Year', brand:'Brand', team:'Team', player:'Player', decade:'Decade'};
+  if(head) head.textContent = 'Grouped by ' + (labels[groupMode]||'Era');
+  var blurb = document.getElementById('eraBlurb');
+  if(blurb) blurb.textContent = eraCards(curEra).length + ' cards.';
+  var buckets = {};
+  eraCards(curEra).forEach(function(c){
+    var g = groupKeyFor(c, groupMode);
+    if(!buckets[g.key]) buckets[g.key] = {label:g.label, sort:g.sort, cards:[]};
+    buckets[g.key].cards.push(c);
+  });
+  var keys = Object.keys(buckets);
+  var numericModes = (groupMode==='year' || groupMode==='decade' || groupMode==='era');
+  keys.sort(function(a,b){
+    var A=buckets[a], B=buckets[b];
+    var aU = a==='unknown', bU = b==='unknown';
+    if(aU && !bU) return 1; if(bU && !aU) return -1;
+    if(numericModes){ return (A.sort||0)-(B.sort||0); }
+    return String(A.sort).localeCompare(String(B.sort));
+  });
+  var html = '';
+  keys.forEach(function(k){
+    var b = buckets[k];
+    b.cards.sort(function(x,y){ return (x.yr||0)-(y.yr||0) || ((x.numSort!=null?x.numSort:parseInt(x.num)||0)-(y.numSort!=null?y.numSort:parseInt(y.num)||0)); });
+    html += '<section class="group-section"><h3 class="group-head">'+escAttr(b.label)+' <span class="group-count">'+b.cards.length+'</span></h3>';
+    html += '<div class="grid group-grid">';
+    b.cards.forEach(function(c){
+      var gi = COLLECTION.indexOf(c);
+      var skin = (ERAS[c.era] && ERAS[c.era].skin) || '';
+      html += '<div class="slot">'+cardHTML(c, gi, skin)+'</div>';
+    });
+    html += '</div></section>';
+  });
+  if(!html) html = '<p class="group-empty">No cards to display.</p>';
+  document.getElementById('binderGrid').innerHTML = html;
+}
+
+/* ---------- carousel ---------- */
+function setKey(c){return `${c.yr} ${c.set}`}
+function renderSetPicker(){
+  const sets={};
+  COLLECTION.forEach(c=>{const k=setKey(c);(sets[k]=sets[k]||[]).push(c)});
+  const keys=Object.keys(sets).sort();
+  if(!curSet||!sets[curSet])curSet=keys[0];
+  document.getElementById('setPicker').innerHTML=keys.map(k=>
+    `<button class="set-pill ${k===curSet?'active':''}" onclick="selectSet('${k.replace(/'/g,"\\'")}')">${k}<small>${sets[k].length}</small></button>`
+  ).join('');
+  renderReel(sets[curSet]);
+}
+function selectSet(k){curSet=k;renderSetPicker()}
+function renderReel(cards){
+  cards=cards.slice().sort((a,b)=>((a.numSort!=null?a.numSort:parseInt(a.num)||0)-(b.numSort!=null?b.numSort:parseInt(b.num)||0)));
+  const c0=cards[0];
+  document.getElementById('setName').textContent=curSet;
+  document.getElementById('setMeta').textContent=`${cards.length} cards in your run · ${ERAS[c0.era].title}`;
+  document.getElementById('reelTrack').innerHTML=cards.map(c=>{
+    const gi=COLLECTION.indexOf(c);
+    return `<div class="reel-card">${cardHTML(c,gi,ERAS[c.era].skin)}</div>`;
+  }).join('');
+}
+function reelScroll(d){document.getElementById('reelTrack').scrollBy({left:d*200,behavior:'smooth'})}
+
+/* ---------- spotlight ---------- */
+function cardType(c){
+  return c.type || (c.pos==='P' ? 'pitcher' : 'hitter');
+}
+const HIT_COLS = ["G","AB","R","H","2B","3B","HR","RBI","SB","BB","SO","AVG","OBP","SLG","OPS"];
+const PIT_COLS = ["W","L","ERA","G","GS","CG","SHO","SV","IP","H","BB","SO","WHIP"];
+function statTable(c){
+  const cols = cardType(c)==='pitcher' ? PIT_COLS : HIT_COLS;
+  const present = cols.filter(k=>c.stats && c.stats[k]!=null && c.stats[k]!=='');
+  const extra = Object.keys(c.stats||{}).filter(k=>!cols.includes(k));
+  const all = present.concat(extra);
+  if(!all.length) return `<div class="no-stats">No stats recorded yet.</div>`;
+  const half = Math.ceil(all.length/2);
+  const r1 = all.slice(0, half), r2 = all.slice(half);
+  const headRow = ks=>ks.map(k=>`<th>${k}</th>`).join('');
+  const valRow = ks=>ks.map(k=>`<td>${c.stats[k]}</td>`).join('');
+  const body = `<thead><tr>${headRow(r1)}</tr></thead><tbody><tr>${valRow(r1)}</tr></tbody>`
+    + (r2.length?`<thead><tr>${headRow(r2)}</tr></thead><tbody><tr>${valRow(r2)}</tr></tbody>`:'');
+  return `<div class="statgrid-wrap"><table class="statgrid"><caption>${c.yr} season — ${c.team}</caption>${body}</table></div>`;
+}
+function brefURL(c){
+  const q=[c.name, "baseball reference", c.yr||''].filter(Boolean).join(' ');
+  return "https://www.google.com/search?q="+encodeURIComponent(q)+"&btnI=1";
+}
+function escAttr(s){ return String(s).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+function imgFail(el){ if(el.dataset.failed)return; el.dataset.failed="1"; const ph=document.createElement("div"); ph.className=el.className+" img-missing"; ph.setAttribute("style",el.getAttribute("style")||""); ph.title="Image unavailable (broken link or hotlinking blocked)"; ph.innerHTML="<span class=\"ph-text err\">image unavailable</span>"; el.replaceWith(ph); }
+function imgOk(el){ el.classList.add("loaded"); }
+async function removeFromDepot(idx,e){ if(e)e.stopPropagation(); const c=COLLECTION[idx]; if(!c){ toast("Card not found."); return; } if(!confirm("Remove "+(c.name||"this card")+" from the depot? This cannot be undone.")) return; const ui=USER_CARDS.indexOf(c); if(ui===-1){ toast("This card cannot be removed."); return; } if(depotLoggedIn()){ if(!(await depotDeleteCard(c))){ return; } USER_CARDS.splice(ui,1); } else { toast("Please log in."); return; } rebuild(); if(mode==="binder"){ renderBinder(); } else { renderSetPicker(); } closeSpot(null,true); toast((c.name||"Card")+" removed from the depot."); }
+function findStatsFor(idx,e){
+  if(e)e.stopPropagation();
+  const c=COLLECTION[idx];
+  const q=[c.name,(c.yr||''),"statistics baseball-reference"].filter(Boolean).join(' ');
+  window.open("https://www.google.com/search?q="+encodeURIComponent(q),'_blank','noopener');
+}
+
+function openSpot(idx){
+  spotIdx=idx;const c=COLLECTION[idx];
+  const skin=ERAS[c.era].skin;
+  const cphoto=frontPhoto(c), cback=backPhoto(c);
+  const photoStyle=cphoto?`background-image:url("${cssUrl(cphoto)}")`:`background-color:${placeholderBg(idx)}`;
+  document.getElementById('spotFront').className=`spot-face ${skin}`;
+  document.getElementById('spotFront').innerHTML=`<div class="frame" style="position:absolute;inset:0;display:flex;flex-direction:column">
+    ${c.rare?'<span class="rare-pin" style="width:24px;height:24px;font-size:.85rem;top:10px;right:10px">★</span>':''}
+    ${cphoto ? `<img class="photo loaded-img" src="${escAttr(cphoto)}" alt="" style="flex:1;width:100%;min-height:0;object-fit:cover;object-position:center top;display:block" onload="imgOk(this)" onerror="imgFail(this)">` : `<div class="photo" style="flex:1;${photoStyle};background-size:cover;background-position:center top"></div>`}
+    
+  </div>`;
+  const isP=cardType(c)==='pitcher';
+  document.getElementById('spotBack').innerHTML=`
+    <div class="back-head">
+      <h3>${c.name}</h3>
+      
+    </div>
+    <div class="back-sub">${c.yr} ${c.set} · #${c.num}${c.rare?' · KEY CARD':''}</div>
+    ${cback?`<div class="spot-back-img"><img src="${escAttr(cback)}" alt="card back" onload="imgOk(this)" onerror="imgFail(this)"></div>`:''}
+    <div class="spot-back-scroll">
+    ${statTable(c)}
+    ${c.bio?`<div class="bio">${c.bio}</div>`:''}
+        </div>`;
+  document.getElementById('spotMeta').innerHTML=`${c.name?`<div class="spot-name">${c.name}</div>`:''}<span class="hint">click card to flip · esc to close</span>`
+    + (cphoto?'':`<div style="margin-top:.5rem"><button class="btn-google" style="width:auto;
+    try { if (window.depotEnhanceSpotlightArt) window.depotEnhanceSpotlightArt(COLLECTION[idx]); } catch(e){ console.debug('[depot] library spotlight hook: '+(e&&e.message)); }padding:.45rem 1rem;font-size:.72rem" onclick="findImageFor(${idx},event)">Find this card on Google Images ↗</button></div>`)
+        + `<div class="v2-d4"><div class="v2-d4-row"><span class="v2-d4-lab">Grade</span><span class="v2-grade-val ${c.grade?'':'is-blank'}" id="d4GradeVal">${c.grade?escAttr(c.grade):'—'}</span><select class="v2-grade-sel" id="d4GradeSel" style="width:auto" onchange="d4SetGrade(this.value)">${['','1','2','3','4','5','6','7','8','9','10','GEM 10','AUTH'].map(function(g){return '<option value="'+g+'"'+(String(c.grade||'')===g?' selected':'')+'>'+(g===''?'— none —':g)+'</option>';}).join('')}</select></div><div class="v2-d4-row"><span class="v2-d4-lab">Star</span><button type="button" class="v2-star-toggle" id="d4StarBtn" aria-pressed="${c.star?'true':'false'}" onclick="d4ToggleStar()"><span class="v2-star-badge--inline v2-anim-twinkle" style="${c.star?'':'filter:grayscale(1);opacity:.5'}">★</span> ${c.star?'Starred':'Mark star'}</button></div><div class="v2-d4-row" style="align-items:flex-start"><span class="v2-d4-lab">Notes</span><textarea class="v2-cond-input" id="d4CondInput" placeholder="Condition notes (corners, centering, flaws…)" onchange="d4SetCond(this.value)">${c.condNotes?escAttr(c.condNotes):''}</textarea></div><div class="v2-d4-status" id="d4Status"></div></div>` + `<div class="spot-remove"><button class="btn-ghost" onclick="removeFromDepot(${idx},event)">Remove from depot</button></div>`;
+  document.getElementById('spotCard').classList.remove('flipped');
+  document.getElementById('spotlight').classList.add('open');
+}
+function flipSpot(e){e.stopPropagation();var t=e&&e.target;if(t&&t.closest&&t.closest('select,input,button,option,label,.v2-grade,[data-no-flip]'))return;document.getElementById('spotCard').classList.toggle('flipped')}
+function closeSpot(e,force){
+  if(force||e.target.id==='spotlight'||e.target.classList.contains('spot-close')){
+    document.getElementById('spotlight').classList.remove('open');
+  }
+}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')document.getElementById('spotlight').classList.remove('open')});
+
+/* ---------- mode switch ---------- */
+function setMode(m){
+  mode=m;
+  var b=document.getElementById('m-binder'); if(b) b.classList.toggle('active',m==='binder');
+  var c=document.getElementById('m-carousel'); if(c) c.classList.toggle('active',m==='carousel');
+  var bs=document.getElementById('binderStage'); if(bs){ bs.style.display=m==='binder'?'flex':'none'; bs.toggleAttribute('data-hidden',m!=='binder'); }
+  var cs=document.getElementById('carouselStage'); if(cs) cs.style.display=m==='carousel'?'flex':'none';
+  if(m==='carousel') renderSetPicker();
+}
+
+/* ---------- rolodex: MLB Stats API auto-fill ----------
+   Uses MLB's public Stats API (statsapi.mlb.com) — no key, CORS-open,
+   free for personal use. Search a player, pick a season, stats auto-fill.
+   Fails soft: if a lookup returns nothing, manual entry still works. */
+const MLB_BASE = "https://statsapi.mlb.com/api/v1";
+/* ===== Checklist card data layer (keyless/static) =====
+   players.json (norm name -> {display, years[]}) loads once on first rolodex use.
+   Per-year cards-YYYY.json files load only when that year is actually picked. */
+let PLAYER_INDEX=null, PLAYER_INDEX_PROMISE=null;
+const YEAR_CACHE={};
+function normName(x){
+  x=(x||"").normalize("NFKD").replace(/[\u0300-\u036f]/g,"");
+  x=x.toLowerCase().replace(/\./g," ");
+  x=x.replace(/\b(junior|jr)\b/g,"jr").replace(/\b(senior|sr)\b/g,"sr");
+  x=x.replace(/[^a-z0-9 ]/g," ").replace(/\s+/g," ").trim();
+  return x;
+}
+async function getPlayerIndex(){
+  if(PLAYER_INDEX) return PLAYER_INDEX;
+  if(!PLAYER_INDEX_PROMISE){
+    PLAYER_INDEX_PROMISE=fetch("data/players.json").then(r=>{if(!r.ok)throw new Error("http");return r.json();})
+      .then(j=>{PLAYER_INDEX=j;return j;}).catch(e=>{PLAYER_INDEX_PROMISE=null;throw e;});
+  }
+  return PLAYER_INDEX_PROMISE;
+}
+async function loadYear(y){
+  if(YEAR_CACHE[y]!==undefined) return YEAR_CACHE[y];
+  try{ const r=await fetch("data/cards-"+y+".json"); if(!r.ok){YEAR_CACHE[y]=null;return null;} const j=await r.json(); YEAR_CACHE[y]=j; return j; }
+  catch(e){ YEAR_CACHE[y]=null; return null; }
+}
+/* Years (from the player index) where a plain-name player has a real card. */
+async function playerCardYears(displayOrName){
+  let idx; try{ idx=await getPlayerIndex(); }catch(e){ return null; } /* null = index unavailable */
+  const n=normName(cleanPlayerName(displayOrName));
+  if(idx[n]){ const _ys=new Set(); for(const _k in idx){ if(normName(cleanPlayerName(idx[_k].display||_k))===n){ (idx[_k].years||[]).forEach(_y=>_ys.add(_y)); } } return {match:idx[n].display, years:[..._ys].sort(), exact:true}; }
+  /* light fuzzy: same last token + first initial */
+  const parts=n.split(" "); if(parts.length<2) return {match:null,years:[],cands:[]};
+  const last=parts[parts.length-1], fi=parts[0][0];
+  const cands=Object.keys(idx).filter(k=>{const p=k.split(" ");return p.length>=2 && p[p.length-1]===last && p[0][0]===fi;});
+  if(cands.length===1) return {match:idx[cands[0]].display, years:idx[cands[0]].years.slice(), exact:false};
+  return {match:null, years:[], cands:cands.map(c=>idx[c].display)};
+}
+/* Real cards for a given plain-name player in a given year (from per-year file). */
+async function cardsForPlayerYear(name,y){
+  const data=await loadYear(y); if(!data) return null; /* null = year file missing */
+  const n=normName(name);
+  const _t=normName(cleanPlayerName(name)); return data.filter(r=>{ var p=normName(cleanPlayerName(r.player)); return p===_t; });
+}
+
+let roloPlayer = null;
+const POS_ABBR = {Pitcher:'P',Catcher:'C','First Base':'1B','Second Base':'2B','Third Base':'3B',Shortstop:'SS','Left Field':'LF','Center Field':'CF','Right Field':'RF',Outfielder:'OF','Designated Hitter':'DH'};
+
+function roloReset(){
+  roloPlayer=null;
+  document.getElementById('rolo-name').value='';
+  document.getElementById('rolo-players').style.display='none';
+  document.getElementById('rolo-players').innerHTML='';
+  document.getElementById('rolo-years').style.display='none';
+  document.getElementById('rolo-years').innerHTML='';
+  document.getElementById('rolo-brand').style.display='none';
+  document.getElementById('rolo-status').textContent='';
+  document.getElementById('rolo-status').className='rolo-status';
+}
+function roloStatus(msg,cls){
+  const s=document.getElementById('rolo-status');
+  s.textContent=msg||''; s.className='rolo-status'+(cls?' '+cls:'');
+}
+let ALL_PLAYERS=null;        // cached full player list
+let roloLoading=false;
+async function ensurePlayerList(){
+  if(ALL_PLAYERS) return ALL_PLAYERS;
+  // Pull the full historical player list. The "all seasons" form returns
+  // every player in MLB history, so retired players are included.
+  let people=[];
+  try{
+    const r=await fetch(`${MLB_BASE}/sports/1/players?all=true`);
+    if(r.ok){const j=await r.json();people=j.people||[];}
+  }catch(e){}
+  // Fallback to current season if the all-history query is unavailable
+  if(!people.length){
+    try{
+      const r2=await fetch(`${MLB_BASE}/sports/1/players?season=${new Date().getFullYear()}`);
+      if(r2.ok){const j2=await r2.json();people=j2.people||[];}
+    }catch(e){}
+  }
+  try{ const _idx=await getPlayerIndex(); if(_idx){ const _f=people.filter(function(pp){ var nm=(pp.fullName||pp.nameFirstLast||""); return _idx[normName(nm)]; }); people=_f; } }catch(e){}
+  ALL_PLAYERS=people;
+  return ALL_PLAYERS;
+}
+/* ---------- static autocomplete (uses the already-loaded players.json) ---------- */
+    let ROLO_SUGG=[];
+    function cleanPlayerName(s){ s=String(s||""); s=s.split(/[:\/]/)[0]; var SUF={"Jr":1,"Jr.":1,"Sr":1,"Sr.":1,"II":1,"III":1,"IV":1,"V":1}; function isName(w){ if(SUF[w])return true; if(/^(?:[A-Z]\.){1,3}$/.test(w))return true; if(/^[A-Za-z'\u2019.\-]+$/.test(w)&&/^[A-Z]/.test(w)&&/[a-z]/.test(w))return true; return false; } var toks=s.trim().split(/\s+/),out=[],core=0; for(var i=0;i<toks.length;i++){ var w=toks[i].replace(/^[ ,;()]+|[ ,;()]+$/g,""); if(!w)continue; if(!isName(w))break; if(core>=2){ if(SUF[w])out.push(w); break; } out.push(w); if(!SUF[w])core++; } return out.join(" ").trim()||String(s).trim(); }
+    let ROLO_POS_CACHE = {};        /* normName -> position abbr (e.g. RF), filled lazily from MLB */
+    let _roloPosTimer = null;
+    /* After the type-ahead dropdown renders, fetch each visible player's primary position
+       from the MLB Stats API (one lookup per uncached name, debounced, never per-keystroke),
+       then patch the meta label in place to read "POS · span · N yrs". Graceful if offline
+       or no position is found. */
+    async function roloFillPositions(sugg, qWhenIssued){
+      if(!sugg || !sugg.length) return;
+      clearTimeout(_roloPosTimer);
+      _roloPosTimer = setTimeout(async function(){
+        for(let i=0;i<sugg.length;i++){
+          const h = sugg[i]; if(!h) continue;
+          const cnm = normName(cleanPlayerName(h.d));
+          const cell = document.getElementById('rolo-meta-'+i);
+          if(!cell || cell.getAttribute('data-cnm')!==cnm) continue;  /* dropdown changed */
+          let pos = ROLO_POS_CACHE[cnm];
+          if(pos===undefined){
+            pos = '';
+            try{
+              const nm = cleanPlayerName(h.d);
+              let r = await fetch(MLB_BASE+'/people/search?names='+encodeURIComponent(nm));
+              let people = r.ok ? ((await r.json()).people||[]) : [];
+              if(!people.length){ r = await fetch(MLB_BASE+'/people/search?q='+encodeURIComponent(nm)); people = r.ok ? ((await r.json()).people||[]) : []; }
+              const hit = people.find(function(pp){ return normName(cleanPlayerName(pp.fullName||pp.nameFirstLast||'')) === cnm; }) || people[0];
+              if(hit && hit.primaryPosition && hit.primaryPosition.abbreviation) pos = hit.primaryPosition.abbreviation;
+            }catch(e){ /* offline / blocked -> leave years-only meta */ }
+            ROLO_POS_CACHE[cnm] = pos;
+          }
+          if(!pos) continue;
+          /* re-find the cell (dropdown may have re-rendered) and prepend the position once */
+          const live = document.getElementById('rolo-meta-'+i);
+          if(!live || live.getAttribute('data-cnm')!==cnm) continue;
+          if(live.getAttribute('data-pos')==='1') continue;
+          live.textContent = [pos, live.textContent].filter(Boolean).join(' · ');
+          live.setAttribute('data-pos','1');
+        }
+      }, 320);
+    }
+    async function roloSuggest(){
+      const inp=document.getElementById('rolo-name');
+      const box=document.getElementById('rolo-players');
+      const q=normName(inp.value);
+      document.getElementById('rolo-years').style.display='none';
+      document.getElementById('rolo-brand').style.display='none';
+      if(q.length<2){ box.style.display='none'; box.innerHTML=''; ROLO_SUGG=[]; return; }
+      let idx; try{ idx=await getPlayerIndex(); }catch(e){ idx=null; }
+      if(!idx){ box.style.display='none'; return; }   /* offline -> fall back to Find */
+      const hits=[];
+      for(const k in idx){ const _d=idx[k].display||k; if(_d.indexOf("(")>=0 || _d.indexOf("/")>=0) continue; const _cd=normName(cleanPlayerName(_d)); if(_cd===q || _cd.indexOf(q)===0 || _cd.indexOf(" "+q)>=0) hits.push({k,d:_d,cd:_cd}); }
+      hits.sort((a,b)=>{ const as=(a.cd||"").startsWith(q)?0:1, bs=(b.cd||"").startsWith(q)?0:1; return as-bs || a.d.localeCompare(b.d); });
+      const _seen=new Map(); for(const it of hits){ const cn=cleanPlayerName(it.d); const prev=_seen.get(cn); if(!prev){ _seen.set(cn,it); } else { const pscore=(prev.d===cn?0:1)*1e6+prev.d.length, iscore=(it.d===cn?0:1)*1e6+it.d.length; if(iscore<pscore) _seen.set(cn,it); } } ROLO_SUGG=Array.from(_seen.values()).slice(0,8);
+      if(!ROLO_SUGG.length){ box.style.display='none'; box.innerHTML=''; return; }
+      box.innerHTML=ROLO_SUGG.map((h,i)=>{ const _cnm=normName(cleanPlayerName(h.d)); const _yset=new Set(); for(const _k in idx){ if(normName(cleanPlayerName(idx[_k].display||_k))===_cnm){ (idx[_k].years||[]).forEach(_y=>{var _n=Number(_y); if(_n) _yset.add(_n);}); } } const yrs=[..._yset].sort((a,b)=>a-b); const span=yrs.length?(yrs[0]===yrs[yrs.length-1]?String(yrs[0]):yrs[0]+'-'+yrs[yrs.length-1]):''; const meta=yrs.length?(span+' \u00b7 '+yrs.length+' yr'+(yrs.length>1?'s':'')):'not in checklist'; return `<div class="rolo-player" onclick="roloPickName(${i})"><span>${cleanPlayerName(h.d)}</span><span class="meta" id="rolo-meta-${i}" data-cnm="${escAttr(_cnm)}">${[(ROLO_POS_CACHE[_cnm]||''),meta].filter(Boolean).join(' \u00b7 ')}</span></div>`; }).join('');
+      box.style.display='block';
+      roloFillPositions(ROLO_SUGG, q);
+    }
+    async function roloPickName(i){
+      const h=ROLO_SUGG[i]; if(!h)return;
+      let idx; try{ idx=await getPlayerIndex(); }catch(e){ idx=null; }
+      const _rawnm=(idx&&idx[h.k]&&idx[h.k].display)||h.d; const _canon=normName(cleanPlayerName(_rawnm)); const name=(idx&&idx[_canon]&&idx[_canon].display)||_rawnm;
+      roloPlayer={fullName:name, nameFirstLast:name};
+      const _cn=cleanPlayerName(name);
+      document.getElementById('rolo-name').value=_cn;
+      document.getElementById('f-name').value=_cn;
+      const box=document.getElementById('rolo-players'); box.style.display='none'; box.innerHTML='';
+      document.getElementById('rolo-brand').style.display='none';
+      const yrsBox=document.getElementById('rolo-years');
+      const endY=new Date().getFullYear(), startY=1980;
+      let html='<span style="font-family:\'Oswald\',sans-serif;font-size:.66rem;text-transform:uppercase;color:var(--leather);width:100%;letter-spacing:.04em">Pick a season:</span>';
+      let _by2=null; try{ const _pcy=await playerCardYears(name); if(_pcy&&Array.isArray(_pcy.years)&&_pcy.years.length) _by2=[...new Set(_pcy.years.map(Number).filter(Boolean))].sort((a,b)=>b-a); }catch(e){ _by2=null; }
+      if(_by2&&_by2.length){ for(const y of _by2) html+=`<button class="rolo-yr" data-year="${y}" onclick="roloYear(${y},this)">${y}</button>`; }
+      else { html=""; }
+      yrsBox.innerHTML=html; yrsBox.style.display='flex';
+      roloStatus("Now pick the season this card is from.");
+      markCardYears(name);
+    }
+    async function roloSearch(){
+  const q=document.getElementById('rolo-name').value.trim();
+  if(!q){roloStatus("Type a player name first.");return;}
+  if(roloLoading) return;
+  roloLoading=true;
+  roloStatus("Searching MLB records…");
+  document.getElementById('rolo-years').style.display='none';
+  document.getElementById('rolo-brand').style.display='none';
+  let people=[];
+  try{
+    // Primary: the documented search endpoint (current API form)
+    const r=await fetch(`${MLB_BASE}/people/search?names=${encodeURIComponent(q)}`);
+    if(r.ok){const j=await r.json();people=(j.people||[]);}
+    // Fallback A: alternate query param
+    if(!people.length){
+      const r2=await fetch(`${MLB_BASE}/people/search?q=${encodeURIComponent(q)}`);
+      if(r2.ok){const j2=await r2.json();people=(j2.people||[]);}
+    }
+    // Fallback B: filter the full player list locally (catches retired players)
+    if(!people.length){
+      roloStatus("Searching full player list…");
+      const list=await ensurePlayerList();
+      const ql=q.toLowerCase();
+      people=list.filter(p=>(p.fullName||'').toLowerCase().includes(ql)
+        || (p.lastName||'').toLowerCase().includes(ql)
+        || (p.nameFirstLast||'').toLowerCase().includes(ql));
+    }
+  }catch(e){
+    roloLoading=false;
+    roloStatus("Couldn't reach MLB records (needs a live connection — works on your deployed site). Enter stats manually below.","err");
+    return;
+  }
+  roloLoading=false;
+  if(!people.length){
+    roloStatus(`No match for "${q}". Try a different spelling, or just enter the card manually below.`,"err");
+    document.getElementById('rolo-players').style.display='none';
+    return;
+  }
+  roloCache={};
+  const box=document.getElementById('rolo-players');
+  box.innerHTML=people.slice(0,15).map((p,i)=>{
+    const pos=(p.primaryPosition&&p.primaryPosition.abbreviation)||'';
+    const yrs=[p.mlbDebutDate?p.mlbDebutDate.slice(0,4):'',p.lastPlayedDate?p.lastPlayedDate.slice(0,4):''].filter(Boolean).join('–');
+    roloCache[i]=p;
+    return `<div class="rolo-player" onclick="roloPick(${i})">
+      <span>${p.fullName||p.nameFirstLast||'(unknown)'}</span><span class="meta">${[pos,yrs].filter(Boolean).join(' · ')}</span></div>`;
+  }).join('');
+  box.style.display='block';
+  roloStatus(`${people.length} match${people.length>1?'es':''} — pick one.`);
+}
+let roloCache={};
+async function hydratePlayer(p){
+  // If we filtered from the list, we may lack debut/lastPlayed dates needed for the year picker.
+  if(p.mlbDebutDate || !p.id) return p;
+  try{
+    const r=await fetch(`${MLB_BASE}/people/${p.id}`);
+    if(r.ok){const j=await r.json(); if(j.people&&j.people[0]) return j.people[0];}
+  }catch(e){}
+  return p;
+}
+async function roloPick(i){
+  let p=roloCache[i]; if(!p)return;
+  document.querySelectorAll('.rolo-player').forEach(el=>el.classList.remove('sel'));
+  const els=document.querySelectorAll('.rolo-player'); if(els[i])els[i].classList.add('sel');
+  roloStatus("Loading player…");
+  p=await hydratePlayer(p);
+  roloCache[i]=p;
+  roloPlayer=p;
+  const posName=(p.primaryPosition&&p.primaryPosition.name)||'';
+  const isP=posName==='Pitcher';
+  document.getElementById('f-name').value=p.fullName||p.nameFirstLast||'';
+  if(POS_ABBR[posName])document.getElementById('f-pos').value=POS_ABBR[posName];
+  document.getElementById('f-type').value=isP?'pitcher':'hitter';
+  updateStatHint();
+  document.getElementById('rolo-brand').style.display='none';
+  const start=p.mlbDebutDate?parseInt(p.mlbDebutDate.slice(0,4)):null;
+  const end=p.lastPlayedDate?parseInt(p.lastPlayedDate.slice(0,4)):new Date().getFullYear();
+  const yrsBox=document.getElementById('rolo-years');
+  if(start){
+    let html='<span style="font-family:\'Oswald\',sans-serif;font-size:.66rem;text-transform:uppercase;color:var(--leather);width:100%;letter-spacing:.04em">Pick a season:</span>';
+    let _by=null; try{ const _pcy=await playerCardYears(roloPlayer.fullName||roloPlayer.nameFirstLast||""); if(_pcy&&Array.isArray(_pcy.years)&&_pcy.years.length) _by=[...new Set(_pcy.years.map(Number).filter(Boolean))].sort((a,b)=>b-a); }catch(e){ _by=null; }
+    if(_by&&_by.length){ for(const y of _by) html+=`<button class="rolo-yr" data-year="${y}" onclick="roloYear(${y},this)">${y}</button>`; }
+    else { html=""; }
+    yrsBox.innerHTML=html; yrsBox.style.display='flex';
+    roloStatus("Now pick the season this card is from.");
+    markCardYears(roloPlayer.fullName||roloPlayer.nameFirstLast||"");
+  }else{
+    yrsBox.style.display='none';
+    roloStatus("Player set. Type the year below and the brand, or fill stats manually.","ok");
+  }
+}
+const STAT_MAP_HIT={gamesPlayed:'G',atBats:'AB',runs:'R',hits:'H',doubles:'2B',triples:'3B',homeRuns:'HR',rbi:'RBI',stolenBases:'SB',baseOnBalls:'BB',strikeOuts:'SO',avg:'AVG',obp:'OBP',slg:'SLG',ops:'OPS'};
+const STAT_MAP_PIT={wins:'W',losses:'L',era:'ERA',gamesPlayed:'G',gamesStarted:'GS',completeGames:'CG',shutouts:'SHO',saves:'SV',inningsPitched:'IP',hits:'H',baseOnBalls:'BB',strikeOuts:'SO',whip:'WHIP'};
+
+/* Major baseball-card brands and the (approx.) flagship-run years they printed.
+   [startYear, endYear] — endYear null means still active. Used to offer a
+   year-aware brand list. "Other…" always lets you type a set we don't list. */
+const BRANDS=[
+  {name:"Topps", from:1951, to:null},
+  {name:"Bowman", from:1948, to:1955},      // original run
+  {name:"Bowman (Topps)", from:1989, to:null}, // revived by Topps
+  {name:"Fleer", from:1981, to:2007},
+  {name:"Donruss", from:1981, to:2005},
+  {name:"Score", from:1988, to:1998},
+  {name:"Upper Deck", from:1989, to:2010},
+  {name:"Leaf", from:1990, to:1998},
+  {name:"Stadium Club", from:1991, to:null},
+  {name:"Pinnacle", from:1992, to:1998},
+  {name:"SP", from:1993, to:2005},
+  {name:"Collector's Choice", from:1994, to:2002},
+  {name:"Topps Chrome", from:1996, to:null},
+  {name:"Bowman Chrome", from:1997, to:null},
+  {name:"Panini", from:2012, to:null}        // MLBPA-only era
+];
+    function populateSetOptions(brandFilter){ const sel=document.getElementById("f-set"); if(!sel||sel.tagName!=="SELECT") return; const src=(ROLO_YEAR_CARDS||[]).filter(c=>brandFilter?c.brand===brandFilter:true); const sets=[...new Set(src.map(c=>c.set).filter(Boolean))].sort(); const prev=sel.value; sel.innerHTML="<option value=\"\">\u2014 pick set \u2014</option>"+sets.map(x=>`<option value="${escAttr(x)}">${x}</option>`).join(""); if(sets.length===1){ sel.value=sets[0]; } else if(prev&&sets.indexOf(prev)>=0){ sel.value=prev; } }
+function brandsForYear(y){
+  return BRANDS.filter(b=>y>=b.from && (b.to==null || y<=b.to)).map(b=>b.name);
+}
+let ROLO_YEAR_CARDS=[];
+async function roloShowBrands(y){
+  const box=document.getElementById('rolo-brand');
+  const sel=document.getElementById('rolo-brand-sel');
+  const note=document.getElementById('rolo-num-note');
+  const name=(roloPlayer&&(roloPlayer.fullName||roloPlayer.nameFirstLast))||'';
+  let cards=null;
+  try{ cards=await cardsForPlayerYear(name,y); }catch(e){ cards=null; }
+  ROLO_YEAR_CARDS = Array.isArray(cards)?cards:[]; setFindCardUrl(""); populateSetOptions("");
+  let list, accurate=false;
+  if(cards===null){
+    /* year file missing / offline -> manual fallback */
+    list=brandsForYear(y);
+    roloStatus("Couldn't load "+y+" cards \u2014 pick a brand and enter the card number manually (can't be auto-confirmed).","err");
+  } else if(cards.length===0){
+    list=[]; /* no cards for this player-year: do not offer phantom brands */
+    roloStatus((name||"This player")+" has no "+y+" card in the checklist. Enter one manually if you have it (it can't be auto-confirmed).","err");
+  } else {
+    list=[...new Set(cards.map(c=>c.brand).filter(Boolean))];
+    accurate=true;
+  }
+  sel.innerHTML='<option value="">\u2014 pick brand \u2014</option>'
+    + list.map(n=>`<option value="${escAttr(n)}">${n}</option>`).join('')
+    + '<option value="__other">Other / type it\u2026</option>';
+  document.getElementById('rolo-brand-custom').style.display='none';
+  document.getElementById('rolo-brand-custom').value='';
+  document.getElementById('rolo-num').value='';
+  document.getElementById('f-num').value='';
+  note.textContent='';
+  box.style.display='flex';
+  if(accurate){
+    const nums=[...new Set(ROLO_YEAR_CARDS.map(c=>c.number).filter(Boolean))];
+    roloStatus("\u2713 "+ROLO_YEAR_CARDS.length+" "+y+" "+(roloPlayer.fullName||name)+" card"+(ROLO_YEAR_CARDS.length===1?"":"s")+" in the checklist across "+list.length+" brand"+(list.length===1?"":"s")+". Pick a brand to see its card number"+(nums.length===1?"":"s")+".","ok");
+  }
+}
+function roloBrandPick(){
+  const v=document.getElementById('rolo-brand-sel').value;
+  const custom=document.getElementById('rolo-brand-custom');
+  const note=document.getElementById('rolo-num-note');
+  const numIn=document.getElementById('rolo-num');
+  if(v==='__other'){custom.style.display='block';custom.focus();document.getElementById('f-set').value='';note.textContent='';return;}
+  custom.style.display='none';
+    if(v){ populateSetOptions(v); }
+  /* offer the actual card number(s) for this brand from the checklist */
+  const nums=[...new Set((ROLO_YEAR_CARDS||[]).filter(c=>c.brand===v).map(c=>c.number).filter(Boolean))];
+  // Card # auto-fill + variation flag (Add-a-Card UX)
+  if(nums.length===1){
+    numIn.value=nums[0]; document.getElementById('f-num').value=nums[0];
+    note.innerHTML=''; note.appendChild(document.createTextNode('checklist #'+nums[0]));
+  } else if(nums.length>1){
+    var bases=nums.filter(function(n){return /^[0-9]+$/.test(String(n).trim());});
+    bases.sort(function(a,b){return parseInt(a,10)-parseInt(b,10);});
+    var base = bases.length ? bases[0] : nums[0];
+    numIn.value=base; document.getElementById('f-num').value=base;
+    renderCardVariations(note, nums, base);
+  } else { note.innerHTML=''; }
+resolveCurrentCardUrl();
+}
+function roloBrandCustom(){
+  document.getElementById('f-set').value=document.getElementById('rolo-brand-custom').value.trim();
+}
+function renderCardVariations(note, nums, current){
+  note.innerHTML='';
+  var flag=document.createElement('span'); flag.className='rolo-var-flag';
+  flag.textContent='⚠ '+nums.length+' versions — base #'+current+' selected:';
+  note.appendChild(flag);
+  nums.forEach(function(n){
+    var chip=document.createElement('button'); chip.type='button';
+    chip.className='rolo-var-chip'+(String(n)===String(current)?' sel':'');
+    chip.textContent='#'+n; chip.title='Use card #'+n;
+    chip.onclick=function(){
+      document.getElementById('rolo-num').value=n; roloNumPick();
+      var sib=note.querySelectorAll('.rolo-var-chip');
+      for(var i=0;i<sib.length;i++){ sib[i].classList.toggle('sel', sib[i]===chip); }
+      flag.textContent='⚠ '+nums.length+' versions — #'+n+' selected:';
+    };
+    note.appendChild(chip);
+  });
+}
+function roloNumPick(){
+  document.getElementById('f-num').value=document.getElementById('rolo-num').value; resolveCurrentCardUrl();
+}
+
+/* Cross-reference career-year buttons against the checklist:
+   enable only years the player actually has a card; mark the rest "no known card". */
+async function markCardYears(playerName){
+  const btns=[...document.querySelectorAll('.rolo-yr')];
+  if(!btns.length) return;
+  let res;
+  try{ res=await playerCardYears(playerName); }catch(e){ res=null; }
+  if(res===null){
+    /* index unavailable (e.g. offline) -> don't block; allow all, note it */
+    roloStatus("Couldn't load the card checklist (works on the deployed site). All years left open \u2014 the card can't be auto-confirmed.","err");
+    return;
+  }
+  if(!res.match){
+    if(res.cands && res.cands.length){
+      roloStatus("No exact name match for \""+playerName+"\". Did you mean: "+res.cands.slice(0,6).join(", ")+"? Pick a year to enter the card manually.","err");
+    }else{
+      roloStatus("\""+playerName+"\" isn't in the checklist \u2014 pick a year and enter the card manually (it can't be auto-confirmed).","err");
+    }
+    return;
+  }
+  const have=new Set(res.years.map(String));
+  let on=0;
+  btns.forEach(b=>{ const y=b.getAttribute('data-year'); if(!y) return; if(have.has(y)){ b.classList.remove('nocard'); on++; } else { b.classList.add('nocard'); } });
+  const note=res.exact?"":" (matched \""+res.match+"\")";
+  const off=btns.length-on; roloStatus("\u2713 "+on+" season"+(on===1?"":"s")+" with a confirmed "+res.match+" card"+note+". "+(off>0?"Other years aren\u2019t in the checklist \u2014 still selectable, but you\u2019ll confirm those manually.":""),"ok");
+}
+async function roloYear(y,btn){
+  document.querySelectorAll('.rolo-yr').forEach(el=>el.classList.remove('sel'));
+  if(btn)btn.classList.add('sel');
+  if(!roloPlayer){roloStatus("Pick a player first.","err");return;}
+  const inChecklist=!(btn&&btn.classList.contains("nocard"));
+  document.getElementById('f-yr').value=y;
+  applyEraFromYear(y);
+  await roloShowBrands(y);            // brand/number are independent of the stats lookup
+      if(!inChecklist){
+        document.getElementById('f-stats').value='';
+        roloStatus(""+y+" isn’t in the checklist — that’s fine, the dataset is patchy. Couldn’t auto-confirm this card; pick the brand & number and enter the details manually.","ok");
+        return;
+      }
+  const isP=document.getElementById('f-type').value==='pitcher';
+  const group=isP?'pitching':'hitting';
+  roloStatus(`Pulling ${y} ${group} stats…`); if(!roloPlayer.__idVerified){ const pname=cleanPlayerName(roloPlayer.fullName||roloPlayer.nameFirstLast||document.getElementById('rolo-name').value.trim()); let found=null; try{ let rs=await fetch(`${MLB_BASE}/people/search?names=${encodeURIComponent(pname)}`); if(rs.ok){const js=await rs.json(); if(js.people&&js.people.length)found=js.people;} if(!found){rs=await fetch(`${MLB_BASE}/people/search?q=${encodeURIComponent(pname)}`); if(rs.ok){const js=await rs.json(); if(js.people&&js.people.length)found=js.people;}} if(!found){const list=await ensurePlayerList(); const ql=pname.toLowerCase(); found=list.filter(p=>(p.fullName||'').toLowerCase()===ql); if(!found.length)found=list.filter(p=>(p.fullName||'').toLowerCase().includes(ql));} }catch(e){} if(found&&found.length){roloPlayer=Object.assign({},found[0],{fullName:roloPlayer.fullName||found[0].fullName,__idVerified:true});} if(!roloPlayer.id){roloStatus(`Couldn’t match “${pname}” to an MLB player to pull stats. Pick the brand/number and enter stats manually.`,"err"); return;} }
+  try{
+    const r=await fetch(`${MLB_BASE}/people/${roloPlayer.id}/stats?stats=season&group=${group}&season=${y}`);
+    if(!r.ok) throw new Error('http');
+    const j=await r.json();
+    const splits=(j.stats&&j.stats[0]&&j.stats[0].splits)||[];
+    if(!splits.length){roloStatus(`No ${group} stats found for ${y}. Pick the brand/number and enter stats manually.`,"err");return;}
+    let split=splits[0];
+    if(splits.length>1){split=splits.reduce((a,b)=>((b.stat.gamesPlayed||0)>(a.stat.gamesPlayed||0)?b:a),splits[0]);}
+    const st=split.stat||{};
+    const map=isP?STAT_MAP_PIT:STAT_MAP_HIT;
+    const out=[];
+    for(const k in map){ if(st[k]!=null&&st[k]!==''&&st[k]!=='.---'&&st[k]!=='-.--') out.push(`${map[k]}:${st[k]}`); }
+    if(!out.length){roloStatus(`Found ${y} but no usable stat fields. Pick brand/number and enter stats manually.`,"err");return;}
+    document.getElementById('f-stats').value=out.join(', ');
+    if(split.team&&split.team.name)document.getElementById('f-team').value=split.team.name;
+    roloStatus(`✓ ${roloPlayer.fullName}, ${y} filled in. Pick the brand & number, then find the front image.`,"ok");
+  }catch(e){
+    roloStatus("Couldn't pull that season (needs live connection — works on your deployed site). Pick brand/number and enter stats manually.","err");
+  }
+}
+
+/* ---------- add-card form ---------- */
+function openForm(){
+  ['name','pos','team','yr','set','num','stats','bio','url','gpaste'].forEach(f=>{const el=document.getElementById('f-'+f);if(el)el.value='';});
+  document.getElementById('f-era').value=curEra;
+  document.getElementById('f-type').value='hitter';
+  document.getElementById('f-rare').checked=false;
+  document.getElementById('f-photo').value='';
+  document.getElementById('f-photo-back').value='';
+  document.getElementById('f-file').value='';
+  setPreview('front','');
+  setPreview('back','');
+  updateStatHint();
+  roloReset();
+  imgSlot('front');
+  imgTab('up');
+  document.getElementById('formScrim').classList.add('open');
+  setTimeout(()=>document.getElementById('f-name').focus(),50);
+}
+function updateStatHint(){
+  const t=document.getElementById('f-type').value;
+  const hint=document.getElementById('statHint');
+  const stats=document.getElementById('f-stats');
+  if(t==='pitcher'){
+    hint.textContent='e.g. W:20, L:10, ERA:2.36, SO:197';
+    stats.placeholder='W:20, L:10, ERA:2.36, SO:197, IP:267, WHIP:1.05';
+  }else{
+    hint.textContent='e.g. AVG:.264, HR:16, RBI:61, OPS:.748';
+    stats.placeholder='AVG:.264, HR:16, RBI:61, OPS:.748';
+  }
+}
+function closeForm(e,force){
+  if(force||e.target.id==='formScrim'){document.getElementById('formScrim').classList.remove('open');}
+}
+function imgTab(p){
+  document.querySelectorAll('.img-tab').forEach(t=>t.classList.toggle('active',t.dataset.pane===p));
+  ['up','url','search'].forEach(x=>{var pe=document.getElementById('pane-'+x);if(pe)pe.style.display=x===p?'block':'none';});
+}
+function findCard(){ if(window.CURRENT_CARD_URL){ window.open(window.CURRENT_CARD_URL,"_blank","noopener"); } }
+function setFindCardUrl(u){ window.CURRENT_CARD_URL=(typeof u==="string"&&u.trim())?u.trim():""; var btn=document.getElementById("find-card-btn"); if(!btn) return; if(window.CURRENT_CARD_URL){ btn.classList.remove("disabled"); btn.removeAttribute("aria-disabled"); btn.title="Open this card on TCDB"; } else { btn.classList.add("disabled"); btn.setAttribute("aria-disabled","true"); btn.title="No card page link for this card"; } }
+function resolveCurrentCardUrl(){ try{ var cards=(typeof ROLO_YEAR_CARDS!=="undefined"&&Array.isArray(ROLO_YEAR_CARDS))?ROLO_YEAR_CARDS:[]; if(!cards.length){ setFindCardUrl(""); return; } var bsel=document.getElementById("rolo-brand-sel"); var brand=bsel?(bsel.value||""):""; var nIn=document.getElementById("rolo-num"); var num=nIn?((nIn.value||"").trim()):""; var pool=brand?cards.filter(function(c){return c.brand===brand;}):cards.slice(); var match=null; if(num){ var byNum=pool.filter(function(c){return String(c.number)===String(num);}); if(byNum.length>1){ var setEl=document.getElementById("f-set"); var set=setEl?(setEl.value||"").trim():""; var nmEl=document.getElementById("f-name"); var pn=nmEl?normName(cleanPlayerName(nmEl.value||"")):""; var narrowed=byNum; if(set){ var bySet=narrowed.filter(function(c){return (c.set||"")===set;}); if(bySet.length) narrowed=bySet; } if(narrowed.length>1 && pn){ var byPl=narrowed.filter(function(c){return normName(cleanPlayerName(c.player||""))===pn;}); if(byPl.length) narrowed=byPl; } match=narrowed[0]||byNum[0]||null; } else { match=byNum[0]||null; } } else if(pool.length===1){ match=pool[0]; } setFindCardUrl(match&&match.url?match.url:""); }catch(e){ setFindCardUrl(""); } }
+let activeSlot = 'front';
+function slotPreviewEl(slot){ return document.getElementById(slot==='back'?'imgPreviewBack':'imgPreviewFront'); }
+function slotInput(slot){ return document.getElementById(slot==='back'?'f-photo-back':'f-photo'); }
+function imgSlot(slot){
+  activeSlot = (slot==='back')?'back':'front';
+  document.querySelectorAll('.slot-tab').forEach(t=>t.classList.toggle('active',t.dataset.slot===activeSlot));
+  document.querySelectorAll('.preview-slot').forEach(ps=>{
+    const has = ps.querySelector('#imgPreview'+(activeSlot==='back'?'Back':'Front'));
+    ps.classList.toggle('active-slot', !!has);
+  });
+  const word = activeSlot==='back'?'back':'front';
+  ['slotNoteUp','slotNoteUrl','slotNoteSearch'].forEach(id=>{ const el=document.getElementById(id); if(el) el.textContent=word; });
+  // reflect the current slot's stored value in the URL field for convenience
+  const cur = slotInput(activeSlot).value;
+  const urlEl = document.getElementById('f-url'); if(urlEl) urlEl.value = (cur && cur.slice(0,5)!=='data:')?cur:'';
+}
+function setPreview(slot, src){
+  // back-compat: allow setPreview(src) -> applies to the active slot
+  if(arguments.length===1){ src = slot; slot = activeSlot; }
+  const pv=slotPreviewEl(slot);
+  if(!pv) return;
+  if(src){
+    pv.classList.add('has-img');
+    pv.innerHTML='<span class="ph-text">loading…</span>';
+    const img=new Image();
+    img.onload=()=>{ pv.innerHTML=''; pv.appendChild(img); };
+    img.onerror=()=>{
+      pv.classList.remove('has-img');
+      pv.innerHTML='<span class="ph-text" style="text-align:center;padding:0 .5rem;line-height:1.4">That link didn\u2019t load as an image.<br>Make sure it ends in .jpg/.png and is a direct image address, not a page link.</span>';
+    };
+    img.alt='card preview';
+    img.style.cssText='width:100%;height:100%;object-fit:cover';
+    img.src=src;
+  } else {
+    pv.style.backgroundImage='';
+    pv.classList.remove('has-img');
+    pv.innerHTML='<span class="ph-text">no image yet</span>';
+  }
+}
+function downscaleDataURL(srcDataURL, maxSide, quality){
+  return new Promise((resolve)=>{
+    const img=new Image();
+    img.onload=function(){
+      let w=img.naturalWidth||img.width, h=img.naturalHeight||img.height;
+      if(!w||!h){ resolve(srcDataURL); return; }
+      const longest=Math.max(w,h);
+      // don't upscale: only shrink if larger than maxSide
+      const scale = longest>maxSide ? maxSide/longest : 1;
+      const cw=Math.round(w*scale), ch=Math.round(h*scale);
+      try{
+        const canvas=document.createElement('canvas');
+        canvas.width=cw; canvas.height=ch;
+        const ctx=canvas.getContext('2d');
+        ctx.drawImage(img,0,0,cw,ch);
+        const out=canvas.toDataURL('image/jpeg', quality);
+        // fall back to source if encoding somehow produced something larger/invalid
+        resolve((out && out.length < srcDataURL.length) ? out : srcDataURL);
+      }catch(err){ resolve(srcDataURL); }
+    };
+    img.onerror=function(){ resolve(srcDataURL); };
+    img.src=srcDataURL;
+  });
+}
+function onFile(e){
+  const file=e.target.files[0];if(!file)return;
+  const reader=new FileReader();
+  reader.onload=ev=>{
+    const orig=ev.target.result;
+    downscaleDataURL(orig, 600, 0.8).then(small=>{
+      slotInput(activeSlot).value=small;
+      setPreview(activeSlot, small);
+    });
+  };
+  reader.readAsDataURL(file);
+}
+function useUrl(){
+  const u=document.getElementById('f-url').value.trim();
+  slotInput(activeSlot).value=u;setPreview(activeSlot, u);
+}
+function useGPaste(){
+  const u=document.getElementById('f-gpaste').value.trim();
+  slotInput(activeSlot).value=u;setPreview(activeSlot, u);
+}
+function googleImagesURL(query){
+  return "https://www.google.com/search?tbm=isch&q="+encodeURIComponent(query);
+}
+function tcdbSearchURL(name,yr,set,num){
+  var p = new URLSearchParams();
+  p.set("MODE","ADVANCED"); p.set("Type","Baseball");
+  if(yr)  p.set("Year", String(yr));
+  if(set) p.set("SetName", set);
+  if(name)p.set("Name", name);
+  return "https://www.tcdb.com/ViewResults.cfm?"+p.toString();
+}
+function openGoogleImages(){
+  const name=document.getElementById('f-name').value.trim();
+  const yr=document.getElementById('f-yr').value.trim();
+  const set=document.getElementById('f-set').value.trim();
+  const num=document.getElementById('f-num').value.trim();
+  const q=[yr,set,name,num?'#'+num:'',"baseball card"].filter(Boolean).join(' ');
+  if(!name && !set){toast("Add a player or set first, so the search knows what to find.");return;}
+  window.open(googleImagesURL(q),'_blank','noopener');
+}
+function openTcdbSearch(){
+  const name=document.getElementById('f-name').value.trim();
+  const yr=document.getElementById('f-yr').value.trim();
+  const set=document.getElementById('f-set').value.trim();
+  const num=document.getElementById('f-num').value.trim();
+  if(!name && !set){toast("Add a player or set first, so the search knows what to find.");return;}
+  window.open(tcdbSearchURL(name,yr,set,num),'_blank','noopener');
+}
+/* opens Google Images for an existing card in the collection */
+function findImageFor(idx,e){
+  if(e)e.stopPropagation();
+  const c=COLLECTION[idx];
+  const q=[c.yr||'',c.set||'',c.name||'',c.num?'#'+c.num:'',"baseball card"].filter(Boolean).join(' ');
+  window.open(googleImagesURL(q),'_blank','noopener');
+}
+
+function parseStats(s){
+  const out={};
+  s.split(',').forEach(pair=>{const [k,...v]=pair.split(':');if(k&&v.length)out[k.trim()]=v.join(':').trim();});
+  return out;
+}
+async function saveCard(){
+  const name=document.getElementById('f-name').value.trim();
+  if(!name){toast("A card needs a player name.");document.getElementById('f-name').focus();return;}
+  const card={
+    id:newCardId(),
+    name,
+    pos:document.getElementById('f-pos').value.trim()||"—",
+    team:document.getElementById('f-team').value.trim()||"—",
+    yr:parseInt(document.getElementById('f-yr').value)||0,
+    set:document.getElementById('f-set').value.trim()||"Unknown",
+    num:(document.getElementById('f-num').value.trim()||""),
+    numSort:parseInt(document.getElementById('f-num').value)||0,
+    era:document.getElementById('f-era').value,
+    type:document.getElementById('f-type').value,
+    rare:document.getElementById('f-rare').checked,
+    photoFront:document.getElementById('f-photo').value||"",
+    photoBack:document.getElementById('f-photo-back').value||"",
+    stats:parseStats(document.getElementById('f-stats').value),
+    bio:document.getElementById('f-bio').value.trim()||""
+  };
+  if(depotLoggedIn()){
+    const _id = await depotInsertCard(card);
+    if(!_id){ return; }
+    USER_CARDS.push(card);
+  } else {
+    toast("Please log in to save cards."); return;
+  }
+  rebuild();
+  document.getElementById('formScrim').classList.remove('open');
+  curEra=card.era;
+  setMode('binder');
+  const cards=eraCards(curEra);
+  curPage=Math.max(0,Math.ceil(cards.length/PER_PAGE)-1);
+  renderBinder();
+  toast(`${name} added to the depot.`);
+}
+
+
+let toastTimer=null;
+function toast(msg){
+  let t=document.getElementById('depotToast');
+  if(!t){t=document.createElement('div');t.id='depotToast';t.className='toast';document.body.appendChild(t);}
+  t.textContent=msg;t.classList.add('show');
+  clearTimeout(toastTimer);
+  toastTimer=setTimeout(()=>t.classList.remove('show'),2600);
+}
+document.addEventListener('keydown',e=>{if(e.key==='Escape')document.getElementById('formScrim').classList.remove('open')});
+
+/* ---------- drag-drop & paste image onto a card (low-friction attach) ---------- */
+function compressForStore(dataURL){
+  return downscaleDataURL(dataURL, 600, 0.8);
+}
+function findUserCardById(id){
+  if(!id) return -1;
+  for(let i=0;i<USER_CARDS.length;i++){ if(USER_CARDS[i].id===id) return i; }
+  return -1;
+}
+function setCardPhotoById(id, rawDataURL){
+  const ui = findUserCardById(id);
+  if(ui<0){ toast("Couldn't match that image to a card. Try again from the card."); return; }
+  compressForStore(rawDataURL).then(small=>{
+    const prev = USER_CARDS[ui].photoFront;
+    USER_CARDS[ui].photoFront = small;
+    const _finishUI=function(){ rebuild(); renderBinder(); if(typeof spotIdx==='number' && COLLECTION[spotIdx] && COLLECTION[spotIdx].id===id){ openSpot(spotIdx); } toast("Image attached to "+(USER_CARDS[ui].name||"card")+"."); };
+    if(depotLoggedIn()){ depotUpdateCardPhoto(USER_CARDS[ui]).then(function(ok){ if(!ok){ USER_CARDS[ui].photoFront = prev; rebuild(); renderBinder(); return; } _finishUI(); }); }
+    else { USER_CARDS[ui].photoFront = prev; toast("Please log in."); return; }
+  });
+}
+function fileToDataURL(file){
+  return new Promise((resolve,reject)=>{
+    if(!file || !/^image\//.test(file.type)){ reject(new Error("not an image")); return; }
+    const r=new FileReader();
+    r.onload=()=>resolve(r.result);
+    r.onerror=()=>reject(new Error("read failed"));
+    r.readAsDataURL(file);
+  });
+}
+function imageFileFromTransfer(dt){
+  if(!dt) return null;
+  if(dt.files && dt.files.length){
+    for(const f of dt.files){ if(/^image\//.test(f.type)) return f; }
+  }
+  if(dt.items && dt.items.length){
+    for(const it of dt.items){ if(it.kind==='file' && /^image\//.test(it.type)){ const f=it.getAsFile(); if(f) return f; } }
+  }
+  return null;
+}
+function activeSpotCardId(){
+  const sl=document.getElementById('spotlight');
+  if(sl && sl.classList.contains('open') && typeof spotIdx==='number' && COLLECTION[spotIdx]){
+    return COLLECTION[spotIdx].id || null;
+  }
+  return null;
+}
+(function wireSpotlightDnD(){
+  const card=document.getElementById('spotCard');
+  if(!card) return;
+  ['dragenter','dragover'].forEach(ev=>card.addEventListener(ev,e=>{
+    if(imageFileFromTransfer(e.dataTransfer) || (e.dataTransfer && e.dataTransfer.types && [].indexOf.call(e.dataTransfer.types,'Files')>-1)){
+      e.preventDefault(); e.stopPropagation(); card.classList.add('drop-hot');
+    }
+  }));
+  ['dragleave','dragend'].forEach(ev=>card.addEventListener(ev,()=>card.classList.remove('drop-hot')));
+  card.addEventListener('drop',e=>{
+    const f=imageFileFromTransfer(e.dataTransfer);
+    if(!f) return;
+    e.preventDefault(); e.stopPropagation(); card.classList.remove('drop-hot');
+    const id=activeSpotCardId();
+    if(!id){ toast("Open a card first, then drop the image on it."); return; }
+    fileToDataURL(f).then(d=>setCardPhotoById(id,d)).catch(()=>toast("That didn't look like an image."));
+  });
+})();
+document.addEventListener('paste',e=>{
+  const id=activeSpotCardId();
+  if(!id) return;
+  const f=imageFileFromTransfer(e.clipboardData);
+  if(!f) return;
+  e.preventDefault();
+  fileToDataURL(f).then(d=>setCardPhotoById(id,d)).catch(()=>toast("Clipboard had no image."));
+});
+(function wireFormPreviewDnD(){
+  ['front','back'].forEach(slot=>{
+    const pv = slotPreviewEl(slot);
+    if(!pv) return;
+    ['dragenter','dragover'].forEach(ev=>pv.addEventListener(ev,e=>{
+      if(e.dataTransfer && e.dataTransfer.types && [].indexOf.call(e.dataTransfer.types,'Files')>-1){
+        e.preventDefault(); e.stopPropagation(); pv.classList.add('drop-hot'); imgSlot(slot);
+      }
+    }));
+    ['dragleave','dragend'].forEach(ev=>pv.addEventListener(ev,()=>pv.classList.remove('drop-hot')));
+    pv.addEventListener('drop',e=>{
+      const f=imageFileFromTransfer(e.dataTransfer);
+      if(!f) return;
+      e.preventDefault(); e.stopPropagation(); pv.classList.remove('drop-hot'); imgSlot(slot);
+      fileToDataURL(f).then(orig=>downscaleDataURL(orig,600,0.8)).then(small=>{
+        slotInput(slot).value=small; setPreview(slot, small);
+      }).catch(()=>toast("That didn't look like an image."));
+    });
+  });
+})();
+document.addEventListener('paste',e=>{
+  const scrim=document.getElementById('formScrim');
+  if(!scrim || !scrim.classList.contains('open')) return;
+  if(activeSpotCardId()) return;
+  const f=imageFileFromTransfer(e.clipboardData);
+  if(!f) return;
+  e.preventDefault();
+  fileToDataURL(f).then(orig=>downscaleDataURL(orig,600,0.8)).then(small=>{
+    slotInput(activeSlot).value=small; setPreview(activeSlot, small);
+  }).catch(()=>{});
+});
+
+/* Phase 4: toggle the whole app vs the login gate (login-required). */
+function setAuthUI(loggedIn){
+  var gate=document.getElementById('loginGate');
+  document.body.classList.toggle('logged-out', !loggedIn);
+  if(gate) gate.classList.toggle('show', !loggedIn);
+  if(loggedIn){
+    if(mode==='binder'){ renderBinder(); } else { renderSetPicker(); }
+  }
+}
+/* ---------- init ---------- */
+rebuild();
+setAuthUI(false);
+
+/* ===== PHASE5-SHARE-JS (injected at tail of body script; shares scope with USER_CARDS, COLLECTION, mode, DEPOT_COLLECTION_ID) ===== */
+;(function(){
+  function $id(x){ return document.getElementById(x); }
+  function notify(msg){
+    try{ if(typeof toast==='function'){ toast(msg); return; } }catch(e){}
+    var t=$id('depotToast'); if(t){ t.textContent=msg; t.classList.add('show'); setTimeout(function(){ t.classList.remove('show'); },2200); }
+  }
+  function getShareToken(){
+    try{ return new URLSearchParams(location.search).get('share'); }catch(e){ return null; }
+  }
+  function shareUrlFor(token){ return location.origin + location.pathname + '?share=' + encodeURIComponent(token); }
+  function sbc(){ return (typeof depotSB==='function') ? depotSB() : (window.supabaseClient||null); }
+
+  /* Are we rendering a read-only shared view? Guards below read this. */
+  window.__DEPOT_SHARED = false;
+  function sharedActive(){ return !!window.__DEPOT_SHARED; }
+
+  /* ---------- Owner share control ---------- */
+  window.DepotShare = {
+    isSharing:false,
+    busy:false,
+
+    collId:function(){
+      try{ if(typeof DEPOT_COLLECTION_ID!=='undefined' && DEPOT_COLLECTION_ID) return DEPOT_COLLECTION_ID; }catch(e){}
+      return null;
+    },
+
+    setUI:function(on){
+      this.isSharing=!!on;
+      var b=$id('shareBtn'); if(!b) return;
+      if(on){ b.textContent='Stop sharing'; b.classList.add('sharing'); }
+      else { b.textContent='Share my collection'; b.classList.remove('sharing'); }
+    },
+
+    /* Reflect current is_shared state from the DB for the logged-in owner. */
+    refresh:async function(){
+      var s=sbc(); var cid=this.collId();
+      if(!s || !cid){ this.setUI(false); return; }
+      try{
+        var r=await s.from('collections').select('is_shared').eq('id',cid).maybeSingle();
+        this.setUI(!!(r && r.data && r.data.is_shared));
+      }catch(e){ /* leave UI as-is */ }
+    },
+
+    toggle:async function(){
+      if(this.busy) return;
+      if(this.isSharing) await this.stop(); else await this.start();
+    },
+
+    start:async function(){
+      var s=sbc(); var cid=this.collId();
+      if(!s){ notify('Not ready.'); return; }
+      if(!cid){ notify('No collection to share yet.'); return; }
+      this.busy=true;
+      try{
+        var r=await s.rpc('share_collection',{ p_collection_id: cid });
+        if(r.error){ console.warn('[DepotShare] share error', r.error); notify('Could not start sharing.'); return; }
+        var token=r.data; if(token && typeof token==='object'){ token=token.share_token||token.token||token[0]; }
+        if(!token){ notify('Could not start sharing.'); return; }
+        var url=shareUrlFor(token);
+        var copied=false;
+        try{ await navigator.clipboard.writeText(url); copied=true; }catch(e){ copied=fallbackCopy(url); }
+        this.setUI(true);
+        notify(copied ? 'Link copied!' : 'Sharing on. Copy: '+url);
+        if(!copied) window.prompt('Copy your share link:', url);
+      } finally { this.busy=false; }
+    },
+
+    stop:async function(){
+      var s=sbc(); var cid=this.collId();
+      if(!s || !cid){ this.setUI(false); return; }
+      this.busy=true;
+      try{
+        var r=await s.rpc('unshare_collection',{ p_collection_id: cid });
+        if(r.error){ console.warn('[DepotShare] unshare error', r.error); notify('Could not stop sharing.'); return; }
+        this.setUI(false);
+        notify('Sharing stopped.');
+      } finally { this.busy=false; }
+    }
+  };
+
+  function fallbackCopy(text){
+    try{
+      var ta=document.createElement('textarea'); ta.value=text;
+      ta.style.position='fixed'; ta.style.opacity='0'; document.body.appendChild(ta);
+      ta.focus(); ta.select(); var ok=document.execCommand('copy'); document.body.removeChild(ta); return ok;
+    }catch(e){ return false; }
+  }
+
+  /* ---------- Read-only shared view ---------- */
+  async function enterSharedView(token){
+    var s=sbc();
+    if(!s){ showUnavailable(); return; }
+    var name=null, rows=null;
+    try{
+      var rc=await s.rpc('get_shared_collection',{ p_token: token });
+      if(rc.error){ console.warn('[DepotShare] get_shared_collection', rc.error); showUnavailable(); return; }
+      var cd=rc.data; if(Array.isArray(cd)) cd=cd[0];
+      if(!cd){ showUnavailable(); return; }   /* invalid / not shared / unshared */
+      name=cd.name || 'Shared';
+      var rr=await s.rpc('get_shared_cards',{ p_token: token });
+      if(rr.error){ console.warn('[DepotShare] get_shared_cards', rr.error); showUnavailable(); return; }
+      rows=rr.data || [];
+    }catch(e){ console.warn('[DepotShare] shared view error', e); showUnavailable(); return; }
+
+    window.__DEPOT_SHARED = true;
+
+    /* Map + resolve photos using the existing pipeline (anon client + shared storage policy). */
+    var cards=[];
+    try{ cards=(rows||[]).map(rowToCard); }catch(e){ console.warn('[DepotShare] map', e); }
+    for(var i=0;i<cards.length;i++){ try{ await depotResolveCardPhotos(cards[i]); }catch(e){} }
+
+    /* Feed the existing render pipeline. */
+    try{
+      USER_CARDS.length = 0;
+      cards.forEach(function(c){ USER_CARDS.push(c); });
+    }catch(e){ /* USER_CARDS not in scope -> fall back below */ window.USER_CARDS = cards; }
+
+    /* Flip UI into shared, read-only mode. */
+    document.body.classList.remove('logged-out');
+    document.body.classList.add('shared-mode');
+    var lg=$id('loginGate'); if(lg) lg.classList.remove('show');
+    var banner=$id('shareBanner'); if(banner){ banner.textContent='Viewing '+name+' (read-only)'; }
+    var chip=$id('countChip'); /* count set by rebuild */
+
+    try{ if(typeof rebuild==='function') rebuild(); }catch(e){ console.warn('[DepotShare] rebuild', e); }
+    try{ if(typeof setMode==='function') setMode('binder'); else if(typeof renderBinder==='function') renderBinder(); }catch(e){ console.warn('[DepotShare] render', e); }
+  }
+
+  function showUnavailable(){
+    document.body.classList.remove('shared-mode');
+    document.body.classList.add('shared-unavailable');
+    var lg=$id('loginGate'); if(lg) lg.classList.remove('show');
+  }
+
+  /* ---------- Defense-in-depth: neutralise mutating actions while in shared view ---------- */
+  function guard(name){
+    var orig=window[name];
+    if(typeof orig!=='function') return;
+    window[name]=function(){
+      if(sharedActive()){ console.warn('[DepotShare] blocked '+name+' in read-only shared view'); return; }
+      return orig.apply(this, arguments);
+    };
+  }
+  ['removeFromDepot','saveCard','openForm','depotInsertCard','depotDeleteCard','depotUpdateCardPhoto'].forEach(guard);
+
+  /* ---------- Bootstrap ---------- */
+  function boot(){
+    var token=getShareToken();
+    if(token){ enterSharedView(token); }
+  }
+  if(document.readyState==='loading'){ document.addEventListener('DOMContentLoaded', boot); }
+  else { boot(); }
+})();
+<!-- /PHASE5-SHARE-JS -->
+
+</script>
+<!-- RESPONSIVE-FIXES (feat/responsive): mobile/tablet only; desktop >768px untouched -->
+<style id="responsive-fixes">
+/* ================= TABLET & PHONE: <=768px ================= */
+@media (max-width:768px){
+
+  /* ---- (1) TOP BAR: reflow so every control stays visible ---- */
+  .topbar{
+    max-width:760px;
+    margin-right:auto;
+    flex-wrap:wrap;
+    align-items:center;
+    row-gap:.6rem;
+    column-gap:.7rem;
+    padding:1.4rem 1rem 1rem;
+  }
+  .topbar .count-chip{ margin-left:auto; }
+  /* account controls drop to their own full-width row, wrapping, all reachable */
+  .topbar #authArea, .topbar .auth-area{
+    flex-basis:100%;
+    margin-left:0;
+    flex-wrap:wrap;
+    justify-content:flex-start;
+    gap:.5rem;
+  }
+  .auth-area .auth-email{ max-width:60vw; }
+  .auth-area .auth-btn, #shareBtn{ white-space:nowrap; }
+
+  /* ---- (2) BY SET: cards fully visible, track fits the viewport ---- */
+  .carousel-stage{ padding:1.2rem .7rem 2rem; }
+  .set-picker{ max-width:100%; }
+  .reel{
+    width:100%;
+    gap:.5rem;
+    justify-content:space-between;
+  }
+  .reel-track{
+    flex:1 1 auto;
+    min-width:0;          /* shrink the flex track instead of overflowing */
+    max-width:100%;
+    padding:1rem .25rem;
+  }
+  .reel-arrow{ flex:0 0 auto; }
+
+  /* ---- (3) ADD-A-CARD FORM: stack card over footer, single column body ---- */
+  /* scrim lays card + footer (its siblings) in a column so nothing floats off-screen */
+  .form-scrim{
+    flex-direction:column;
+    align-items:center;
+    justify-content:flex-start;
+    overflow-y:auto;
+    padding:1rem;
+    gap:.8rem;
+  }
+  .form-card{
+    width:100%;
+    max-width:560px;
+    max-height:none;       /* let the scrim scroll, card grows naturally */
+  }
+  .form-body{
+    flex-direction:column;
+    gap:1rem;
+    padding:1rem;
+  }
+  .form-left, .form-right{
+    flex:1 1 auto;
+    width:100%;
+    min-width:0;           /* stop inner min-width fields forcing overflow */
+  }
+  .rolo-brand select, .rolo-brand input#rolo-brand-custom{ min-width:0; }
+  /* footer sits below the card, full width, buttons reachable */
+  .form-foot{
+    width:100%;
+    max-width:560px;
+    flex-wrap:wrap;
+    justify-content:center;
+  }
+
+  /* ---- sanity: group-by controls wrap ---- */
+  .group-by{ flex-wrap:wrap; }
+}
+
+/* ================= PHONE: <=480px ================= */
+@media (max-width:480px){
+
+  .topbar{ padding:1.2rem .8rem .9rem; column-gap:.5rem; }
+  .tagline{ flex-basis:100%; order:3; }   /* tagline to its own line, never clips controls */
+  .topbar .count-chip{ font-size:.45rem; padding:.35rem .45rem; }
+  .auth-area .auth-email{ max-width:100%; flex-basis:100%; }
+
+  /* By Set: smaller cards so a full card shows on a phone */
+  .reel-card{ flex:0 0 130px; }
+  .reel-arrow{ width:38px; height:38px; font-size:.55rem; }
+
+  /* Add form: smaller image-search grid + full-width buttons */
+  .search-results{ grid-template-columns:repeat(2,1fr); }
+  .form-foot .btn-ghost, .form-foot .btn-solid{ flex:1 1 auto; text-align:center; }
+}
+
+    /* Franchise Economy Slice A: wallet chip + payday panel (additive) */
+    .depot-wallet-chip{display:inline-flex;align-items:baseline;gap:.25em;margin-left:.6em;padding:.12em .5em;border-radius:999px;background:rgba(212,175,55,.15);border:1px solid rgba(212,175,55,.5);font-weight:700;font-size:.8em;color:#e8c86a;vertical-align:middle}
+    .depot-wallet-chip .dw-cur{opacity:.7;font-size:.85em;font-weight:600}
+    .depot-payday{position:fixed;left:50%;bottom:1.2em;transform:translateX(-50%);z-index:9999;min-width:220px;max-width:90vw;background:#12161c;border:1px solid rgba(212,175,55,.55);border-radius:12px;box-shadow:0 8px 32px rgba(0,0,0,.5);padding:.8em 1em;color:#e9edf2;font-size:.9em}
+    .depot-payday .dw-pay-title{font-weight:800;letter-spacing:.08em;color:#e8c86a;margin-bottom:.4em}
+    .depot-payday .dw-pay-row{display:flex;justify-content:space-between;gap:1em;opacity:.9;padding:.1em 0}
+    .depot-payday .dw-pay-total{display:flex;justify-content:space-between;border-top:1px solid rgba(255,255,255,.15);margin-top:.4em;padding-top:.4em;font-weight:800;color:#7CFC9B}
+    .depot-payday .dw-pay-bal{margin-top:.3em;opacity:.85;font-size:.9em}
+    </style>
+
+
+<!-- ===== SEASON MODE view (retro schedule/record) ===== -->
+<div id="depotSeasonView" style="display:none; position:fixed; inset:0; z-index:9000; background:#0b1418; color:#e8e2c8; font-family:'Courier New',monospace; overflow:auto;">
+  <div style="max-width:640px; margin:0 auto; padding:28px 18px;">
+    <div style="display:flex; align-items:center; justify-content:space-between; border-bottom:2px solid #caa14a; padding-bottom:10px;">
+      <div style="font-size:22px; letter-spacing:2px; color:#caa14a;">SEASON</div>
+      <button id="depotSeasonClose" type="button" style="background:#20323a; color:#e8e2c8; border:1px solid #caa14a; padding:6px 12px; cursor:pointer; font-family:inherit;">CLOSE</button>
+    </div>
+    <div id="depotSeasonTeam" style="margin:14px 0 4px; font-size:16px;">&nbsp;</div>
+    <div id="depotSeasonRecord" style="font-size:34px; letter-spacing:3px; color:#8fd694; margin-bottom:12px;">0&ndash;0</div>
+    <div id="depotSeasonSched" style="border-top:1px solid #2c4048;"></div>
+    <div style="margin-top:18px; text-align:center;">
+      <button id="depotSeasonPlayNext" type="button" style="background:#caa14a; color:#0b1418; border:none; padding:12px 26px; font-size:16px; letter-spacing:1px; cursor:pointer; font-family:inherit;">PLAY NEXT GAME</button>
+    </div>
+    <div id="depotSeasonMsg" style="margin-top:12px; text-align:center; color:#c98; min-height:18px;"></div>
+  </div>
+</div>
+<script>
+(function(){
+  function $id(x){ return document.getElementById(x); }
+  var CUR = null; // { franchise, season }
+  function esc(t){ return String(t==null?'':t).replace(/[&<>]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c];}); }
+
+  function renderSched(games){
+    var el=$id('depotSeasonSched'); if(!el) return;
+    el.innerHTML='';
+    (games||[]).forEach(function(g){
+      var row=document.createElement('div');
+      row.style.cssText='display:flex; justify-content:space-between; padding:7px 2px; border-bottom:1px solid #2c4048; font-size:14px;';
+      var res = g.result==='pending' ? '&middot;' : (g.result==='win'?'W':'L');
+      var score = (g.user_score==null||g.opp_score==null) ? '' : (g.user_score+'&ndash;'+g.opp_score);
+      var col = g.result==='win' ? '#8fd694' : (g.result==='loss' ? '#e08a8a' : '#7a8c92');
+      row.innerHTML='<span>G'+g.game_number+' &nbsp; vs '+esc(g.opponent_name||'AI')+'</span>'+
+                    '<span style="color:'+col+';">'+res+' &nbsp; '+score+'</span>';
+      el.appendChild(row);
+    });
+  }
+
+  async function refresh(){
+    if(!window.DepotSeason){ $id('depotSeasonMsg').textContent='Season module not loaded.'; return; }
+    $id('depotSeasonMsg').textContent='Loading season...';
+    try{
+      CUR = await DepotSeason.startOrResumeSeason();
+      if(!CUR){ $id('depotSeasonMsg').textContent='No active season yet.  Sign in and open Season to start one.'; return; }
+      var team = (CUR.franchise && CUR.franchise.team_name) || 'MY CLUB';
+      var w=(CUR.season.wins|0), l=(CUR.season.losses|0);
+      $id('depotSeasonTeam').textContent = team + '  \u2014  Season';
+      $id('depotSeasonRecord').innerHTML = w+'&ndash;'+l;
+      var games = await DepotSeason.loadSeasonGames(CUR.season.id);
+      renderSched(games);
+      var done = (CUR.season.status==='complete') || (w+l >= (CUR.season.games_total|0));
+      var pn=$id('depotSeasonPlayNext');
+      pn.disabled = done; pn.style.opacity = done ? '0.5' : '1';
+      $id('depotSeasonMsg').textContent = done ? 'Season complete.' : '';
+    }catch(e){ console.error('[season] refresh failed', e); $id('depotSeasonMsg').textContent='Could not load season.'; }
+  }
+
+  window.__depotOpenSeason = function(){
+    var v=$id('depotSeasonView'); if(v){ v.style.display='block'; refresh(); }
+  };
+  document.addEventListener('DOMContentLoaded', function(){
+    var c=$id('depotSeasonClose'); if(c) c.addEventListener('click', function(){ $id('depotSeasonView').style.display='none'; });
+    var p=$id('depotSeasonPlayNext');
+    if(p) p.addEventListener('click', async function(){
+      if(!CUR || !window.DepotSeason) return;
+      $id('depotSeasonMsg').textContent='Starting next game...';
+      try{
+        var ng = await DepotSeason.nextPendingGame(CUR.season.id);
+        if(!ng){ $id('depotSeasonMsg').textContent='No pending games.'; return; }
+        DepotSeason.launchSeasonGame({
+          season_id: CUR.season.id,
+          season_game_id: ng.id,
+          game_number: ng.game_number,
+          franchise_id: CUR.franchise.id
+        });
+      }catch(e){ console.error('[season] play next failed', e); $id('depotSeasonMsg').textContent='Could not start game.'; }
+    });
+    // If we arrived from a finished SEASON game (BACK TO SEASON), auto-open the season view.
+    try {
+      var __qsSeason = new URLSearchParams(window.location.search).get('season');
+      if (__qsSeason) {
+        var __openSeasonSoon = function(tries){
+          if (window.__depotOpenSeason) { window.__depotOpenSeason(); return; }
+          if ((tries||0) < 40) setTimeout(function(){ __openSeasonSoon((tries||0)+1); }, 150);
+        };
+        __openSeasonSoon(0);
+      }
+    } catch(e){}
+  });
+})();
+</script>
+<script src="game/season.js?v=276d06c" defer></script>
+<script src="js/depot-index-shell.js?v=276d06c"></script>
+<script src="js/depot-prestige.js?v=276d06c"></script>
+<script src="js/depot-wallet.js?v=276d06c"></script>
+  <script src="js/depot-pack-engine.js?v=276d06c"></script>
+  <script src="js/depot-pixel-card.js?v=276d06c"></script>
+  <script src="js/depot-shop.js?v=276d06c"></script>
+  <script src="js/depot-shop-view.js?v=276d06c"></script>
+  <script src="js/depot-binder-shop.js?v=276d06c"></script>
+  <script src="js/depot-library-art.js?v=276d06c"></script>
 <script>
 /* Franchise Economy Slice A: arm wallet chip + payout hook. Additive, fail-loud, graceful until DDL. */
 (function(){
