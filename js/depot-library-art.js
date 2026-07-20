@@ -119,6 +119,7 @@
   // Apply a library background to the app's real photo layer as a clean card scan.
   function applyBg(el, url) {
     if (!el) return;
+    if (el.closest) { var _t = el.closest('.dc-tile'); if (_t) _t.classList.add('has-art'); }
     el.style.backgroundImage = 'url("' + String(url).replace(/"/g, '%22') + '")';
     el.style.backgroundSize = 'cover';
     el.style.backgroundRepeat = 'no-repeat';
