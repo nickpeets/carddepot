@@ -122,7 +122,7 @@
     el.style.backgroundImage = 'url("' + String(url).replace(/"/g, '%22') + '")';
     el.style.backgroundSize = 'cover';
     el.style.backgroundRepeat = 'no-repeat';
-    el.style.backgroundPosition = 'center';
+    el.style.backgroundPosition = 'center';    var _tile = el.closest ? el.closest('.dc-tile') : null;    if (_tile) { _tile.classList.add('has-art'); }    var _tile = el.closest ? el.closest('.dc-tile') : null;
   }
 
   // Locate the app's ACTUAL photo layer inside a binder tile: the absolutely-
