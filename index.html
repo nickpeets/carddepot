@@ -1591,24 +1591,28 @@ const dcERA_TITLE = {"all":"All Eras","vintage":"Vintage","junk":"Junk Wax","mod
 const dcEsc = function(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); };
 function dcStatPairs(){ return [['AVG','.264'],['HR','16'],['RBI','61'],['SB','16'],['GAMES','127']]; }
 function dcStatChips(c){ return [['YEAR',String(c.yr)],['ERA',dcERA_TITLE[eraFromYear(c.yr)]],['GRADE',c.grade||'\u2014'],['POS','CF']]; }
-function dcTileHTML(c){
-  var photo = c.photo
-    ? '<div style="position:absolute;inset:0;border-radius:8px;background-image:url(\"'+dcEsc(c.photo)+'\");background-size:cover;background-position:center"></div>'
-    : '<span style="font:9px ui-monospace,monospace;color:rgba(16,69,107,.45)">scan</span>';
-  var starBadge = c.star ? '<span style="position:absolute;top:4px;right:6px;font-size:14px;color:#f4823c">\u2605</span>' : '';
-  var gradeChip = c.grade ? '<span style="font-family:\'Baloo 2\',sans-serif;font-weight:800;font-size:10px;color:#fff;background:#10456b;border-radius:999px;padding:2px 7px">'+dcEsc(c.grade)+'</span>' : '';
-  return ''+
-  '<div class="dc-tile" style="background:#f2f9fd;border:3px solid #10456b;border-radius:14px;box-shadow:0 4px 0 #10456b;padding:9px;cursor:pointer">'+
-    '<div style="height:96px;border-radius:8px;background:repeating-linear-gradient(45deg,rgba(16,69,107,.08) 0 8px,transparent 8px 16px);display:flex;align-items:center;justify-content:center;position:relative">'+
-      photo + starBadge +
-    '</div>'+
-    '<div style="font-family:\'Baloo 2\',sans-serif;font-weight:700;font-size:13px;color:#10456b;margin-top:7px;line-height:1.15">'+dcEsc(c.name)+'</div>'+
-    '<div style="display:flex;justify-content:space-between;align-items:baseline">'+
-      '<span style="font-family:\'Baloo 2\',sans-serif;font-weight:600;font-size:11px;color:#5b7f97">'+dcEsc(c.set)+'</span>'+
-      gradeChip +
-    '</div>'+
-  '</div>';
-}
+  function dcTileHTML(c){
+    var hasPersonal = !!c.photo;
+    var artStyle = 'position:absolute;inset:0;border-radius:8px;background-size:contain;background-repeat:no-repeat;background-position:center;'
+      + (hasPersonal ? ('background-image:url(\"'+dcEsc(c.photo)+'\")') : '');
+    var artLayer = '<div class="dc-art" style="'+artStyle+'"></div>';
+    var scanHint = hasPersonal ? '' : '<span class="dc-scan" style="font:9px ui-monospace,monospace;color:rgba(16,69,107,.45)">scan</span>';
+    var starBadge = c.star ? '<span style="position:absolute;top:6px;right:8px;font-size:15px;color:#f4823c;text-shadow:0 1px 2px rgba(0,0,0,.5);z-index:2">\u2605</span>' : '';
+    var gradeBadge = c.grade ? '<span style="position:absolute;bottom:6px;right:6px;font-family:\'Baloo 2\',sans-serif;font-weight:800;font-size:10px;color:#fff;background:#10456b;border-radius:999px;padding:2px 7px;box-shadow:0 1px 2px rgba(0,0,0,.35);z-index:2">'+dcEsc(c.grade)+'</span>' : '';
+    var caption = hasPersonal ? '' : (
+        '<div class="dc-cap" style="font-family:\'Baloo 2\',sans-serif;font-weight:700;font-size:13px;color:#10456b;margin-top:7px;line-height:1.15">'+dcEsc(c.name)+'</div>'
+      + '<div class="dc-cap" style="display:flex;justify-content:space-between;align-items:baseline;margin-top:2px"><span style="font-family:\'Baloo 2\',sans-serif;font-weight:600;font-size:11px;color:#5b7f97">'+dcEsc(c.set)+'</span></div>'
+    );
+    return (
+      '<div class="dc-tile" data-has-art="'+(hasPersonal?'1':'0')+'" style="background:#f2f9fd;border:3px solid #10456b;border-radius:14px;box-shadow:0 4px 0 #10456b;padding:9px;cursor:pointer">'
+    +   '<div class="dc-photo" style="aspect-ratio:2.5/3.5;width:100%;border-radius:8px;background:repeating-linear-gradient(45deg,rgba(16,69,107,.08));display:flex;align-items:center;justify-content:center;position:relative;overflow:hidden">'
+    +     artLayer + scanHint + starBadge + gradeBadge
+    +   '</div>'
+    +   caption
+    + '</div>'
+    );
+  }
+
 function dcBinderHTML(id){
   var filterPills = dcFILTERS.map(function(f,i){
     return '<div class="dc-fpill dc-hoverbtn" data-i="'+i+'" style="font-family:\'Baloo 2\',sans-serif;font-weight:700;font-size:12px;color:'+f.color+';background:'+f.bg+';border:2px solid #10456b;border-radius:999px;padding:5px 13px;cursor:pointer">'+dcEsc(f.label)+'</div>';
