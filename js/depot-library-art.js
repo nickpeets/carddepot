@@ -11,17 +11,16 @@
  *   number = leading-zeros-stripped, letter suffix KEPT  (5 not 005; 1b not 001b).
  * Library reads are PLAIN PUBLIC URLs (browser-cacheable) — never signed URLs.
  *
- * Binder tiles (.dc-tile) and the spotlight (#spotFront / #spotBack) render the card image
- * as a CSS background-image (not an <img>), so fall-through cannot use <img onerror>.
- * Instead we PROBE the candidate library URL with a throwaway Image(): on load we swap the
- * background; on error we leave the existing placeholder (no broken-image icon, one debug log).
- * Resolution is lazy/per-render — no speculative prefetching.
+ * Surfaces render card art as CSS background-image (binder tiles, spotlight front) or as an
+ * <img> (spotlight back), so fall-through cannot rely on a single <img onerror>. Instead we
+ * PROBE the candidate library URL with a throwaway Image(): on load we swap; on error we leave
+ * the existing placeholder (no broken-image icon, one debug log). Lazy/per-render; no prefetch.
  *
  * Cards whose {year}/{set}/{number} derive to a 404 stay on placeholder — correct while
  * ingestion is mid-flight; they self-heal as sets land (no code change on new sets).
  *
- * NOTE: COLLECTION is closure-scoped in index.html, so the page passes it (or the card)
- * into the enhancers explicitly; we also fall back to window.COLLECTION if present.
+ * COLLECTION is closure-scoped in index.html, so the page passes it (or the card) into the
+ * enhancers explicitly; we also fall back to window.COLLECTION if present.
  */
 (function () {
   'use strict';
@@ -115,6 +114,7 @@
     if (!el.style.backgroundPosition) el.style.backgroundPosition = 'center';
   }
 
+  // Swap a background-image only after confirming the candidate loads.
   function probeAndSwap(el, url, key) {
     if (!el || !url) return;
     if (_probeCache[url] === 'fail') return;
@@ -125,8 +125,19 @@
     img.src = url;
   }
 
-  // Element carrying the front background inside a tile: the child whose inline style sets
-  // a background (placeholder/personal), else the tile's first child div, else the tile.
+  // Swap an <img> src only after confirming the candidate loads (leaves onerror chain intact).
+  function probeImg(imgEl, url, key) {
+    if (!imgEl || !url) return;
+    if (_probeCache[url] === 'fail') return;
+    if (_probeCache[url] === 'ok') { imgEl.src = url; return; }
+    var t = new Image();
+    t.onload = function () { _probeCache[url] = 'ok'; imgEl.src = url; console.debug('[depot] library-hit ' + key); };
+    t.onerror = function () { _probeCache[url] = 'fail'; console.debug('[depot] library-miss ' + key); };
+    t.src = url;
+  }
+
+  // Element carrying the front background inside a tile: the child whose inline style sets a
+  // background (placeholder/personal), else the tile's first child div, else the tile.
   function photoPanel(root) {
     if (!root) return null;
     var cands = root.querySelectorAll('div,section,figure');
@@ -150,25 +161,33 @@
       var card = col[idx];
       if (!card) continue;
       var res = depotResolveCardArt(card, 'front');
-      if (res.tier !== 'library') continue;                       // personal shown; placeholder handled by page
+      if (res.tier !== 'library') continue;                        // personal shown; placeholder handled by page
       if (tile.getAttribute('data-lib-front') === res.url) continue; // idempotent
       tile.setAttribute('data-lib-front', res.url);
       probeAndSwap(photoPanel(tile), res.url, res.key);
     }
   }
 
-  // Enhance the open spotlight for one card. Targets #spotFront / #spotBack (present in
-  // index.html); back is skipped cleanly when hasback is false (probe simply misses).
+  // Enhance the open spotlight for one card. openSpot injects into #spotFront / #spotBack:
+  //   front: background-image on '#spotFront .photo' (personal front or placeholder)
+  //   back : <img> inside '#spotBack .spot-back-img' (present only when a personal back exists)
+  // Resolve both; a hasback=false card whose library back 404s falls through cleanly.
   function enhanceSpotlight(card) {
     if (!card) return;
-    var faces = { front: document.getElementById('spotFront'), back: document.getElementById('spotBack') };
-    ['front', 'back'].forEach(function (side) {
-      var panel = faces[side];
-      if (!panel) return;
-      var res = depotResolveCardArt(card, side);
-      if (res.tier !== 'library') return;
-      probeAndSwap(panel, res.url, res.key);
-    });
+    var frontRes = depotResolveCardArt(card, 'front');
+    if (frontRes.tier === 'library') {
+      var fr = document.getElementById('spotFront');
+      var frontPanel = fr && (fr.querySelector('.photo') || fr);
+      if (frontPanel) probeAndSwap(frontPanel, frontRes.url, frontRes.key);
+    }
+    var backRes = depotResolveCardArt(card, 'back');
+    if (backRes.tier === 'library') {
+      var bk = document.getElementById('spotBack');
+      var backWrap = bk && bk.querySelector('.spot-back-img');
+      var backImg = backWrap && backWrap.querySelector('img');
+      if (backImg) probeImg(backImg, backRes.url, backRes.key);
+      else if (backWrap) probeAndSwap(backWrap, backRes.url, backRes.key);
+    }
   }
 
   window.depotResolveCardArt = depotResolveCardArt;
