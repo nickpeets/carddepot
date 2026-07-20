@@ -1,18 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <script src="js/version.js?v=9ce1034"></script>
-  <script src="js/depot-core.js?v=9ce1034"></script>
+  <script src="js/version.js?v=ea80b7b"></script>
+  <script src="js/depot-core.js?v=ea80b7b"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>The Depot</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Spectral:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/depot-style.css?v=9ce1034">
-  <link rel="stylesheet" href="css/season.css?v=9ce1034">
-    <script src="js/depot-shell.js?v=9ce1034"></script>
-  <script src="js/depot-season-shell.js?v=9ce1034"></script>
+  <link rel="stylesheet" href="css/depot-style.css?v=ea80b7b">
+  <link rel="stylesheet" href="css/season.css?v=ea80b7b">
+    <script src="js/depot-shell.js?v=ea80b7b"></script>
+  <script src="js/depot-season-shell.js?v=ea80b7b"></script>
   <style>
 :root{
   --leather:#5a2118;
@@ -1107,8 +1107,8 @@ body{
 </style>
 <!-- /PHASE5-SHARE-CSS -->
 
-  <link rel="stylesheet" href="css/depot-shop-view.css?v=9ce1034">
-    <link rel="stylesheet" href="depot-v2.css?v=9ce1034">
+  <link rel="stylesheet" href="css/depot-shop-view.css?v=ea80b7b">
+    <link rel="stylesheet" href="depot-v2.css?v=ea80b7b">
 </head>
 <body class="v2-body">
   <div id="sharedUnavailable"><div class="su-card"><div class="su-title">Not available</div><div class="su-sub">This collection isn&rsquo;t available.</div></div></div>
@@ -1726,6 +1726,7 @@ function renderBinder(){
     }
   }
   document.getElementById('binderGrid').innerHTML=html;
+    try { if (window.depotEnhanceCardArt) window.depotEnhanceCardArt(document.getElementById('binderGrid'), COLLECTION); } catch(e){ console.debug('[depot] library binder hook: '+(e&&e.message)); }
   document.getElementById('pageDots').textContent=`Page ${curPage+1} of ${pages}`;
   document.getElementById('prevPage').disabled=curPage===0;
   document.getElementById('nextPage').disabled=curPage>=pages-1;
@@ -1890,7 +1891,8 @@ function openSpot(idx){
     ${c.bio?`<div class="bio">${c.bio}</div>`:''}
         </div>`;
   document.getElementById('spotMeta').innerHTML=`${c.name?`<div class="spot-name">${c.name}</div>`:''}<span class="hint">click card to flip · esc to close</span>`
-    + (cphoto?'':`<div style="margin-top:.5rem"><button class="btn-google" style="width:auto;padding:.45rem 1rem;font-size:.72rem" onclick="findImageFor(${idx},event)">Find this card on Google Images ↗</button></div>`)
+    + (cphoto?'':`<div style="margin-top:.5rem"><button class="btn-google" style="width:auto;
+    try { if (window.depotEnhanceSpotlightArt) window.depotEnhanceSpotlightArt(COLLECTION[idx]); } catch(e){ console.debug('[depot] library spotlight hook: '+(e&&e.message)); }padding:.45rem 1rem;font-size:.72rem" onclick="findImageFor(${idx},event)">Find this card on Google Images ↗</button></div>`)
         + `<div class="v2-d4"><div class="v2-d4-row"><span class="v2-d4-lab">Grade</span><span class="v2-grade-val ${c.grade?'':'is-blank'}" id="d4GradeVal">${c.grade?escAttr(c.grade):'—'}</span><select class="v2-grade-sel" id="d4GradeSel" style="width:auto" onchange="d4SetGrade(this.value)">${['','1','2','3','4','5','6','7','8','9','10','GEM 10','AUTH'].map(function(g){return '<option value="'+g+'"'+(String(c.grade||'')===g?' selected':'')+'>'+(g===''?'— none —':g)+'</option>';}).join('')}</select></div><div class="v2-d4-row"><span class="v2-d4-lab">Star</span><button type="button" class="v2-star-toggle" id="d4StarBtn" aria-pressed="${c.star?'true':'false'}" onclick="d4ToggleStar()"><span class="v2-star-badge--inline v2-anim-twinkle" style="${c.star?'':'filter:grayscale(1);opacity:.5'}">★</span> ${c.star?'Starred':'Mark star'}</button></div><div class="v2-d4-row" style="align-items:flex-start"><span class="v2-d4-lab">Notes</span><textarea class="v2-cond-input" id="d4CondInput" placeholder="Condition notes (corners, centering, flaws…)" onchange="d4SetCond(this.value)">${c.condNotes?escAttr(c.condNotes):''}</textarea></div><div class="v2-d4-status" id="d4Status"></div></div>` + `<div class="spot-remove"><button class="btn-ghost" onclick="removeFromDepot(${idx},event)">Remove from depot</button></div>`;
   document.getElementById('spotCard').classList.remove('flipped');
   document.getElementById('spotlight').classList.add('open');
@@ -3030,15 +3032,16 @@ setAuthUI(false);
   });
 })();
 </script>
-<script src="game/season.js?v=9ce1034" defer></script>
-<script src="js/depot-index-shell.js?v=9ce1034"></script>
-<script src="js/depot-prestige.js?v=9ce1034"></script>
-<script src="js/depot-wallet.js?v=9ce1034"></script>
-  <script src="js/depot-pack-engine.js?v=9ce1034"></script>
-  <script src="js/depot-pixel-card.js?v=9ce1034"></script>
-  <script src="js/depot-shop.js?v=9ce1034"></script>
-  <script src="js/depot-shop-view.js?v=9ce1034"></script>
-  <script src="js/depot-binder-shop.js?v=9ce1034"></script>
+<script src="game/season.js?v=ea80b7b" defer></script>
+<script src="js/depot-index-shell.js?v=ea80b7b"></script>
+<script src="js/depot-prestige.js?v=ea80b7b"></script>
+<script src="js/depot-wallet.js?v=ea80b7b"></script>
+  <script src="js/depot-pack-engine.js?v=ea80b7b"></script>
+  <script src="js/depot-pixel-card.js?v=ea80b7b"></script>
+  <script src="js/depot-shop.js?v=ea80b7b"></script>
+  <script src="js/depot-shop-view.js?v=ea80b7b"></script>
+  <script src="js/depot-binder-shop.js?v=ea80b7b"></script>
+  <script src="js/depot-library-art.js?v=ea80b7b"></script>
 <script>
 /* Franchise Economy Slice A: arm wallet chip + payout hook. Additive, fail-loud, graceful until DDL. */
 (function(){
