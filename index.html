@@ -1,18 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <script src="js/version.js?v=4371e1b"></script>
-  <script src="js/depot-core.js?v=4371e1b"></script>
+  <script src="js/version.js?v=0d88c68"></script>
+  <script src="js/depot-core.js?v=0d88c68"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>The Depot</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://fonts.gshtatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Spectral:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/depot-style.css?v=4371e1b">
-  <link rel="stylesheet" href="css/season.css?v=4371e1b">
-    <script src="js/depot-shell.js?v=4371e1b"></script>
-  <script src="js/depot-season-shell.js?v=4371e1b"></script>
+  <link rel="stylesheet" href="css/depot-style.css?v=0d88c68">
+  <link rel="stylesheet" href="css/season.css?v=0d88c68">
+    <script src="js/depot-shell.js?v=0d88c68"></script>
+  <script src="js/depot-season-shell.js?v=0d88c68"></script>
   <style>
     /* binder tile portrait redesign v2 (additive, contract-safe) */
     :root{--binder-cols:3}
@@ -1117,8 +1117,8 @@ body{
 </style>
 <!-- /PHASE5-SHARE-CSS -->
 
-  <link rel="stylesheet" href="css/depot-shop-view.css?v=4371e1b">
-    <link rel="stylesheet" href="depot-v2.css?v=4371e1b">
+  <link rel="stylesheet" href="css/depot-shop-view.css?v=0d88c68">
+    <link rel="stylesheet" href="depot-v2.css?v=0d88c68">
 </head>
 <body class="v2-body">
   <div id="sharedUnavailable"><div class="su-card"><div class="su-title">Not available</div><div class="su-sub">This collection isn&rsquo;t available.</div></div></div>
@@ -1167,7 +1167,7 @@ body.logged-out #appFrame{display:none !important;}
 
 
 <!-- BINDER -->
-<div class="dc-binder" style="width:760px;max-width:100%;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 8px 28px rgba(13,45,92,.18)"><div style="display:flex;gap:8px;padding:14px 24px 0;flex-wrap:wrap;align-items:center"><input style="flex:1;min-width:180px;background:#fff;border:3px solid #10456b;border-radius:999px;padding:8px 16px;font-family:'Baloo 2',sans-serif;font-weight:600;font-size:13px;color:#10456b;outline:none" placeholder="ð Search players, sets, yearsâ¦" id="binderSearch" oninput="curSearch=this.value; if(typeof curPage!==&#39;undefined&#39;){curPage=0;} renderBinder();"><div style="display:flex;gap:8px;flex-wrap:wrap" id="eraTabs"></div></div><div style="margin:6px 0 0;background:transparent;border:0;border-radius:0;box-shadow:none;padding:16px 24px 20px"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px"><div style="font-family:'Baloo 2',sans-serif;font-weight:800;font-size:16px;color:#10456b" id="pageDots">Page 1 of 1</div><span id="eraTitle" style="margin-left:8px;font-weight:700;color:#10456b"></span><span id="eraBlurb" style="display:none"></span><div style="display:flex;gap:6px"><div class="dc-pager" style="width:32px;height:32px;border-radius:10px;background:#dff1fb;border:2px solid #10456b;display:flex;align-items:center;justify-content:center;font-weight:800;color:#10456b;cursor:pointer" id="prevPage" onclick="turnPage(-1)" role="button">â¹</div><div class="dc-pager" style="width:32px;height:32px;border-radius:10px;background:#dff1fb;border:2px solid #10456b;display:flex;align-items:center;justify-content:center;font-weight:800;color:#10456b;cursor:pointer" id="nextPage" onclick="turnPage(1)" role="button">âº</div></div><div id="groupByBar" style="display:flex;align-items:center;gap:6px;margin-left:auto"><label style="font-family:'Baloo 2',sans-serif;color:#10456b;font-weight:700;font-size:12px">Group by</label><select style="font-family:'Baloo 2',sans-serif;border:2px solid #10456b;border-radius:999px;color:#10456b;background:#dff1fb;padding:4px 10px;font-weight:700;font-size:12px;outline:none;box-shadow:none;" id="groupBy" onchange="setGroupMode(this.value)">
+<div class="dc-binder" style="width:760px;max-width:100%;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 8px 28px rgba(13,45,92,.18)"><div style="display:flex;gap:8px;padding:14px 24px 0;flex-wrap:wrap;align-items:center"><input style="flex:1;min-width:180px;background:#fff;border:3px solid #10456b;border-radius:999px;padding:8px 16px;font-family:'Baloo 2',sans-serif;font-weight:600;font-size:13px;color:#10456b;outline:none" placeholder="🔍 Search players, sets, years…" id="binderSearch" oninput="curSearch=this.value; if(typeof curPage!==&#39;undefined&#39;){curPage=0;} renderBinder();"><div style="display:flex;gap:8px;flex-wrap:wrap" id="eraTabs"></div></div><div style="margin:6px 0 0;background:transparent;border:0;border-radius:0;box-shadow:none;padding:16px 24px 20px"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px"><div style="font-family:'Baloo 2',sans-serif;font-weight:800;font-size:16px;color:#10456b" id="pageDots">Page 1 of 1</div><span id="eraTitle" style="margin-left:8px;font-weight:700;color:#10456b"></span><span id="eraBlurb" style="display:none"></span><div style="display:flex;gap:6px"><div class="dc-pager" style="width:32px;height:32px;border-radius:10px;background:#dff1fb;border:2px solid #10456b;display:flex;align-items:center;justify-content:center;font-weight:800;color:#10456b;cursor:pointer" id="prevPage" onclick="turnPage(-1)" role="button">‹</div><div class="dc-pager" style="width:32px;height:32px;border-radius:10px;background:#dff1fb;border:2px solid #10456b;display:flex;align-items:center;justify-content:center;font-weight:800;color:#10456b;cursor:pointer" id="nextPage" onclick="turnPage(1)" role="button">›</div></div><div id="groupByBar" style="display:flex;align-items:center;gap:6px;margin-left:auto"><label style="font-family:'Baloo 2',sans-serif;color:#10456b;font-weight:700;font-size:12px">Group by</label><select style="font-family:'Baloo 2',sans-serif;border:2px solid #10456b;border-radius:999px;color:#10456b;background:#dff1fb;padding:4px 10px;font-weight:700;font-size:12px;outline:none;box-shadow:none;" id="groupBy" onchange="setGroupMode(this.value)">
           <option value="year">Year</option>
           <option value="set">Set</option><option value="brand">Brand</option>
           </select><a class="v2-pill v2-pill--green v2-pill--sm depot-add-card" data-depot-addcard href="index.html#add">+ Add a card</a></div></div><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px" id="binderGrid"></div></div></div>
@@ -1596,7 +1596,7 @@ function cssUrl(u){ return String(u).replace(/["'()\\]/g, m=>'%'+m.charCodeAt(0)
 function frontPhoto(c){ return (c && (c.photoFront || c.photo)) || ""; }
 function backPhoto(c){ return (c && c.photoBack) || ""; }
 /* ==== Phase 2 cutover: demo 3a/2b generators (extracted verbatim, namespaced dc*) ==== */
-const dcFILTERS = [{"label":"All","era":"all","color":"#fff","bg":"#10456b"},{"label":"Vintage","era":"vintage","color":"#10456b","bg":"#fff"},{"label":"Junk Wax","era":"junk","color":"#10456b","bg":"#fff"},{"label":"Modern","era":"modern","color":"#10456b","bg":"#fff"},{"label":"â Stars","era":"stars","color":"#7a5b00","bg":"#ffd23e"}];
+const dcFILTERS = [{"label":"All","era":"all","color":"#fff","bg":"#10456b"},{"label":"Vintage","era":"vintage","color":"#10456b","bg":"#fff"},{"label":"Junk Wax","era":"junk","color":"#10456b","bg":"#fff"},{"label":"Modern","era":"modern","color":"#10456b","bg":"#fff"},{"label":"★ Stars","era":"stars","color":"#7a5b00","bg":"#ffd23e"}];
 const dcERA_TITLE = {"all":"All Eras","vintage":"Vintage","junk":"Junk Wax","modern":"Modern","stars":"Starred"};
 const dcEsc = function(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); };
 function dcStatPairs(){ return [['AVG','.264'],['HR','16'],['RBI','61'],['SB','16'],['GAMES','127']]; }
@@ -1696,7 +1696,7 @@ function eraCards(era){
 function renderEraTabs(){
   var host = document.getElementById('eraTabs');
   if(!host) return;
-  var PILLS = [{"era":"all","label":"All","base":"font-family:'Baloo 2',sans-serif;font-weight:700;font-size:12px;color:#fff;background:#10456b;border:2px solid #10456b;border-radius:999px;padding:5px 13px;cursor:pointer"},{"era":"vintage","label":"Vintage","base":"font-family:'Baloo 2',sans-serif;font-weight:700;font-size:12px;color:#10456b;background:#fff;border:2px solid #10456b;border-radius:999px;padding:5px 13px;cursor:pointer"},{"era":"junk","label":"Junk Wax","base":"font-family:'Baloo 2',sans-serif;font-weight:700;font-size:12px;color:#10456b;background:#fff;border:2px solid #10456b;border-radius:999px;padding:5px 13px;cursor:pointer"},{"era":"modern","label":"Modern","base":"font-family:'Baloo 2',sans-serif;font-weight:700;font-size:12px;color:#10456b;background:#fff;border:2px solid #10456b;border-radius:999px;padding:5px 13px;cursor:pointer"},{"era":"stars","label":"â Stars","base":"font-family:'Baloo 2',sans-serif;font-weight:700;font-size:12px;color:#7a5b00;background:#ffd23e;border:2px solid #10456b;border-radius:999px;padding:5px 13px;cursor:pointer"}];
+  var PILLS = [{"era":"all","label":"All","base":"font-family:'Baloo 2',sans-serif;font-weight:700;font-size:12px;color:#fff;background:#10456b;border:2px solid #10456b;border-radius:999px;padding:5px 13px;cursor:pointer"},{"era":"vintage","label":"Vintage","base":"font-family:'Baloo 2',sans-serif;font-weight:700;font-size:12px;color:#10456b;background:#fff;border:2px solid #10456b;border-radius:999px;padding:5px 13px;cursor:pointer"},{"era":"junk","label":"Junk Wax","base":"font-family:'Baloo 2',sans-serif;font-weight:700;font-size:12px;color:#10456b;background:#fff;border:2px solid #10456b;border-radius:999px;padding:5px 13px;cursor:pointer"},{"era":"modern","label":"Modern","base":"font-family:'Baloo 2',sans-serif;font-weight:700;font-size:12px;color:#10456b;background:#fff;border:2px solid #10456b;border-radius:999px;padding:5px 13px;cursor:pointer"},{"era":"stars","label":"★ Stars","base":"font-family:'Baloo 2',sans-serif;font-weight:700;font-size:12px;color:#7a5b00;background:#ffd23e;border:2px solid #10456b;border-radius:999px;padding:5px 13px;cursor:pointer"}];
   var ACTIVE_STYLE = "font-family:'Baloo 2',sans-serif;font-weight:700;font-size:12px;color:#fff;background:#10456b;border:2px solid #10456b;border-radius:999px;padding:5px 13px;cursor:pointer";
   var cur = (typeof curEra!=='undefined' && curEra) ? curEra : 'all';
   var html = PILLS.map(function(p){
@@ -3042,17 +3042,17 @@ setAuthUI(false);
   });
 })();
 </script>
-<script src="game/season.js?v=4371e1b" defer></script>
-<script src="js/depot-index-shell.js?v=4371e1b"></script>
-<script src="js/depot-prestige.js?v=4371e1b"></script>
-<script src="js/depot-wallet.js?v=4371e1b"></script>
-  <script src="js/depot-pack-engine.js?v=4371e1b"></script>
-  <script src="js/depot-pixel-card.js?v=4371e1b"></script>
-  <script src="js/depot-shop.js?v=4371e1b"></script>
-  <script src="js/depot-shop-view.js?v=4371e1b"></script>
-  <script src="js/depot-binder-shop.js?v=4371e1b"></script>
-  <script src="js/depot-library-art.js?v=4371e1b"></script>
-  <script src="js/depot-card-detail-2b.js?v=4371e1b"></script>
+<script src="game/season.js?v=0d88c68" defer></script>
+<script src="js/depot-index-shell.js?v=0d88c68"></script>
+<script src="js/depot-prestige.js?v=0d88c68"></script>
+<script src="js/depot-wallet.js?v=0d88c68"></script>
+  <script src="js/depot-pack-engine.js?v=0d88c68"></script>
+  <script src="js/depot-pixel-card.js?v=0d88c68"></script>
+  <script src="js/depot-shop.js?v=0d88c68"></script>
+  <script src="js/depot-shop-view.js?v=0d88c68"></script>
+  <script src="js/depot-binder-shop.js?v=0d88c68"></script>
+  <script src="js/depot-library-art.js?v=0d88c68"></script>
+  <script src="js/depot-card-detail-2b.js?v=0d88c68"></script>
 <script>
 /* Franchise Economy Slice A: arm wallet chip + payout hook. Additive, fail-loud, graceful until DDL. */
 (function(){
