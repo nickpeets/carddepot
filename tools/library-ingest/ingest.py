@@ -42,6 +42,7 @@ Requires: Pillow (resize), supabase (upload) -- see requirements.txt. Both are
 imported lazily so a pure dry-run works with only the stdlib + Pillow.
 """
 
+import re
 import argparse
 import csv
 import io
@@ -53,7 +54,7 @@ from collections import Counter
 from pathlib import Path
 
 from normalize import norm_number, norm_text, catalog_key
-from parsers import FAMILIES, family_for
+from parsers import FAMILIES, family_for, detect_family
 
 LONG_EDGE = 1000
 JPEG_QUALITY = 82
@@ -86,9 +87,17 @@ def load_catalog_numbers(catalog_path, set_name):
 def census(zf, year, brand):
     """Enumerate the zip fully (Drive preview capped at ~200; this is the real
     census). Return (records, stats). records: list of ParsedFile. stats: dict."""
-    fam = family_for(int(year), brand)
-    parse = FAMILIES[fam]
     names = [n for n in zf.namelist() if n.lower().endswith((".jpg", ".jpeg"))]
+    # Content-based family auto-detection (replaces the year-only router,
+    # which mis-forced 1981 hyphen-format zips to family C -> 0% match).
+    leaves = [n.split("/")[-1] for n in names]
+    detected, detect_info = detect_family(leaves, year=year, brand=brand)
+    year_guess = detect_info["year_guess"]
+    # Use the confident content winner; fall back to the year-guess when no
+    # family clears the sanity floor (that zip then fails the base-gate and
+    # is skipped+logged as an unknown format rather than silently ingested).
+    fam = detected if detected is not None else year_guess
+    parse = FAMILIES[fam]
     records, unparsed = [], []
     sides = Counter()
     for full in names:
@@ -109,6 +118,7 @@ def census(zf, year, brand):
         "unparsed": unparsed,
         "front": sides["front"],
         "back": sides["back"],
+        "detect": detect_info,
     }
     return records, stats
 
@@ -133,6 +143,19 @@ def size_distribution(zf, sample_names):
 
 
 # ------------------------------------------------------------------- match ---
+_VAR_NUM_RE = re.compile(r"^\\d+[a-z]$", re.IGNORECASE)
+
+def is_variant(pf):
+    """Family-D letter-variant / (VAR) parallel. Base-gate rule (Nick):
+    these are non-blockers -- logged to the review CSV for a later catalog
+    enrichment pass, never counted against the base-card match gate."""
+    src = getattr(pf, "source_file", "") or ""
+    if "(var)" in src.lower():
+        return True
+    tok = (getattr(pf, "number_token", "") or "").strip()
+    return bool(_VAR_NUM_RE.match(tok))
+
+
 def dry_run(records, catalog_numbers, year, brand, set_name):
     """Parse every record's number to catalog form, test membership, and split
     into matched / unmapped. Returns (matched, unmapped). Each unmapped row carries
@@ -287,6 +310,10 @@ def main(argv=None):
         records, stats = census(zf, args.year, args.brand)
         log("census", "family={} image_files={} parsed={} front={} back={} unparsed={}".format(
             stats["family"], stats["image_files"], stats["parsed"], stats["front"], stats["back"], len(stats["unparsed"])))
+        di = stats["detect"]
+        log("detect", "{} -> family {} ({:.1%}), year-guess was {} [A={} B={} C={} D={} floor_ok={}]".format(
+            zip_name, stats["family"], di["winner_rate"], di["year_guess"],
+            di["counts"]["A"], di["counts"]["B"], di["counts"]["C"], di["counts"]["D"], di["confident"]))
         for u in stats["unparsed"]:
             log("census", "UNPARSED filename (no family-{} match): {}".format(stats["family"], u))
 
@@ -297,9 +324,16 @@ def main(argv=None):
             log("census", "sample {} {}x{} {}B".format(d["file"], d["w"], d["h"], d["bytes"]))
 
         matched, unmapped = dry_run(records, catalog_numbers, args.year, args.brand, args.set_name)
+        # Base-gate rule (Nick): variants (family-D letter-suffix / (VAR))
+        # are non-blockers -- excluded from gate denominator, logged to CSV.
+        unmapped_var = [u for u in unmapped if is_variant(u[0])]
+        unmapped_base = [u for u in unmapped if not is_variant(u[0])]
         base = len(matched) + len(unmapped)
         rate = (len(matched) / base) if base else 0.0
+        base_denom = len(matched) + len(unmapped_base)
+        base_rate = (len(matched) / base_denom) if base_denom else 0.0
         log("depot", "MATCH RATE {:.2%}  matched={} unmapped={} of {}".format(rate, len(matched), len(unmapped), base))
+        log("depot", "BASE MATCH RATE {:.2%}  base_matched={} base_unmapped={} of {}  (variants_excluded={})".format(base_rate, len(matched), len(unmapped_base), base_denom, len(unmapped_var)))
 
         # write the review CSV (LIBRARY_PHASE0.md 4.4 -- never silently drop)
         review_csv = Path(args.out_dir) / "unmapped_{}.csv".format(Path(zip_name).stem)
@@ -312,10 +346,10 @@ def main(argv=None):
 
         if not args.commit:
             log("depot", "DRY-RUN complete; no uploads, no manifest writes. Re-run with --commit to ingest.")
-            return 0 if rate >= args.min_match else 1
+            return 0 if base_rate >= args.min_match else 1
 
-        if rate < args.min_match:
-            log("depot", "match rate {:.2%} < min {:.2%} -- ABORT (fix parser before ingest)".format(rate, args.min_match))
+        if base_rate < args.min_match:
+            log("depot", "base match rate {:.2%} < min {:.2%} -- ABORT (real parse failures on base cards)".format(base_rate, args.min_match))
             return 1
 
         client = make_client()

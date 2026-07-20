@@ -148,3 +148,78 @@ def family_for(year: int, brand: str) -> str:
     if 1981 <= year <= 2010:
         return "C"          # sampled: 1983 Topps, 1989 Fleer
     return "D"              # modern (sampled: 2021 Topps)
+
+
+# ---- Content-based family auto-detection ----------------------------------
+# The year-based family_for() is only a guess and broke on 1981 hyphen-format
+# zips (real shape = family B, year-router forced C -> 0% match, mis-skip).
+# detect_family() looks at the zip's ACTUAL files: run every parser over the
+# image leaf-names, and pick whichever family structurally parses the most.
+# family_for() is kept only as a tiebreaker. A sanity floor prevents a weak
+# winner from being committed: the winner must clear WIN_FLOOR of parseable
+# files AND decisively beat the runner-up (WIN_MARGIN), else the zip is an
+# unknown format and is skipped+logged rather than ingested at a bad shape.
+
+WIN_FLOOR = 0.50    # winner must parse >= 50% of image files
+WIN_MARGIN = 0.10   # winner must beat runner-up by >= 10% of image files
+
+_FAMILY_ORDER = ("A", "B", "C", "D")
+
+
+def _count_parsed(leaf_names, parse):
+    """How many leaf image names this parser structurally accepts (non-None)."""
+    n = 0
+    for leaf in leaf_names:
+        if not leaf:
+            continue
+        try:
+            if parse(leaf) is not None:
+                n += 1
+        except Exception:
+            # A parser choking on an odd name is a non-match, never a crash.
+            pass
+    return n
+
+
+def detect_family(leaf_names, year=None, brand=None):
+    """Content-based family detection for one zip.
+
+    Returns (family, info) where family is 'A'|'B'|'C'|'D' on a confident
+    detection, or None when no family clears the sanity floor (unknown format
+    -> caller should skip+log). info is a dict for logging: per-family counts,
+    winner/runner-up rates, the year-guess, and whether they agreed.
+    """
+    leaf_names = [ln for ln in leaf_names if ln]
+    total = len(leaf_names)
+    counts = {fam: _count_parsed(leaf_names, FAMILIES[fam]) for fam in _FAMILY_ORDER}
+    year_guess = family_for(int(year), brand) if year is not None else None
+
+    # Rank by parse count; break ties by preferring the year-guess, then a
+    # stable family order so the result is deterministic.
+    def _rank_key(fam):
+        return (counts[fam], 1 if fam == year_guess else 0, -_FAMILY_ORDER.index(fam))
+    ranked = sorted(_FAMILY_ORDER, key=_rank_key, reverse=True)
+    winner, runner = ranked[0], ranked[1]
+
+    win_n, run_n = counts[winner], counts[runner]
+    win_rate = (win_n / total) if total else 0.0
+    run_rate = (run_n / total) if total else 0.0
+
+    info = {
+        "total": total,
+        "counts": counts,
+        "winner": winner,
+        "winner_rate": win_rate,
+        "runner": runner,
+        "runner_rate": run_rate,
+        "year_guess": year_guess,
+        "agreed": (winner == year_guess),
+    }
+
+    confident = (
+        total > 0
+        and win_rate >= WIN_FLOOR
+        and (win_rate - run_rate) >= WIN_MARGIN
+    )
+    info["confident"] = confident
+    return (winner if confident else None), info

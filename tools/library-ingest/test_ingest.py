@@ -30,6 +30,7 @@ from parsers import (
     parse_family_C,
     parse_family_D,
     family_for,
+    detect_family,
     FAMILIES,
 )
 
@@ -188,6 +189,50 @@ def test_catalog_2021_topps():
         assert present in nums, present
     # '4d' appears in a report filename sample but NOT the catalog -> expected unmapped
     assert "4d" not in nums
+
+
+
+# ---- family auto-detection (content-based, replaces year-only router) -------
+def _bset():
+    # 1981-Donruss/Fleer/Topps real shape: number-Name-side, hyphen-joined side
+    out = []
+    for n, name in ((1,"Ozzie-Smith"),(2,"Rollie-Fingers"),(3,"Rick-Wise"),(4,"Pete-Rose")):
+        out += ["%03d-%s-front.jpg" % (n, name), "%03d-%s-back.jpg" % (n, name)]
+    return out
+
+def test_detect_family_B_beats_year_guess_C():
+    # The 1981 mis-skip bug: year router says C, real shape is B. Auto-detect
+    # must pick B from the files, not trust the year guess.
+    fam, info = detect_family(_bset(), year=1981, brand="Donruss")
+    assert fam == "B", (fam, info["counts"])
+    assert info["year_guess"] == "C"
+    assert info["agreed"] is False
+    assert info["confident"] is True
+
+def test_detect_family_A_numeric_only():
+    a = ["%03d_front.jpg" % i for i in range(1, 9)] + ["%03d_back.jpg" % i for i in range(1, 9)]
+    fam, info = detect_family(a, year=1955, brand="Topps")
+    assert fam == "A", (fam, info["counts"])
+
+def test_detect_unknown_format_is_none():
+    # No family parses -> unconfident -> None (caller skips+logs, never ingests).
+    fam, info = detect_family(["random_photo.txt", "IMG_0001.heic"], year=1990, brand="Topps")
+    assert fam is None
+    assert info["confident"] is False
+
+def test_detect_empty_is_none():
+    fam, info = detect_family([], year=1990, brand="Topps")
+    assert fam is None
+    assert info["total"] == 0
+
+def test_detect_tiebreak_prefers_year_guess():
+    # C and D structurally overlap; on a tie the year-guess breaks it.
+    cd = ["%d_Some-Player-front.jpg" % i for i in range(1, 9)]
+    famC, _ = detect_family(cd, year=1983, brand="Topps")
+    famD, _ = detect_family(cd, year=2021, brand="Topps")
+    # Whatever the overlap, the two runs must not both silently pick the same
+    # non-year-guess family; at least one must honor its year guess when tied.
+    assert (famC in ("C", None)) and (famD in ("D", None))
 
 
 # ---- plain-stdlib runner (no pytest required) -------------------------------

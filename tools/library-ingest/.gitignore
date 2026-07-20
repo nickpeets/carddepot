@@ -13,3 +13,8 @@ manifest_*.jsonl
 __pycache__/
 *.pyc
 .venv/
+
+# local backups + stage-run logs (never commit)
+*.bak
+*.log
+stage2_results.json
