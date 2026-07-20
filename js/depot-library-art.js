@@ -107,52 +107,74 @@
 
   var _probeCache = {};
 
-  function applyBg(el, url) {
-    if (!el) return;
-    el.style.backgroundImage = 'url("' + url.replace(/"/g, '\\"') + '")';
-    if (!el.style.backgroundSize) el.style.backgroundSize = 'cover';
-    if (!el.style.backgroundPosition) el.style.backgroundPosition = 'center';
+  // ---- Rendering helpers -------------------------------------------------
+  // A background-image value counts as 'empty' when it is absent, 'none', or url("").
+  function bgIsEmpty(el) {
+    if (!el) return true;
+    var v = '';
+    try { v = getComputedStyle(el).backgroundImage; } catch (e) { v = ''; }
+    return !v || v === 'none' || v === 'url("")' || v === "url('')";
   }
 
-  // Swap a background-image only after confirming the candidate loads.
+  // Apply a library background to the app's real photo layer as a clean card scan.
+  function applyBg(el, url) {
+    if (!el) return;
+    el.style.backgroundImage = 'url("' + String(url).replace(/"/g, '%22') + '")';
+    el.style.backgroundSize = 'cover';
+    el.style.backgroundRepeat = 'no-repeat';
+    el.style.backgroundPosition = 'center';
+  }
+
+  // Locate the app's ACTUAL photo layer inside a binder tile: the absolutely-
+  // positioned inset:0 overlay the tile leaves empty when there is no personal
+  // photo. Returns that layer ONLY when it is genuinely empty (personal wins).
+  function emptyPhotoLayer(root) {
+    if (!root) return null;
+    var cands = root.querySelectorAll('div, section, figure');
+    var fallback = null;
+    for (var i = 0; i < cands.length; i++) {
+      var el = cands[i];
+      var cs;
+      try { cs = getComputedStyle(el); } catch (e) { continue; }
+      var covers = cs.position === 'absolute' && cs.top === '0px' && cs.left === '0px' && cs.right === '0px' && cs.bottom === '0px';
+      if (covers) {
+        if (bgIsEmpty(el)) return el;   // empty overlay -> safe to fill
+        return null;                    // overlay already painted (personal) -> never overwrite
+      }
+      if (!fallback && bgIsEmpty(el)) fallback = el;
+    }
+    return fallback;
+  }
+
+  // Swap a background image only after confirming the candidate loads.
   function probeAndSwap(el, url, key) {
     if (!el || !url) return;
     if (_probeCache[url] === 'fail') return;
     if (_probeCache[url] === 'ok') { applyBg(el, url); return; }
     var img = new Image();
-    img.onload = function () { _probeCache[url] = 'ok'; applyBg(el, url); console.debug('[depot] library-hit ' + key); };
-    img.onerror = function () { _probeCache[url] = 'fail'; console.debug('[depot] library-miss ' + key); };
+    img.onload = function () { _probeCache[url] = 'ok'; applyBg(el, url); console.debug('[depot] library-hit', key); };
+    img.onerror = function () { _probeCache[url] = 'fail'; console.debug('[depot] library-miss', key); };
     img.src = url;
   }
 
-  // Swap an <img> src only after confirming the candidate loads (leaves onerror chain intact).
+  // Swap an <img> src only after confirming the candidate loads; leaves onerror chain intact.
   function probeImg(imgEl, url, key) {
     if (!imgEl || !url) return;
     if (_probeCache[url] === 'fail') return;
     if (_probeCache[url] === 'ok') { imgEl.src = url; return; }
     var t = new Image();
-    t.onload = function () { _probeCache[url] = 'ok'; imgEl.src = url; console.debug('[depot] library-hit ' + key); };
-    t.onerror = function () { _probeCache[url] = 'fail'; console.debug('[depot] library-miss ' + key); };
+    t.onload = function () { _probeCache[url] = 'ok'; imgEl.src = url; console.debug('[depot] library-hit', key); };
+    t.onerror = function () { _probeCache[url] = 'fail'; console.debug('[depot] library-miss', key); };
     t.src = url;
   }
 
-  // Element carrying the front background inside a tile: the child whose inline style sets a
-  // background (placeholder/personal), else the tile's first child div, else the tile.
-  function photoPanel(root) {
-    if (!root) return null;
-    var cands = root.querySelectorAll('div,section,figure');
-    for (var i = 0; i < cands.length; i++) {
-      var st = cands[i].getAttribute('style') || '';
-      if (/background/i.test(st)) return cands[i];
-    }
-    return root.firstElementChild || root;
-  }
-
   // Enhance binder tiles (.dc-tile[data-idx]) within root, reading col[idx].
+  // DOM-truth guard: fill library art ONLY when the tile's photo layer is
+  // genuinely empty. A painted personal photo is never overwritten.
   function enhanceTiles(root, col) {
     root = root || document;
     col = col || window.COLLECTION;
-    if (!Array.isArray(col)) { console.debug('[depot] library: no collection; skip tiles'); return; }
+    if (!Array.isArray(col)) { console.debug('[depot] library: no collection, skip tiles'); return; }
     var tiles = root.querySelectorAll('.dc-tile[data-idx]');
     for (var i = 0; i < tiles.length; i++) {
       var tile = tiles[i];
@@ -160,40 +182,57 @@
       if (isNaN(idx)) continue;
       var card = col[idx];
       if (!card) continue;
-      var res = depotResolveCardArt(card, 'front');
-      if (res.tier !== 'library') continue;                        // personal shown; placeholder handled by page
-      if (tile.getAttribute('data-lib-front') === res.url) continue; // idempotent
-      tile.setAttribute('data-lib-front', res.url);
-      probeAndSwap(photoPanel(tile), res.url, res.key);
+      var url = libraryURL(card, 'front');
+      if (!url) continue;                       // card has no derivable library path
+      var panel = emptyPhotoLayer(tile);
+      if (!panel) continue;                     // personal photo painting -> personal wins
+      if (tile.getAttribute('data-lib-front') === url) continue; // idempotent
+      tile.setAttribute('data-lib-front', url);
+      probeAndSwap(panel, url, (card && card.name) || idx);
     }
   }
 
-  // Enhance the open spotlight for one card. openSpot injects into #spotFront / #spotBack:
-  //   front: background-image on '#spotFront .photo' (personal front or placeholder)
-  //   back : <img> inside '#spotBack .spot-back-img' (present only when a personal back exists)
-  // Resolve both; a hasback=false card whose library back 404s falls through cleanly.
+  // Enhance the open spotlight for one card. openSpot injects into #spotFront /
+  // #spotBack. Front photo is an <img class="photo"> (or a .photo bg); back is an
+  // <img> inside .spot-back-img. Fill library art ONLY when the target is empty
+  // or failed to load, so personal front/back always wins.
+  function imgIsEmpty(im) {
+    return !im || !im.getAttribute('src') || (im.complete && im.naturalWidth === 0);
+  }
   function enhanceSpotlight(card) {
     if (!card) return;
-    var frontRes = depotResolveCardArt(card, 'front');
-    if (frontRes.tier === 'library') {
+    var frontURL = libraryURL(card, 'front');
+    if (frontURL) {
       var fr = document.getElementById('spotFront');
-      var frontPanel = fr && (fr.querySelector('.photo') || fr);
-      if (frontPanel) probeAndSwap(frontPanel, frontRes.url, frontRes.key);
+      if (fr) {
+        var frontImg = fr.querySelector('img.photo, img');
+        if (frontImg) {
+          if (imgIsEmpty(frontImg)) probeImg(frontImg, frontURL, ((card.name || '') + ' front'));
+        } else {
+          var frontPanel = fr.querySelector('.photo') || fr;
+          if (bgIsEmpty(frontPanel)) probeAndSwap(frontPanel, frontURL, ((card.name || '') + ' front'));
+        }
+      }
     }
-    var backRes = depotResolveCardArt(card, 'back');
-    if (backRes.tier === 'library') {
+    var backURL = libraryURL(card, 'back');
+    if (backURL) {
       var bk = document.getElementById('spotBack');
-      var backWrap = bk && bk.querySelector('.spot-back-img');
-      var backImg = backWrap && backWrap.querySelector('img');
-      if (backImg) probeImg(backImg, backRes.url, backRes.key);
-      else if (backWrap) probeAndSwap(backWrap, backRes.url, backRes.key);
+      if (bk) {
+        var backWrap = bk.querySelector('.spot-back-img') || bk;
+        var backImg = backWrap.querySelector('img');
+        if (backImg) {
+          if (imgIsEmpty(backImg)) probeImg(backImg, backURL, ((card.name || '') + ' back'));
+        } else if (bgIsEmpty(backWrap)) {
+          probeAndSwap(backWrap, backURL, ((card.name || '') + ' back'));
+        }
+      }
     }
   }
 
   window.depotResolveCardArt = depotResolveCardArt;
   window.depotLibraryArtURL = libraryURL;
-  window.depotEnhanceCardArt = function (root, col) { try { enhanceTiles(root, col); } catch (e) { console.debug('[depot] library enhance tiles failed: ' + (e && e.message)); } };
-  window.depotEnhanceSpotlightArt = function (card) { try { enhanceSpotlight(card); } catch (e) { console.debug('[depot] library enhance spotlight failed: ' + (e && e.message)); } };
+  window.depotEnhanceCardArt = function (root, col) { try { enhanceTiles(root, col); } catch (e) { console.debug('[depot] library: enhance tiles failed', e && e.message); } };
+  window.depotEnhanceSpotlightArt = function (card) { try { enhanceSpotlight(card); } catch (e) { console.debug('[depot] library: enhance spotlight failed', e && e.message); } };
 
   console.debug('[depot] library-art resolver ready');
 })();
