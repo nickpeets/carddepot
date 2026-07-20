@@ -27,6 +27,15 @@
     if (document.getElementById("dc2b-styles")) return;
     var css = [
       ".spotlight.dc2b .spot-shell{position:relative;display:flex;align-items:flex-start;justify-content:center;}",
+      ".spotlight.dc2b .spot-shell{background:#2eb2e6;border:4px solid #10456b;border-radius:26px;box-shadow:0 8px 0 #0c3556;padding:16px;flex-direction:column;gap:12px;max-width:760px;width:min(760px,94vw);}",
+      ".dc2b .spot-2b-head{display:flex;align-items:center;justify-content:flex-start;width:100%;padding:2px 4px 0;}",
+      ".dc2b .spot-back-to-binder{display:inline-flex;align-items:center;gap:6px;border:3px solid #10456b;border-radius:999px;background:#fff;box-shadow:0 4px 0 #10456b;color:#10456b;font-family:'Baloo 2',sans-serif;font-weight:800;font-size:.82rem;padding:6px 14px;cursor:pointer;line-height:1;}",
+      ".dc2b .spot-back-to-binder:hover{transform:translateY(2px);box-shadow:0 2px 0 #10456b;}",
+      ".spotlight.dc2b .spot-shell .spot-2col{width:100%;}",
+      ".dc2b .spot-chips{display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin:2px 0 0;}",
+      ".dc2b .spot-chip{display:inline-flex;align-items:baseline;gap:4px;border:2px solid #10456b;border-radius:999px;background:#dff1fb;color:#10456b;font-family:'Baloo 2',sans-serif;font-weight:800;font-size:.62rem;letter-spacing:.02em;padding:3px 9px;line-height:1.2;}",
+      ".dc2b .spot-chip b{font-weight:800;color:#10456b;}",
+      ".dc2b .spot-chip .k{color:#5b7f97;font-weight:800;}",
       ".dc2b .spot-2col{display:grid;grid-template-columns:266px minmax(0,420px);gap:20px;align-items:start;background:#fff;border:4px solid #10456b;border-radius:20px;box-shadow:0 7px 0 #10456b;padding:20px;max-height:92vh;overflow:auto;font-family:'Baloo 2',sans-serif;}",
       ".dc2b .spot-close{position:absolute;top:-16px;right:-16px;left:auto;width:38px;height:38px;display:flex;align-items:center;justify-content:center;border-radius:999px;background:#fff;border:3px solid #10456b;box-shadow:0 4px 0 #10456b;color:#10456b;font-weight:800;font-size:1rem;cursor:pointer;z-index:5;font-family:'Baloo 2',sans-serif;}",
       ".dc2b .spot-close:hover{transform:translateY(2px);box-shadow:0 2px 0 #10456b;}",
@@ -95,6 +104,19 @@
     right.className = "spot-col-right";
 
     // close X becomes a direct child of the shell (outside the card, upper-right)
+    // 2b header: "back to binder" affordance pill (mirrors the design header)
+    var head2b = document.createElement("div");
+    head2b.className = "spot-2b-head";
+    var backBtn = document.createElement("button");
+    backBtn.type = "button";
+    backBtn.className = "spot-back-to-binder";
+    backBtn.innerHTML = "\u2039 Back to binder";
+    backBtn.addEventListener("click", function () {
+      var x = document.querySelector("#spotlight .spot-close");
+      if (x) x.click(); else { overlay.classList.remove("open"); }
+    });
+    head2b.appendChild(backBtn);
+    shell.appendChild(head2b);
     if (close) shell.appendChild(close);
     shell.appendChild(grid);
     grid.appendChild(left);
@@ -106,6 +128,11 @@
     cap.className = "spot-flip-cap";
     cap.textContent = "\u21bb click card to flip \u00b7 Esc to close";
     left.appendChild(cap);
+    // 2b left-column stat chips (populated in refreshMeta from the card meta)
+    var chips = document.createElement("div");
+    chips.className = "spot-chips";
+    chips.id = "spotChips";
+    left.appendChild(chips);
     var prest = document.createElement("div");
     prest.className = "spot-prestige";
     prest.id = "spotPrestige";
@@ -232,6 +259,31 @@
       var taRow = tray.querySelector(".v2-cond-input");
       if (taRow && taRow.closest(".v2-d4-row")) taRow.closest(".v2-d4-row").classList.add("notes");
     }
+    // 2b: populate left-column stat chips from the card meta already in the DOM
+    try {
+      var chipHost = document.getElementById("spotChips");
+      if (chipHost) {
+        chipHost.innerHTML = "";
+        var overlayEl = document.getElementById("spotlight");
+        var backSub = overlayEl ? overlayEl.querySelector(".back-sub") : null;
+        var subTxt = backSub ? backSub.textContent : "";
+        var yrM = subTxt.match(/\b(18|19|20)\d{2}\b/);
+        var setM = subTxt.match(/(Topps|Donruss|Bowman|Upper Deck|Fleer|Score|Panini|Leaf|O-Pee-Chee)/i);
+        function addChip(k, v) {
+          if (!v) return;
+          var el = document.createElement("span");
+          el.className = "spot-chip";
+          el.innerHTML = "<span class=\"k\">" + k + "</span> <b>" + v + "</b>";
+          chipHost.appendChild(el);
+        }
+        addChip("YEAR", yrM ? yrM[0] : "");
+        addChip("SET", setM ? setM[0].toUpperCase() : "");
+        var gsel = document.getElementById("d4GradeSel");
+        var gval = gsel ? (gsel.value || "").trim() : "";
+        if (gval && /^(\d{1,2}|GEM 10|AUTH)$/i.test(gval)) addChip("GRADE", gval);
+        chipHost.style.display = chipHost.children.length ? "flex" : "none";
+      }
+    } catch (e) { console.warn(TAG, "chip build failed:", e); }
     buildStepper(meta);
   }
 
