@@ -2,23 +2,26 @@
  * Shared Card-Image Library — client-side art resolver (Slice B consumption).
  *
  * Three-tier resolution, per card, per side:
- *   1) personal  — the owner's own scan (existing signed-URL machinery: card.photoFront / card.photoBack)
- *   2) library   — the public card-library bucket, keyed on catalog identity (year/set/number)
- *   3) placeholder — the existing pixel-art fallback (this module returns null; the caller keeps its placeholder)
+ *   1) personal   — the owner's own scan (existing signed-URL machinery: card.photoFront / card.photoBack)
+ *   2) library    — the public card-library bucket, keyed on catalog identity (year/set/number)
+ *   3) placeholder — the existing pixel-art fallback (this module returns null; caller keeps its placeholder)
  *
  * Path convention (VERIFIED against the live public bucket, 2026-07):
  *   {year}/{brand}/{setSlug}/{number}_{side}.jpg   with brand == setSlug (lowercased),
  *   number = leading-zeros-stripped, letter suffix KEPT  (5 not 005; 1b not 001b).
  * Library reads are PLAIN PUBLIC URLs (browser-cacheable) — never signed URLs.
  *
- * Binder tiles and the spotlight render the card image as a CSS background-image
- * (not an <img>), so fall-through cannot use <img onerror>. Instead we PROBE the
- * candidate library URL with a throwaway Image(): on load we swap the tile background;
- * on error we leave the existing placeholder (no broken-image icon, one debug log).
+ * Binder tiles (.dc-tile) and the spotlight (#spotFront / #spotBack) render the card image
+ * as a CSS background-image (not an <img>), so fall-through cannot use <img onerror>.
+ * Instead we PROBE the candidate library URL with a throwaway Image(): on load we swap the
+ * background; on error we leave the existing placeholder (no broken-image icon, one debug log).
  * Resolution is lazy/per-render — no speculative prefetching.
  *
  * Cards whose {year}/{set}/{number} derive to a 404 stay on placeholder — correct while
  * ingestion is mid-flight; they self-heal as sets land (no code change on new sets).
+ *
+ * NOTE: COLLECTION is closure-scoped in index.html, so the page passes it (or the card)
+ * into the enhancers explicitly; we also fall back to window.COLLECTION if present.
  */
 (function () {
   'use strict';
@@ -42,7 +45,7 @@
       .replace(/^\-|\-$/g, '');
   }
 
-  // number: strip leading zeros, KEEP trailing letter suffix; keep combo hyphens.
+  // number: strip leading zeros, KEEP trailing letter suffix; keep combo hyphens ("1-2").
   function normNum(n) {
     if (n == null) return '';
     var s = String(n).trim().toLowerCase().replace(/\s+/g, '');
@@ -108,8 +111,8 @@
   function applyBg(el, url) {
     if (!el) return;
     el.style.backgroundImage = 'url("' + url.replace(/"/g, '\\"') + '")';
-    el.style.backgroundSize = el.style.backgroundSize || 'cover';
-    el.style.backgroundPosition = el.style.backgroundPosition || 'center';
+    if (!el.style.backgroundSize) el.style.backgroundSize = 'cover';
+    if (!el.style.backgroundPosition) el.style.backgroundPosition = 'center';
   }
 
   function probeAndSwap(el, url, key) {
@@ -122,6 +125,8 @@
     img.src = url;
   }
 
+  // Element carrying the front background inside a tile: the child whose inline style sets
+  // a background (placeholder/personal), else the tile's first child div, else the tile.
   function photoPanel(root) {
     if (!root) return null;
     var cands = root.querySelectorAll('div,section,figure');
@@ -132,10 +137,11 @@
     return root.firstElementChild || root;
   }
 
-  function enhanceTiles(root) {
+  // Enhance binder tiles (.dc-tile[data-idx]) within root, reading col[idx].
+  function enhanceTiles(root, col) {
     root = root || document;
-    var col = window.COLLECTION;
-    if (!Array.isArray(col)) { console.debug('[depot] library: COLLECTION not ready; skip tiles'); return; }
+    col = col || window.COLLECTION;
+    if (!Array.isArray(col)) { console.debug('[depot] library: no collection; skip tiles'); return; }
     var tiles = root.querySelectorAll('.dc-tile[data-idx]');
     for (var i = 0; i < tiles.length; i++) {
       var tile = tiles[i];
@@ -144,30 +150,31 @@
       var card = col[idx];
       if (!card) continue;
       var res = depotResolveCardArt(card, 'front');
-      if (res.tier !== 'library') continue;
-      if (tile.getAttribute('data-lib-front') === res.url) continue;
+      if (res.tier !== 'library') continue;                       // personal shown; placeholder handled by page
+      if (tile.getAttribute('data-lib-front') === res.url) continue; // idempotent
       tile.setAttribute('data-lib-front', res.url);
       probeAndSwap(photoPanel(tile), res.url, res.key);
     }
   }
 
-  function enhanceSpotlight(card, root) {
-    root = root || document.querySelector('.spot-card') || document;
+  // Enhance the open spotlight for one card. Targets #spotFront / #spotBack (present in
+  // index.html); back is skipped cleanly when hasback is false (probe simply misses).
+  function enhanceSpotlight(card) {
     if (!card) return;
+    var faces = { front: document.getElementById('spotFront'), back: document.getElementById('spotBack') };
     ['front', 'back'].forEach(function (side) {
+      var panel = faces[side];
+      if (!panel) return;
       var res = depotResolveCardArt(card, side);
       if (res.tier !== 'library') return;
-      var faceSel = side === 'back' ? '[data-face="back"],.spot-back,.card-back' : '[data-face="front"],.spot-front,.card-front';
-      var panel = root.querySelector(faceSel) || (side === 'front' ? photoPanel(root) : null);
-      if (!panel) return;
       probeAndSwap(panel, res.url, res.key);
     });
   }
 
   window.depotResolveCardArt = depotResolveCardArt;
   window.depotLibraryArtURL = libraryURL;
-  window.depotEnhanceCardArt = function (root) { try { enhanceTiles(root); } catch (e) { console.debug('[depot] library enhance tiles failed: ' + (e && e.message)); } };
-  window.depotEnhanceSpotlightArt = function (card, root) { try { enhanceSpotlight(card, root); } catch (e) { console.debug('[depot] library enhance spotlight failed: ' + (e && e.message)); } };
+  window.depotEnhanceCardArt = function (root, col) { try { enhanceTiles(root, col); } catch (e) { console.debug('[depot] library enhance tiles failed: ' + (e && e.message)); } };
+  window.depotEnhanceSpotlightArt = function (card) { try { enhanceSpotlight(card); } catch (e) { console.debug('[depot] library enhance spotlight failed: ' + (e && e.message)); } };
 
   console.debug('[depot] library-art resolver ready');
 })();
