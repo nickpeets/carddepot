@@ -650,7 +650,7 @@ button:focus-visible,[tabindex]:focus-visible{outline:3px solid var(--brass);out
 }
 .btn-solid:hover{background:#ffe24d}
 .btn-solid:active,.btn-ghost:active,.mode-btn:active{transform:translate(3px,3px);box-shadow:0 0 0 #000}
-.spot-remove{font-family:'Press Start 2P',monospace !important;font-size:.42rem;color:#fff;background:#c1121f;border:3px solid #000 !important;box-shadow:2px 2px 0 #000;padding:.45rem .55rem}
+.spot-remove{margin-top:1.1rem;text-align:center;background:none !important;border:none !important;box-shadow:none !important;padding:0}.spot-remove .btn-ghost{font-family:'Oswald',sans-serif !important;text-transform:none !important;letter-spacing:normal !important;font-size:.72rem !important;color:#9a4b52 !important;background:none !important;border:none !important;box-shadow:none !important;padding:.2rem .3rem !important;width:auto !important;text-decoration:underline;cursor:pointer;opacity:.75}.spot-remove .btn-ghost:hover{color:#c1121f !important;opacity:1}
 .toast{
   font-family:'Press Start 2P',monospace !important;font-size:.5rem;line-height:1.6;
   background:var(--sb-blue);color:#fff;border:3px solid #000 !important;box-shadow:4px 4px 0 #000;
@@ -878,7 +878,7 @@ body{
   display:block;color:#fff;font-size:.45rem;margin-top:.4rem;text-shadow:2px 2px 0 #000;
 }
 .spot-meta .hint{display:block;text-align:center;}
-.spot-meta .spot-remove{margin-top:0 !important;width:100%;}
+.spot-meta .spot-remove{margin-top:0 !important;width:auto !important;}
 .spot-meta .spot-remove .btn-ghost{width:100% !important;display:block;}
 @media (max-width:640px){
   .spot-card{width:90vw;}
@@ -1279,7 +1279,7 @@ body.logged-out #appFrame{display:none !important;}
 
 <!-- SPOTLIGHT -->
 <div class="spotlight" id="spotlight" onclick="closeSpot(event)">
-  <div class="spot-card" id="spotCard" onclick="flipSpot(event)"><button class="spot-close" onclick="closeSpot(event,true)" aria-label="Close">â</button>
+  <div class="spot-card" id="spotCard" onclick="flipSpot(event)"><button class="spot-close" onclick="closeSpot(event,true)" aria-label="Close">✕</button>
     <div class="spot-inner">
       <div class="spot-face" id="spotFront"></div>
       <div class="spot-face spot-back" id="spotBack"></div>
@@ -1860,7 +1860,7 @@ function statTable(c){
   const valRow = ks=>ks.map(k=>`<td>${c.stats[k]}</td>`).join('');
   const body = `<thead><tr>${headRow(r1)}</tr></thead><tbody><tr>${valRow(r1)}</tr></tbody>`
     + (r2.length?`<thead><tr>${headRow(r2)}</tr></thead><tbody><tr>${valRow(r2)}</tr></tbody>`:'');
-  return `<div class="statgrid-wrap"><table class="statgrid"><caption>${c.yr} season â ${c.team}</caption>${body}</table></div>`;
+  return `<div class="statgrid-wrap"><table class="statgrid"><caption>${c.yr} season — ${c.team}</caption>${body}</table></div>`;
 }
 function brefURL(c){
   const q=[c.name, "baseball reference", c.yr||''].filter(Boolean).join(' ');
@@ -1884,7 +1884,7 @@ function openSpot(idx){
   const photoStyle=cphoto?`background-image:url("${cssUrl(cphoto)}")`:`background-color:${placeholderBg(idx)}`;
   document.getElementById('spotFront').className=`spot-face ${skin}`;
   document.getElementById('spotFront').innerHTML=`<div class="frame" style="position:absolute;inset:0;display:flex;flex-direction:column">
-    ${c.rare?'<span class="rare-pin" style="width:24px;height:24px;font-size:.85rem;top:10px;right:10px">â</span>':''}
+    ${c.rare?'<span class="rare-pin" style="width:24px;height:24px;font-size:.85rem;top:10px;right:10px">★</span>':''}
     ${cphoto ? `<img class="photo loaded-img" src="${escAttr(cphoto)}" alt="" style="flex:1;width:100%;min-height:0;object-fit:cover;object-position:center top;display:block" onload="imgOk(this)" onerror="imgFail(this)">` : `<div class="photo" style="flex:1;${photoStyle};background-size:cover;background-position:center top"></div>`}
     
   </div>`;
@@ -1894,16 +1894,16 @@ function openSpot(idx){
       <h3>${c.name}</h3>
       
     </div>
-    <div class="back-sub">${c.yr} ${c.set} Â· #${c.num}${c.rare?' Â· KEY CARD':''}</div>
+    <div class="back-sub">${c.yr} ${c.set} · #${c.num}${c.rare?' · KEY CARD':''}</div>
     ${cback?`<div class="spot-back-img"><img src="${escAttr(cback)}" alt="card back" onload="imgOk(this)" onerror="imgFail(this)"></div>`:''}
     <div class="spot-back-scroll">
     ${statTable(c)}
     ${c.bio?`<div class="bio">${c.bio}</div>`:''}
         </div>`;
-  document.getElementById('spotMeta').innerHTML=`${c.name?`<div class="spot-name">${c.name}</div>`:''}<span class="hint">click card to flip Â· esc to close</span>`
+  document.getElementById('spotMeta').innerHTML=`${c.name?`<div class="spot-name">${c.name}</div>`:''}<span class="hint">click card to flip · esc to close</span>`
     + (cphoto?'':`<div style="margin-top:.5rem"><button class="btn-google" style="width:auto;
-    try { if (window.depotEnhanceSpotlightArt) window.depotEnhanceSpotlightArt(COLLECTION[idx]); } catch(e){ console.debug('[depot] library spotlight hook: '+(e&&e.message)); }padding:.45rem 1rem;font-size:.72rem" onclick="findImageFor(${idx},event)">Find this card on Google Images â</button></div>`)
-        + `<div class="v2-d4"><div class="v2-d4-row"><span class="v2-d4-lab">Grade</span><span class="v2-grade-val ${c.grade?'':'is-blank'}" id="d4GradeVal">${c.grade?escAttr(c.grade):'â'}</span><select class="v2-grade-sel" id="d4GradeSel" style="width:auto" onchange="d4SetGrade(this.value)">${['','1','2','3','4','5','6','7','8','9','10','GEM 10','AUTH'].map(function(g){return '<option value="'+g+'"'+(String(c.grade||'')===g?' selected':'')+'>'+(g===''?'â none â':g)+'</option>';}).join('')}</select></div><div class="v2-d4-row"><span class="v2-d4-lab">Star</span><button type="button" class="v2-star-toggle" id="d4StarBtn" aria-pressed="${c.star?'true':'false'}" onclick="d4ToggleStar()"><span class="v2-star-badge--inline v2-anim-twinkle" style="${c.star?'':'filter:grayscale(1);opacity:.5'}">â</span> ${c.star?'Starred':'Mark star'}</button></div><div class="v2-d4-row" style="align-items:flex-start"><span class="v2-d4-lab">Notes</span><textarea class="v2-cond-input" id="d4CondInput" placeholder="Condition notes (corners, centering, flawsâ¦)" onchange="d4SetCond(this.value)">${c.condNotes?escAttr(c.condNotes):''}</textarea></div><div class="v2-d4-status" id="d4Status"></div></div>` + `<div class="spot-remove"><button class="btn-ghost" onclick="removeFromDepot(${idx},event)">Remove from depot</button></div>`;
+    try { if (window.depotEnhanceSpotlightArt) window.depotEnhanceSpotlightArt(COLLECTION[idx]); } catch(e){ console.debug('[depot] library spotlight hook: '+(e&&e.message)); }padding:.45rem 1rem;font-size:.72rem" onclick="findImageFor(${idx},event)">Find this card on Google Images ↗</button></div>`)
+        + `<div class="v2-d4"><div class="v2-d4-row"><span class="v2-d4-lab">Grade</span><span class="v2-grade-val ${c.grade?'':'is-blank'}" id="d4GradeVal">${c.grade?escAttr(c.grade):'—'}</span><select class="v2-grade-sel" id="d4GradeSel" style="width:auto" onchange="d4SetGrade(this.value)">${['','1','2','3','4','5','6','7','8','9','10','GEM 10','AUTH'].map(function(g){return '<option value="'+g+'"'+(String(c.grade||'')===g?' selected':'')+'>'+(g===''?'— none —':g)+'</option>';}).join('')}</select></div><div class="v2-d4-row"><span class="v2-d4-lab">Star</span><button type="button" class="v2-star-toggle" id="d4StarBtn" aria-pressed="${c.star?'true':'false'}" onclick="d4ToggleStar()"><span class="v2-star-badge--inline v2-anim-twinkle" style="${c.star?'':'filter:grayscale(1);opacity:.5'}">★</span> ${c.star?'Starred':'Mark star'}</button></div><div class="v2-d4-row" style="align-items:flex-start"><span class="v2-d4-lab">Notes</span><textarea class="v2-cond-input" id="d4CondInput" placeholder="Condition notes (corners, centering, flaws…)" onchange="d4SetCond(this.value)">${c.condNotes?escAttr(c.condNotes):''}</textarea></div><div class="v2-d4-status" id="d4Status"></div></div>` + `<div class="spot-remove"><button class="btn-ghost" onclick="if(confirm('Remove this card from your depot?'))removeFromDepot(${idx},event)">Remove from depot</button></div>`;
   document.getElementById('spotCard').classList.remove('flipped');
   document.getElementById('spotlight').classList.add('open');
 }
