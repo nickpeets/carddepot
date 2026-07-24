@@ -106,6 +106,7 @@
   }
 
   var _probeCache = {};
+  var _gen = 0; // bumped each enhanceTiles pass; stale probes are discarded
 
   // ---- Rendering helpers -------------------------------------------------
   // A background-image value counts as 'empty' when it is absent, 'none', or url("").
@@ -119,6 +120,10 @@
   // Apply a library background to the app's real photo layer as a clean card scan.
   function applyBg(el, url) {
     if (!el) return;
+    // Invariant: never half-apply. Only paint + hide the caption when the
+    // target layer is actually laid out on screen (a hidden/0x0 layer would
+    // suppress the caption while painting nothing the user can see).
+    if (!isLaidOut(el)) { console.debug('[depot] library-skip: target not laid out'); return; }
     if (el.closest) { var _t = el.closest('.dc-tile'); if (_t) _t.classList.add('has-art'); }
     el.style.backgroundImage = 'url("' + String(url).replace(/"/g, '%22') + '")';
     el.style.backgroundSize = 'cover';
@@ -129,33 +134,75 @@
   // Locate the app's ACTUAL photo layer inside a binder tile: the absolutely-
   // positioned inset:0 overlay the tile leaves empty when there is no personal
   // photo. Returns that layer ONLY when it is genuinely empty (personal wins).
+  // A layer is a VALID paint target only when it is actually laid out on screen:
+  // connected, not display:none, and a non-zero box. A hidden or 0x0 layer would
+  // suppress the caption (via has-art) while painting nothing visible.
+  function isLaidOut(el) {
+    if (!el || !el.isConnected) return false;
+    var cs;
+    try { cs = getComputedStyle(el); } catch (e) { return false; }
+    if (cs.display === 'none' || cs.visibility === 'hidden') return false;
+    return el.offsetWidth > 0 && el.offsetHeight > 0;
+  }
+  // The tile frame ships a repeating-linear-gradient placeholder. That is safe to
+  // paint over; a url(...) background is a real personal photo and must be kept.
+  function bgIsPlaceholder(el) {
+    if (bgIsEmpty(el)) return true;
+    var v = '';
+    try { v = getComputedStyle(el).backgroundImage; } catch (e) { return false; }
+    return /gradient/.test(v) && !/url\(/.test(v);
+  }
   function emptyPhotoLayer(root) {
     if (!root) return null;
     var cands = root.querySelectorAll('div, section, figure');
-    var fallback = null;
+    var overlay = null;   // laid-out empty inset:0 overlay (preferred target)
+    var frame = null;     // laid-out placeholder frame (fallback for tiles w/o overlay)
     for (var i = 0; i < cands.length; i++) {
       var el = cands[i];
+      if (!isLaidOut(el)) continue;    // reject hidden / 0x0 layers outright
       var cs;
       try { cs = getComputedStyle(el); } catch (e) { continue; }
       var covers = cs.position === 'absolute' && cs.top === '0px' && cs.left === '0px' && cs.right === '0px' && cs.bottom === '0px';
       if (covers) {
-        if (bgIsEmpty(el)) return el;   // empty overlay -> safe to fill
-        return null;                    // overlay already painted (personal) -> never overwrite
+        if (bgIsEmpty(el)) { if (!overlay) overlay = el; }  // empty overlay -> best target
+        else if (!/gradient/.test(cs.backgroundImage) || /url\(/.test(cs.backgroundImage)) {
+          return null;                 // overlay already holds a personal photo -> never overwrite
+        }
+        continue;
       }
-      if (!fallback && bgIsEmpty(el)) fallback = el;
+      // Track the largest laid-out placeholder frame as a last resort. On the
+      // page-3 tiles that lack a proper inset:0 overlay, this is the visible frame
+      // (confirmed by live experiment) and painting it renders the photo.
+      if (bgIsPlaceholder(el)) {
+        if (!frame || (el.offsetWidth * el.offsetHeight) > (frame.offsetWidth * frame.offsetHeight)) frame = el;
+      }
     }
-    return fallback;
+    return overlay || frame || null;
   }
 
   // Swap a background image only after confirming the candidate loads.
-  function probeAndSwap(el, url, key) {
+  function probeAndSwap(el, url, key, idx, gen) {
     if (!el || !url) return;
     if (_probeCache[url] === 'fail') return;
     if (_probeCache[url] === 'ok') { applyBg(el, url); return; }
     var img = new Image();
-    img.onload = function () { _probeCache[url] = 'ok'; applyBg(el, url); console.debug('[depot] library-hit', key); };
+    img.onload = function () {
+      _probeCache[url] = 'ok';
+      var target = liveLayer(el, idx, gen);
+      if (target) { applyBg(target, url); console.debug('[depot] library-hit', key); }
+    };
     img.onerror = function () { _probeCache[url] = 'fail'; console.debug('[depot] library-miss', key); };
     img.src = url;
+  }
+  // Resolve the layer to paint at callback time. Discards the write if a newer
+  // enhance pass has started (gen mismatch) or the tile is gone; re-queries the
+  // LIVE tile by data-idx so we never paint a detached/superseded node.
+  function liveLayer(el, idx, gen) {
+    if (typeof gen === 'number' && gen !== _gen) return null;
+    if (idx == null) return (el && el.isConnected) ? el : null;
+    var tile = document.querySelector('.dc-tile[data-idx="' + idx + '"]');
+    if (!tile) return null;
+    return emptyPhotoLayer(tile);
   }
 
   // Swap an <img> src only after confirming the candidate loads; leaves onerror chain intact.
@@ -176,6 +223,7 @@
     root = root || document;
     col = col || window.COLLECTION;
     if (!Array.isArray(col)) { console.debug('[depot] library: no collection, skip tiles'); return; }
+    var myGen = ++_gen; // this pass owns _gen; older in-flight probes are now stale
     var tiles = root.querySelectorAll('.dc-tile[data-idx]');
     for (var i = 0; i < tiles.length; i++) {
       var tile = tiles[i];
@@ -189,7 +237,7 @@
       if (!panel) continue;                     // personal photo painting -> personal wins
       if (tile.getAttribute('data-lib-front') === url) continue; // idempotent
       tile.setAttribute('data-lib-front', url);
-      probeAndSwap(panel, url, (card && card.name) || idx);
+      probeAndSwap(panel, url, (card && card.name) || idx, idx, myGen);
     }
   }
 
@@ -211,7 +259,7 @@
           if (imgIsEmpty(frontImg)) probeImg(frontImg, frontURL, ((card.name || '') + ' front'));
         } else {
           var frontPanel = fr.querySelector('.photo') || fr;
-          if (bgIsEmpty(frontPanel)) probeAndSwap(frontPanel, frontURL, ((card.name || '') + ' front'));
+          if (bgIsEmpty(frontPanel)) probeAndSwap(frontPanel, frontURL, ((card.name || '') + ' front'), null, null);
         }
       }
     }
@@ -224,7 +272,7 @@
         if (backImg) {
           if (imgIsEmpty(backImg)) probeImg(backImg, backURL, ((card.name || '') + ' back'));
         } else if (bgIsEmpty(backWrap)) {
-          probeAndSwap(backWrap, backURL, ((card.name || '') + ' back'));
+          probeAndSwap(backWrap, backURL, ((card.name || '') + ' back'), null, null);
         }
       }
     }

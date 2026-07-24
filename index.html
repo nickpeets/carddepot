@@ -1,18 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <script src="js/version.js?v=09ee421"></script>
-  <script src="js/depot-core.js?v=09ee421"></script>
+  <script src="js/version.js?v=e96d5c8"></script>
+  <script src="js/depot-core.js?v=e96d5c8"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>The Depot</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gshtatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Spectral:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/depot-style.css?v=09ee421">
-  <link rel="stylesheet" href="css/season.css?v=09ee421">
-    <script src="js/depot-shell.js?v=09ee421"></script>
-  <script src="js/depot-season-shell.js?v=09ee421"></script>
+  <link rel="stylesheet" href="css/depot-style.css?v=e96d5c8">
+  <link rel="stylesheet" href="css/season.css?v=e96d5c8">
+    <script src="js/depot-shell.js?v=e96d5c8"></script>
+  <script src="js/depot-season-shell.js?v=e96d5c8"></script>
   <style>
     /* binder tile portrait redesign v2 (additive, contract-safe) */
     :root{--binder-cols:3}
@@ -1117,8 +1117,8 @@ body{
 </style>
 <!-- /PHASE5-SHARE-CSS -->
 
-  <link rel="stylesheet" href="css/depot-shop-view.css?v=09ee421">
-    <link rel="stylesheet" href="depot-v2.css?v=09ee421">
+  <link rel="stylesheet" href="css/depot-shop-view.css?v=e96d5c8">
+    <link rel="stylesheet" href="depot-v2.css?v=e96d5c8">
 </head>
 <body class="v2-body">
   <div id="sharedUnavailable"><div class="su-card"><div class="su-title">Not available</div><div class="su-sub">This collection isn&rsquo;t available.</div></div></div>
@@ -1168,7 +1168,8 @@ body.logged-out #appFrame{display:none !important;}
 
 <!-- BINDER -->
 <div class="dc-binder" style="width:760px;max-width:100%;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 8px 28px rgba(13,45,92,.18)"><div style="display:flex;gap:8px;padding:14px 24px 0;flex-wrap:wrap;align-items:center"><input style="flex:1;min-width:180px;background:#fff;border:3px solid #10456b;border-radius:999px;padding:8px 16px;font-family:'Baloo 2',sans-serif;font-weight:600;font-size:13px;color:#10456b;outline:none" placeholder="🔍 Search players, sets, years…" id="binderSearch" oninput="curSearch=this.value; if(typeof curPage!==&#39;undefined&#39;){curPage=0;} renderBinder();"><div style="display:flex;gap:8px;flex-wrap:wrap" id="eraTabs"></div></div><div style="margin:6px 0 0;background:transparent;border:0;border-radius:0;box-shadow:none;padding:16px 24px 20px"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px"><div style="font-family:'Baloo 2',sans-serif;font-weight:800;font-size:16px;color:#10456b" id="pageDots">Page 1 of 1</div><span id="eraTitle" style="margin-left:8px;font-weight:700;color:#10456b"></span><span id="eraBlurb" style="display:none"></span><div style="display:flex;gap:6px"><div class="dc-pager" style="width:32px;height:32px;border-radius:10px;background:#dff1fb;border:2px solid #10456b;display:flex;align-items:center;justify-content:center;font-weight:800;color:#10456b;cursor:pointer" id="prevPage" onclick="turnPage(-1)" role="button">‹</div><div class="dc-pager" style="width:32px;height:32px;border-radius:10px;background:#dff1fb;border:2px solid #10456b;display:flex;align-items:center;justify-content:center;font-weight:800;color:#10456b;cursor:pointer" id="nextPage" onclick="turnPage(1)" role="button">›</div></div><div id="groupByBar" style="display:flex;align-items:center;gap:6px;margin-left:auto"><label style="font-family:'Baloo 2',sans-serif;color:#10456b;font-weight:700;font-size:12px">Group by</label><select style="font-family:'Baloo 2',sans-serif;border:2px solid #10456b;border-radius:999px;color:#10456b;background:#dff1fb;padding:4px 10px;font-weight:700;font-size:12px;outline:none;box-shadow:none;" id="groupBy" onchange="setGroupMode(this.value)">
-          <option value="year">Year</option>
+          <option value="era">None</option>
+            <option value="year">Year</option>
           <option value="set">Set</option><option value="brand">Brand</option>
           </select><a class="v2-pill v2-pill--green v2-pill--sm depot-add-card" data-depot-addcard href="index.html#add">+ Add a card</a></div></div><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px" id="binderGrid"></div></div></div>
 
@@ -1747,7 +1748,6 @@ function renderBinder(){
 function setGroupMode(m){
   groupMode = m || "era";
   var sel = document.getElementById('groupBy'); if(sel && sel.value!==groupMode) sel.value=groupMode;
-  if(groupMode==='set'){ setMode('carousel'); return; }
   setMode('binder');
   renderBinder();
 }
@@ -1775,13 +1775,17 @@ function groupKeyFor(c, mode){
     var p = (c.name||'').trim(); if(!p) return {key:'unknown', label:'Unknown', sort:null};
     return {key:'p:'+p.toLowerCase(), label:p, sort:p.toLowerCase()};
   }
+  if(mode === 'set'){
+    var st = (c.set||'').trim(); if(!st || st==='Unknown' || st==='—') return {key:'unknown', label:'Unknown', sort:null};
+    return {key:'s:'+st.toLowerCase(), label:st, sort:st.toLowerCase()};
+  }
   var ek = c.era || 'unknown';
   return {key:ek, label:(ERAS[ek]?ERAS[ek].title:'Unknown'), sort:ERA_ORDER.indexOf(ek)};
 }
 function renderGrouped(){
   showEraChrome(false);
   var head = document.getElementById('eraTitle');
-  var labels = {year:'Year', brand:'Brand', team:'Team', player:'Player', decade:'Decade'};
+  var labels = {year:'Year', set:'Set', brand:'Brand', team:'Team', player:'Player', decade:'Decade'};
   if(head) head.textContent = 'Grouped by ' + (labels[groupMode]||'Era');
   var blurb = document.getElementById('eraBlurb');
   if(blurb) blurb.textContent = eraCards(curEra).length + ' cards.';
@@ -1815,6 +1819,7 @@ function renderGrouped(){
   });
   if(!html) html = '<p class="group-empty">No cards to display.</p>';
   document.getElementById('binderGrid').innerHTML = html;
+  try { if (window.depotEnhanceCardArt) window.depotEnhanceCardArt(document.getElementById('binderGrid'), COLLECTION); } catch(e){ console.debug('[depot] library grouped hook: '+(e&&e.message)); }
 }
 
 /* ---------- carousel ---------- */
@@ -3075,17 +3080,17 @@ setAuthUI(false);
   });
 })();
 </script>
-<script src="game/season.js?v=09ee421" defer></script>
-<script src="js/depot-index-shell.js?v=09ee421"></script>
-<script src="js/depot-prestige.js?v=09ee421"></script>
-<script src="js/depot-wallet.js?v=09ee421"></script>
-  <script src="js/depot-pack-engine.js?v=09ee421"></script>
-  <script src="js/depot-pixel-card.js?v=09ee421"></script>
-  <script src="js/depot-shop.js?v=09ee421"></script>
-  <script src="js/depot-shop-view.js?v=09ee421"></script>
-  <script src="js/depot-binder-shop.js?v=09ee421"></script>
-  <script src="js/depot-library-art.js?v=09ee421"></script>
-  <script src="js/depot-card-detail-2b.js?v=09ee421"></script>
+<script src="game/season.js?v=e96d5c8" defer></script>
+<script src="js/depot-index-shell.js?v=e96d5c8"></script>
+<script src="js/depot-prestige.js?v=e96d5c8"></script>
+<script src="js/depot-wallet.js?v=e96d5c8"></script>
+  <script src="js/depot-pack-engine.js?v=e96d5c8"></script>
+  <script src="js/depot-pixel-card.js?v=e96d5c8"></script>
+  <script src="js/depot-shop.js?v=e96d5c8"></script>
+  <script src="js/depot-shop-view.js?v=e96d5c8"></script>
+  <script src="js/depot-binder-shop.js?v=e96d5c8"></script>
+  <script src="js/depot-library-art.js?v=e96d5c8"></script>
+  <script src="js/depot-card-detail-2b.js?v=e96d5c8"></script>
 <script>
 /* Franchise Economy Slice A: arm wallet chip + payout hook. Additive, fail-loud, graceful until DDL. */
 (function(){
