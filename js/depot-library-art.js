@@ -106,6 +106,7 @@
   }
 
   var _probeCache = {};
+  var _gen = 0; // bumped each enhanceTiles pass; stale probes are discarded
 
   // ---- Rendering helpers -------------------------------------------------
   // A background-image value counts as 'empty' when it is absent, 'none', or url("").
@@ -148,14 +149,28 @@
   }
 
   // Swap a background image only after confirming the candidate loads.
-  function probeAndSwap(el, url, key) {
+  function probeAndSwap(el, url, key, idx, gen) {
     if (!el || !url) return;
     if (_probeCache[url] === 'fail') return;
     if (_probeCache[url] === 'ok') { applyBg(el, url); return; }
     var img = new Image();
-    img.onload = function () { _probeCache[url] = 'ok'; applyBg(el, url); console.debug('[depot] library-hit', key); };
+    img.onload = function () {
+      _probeCache[url] = 'ok';
+      var target = liveLayer(el, idx, gen);
+      if (target) { applyBg(target, url); console.debug('[depot] library-hit', key); }
+    };
     img.onerror = function () { _probeCache[url] = 'fail'; console.debug('[depot] library-miss', key); };
     img.src = url;
+  }
+  // Resolve the layer to paint at callback time. Discards the write if a newer
+  // enhance pass has started (gen mismatch) or the tile is gone; re-queries the
+  // LIVE tile by data-idx so we never paint a detached/superseded node.
+  function liveLayer(el, idx, gen) {
+    if (typeof gen === 'number' && gen !== _gen) return null;
+    if (idx == null) return (el && el.isConnected) ? el : null;
+    var tile = document.querySelector('.dc-tile[data-idx="' + idx + '"]');
+    if (!tile) return null;
+    return emptyPhotoLayer(tile);
   }
 
   // Swap an <img> src only after confirming the candidate loads; leaves onerror chain intact.
@@ -176,6 +191,7 @@
     root = root || document;
     col = col || window.COLLECTION;
     if (!Array.isArray(col)) { console.debug('[depot] library: no collection, skip tiles'); return; }
+    var myGen = ++_gen; // this pass owns _gen; older in-flight probes are now stale
     var tiles = root.querySelectorAll('.dc-tile[data-idx]');
     for (var i = 0; i < tiles.length; i++) {
       var tile = tiles[i];
@@ -189,7 +205,7 @@
       if (!panel) continue;                     // personal photo painting -> personal wins
       if (tile.getAttribute('data-lib-front') === url) continue; // idempotent
       tile.setAttribute('data-lib-front', url);
-      probeAndSwap(panel, url, (card && card.name) || idx);
+      probeAndSwap(panel, url, (card && card.name) || idx, idx, myGen);
     }
   }
 
@@ -211,7 +227,7 @@
           if (imgIsEmpty(frontImg)) probeImg(frontImg, frontURL, ((card.name || '') + ' front'));
         } else {
           var frontPanel = fr.querySelector('.photo') || fr;
-          if (bgIsEmpty(frontPanel)) probeAndSwap(frontPanel, frontURL, ((card.name || '') + ' front'));
+          if (bgIsEmpty(frontPanel)) probeAndSwap(frontPanel, frontURL, ((card.name || '') + ' front'), null, null);
         }
       }
     }
@@ -224,7 +240,7 @@
         if (backImg) {
           if (imgIsEmpty(backImg)) probeImg(backImg, backURL, ((card.name || '') + ' back'));
         } else if (bgIsEmpty(backWrap)) {
-          probeAndSwap(backWrap, backURL, ((card.name || '') + ' back'));
+          probeAndSwap(backWrap, backURL, ((card.name || '') + ' back'), null, null);
         }
       }
     }
