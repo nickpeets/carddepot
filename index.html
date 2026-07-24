@@ -1,18 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <script src="js/version.js?v=a6ab5c8"></script>
-  <script src="js/depot-core.js?v=a6ab5c8"></script>
+  <script src="js/version.js?v=b0499c0"></script>
+  <script src="js/depot-core.js?v=b0499c0"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>The Depot</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gshtatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Spectral:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/depot-style.css?v=a6ab5c8">
-  <link rel="stylesheet" href="css/season.css?v=a6ab5c8">
-    <script src="js/depot-shell.js?v=a6ab5c8"></script>
-  <script src="js/depot-season-shell.js?v=a6ab5c8"></script>
+  <link rel="stylesheet" href="css/depot-style.css?v=b0499c0">
+  <link rel="stylesheet" href="css/season.css?v=b0499c0">
+    <script src="js/depot-shell.js?v=b0499c0"></script>
+  <script src="js/depot-season-shell.js?v=b0499c0"></script>
   <style>
     /* binder tile portrait redesign v2 (additive, contract-safe) */
     :root{--binder-cols:3}
@@ -1117,8 +1117,8 @@ body{
 </style>
 <!-- /PHASE5-SHARE-CSS -->
 
-  <link rel="stylesheet" href="css/depot-shop-view.css?v=a6ab5c8">
-    <link rel="stylesheet" href="depot-v2.css?v=a6ab5c8">
+  <link rel="stylesheet" href="css/depot-shop-view.css?v=b0499c0">
+    <link rel="stylesheet" href="depot-v2.css?v=b0499c0">
 </head>
 <body class="v2-body">
   <div id="sharedUnavailable"><div class="su-card"><div class="su-title">Not available</div><div class="su-sub">This collection isn&rsquo;t available.</div></div></div>
@@ -1911,9 +1911,42 @@ function flipSpot(e){e.stopPropagation();var t=e&&e.target;if(t&&t.closest&&t.cl
 function closeSpot(e,force){
   if(force||e.target.id==='spotlight'||e.target.classList.contains('spot-close')){
     document.getElementById('spotlight').classList.remove('open');
+    refreshSpotTile(); // re-badge the just-closed card's binder tile (grade/star) without a full reload
   }
 }
-document.addEventListener('keydown',e=>{if(e.key==='Escape')document.getElementById('spotlight').classList.remove('open')});
+// Keep the binder tile's visible state (grade chip, star badge) in sync after the spotlight closes.
+// The d4 handlers already mutate COLLECTION[spotIdx] in memory + persist; we just re-paint the tile.
+function refreshSpotTile(){
+  try{
+    if(typeof spotIdx!=='number' || !window.COLLECTION || !COLLECTION[spotIdx]){ return; }
+    var grid=document.getElementById('binderGrid');
+    var tile=grid && grid.querySelector('[data-idx="'+spotIdx+'"]');
+    if(tile && typeof window.cardHTML==='function'){
+      var c=COLLECTION[spotIdx];
+      var skin=(window.ERAS && ERAS[c.era] && ERAS[c.era].skin) || '';
+      var tmp=document.createElement('div');
+      tmp.innerHTML=window.cardHTML(c, spotIdx, skin);
+      var fresh=tmp.firstElementChild;
+      if(fresh){
+        tile.parentNode.replaceChild(fresh, tile);
+        // re-apply the library-art enhancer so has-art/caption survive the swap (same hook renderBinder uses)
+        try{ if(window.depotEnhanceCardArt) window.depotEnhanceCardArt(grid, COLLECTION); }
+        catch(e){ console.debug('[depot] tile-refresh art hook: '+(e&&e.message)); }
+        return;
+      }
+      console.debug('[depot] refreshSpotTile: cardHTML produced no node; full renderBinder fallback');
+    } else {
+      console.debug('[depot] refreshSpotTile: tile('+(!!tile)+')/cardHTML('+(typeof window.cardHTML)+') unavailable; full renderBinder fallback');
+    }
+    // fallback: full re-render. curPage/groupBy/search/filter are all live globals, so page+filters are preserved.
+    if(typeof window.renderBinder==='function'){ window.renderBinder(); }
+    else { console.warn('[depot] refreshSpotTile: renderBinder missing; tile not refreshed'); }
+  }catch(err){
+    console.warn('[depot] refreshSpotTile failed ('+(err&&err.message)+'); forcing renderBinder');
+    try{ if(typeof window.renderBinder==='function') window.renderBinder(); }catch(_){}
+  }
+}
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){document.getElementById('spotlight').classList.remove('open');refreshSpotTile();}});
 
 /* ---------- mode switch ---------- */
 function setMode(m){
@@ -3042,17 +3075,17 @@ setAuthUI(false);
   });
 })();
 </script>
-<script src="game/season.js?v=a6ab5c8" defer></script>
-<script src="js/depot-index-shell.js?v=a6ab5c8"></script>
-<script src="js/depot-prestige.js?v=a6ab5c8"></script>
-<script src="js/depot-wallet.js?v=a6ab5c8"></script>
-  <script src="js/depot-pack-engine.js?v=a6ab5c8"></script>
-  <script src="js/depot-pixel-card.js?v=a6ab5c8"></script>
-  <script src="js/depot-shop.js?v=a6ab5c8"></script>
-  <script src="js/depot-shop-view.js?v=a6ab5c8"></script>
-  <script src="js/depot-binder-shop.js?v=a6ab5c8"></script>
-  <script src="js/depot-library-art.js?v=a6ab5c8"></script>
-  <script src="js/depot-card-detail-2b.js?v=a6ab5c8"></script>
+<script src="game/season.js?v=b0499c0" defer></script>
+<script src="js/depot-index-shell.js?v=b0499c0"></script>
+<script src="js/depot-prestige.js?v=b0499c0"></script>
+<script src="js/depot-wallet.js?v=b0499c0"></script>
+  <script src="js/depot-pack-engine.js?v=b0499c0"></script>
+  <script src="js/depot-pixel-card.js?v=b0499c0"></script>
+  <script src="js/depot-shop.js?v=b0499c0"></script>
+  <script src="js/depot-shop-view.js?v=b0499c0"></script>
+  <script src="js/depot-binder-shop.js?v=b0499c0"></script>
+  <script src="js/depot-library-art.js?v=b0499c0"></script>
+  <script src="js/depot-card-detail-2b.js?v=b0499c0"></script>
 <script>
 /* Franchise Economy Slice A: arm wallet chip + payout hook. Additive, fail-loud, graceful until DDL. */
 (function(){
