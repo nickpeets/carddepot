@@ -1918,12 +1918,12 @@ function closeSpot(e,force){
 // The d4 handlers already mutate COLLECTION[spotIdx] in memory + persist; we just re-paint the tile.
 function refreshSpotTile(){
   try{
-    if(typeof spotIdx!=='number' || !window.COLLECTION || !COLLECTION[spotIdx]){ return; }
+    if(typeof spotIdx!=='number' || typeof COLLECTION==='undefined' || !COLLECTION[spotIdx]){ return; }
     var grid=document.getElementById('binderGrid');
     var tile=grid && grid.querySelector('[data-idx="'+spotIdx+'"]');
     if(tile && typeof window.cardHTML==='function'){
       var c=COLLECTION[spotIdx];
-      var skin=(window.ERAS && ERAS[c.era] && ERAS[c.era].skin) || '';
+      var skin=(typeof ERAS!=='undefined' && ERAS[c.era] && ERAS[c.era].skin) || '';
       var tmp=document.createElement('div');
       tmp.innerHTML=window.cardHTML(c, spotIdx, skin);
       var fresh=tmp.firstElementChild;
