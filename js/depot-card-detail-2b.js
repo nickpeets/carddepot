@@ -176,7 +176,7 @@
     minus.type = "button"; minus.textContent = "\u2013"; minus.setAttribute("aria-label", "lower grade");
     var out = document.createElement("span");
     out.className = "v2-grade-val" + (cur ? "" : " is-blank");
-    out.id = "d4GradeVal";
+    out.id = "d4GradeValStep"; // was "d4GradeVal" -> caused DUPLICATE id; step()/d4SetGrade grabbed the wrong node
     out.textContent = cur ? cur : "\u2014";
     var plus = document.createElement("button");
     plus.type = "button"; plus.textContent = "+"; plus.setAttribute("aria-label", "raise grade");
@@ -190,7 +190,7 @@
       if (typeof window.d4SetGrade === "function") window.d4SetGrade(next);
       // d4SetGrade rebuilds #d4GradeVal text/class; keep the hidden select in sync too
       sel.value = next;
-      var live = meta.querySelector("#d4GradeVal");
+      var live = out; // direct ref to the span we built (was querySelector("#d4GradeVal") -> hit the wrong duplicate)
       if (live) { live.textContent = next ? next : "\u2014"; live.className = "v2-grade-val" + (next ? "" : " is-blank"); }
     }
     minus.addEventListener("click", function (e) { step(-1, e); });

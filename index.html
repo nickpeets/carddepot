@@ -1516,9 +1516,9 @@ async function d4SetGrade(val){
   const prev = (c.grade!=null ? c.grade : null);
   c.grade = clean;
   const gv = document.getElementById('d4GradeVal');
-  if(gv){ gv.textContent = clean ? clean : 'â'; gv.className = 'v2-grade-val' + (clean?'':' is-blank'); }
+  if(gv){ gv.textContent = clean ? clean : '\u2014'; gv.className = 'v2-grade-val' + (clean?'':' is-blank'); }
   const ok = await depotUpdateCard(c, { grade: clean });
-  if(!ok){ c.grade = prev; if(gv){ gv.textContent = prev?prev:'â'; gv.className='v2-grade-val'+(prev?'':' is-blank'); } }
+  if(!ok){ c.grade = prev; if(gv){ gv.textContent = prev?prev:'\u2014'; gv.className='v2-grade-val'+(prev?'':' is-blank'); } }
   d4Status(ok, ok ? 'Grade saved' : 'Grade not saved');
 }
 async function d4ToggleStar(){
