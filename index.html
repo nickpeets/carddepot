@@ -1911,9 +1911,42 @@ function flipSpot(e){e.stopPropagation();var t=e&&e.target;if(t&&t.closest&&t.cl
 function closeSpot(e,force){
   if(force||e.target.id==='spotlight'||e.target.classList.contains('spot-close')){
     document.getElementById('spotlight').classList.remove('open');
+    refreshSpotTile(); // re-badge the just-closed card's binder tile (grade/star) without a full reload
   }
 }
-document.addEventListener('keydown',e=>{if(e.key==='Escape')document.getElementById('spotlight').classList.remove('open')});
+// Keep the binder tile's visible state (grade chip, star badge) in sync after the spotlight closes.
+// The d4 handlers already mutate COLLECTION[spotIdx] in memory + persist; we just re-paint the tile.
+function refreshSpotTile(){
+  try{
+    if(typeof spotIdx!=='number' || !window.COLLECTION || !COLLECTION[spotIdx]){ return; }
+    var grid=document.getElementById('binderGrid');
+    var tile=grid && grid.querySelector('[data-idx="'+spotIdx+'"]');
+    if(tile && typeof window.cardHTML==='function'){
+      var c=COLLECTION[spotIdx];
+      var skin=(window.ERAS && ERAS[c.era] && ERAS[c.era].skin) || '';
+      var tmp=document.createElement('div');
+      tmp.innerHTML=window.cardHTML(c, spotIdx, skin);
+      var fresh=tmp.firstElementChild;
+      if(fresh){
+        tile.parentNode.replaceChild(fresh, tile);
+        // re-apply the library-art enhancer so has-art/caption survive the swap (same hook renderBinder uses)
+        try{ if(window.depotEnhanceCardArt) window.depotEnhanceCardArt(grid, COLLECTION); }
+        catch(e){ console.debug('[depot] tile-refresh art hook: '+(e&&e.message)); }
+        return;
+      }
+      console.debug('[depot] refreshSpotTile: cardHTML produced no node; full renderBinder fallback');
+    } else {
+      console.debug('[depot] refreshSpotTile: tile('+(!!tile)+')/cardHTML('+(typeof window.cardHTML)+') unavailable; full renderBinder fallback');
+    }
+    // fallback: full re-render. curPage/groupBy/search/filter are all live globals, so page+filters are preserved.
+    if(typeof window.renderBinder==='function'){ window.renderBinder(); }
+    else { console.warn('[depot] refreshSpotTile: renderBinder missing; tile not refreshed'); }
+  }catch(err){
+    console.warn('[depot] refreshSpotTile failed ('+(err&&err.message)+'); forcing renderBinder');
+    try{ if(typeof window.renderBinder==='function') window.renderBinder(); }catch(_){}
+  }
+}
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){document.getElementById('spotlight').classList.remove('open');refreshSpotTile();}});
 
 /* ---------- mode switch ---------- */
 function setMode(m){
