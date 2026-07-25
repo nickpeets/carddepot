@@ -1,18 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <script src="js/version.js?v=be36d25"></script>
-  <script src="js/depot-core.js?v=be36d25"></script>
+  <script src="js/version.js?v=9d17d8b"></script>
+  <script src="js/depot-core.js?v=9d17d8b"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>The Depot</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gshtatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Spectral:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/depot-style.css?v=be36d25">
-  <link rel="stylesheet" href="css/season.css?v=be36d25">
-    <script src="js/depot-shell.js?v=be36d25"></script>
-  <script src="js/depot-season-shell.js?v=be36d25"></script>
+  <link rel="stylesheet" href="css/depot-style.css?v=9d17d8b">
+  <link rel="stylesheet" href="css/season.css?v=9d17d8b">
+    <script src="js/depot-shell.js?v=9d17d8b"></script>
+  <script src="js/depot-season-shell.js?v=9d17d8b"></script>
   <style>
     /* binder tile portrait redesign v2 (additive, contract-safe) */
     :root{--binder-cols:3}
@@ -1117,8 +1117,8 @@ body{
 </style>
 <!-- /PHASE5-SHARE-CSS -->
 
-  <link rel="stylesheet" href="css/depot-shop-view.css?v=be36d25">
-    <link rel="stylesheet" href="depot-v2.css?v=be36d25">
+  <link rel="stylesheet" href="css/depot-shop-view.css?v=9d17d8b">
+    <link rel="stylesheet" href="depot-v2.css?v=9d17d8b">
 </head>
 <body class="v2-body">
   <div id="sharedUnavailable"><div class="su-card"><div class="su-title">Not available</div><div class="su-sub">This collection isn&rsquo;t available.</div></div></div>
@@ -1383,7 +1383,8 @@ function depotLoggedIn(){ return !!(DEPOT_USER && depotSB()); }
 const META_MARK = '\n\n<!--DEPOT_META:';
 const META_END  = '-->';
 function packNotes(c){
-  const meta = { pos:c.pos, type:c.type, rare:!!c.rare, stats:c.stats||{} };
+  const meta = { pos:(window.depotNormalizePos?window.depotNormalizePos(c.pos):(c.pos||null)), type:c.type||null, rare:!!c.rare, stats:c.stats||{} };
+  if(c.statsPit && Object.keys(c.statsPit).length) meta.statsPit = c.statsPit;
   const bio = c.bio || '';
   return bio + META_MARK + JSON.stringify(meta) + META_END;
 }
@@ -1422,7 +1423,7 @@ function rowToCard(r){
   return {
     id: r.id,
     name: r.player || '',
-    pos: u.meta.pos || '\u2014',
+    pos: (window.depotNormalizePos ? window.depotNormalizePos(u.meta.pos) : (u.meta.pos || null)), // normalize-on-read: sentinel/mojibake -> null
     team: r.team || '\u2014',
     yr: yr,
     set: r.brand || r.set || 'Unknown',
@@ -1430,12 +1431,13 @@ function rowToCard(r){
     num: (r.number!=null ? String(r.number) : ''),
     numSort: parseInt(r.number,10) || 0,
     era: eraFromYear(yr) || 'modern',
-    type: u.meta.type || 'hitter',
+    type: u.meta.type || null, // no default here: cardType() derives it from pos
     rare: !!u.meta.rare,
     photoFront: r.photo_front_path || '',
     photoBack: r.photo_back_path || '',
     tcdb_url: r.tcdb_url || '',
     stats: u.meta.stats || {},
+    statsPit: u.meta.statsPit || {}, // two-way pitching line (fed by fix/pitcher-statline)
     bio: u.bio || '',
     grade: (r.grade != null ? r.grade : null),
     star: !!r.is_star,
@@ -1849,23 +1851,45 @@ function reelScroll(d){document.getElementById('reelTrack').scrollBy({left:d*200
 
 /* ---------- spotlight ---------- */
 function cardType(c){
-  return c.type || (c.pos==='P' ? 'pitcher' : 'hitter');
+  // Position is the PRIMARY signal. 'type' was defaulted to 'hitter' on every
+  // row ever written, so trusting it first made the pos fallback dead code and
+  // rendered every pitcher in the depot a season batting line.
+  const p = (window.depotNormalizePos ? window.depotNormalizePos(c && c.pos) : null);
+  if(p){
+    if(window.depotPosIsTwoWay && window.depotPosIsTwoWay(p)) return 'two-way';
+    if(window.depotPosIsPitcher && window.depotPosIsPitcher(p)) return 'pitcher';
+    return 'hitter';
+  }
+  return (c && c.type) || 'hitter';
 }
 const HIT_COLS = ["G","AB","R","H","2B","3B","HR","RBI","SB","BB","SO","AVG","OBP","SLG","OPS"];
 const PIT_COLS = ["W","L","ERA","G","GS","CG","SHO","SV","IP","H","BB","SO","WHIP"];
-function statTable(c){
-  const cols = cardType(c)==='pitcher' ? PIT_COLS : HIT_COLS;
-  const present = cols.filter(k=>c.stats && c.stats[k]!=null && c.stats[k]!=='');
-  const extra = Object.keys(c.stats||{}).filter(k=>!cols.includes(k));
+function statGrid(stats, cols, caption){
+  const present = cols.filter(k=>stats && stats[k]!=null && stats[k]!=='');
+  const extra = Object.keys(stats||{}).filter(k=>!cols.includes(k));
   const all = present.concat(extra);
-  if(!all.length) return `<div class="no-stats">No stats recorded yet.</div>`;
+  if(!all.length) return '';
   const half = Math.ceil(all.length/2);
   const r1 = all.slice(0, half), r2 = all.slice(half);
   const headRow = ks=>ks.map(k=>`<th>${k}</th>`).join('');
-  const valRow = ks=>ks.map(k=>`<td>${c.stats[k]}</td>`).join('');
+  const valRow = ks=>ks.map(k=>`<td>${stats[k]}</td>`).join('');
   const body = `<thead><tr>${headRow(r1)}</tr></thead><tbody><tr>${valRow(r1)}</tr></tbody>`
     + (r2.length?`<thead><tr>${headRow(r2)}</tr></thead><tbody><tr>${valRow(r2)}</tr></tbody>`:'');
-  return `<div class="statgrid-wrap"><table class="statgrid"><caption>${c.yr} season — ${c.team}</caption>${body}</table></div>`;
+  return `<div class="statgrid-wrap"><table class="statgrid">${caption?`<caption>${caption}</caption>`:''}${body}</table></div>`;
+}
+function statTable(c){
+  const kind = cardType(c);
+  const cap = `${c.yr} season \u2014 ${c.team}`;
+  // Two-way (TWP, e.g. Ohtani): hitter-primary with a labelled pitching section
+  // beneath. Pitching numbers live in their own bucket because the two column
+  // sets collide on G/H/BB/SO -- one merged bag cannot represent both lines.
+  if(kind==='two-way'){
+    const hit = statGrid(c.stats, HIT_COLS, cap);
+    const pit = statGrid(c.statsPit, PIT_COLS, null);
+    if(!hit && !pit) return `<div class="no-stats">No stats recorded yet.</div>`;
+    return hit + (pit?`<div class="statblock-head statblock-sub">Pitching</div>`+pit:'');
+  }
+  return statGrid(c.stats, (kind==='pitcher'?PIT_COLS:HIT_COLS), cap) || `<div class="no-stats">No stats recorded yet.</div>`;
 }
 function brefURL(c){
   const q=[c.name, "baseball reference", c.yr||''].filter(Boolean).join(' ');
@@ -2035,7 +2059,7 @@ async function cardsForPlayerYear(name,y){
 }
 
 let roloPlayer = null;
-const POS_ABBR = {Pitcher:'P',Catcher:'C','First Base':'1B','Second Base':'2B','Third Base':'3B',Shortstop:'SS','Left Field':'LF','Center Field':'CF','Right Field':'RF',Outfielder:'OF','Designated Hitter':'DH'};
+const POS_ABBR = {Pitcher:'P','Two-Way Player':'TWP',Catcher:'C','First Base':'1B','Second Base':'2B','Third Base':'3B',Shortstop:'SS','Left Field':'LF','Center Field':'CF','Right Field':'RF',Outfielder:'OF','Designated Hitter':'DH'};
 
 function roloReset(){
   roloPlayer=null;
@@ -2584,17 +2608,24 @@ function parseStats(s){
 async function saveCard(){
   const name=document.getElementById('f-name').value.trim();
   if(!name){toast("A card needs a player name.");document.getElementById('f-name').focus();return;}
+  // Position is derived, not typed: normalize whatever the form holds, and if it
+  // is empty ask MLB for the primary position so EVERY new row carries one.
+  let posVal = (window.depotNormalizePos ? window.depotNormalizePos(document.getElementById('f-pos').value) : null);
+  if(!posVal && window.depotResolvePosition){
+    try { posVal = await window.depotResolvePosition(name); } catch(_){ posVal = null; }
+  }
+  const typeVal = (posVal && window.depotTypeForPos) ? (window.depotTypeForPos(posVal) || document.getElementById('f-type').value) : document.getElementById('f-type').value;
   const card={
     id:newCardId(),
     name,
-    pos:document.getElementById('f-pos').value.trim()||"â",
+    pos:posVal,
     team:document.getElementById('f-team').value.trim()||"â",
     yr:parseInt(document.getElementById('f-yr').value)||0,
     set:document.getElementById('f-set').value.trim()||"Unknown",
     num:(document.getElementById('f-num').value.trim()||""),
     numSort:parseInt(document.getElementById('f-num').value)||0,
     era:document.getElementById('f-era').value,
-    type:document.getElementById('f-type').value,
+    type:typeVal,
     rare:document.getElementById('f-rare').checked,
     photoFront:document.getElementById('f-photo').value||"",
     photoBack:document.getElementById('f-photo-back').value||"",
@@ -3102,17 +3133,18 @@ setAuthUI(false);
   });
 })();
 </script>
-<script src="game/season.js?v=be36d25" defer></script>
-<script src="js/depot-index-shell.js?v=be36d25"></script>
-<script src="js/depot-prestige.js?v=be36d25"></script>
-<script src="js/depot-wallet.js?v=be36d25"></script>
-  <script src="js/depot-pack-engine.js?v=be36d25"></script>
-  <script src="js/depot-pixel-card.js?v=be36d25"></script>
-  <script src="js/depot-shop.js?v=be36d25"></script>
-  <script src="js/depot-shop-view.js?v=be36d25"></script>
-  <script src="js/depot-binder-shop.js?v=be36d25"></script>
-  <script src="js/depot-library-art.js?v=be36d25"></script>
-  <script src="js/depot-card-detail-2b.js?v=be36d25"></script>
+<script src="game/season.js?v=9d17d8b" defer></script>
+<script src="js/depot-index-shell.js?v=9d17d8b"></script>
+<script src="js/depot-prestige.js?v=9d17d8b"></script>
+<script src="js/depot-wallet.js?v=9d17d8b"></script>
+  <script src="js/depot-pack-engine.js?v=9d17d8b"></script>
+  <script src="js/depot-pixel-card.js?v=9d17d8b"></script>
+  <script src="js/depot-shop.js?v=9d17d8b"></script>
+  <script src="js/depot-shop-view.js?v=9d17d8b"></script>
+  <script src="js/depot-binder-shop.js?v=9d17d8b"></script>
+  <script src="js/depot-library-art.js?v=9d17d8b"></script>
+    <script src="js/depot-position.js?v=9d17d8b"></script>
+  <script src="js/depot-card-detail-2b.js?v=9d17d8b"></script>
 <script>
 /* Franchise Economy Slice A: arm wallet chip + payout hook. Additive, fail-loud, graceful until DDL. */
 (function(){

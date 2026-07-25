@@ -234,8 +234,21 @@
       block.className = "spot-statblock";
       var head = document.createElement("div");
       head.className = "statblock-head";
-      var yr = c && c.yr ? c.yr : "";
-      var kind = (c && typeof window.cardType === "function" && window.cardType(c) === "pitcher") ? "pitching line" : "batting line";
+      // AGENTS.md trap: spotIdx and COLLECTION are BARE globals, not window
+      // properties, so the `c` resolved at the top of refreshMeta is always null
+      // and this heading always read "batting line" no matter what the card was.
+      // Resolve a card the safe way for the heading only -- the wider
+      // consequence of c === null higher up is logged, not touched here.
+      var statCard = c;
+      if (!statCard) {
+        try {
+          var _si = (typeof spotIdx === "number") ? spotIdx : null;
+          var _col = (typeof COLLECTION !== "undefined") ? COLLECTION : null;
+          if (_si != null && _col) statCard = _col[_si];
+        } catch (e) {}
+      }
+      var yr = statCard && statCard.yr ? statCard.yr : "";
+      var kind = (statCard && typeof window.cardType === "function" && window.cardType(statCard) === "pitcher") ? "pitching line" : "batting line";
       head.textContent = (yr ? (yr + " SEASON \u2014 ") : "SEASON \u2014 ") + kind;
       block.appendChild(head);
       if (scroll) { block.appendChild(scroll); } // move the grids verbatim

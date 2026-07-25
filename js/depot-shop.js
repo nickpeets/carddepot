@@ -300,6 +300,16 @@ function loadCatalog() {
       return client.from('cards').insert(toInsert).select('id').then(function(ins){
         if(ins.error) throw new Error('card insert rejected: '+ins.error.message);
         console.log(TAG+' redeem: inserted '+((ins.data||[]).length)+' card(s) after grant row');
+        // POST-GRANT position enrichment. Fire-and-forget, deliberately AFTER the
+        // grant row and the card insert have landed: the money path must never
+        // wait on statsapi and must never fail because of it. Anything missed
+        // here is picked up later by depotBackfillPositions().
+        try {
+          var newIds = (ins.data||[]).map(function(r){ return r && r.id; }).filter(Boolean);
+          if(newIds.length && typeof window.depotEnrichPositions === 'function'){
+            window.depotEnrichPositions(client, newIds);
+          }
+        } catch(e){ console.debug(TAG+' position enrichment skipped: '+((e&&e.message)||e)); }
         return {skipInsert:false};
       });
     }).then(function(){
