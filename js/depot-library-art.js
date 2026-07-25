@@ -278,8 +278,35 @@
     }
   }
 
+  // Will art ACTUALLY paint for this card/side? depotResolveCardArt is optimistic:
+  // it builds a library URL from catalog parts without checking that the object
+  // exists. Callers that need paint TRUTH (spotlight Google-Images gate, Add-a-Card
+  // upload gate) must probe. Shares _probeCache with probeImg, so re-asking about a
+  // known URL is free and never re-hits the network.
+  function probeURL(url, key) {
+    return new Promise(function (resolve) {
+      if (!url) { resolve(false); return; }
+      if (_probeCache[url] === 'ok') { resolve(true); return; }
+      if (_probeCache[url] === 'fail') { resolve(false); return; }
+      var t = new Image();
+      t.onload = function () { _probeCache[url] = 'ok'; console.debug('[depot] probe-hit', key); resolve(true); };
+      t.onerror = function () { _probeCache[url] = 'fail'; console.debug('[depot] probe-miss', key); resolve(false); };
+      t.src = url;
+    });
+  }
+
+  function probeCardArt(card, side) {
+    try {
+      var r = depotResolveCardArt(card, side || 'front');
+      if (!r || !r.url || r.tier === 'placeholder') return Promise.resolve(false);
+      return probeURL(r.url, r.key || '');
+    } catch (e) { return Promise.resolve(false); }
+  }
+
   window.depotResolveCardArt = depotResolveCardArt;
   window.depotLibraryArtURL = libraryURL;
+  // Promise<bool>: true only after a real image load succeeded.
+  window.depotProbeCardArt = function (card, side) { try { return probeCardArt(card, side); } catch (e) { return Promise.resolve(false); } };
   window.depotEnhanceCardArt = function (root, col) { try { enhanceTiles(root, col); } catch (e) { console.debug('[depot] library: enhance tiles failed', e && e.message); } };
   window.depotEnhanceSpotlightArt = function (card) { try { enhanceSpotlight(card); } catch (e) { console.debug('[depot] library: enhance spotlight failed', e && e.message); } };
 

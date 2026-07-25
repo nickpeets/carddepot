@@ -1886,7 +1886,7 @@ function openSpot(idx){
   spotIdx=idx;const c=COLLECTION[idx];
   const skin=ERAS[c.era].skin;
   const cphoto=frontPhoto(c), cback=backPhoto(c);
-  const hasArt = !!cphoto || (function(){ try { return !!(window.depotResolveCardArt && window.depotResolveCardArt(c,'front').tier !== 'placeholder'); } catch(_){ return false; } })();
+  const hasScan = !!cphoto; // paint truth is settled by the probe after .open, never by resolver tier
   const photoStyle=cphoto?`background-image:url("${cssUrl(cphoto)}")`:`background-color:${placeholderBg(idx)}`;
   document.getElementById('spotFront').className=`spot-face ${skin}`;
   document.getElementById('spotFront').innerHTML=`<div class="frame" style="position:absolute;inset:0;display:flex;flex-direction:column">
@@ -1907,7 +1907,7 @@ function openSpot(idx){
     ${c.bio?`<div class="bio">${c.bio}</div>`:''}
         </div>`;
   document.getElementById('spotMeta').innerHTML=`${c.name?`<div class="spot-name">${c.name}</div>`:''}<span class="hint">click card to flip · esc to close</span>`
-    + (hasArt?'':`<div style="margin-top:.5rem"><button class="btn-google" style="width:auto;padding:.45rem 1rem;font-size:.72rem" onclick="findImageFor(${idx},event)">Find this card on Google Images ↗</button></div>`)
+    + (hasScan?'':`<div id="spotNoArt" style="margin-top:.5rem;display:none"><button class="btn-google" style="width:auto;padding:.45rem 1rem;font-size:.72rem" onclick="findImageFor(${idx},event)">Find this card on Google Images ↗</button></div>`)
         + `<div class="v2-d4"><div class="v2-d4-row"><span class="v2-d4-lab">Grade</span><span class="v2-grade-val ${c.grade?'':'is-blank'}" id="d4GradeVal">${c.grade?escAttr(c.grade):'—'}</span><select class="v2-grade-sel" id="d4GradeSel" style="width:auto" onchange="d4SetGrade(this.value)">${['','1','2','3','4','5','6','7','8','9','10','GEM 10','AUTH'].map(function(g){return '<option value="'+g+'"'+(String(c.grade||'')===g?' selected':'')+'>'+(g===''?'— none —':g)+'</option>';}).join('')}</select></div><div class="v2-d4-row"><span class="v2-d4-lab">Star</span><button type="button" class="v2-star-toggle" id="d4StarBtn" aria-pressed="${c.star?'true':'false'}" onclick="d4ToggleStar()"><span class="v2-star-badge--inline v2-anim-twinkle" style="${c.star?'':'filter:grayscale(1);opacity:.5'}">★</span> ${c.star?'Starred':'Mark star'}</button></div><div class="v2-d4-row" style="align-items:flex-start"><span class="v2-d4-lab">Notes</span><textarea class="v2-cond-input" id="d4CondInput" placeholder="Condition notes (corners, centering, flaws…)" onchange="d4SetCond(this.value)">${c.condNotes?escAttr(c.condNotes):''}</textarea></div><div class="v2-d4-status" id="d4Status"></div></div>` + `<div class="spot-remove"><button class="btn-ghost" onclick="if(confirm('Remove this card from your depot?'))removeFromDepot(${idx},event)">Remove from depot</button></div>`;
   document.getElementById('spotCard').classList.remove('flipped');
   document.getElementById('spotlight').classList.add('open');
@@ -1920,6 +1920,18 @@ function openSpot(idx){
         catch(e){ console.debug('[depot] library spotlight hook: '+(e&&e.message)); }
       });
     });
+  }
+
+  // Escape hatch, paint-outcome gated: reveal the Google-Images button ONLY when
+  // art truly fails to paint. Resolver tier alone would hide it on every
+  // catalogued card -- including the ones that paint nothing at all.
+  if (!cphoto) {
+    var _reveal = function(){ var nb = document.getElementById('spotNoArt'); if (nb) nb.style.display = ''; };
+    var _artProbe = (window.depotProbeCardArt ? window.depotProbeCardArt(c,'front') : Promise.resolve(false));
+    _artProbe.then(function(ok){
+      if (spotIdx !== idx) return; // stale: spotlight already moved to another card
+      if (!ok) _reveal();
+    }).catch(_reveal);
   }
 }
 function flipSpot(e){e.stopPropagation();var t=e&&e.target;if(t&&t.closest&&t.closest('select,input,button,option,label,.v2-grade,[data-no-flip]'))return;document.getElementById('spotCard').classList.toggle('flipped')}
