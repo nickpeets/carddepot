@@ -77,7 +77,49 @@
   /* ---------- MLB resolution ---------- */
   var personCache = {};
 
-  function cleanName(n) { return String(n || '').replace(/\s+/g, ' ').trim(); }
+  /* ---- shared name helpers (accent-aware) -------------------------------
+   * ONE implementation, exported for index.html so the add-card form and this
+   * probe can never disagree about what a player is called.
+   *
+   * cleanName(): trims a raw/OCR'd string down to the person tokens while
+   * PRESERVING accented Latin letters. The old ASCII-only token test
+   * (/^[A-Za-z'.-]+$/) rejected "Beltre" with an acute e and broke out of the
+   * loop, so cleanPlayerName("Adrian Beltre") returned just "Adrian".
+   * normName(): folds accents/punctuation for COMPARISON only -- never store
+   * its output, it is lossy by design.
+   * ---------------------------------------------------------------------- */
+  var NAME_SUF   = { 'Jr': 1, 'Jr.': 1, 'Sr': 1, 'Sr.': 1, 'II': 1, 'III': 1, 'IV': 1, 'V': 1 };
+  var NAME_TOKEN = /^[A-Za-z\u00C0-\u00D6\u00D8-\u00F6\u00F8-\u024F'\u2019.\-]+$/;
+  var NAME_UPPER = /^[A-Z\u00C0-\u00D6\u00D8-\u00DE]/;
+  var NAME_LOWER = /[a-z\u00DF-\u00F6\u00F8-\u024F]/;
+
+  function normName(x) {
+    x = String(x == null ? '' : x).normalize('NFKD').replace(/[\u0300-\u036f]/g, '');
+    x = x.toLowerCase().replace(/\./g, ' ');
+    x = x.replace(/\b(junior|jr)\b/g, 'jr').replace(/\b(senior|sr)\b/g, 'sr');
+    return x.replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
+  }
+
+  function isNameTok(w) {
+    if (NAME_SUF[w]) return true;
+    if (/^(?:[A-Z]\.){1,3}$/.test(w)) return true;
+    return NAME_TOKEN.test(w) && NAME_UPPER.test(w) && NAME_LOWER.test(w);
+  }
+
+  function cleanName(n) {
+    var raw = String(n == null ? '' : n);
+    var s = raw.split(/[:\/|]/)[0];
+    var toks = s.trim().split(/\s+/), out = [], core = 0, i, w;
+    for (i = 0; i < toks.length; i++) {
+      w = toks[i].replace(/^[ ,;()]+|[ ,;()]+$/g, '');
+      if (!w) continue;
+      if (!isNameTok(w)) break;
+      if (core === 2) { if (NAME_SUF[w]) out.push(w); break; }
+      out.push(w);
+      if (!NAME_SUF[w]) core++;
+    }
+    return out.join(' ').replace(/\s+/g, ' ').trim() || raw.replace(/\s+/g, ' ').trim();
+  }
 
   function searchPerson(name) {
     var nm = cleanName(name);
@@ -286,6 +328,8 @@
   window.depotSeasonStats = seasonStats;
   window.depotNotesWithMeta = withMeta;
   window.depotNotesUnpack = unpackNotes;
+  window.depotCleanName = cleanName;
+  window.depotNormName = normName;
   window.depotEnrichPositions = enrichRows;
   window.depotBackfillPositions = backfill;
   console.debug(TAG + ' ready');
