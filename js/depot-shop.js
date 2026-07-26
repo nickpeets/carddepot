@@ -214,6 +214,16 @@ function loadCatalog() {
       // Success: the card is granted server-side. Reveal it.
       console.log(TAG + " free claim OK card_id=" + data.card_id + " tier=" + data.tier);
       ui.claimed(card, band, data.next_claim_at, data.card_id);
+      // POST-GRANT position enrichment. The free card is already granted
+      // server-side and revealed above; this is fire-and-forget, deliberately
+      // AFTER ui.claimed(). The claim must never wait on statsapi and must
+      // never fail because of it. Anything missed here is picked up later by
+      // depotBackfillPositions().
+      try {
+        if(data.card_id && typeof window.depotEnrichPositions === 'function'){
+          window.depotEnrichPositions(client, [data.card_id]);
+        }
+      } catch(e2){ console.debug(TAG+' free position enrichment skipped: '+((e2&&e2.message)||e2)); }
     }).catch(function (e) {
       console.error(TAG + " free RPC threw:", e && e.message || e);
       ui.fail("Free claim could not be confirmed. Please try again.");
