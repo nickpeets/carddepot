@@ -51,3 +51,27 @@ Notes on doing it properly: the column should be nullable with no default (never
 a sentinel string); normalize-on-read must stay for rows written before the
 migration; and notes should remain the source of truth until the migration is
 verified, so the two can be cross-checked rather than trusted blindly.
+
+## 3. Share personal scan to the public card-library (Option B, from feat/add-card-search)
+
+The Add-a-Card flow ships with the HYBRID decision: a user's personal scan always writes to the
+private card-images/{user}/{collection}/{cardId}_{side}.jpg path (existing machinery, zero DDL)
+and paints via the personal->library->placeholder resolver order. A future "Share to library"
+toggle would also populate the public card-library bucket / public.card_library catalog.
+
+Prerequisites before any bucket-write ships (do NOT attempt a bucket-write policy change casually):
+
+- Storage insert policy on card-library, OR an Edge Function doing the privileged write server-side
+  (preferred: keeps the service role off the client).
+- First-scan-wins: the first accepted image for a catalog_key+side wins; later submissions never
+  silently overwrite a canonical image.
+- Explicit opt-in consent toggle at add-time (off by default) before anything leaves the private bucket.
+- Report / remove path so a bad or mislabeled shared image can be flagged and taken down.
+
+## 4. renderGrouped mojibake team comparison (one-line fix)
+
+saveCard writes the team default as a double-encoded mojibake em-dash sentinel; renderGrouped
+compares against that same mojibake, while rowToCard uses a clean U+2014. feat/add-card-search
+deliberately writes NULL (never the sentinel) for unresolved team. Separately, renderGrouped's
+comparison should be normalized to the clean em-dash (or an explicit null/empty check) so grouped
+view stops depending on the mojibake sentinel. Out of scope for feat/add-card-search.
