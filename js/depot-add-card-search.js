@@ -30,7 +30,8 @@
     return null;
   }
   function libAnonKey(){
-    try{ if(window.DEPOT_SUPABASE_CONFIG && window.DEPOT_SUPABASE_CONFIG.anonKey) return window.DEPOT_SUPABASE_CONFIG.anonKey; }catch(e){}
+    // The app config exposes the anon key as DEPOT_SUPABASE_CONFIG.key.
+    try{ var c=window.DEPOT_SUPABASE_CONFIG; if(c && (c.key||c.anonKey)) return c.key||c.anonKey; }catch(e){}
     try{ if(typeof window.SUPABASE_ANON_KEY==='string') return window.SUPABASE_ANON_KEY; }catch(e){}
     return null;
   }
