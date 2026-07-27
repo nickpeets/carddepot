@@ -70,10 +70,15 @@
   function userAttachedFront(){ var el=document.getElementById('f-photo'); return !!(el && el.value && /^data:/.test(el.value)); }
   function refreshGateFromUpload(){ if(userAttachedFront()) setAddEnabled(true); }
   window.depotAddCardRefreshGate=refreshGateFromUpload;
+  // Functional ADD gate consulted by saveCard on EVERY save path (legacy inline onclick included).
+  // True only when a front image is confirmed: library probe TRUE (_frontConfirmed) OR the user attached a front scan.
+  window.depotAddCardGateOk=function(){ try{ return !!(_frontConfirmed || userAttachedFront()); }catch(e){ return true; } };
 
   // ---- Row list with badges -------------------------------------------------
   function listEl(){ return document.getElementById('rolo-card-list'); }
   function currentYear(){ var y=document.getElementById('f-yr'); return y?parseInt(y.value,10)||0:0; }
+
+  function settleBadge(badge, cardObj){ var done=false; function finish(st){ if(done) return; done=true; badge.className='rcr-badge rcr-'+st; badge.textContent=badgeText(st); } var to=setTimeout(function(){ finish('none'); }, 4000); try{ if(!window.depotProbeCardArt){ clearTimeout(to); finish('none'); return; } Promise.resolve(window.depotProbeCardArt(cardObj,'front')).then(function(hf){ return Promise.resolve(hf?window.depotProbeCardArt(cardObj,'back'):false).then(function(hb){ clearTimeout(to); finish(hf?(hb?'both':'front'):'none'); }); }).catch(function(){ clearTimeout(to); finish('none'); }); }catch(e){ clearTimeout(to); finish('none'); } }
 
   function badgeText(state){ return state==='both'?'front + back':(state==='front'?'front only':'no image yet'); }
 
@@ -82,6 +87,9 @@
     return { set: row.set!=null?row.set:row.brand, brand: row.brand, number: row.number, yr: year, year: year, player: row.player };
   }
 
+  function clearPreviews(){
+    try{ if(typeof setPreview==="function"){ setPreview("front",""); setPreview("back",""); } }catch(e){ warn("clear preview failed", e&&e.message); }
+  }
   function paintPreviewFromLibrary(cardObj){
     // Show library art in BOTH preview slots without writing #f-photo, so the
     // saved row keeps empty photo paths (resolver paints from library). If the
@@ -106,6 +114,7 @@
     var cardObj=makeCardObj(row, year);
     // Authoritative gate: probe the real bucket (table can run ~2 objects behind).
     setAddEnabled(false);
+    clearPreviews();
     var uploadHint=document.getElementById('rolo-upload-hint');
     if(!window.depotProbeCardArt){ warn('no probe fn; leaving locked'); return; }
     Promise.resolve(window.depotProbeCardArt(cardObj,'front')).then(function(hasFront){
@@ -146,7 +155,7 @@
         var label=document.createElement('span'); label.className='rcr-set'; label.textContent=(r.set!=null?r.set:r.brand)||'';
         var num=document.createElement('span'); num.className='rcr-num'; num.textContent='#'+(r.number==null?'':r.number);
         var badge=document.createElement('span'); badge.className='rcr-badge rcr-'+state; badge.textContent = state==='unknown'?'checking…':badgeText(state);
-        el.appendChild(label); el.appendChild(num); el.appendChild(badge);
+        el.appendChild(label); el.appendChild(num); el.appendChild(badge); if(state==='unknown'){ settleBadge(badge, makeCardObj(r, year)); } // never rest on checking…
         if(k && keyCount[k]>1){ var same=document.createElement('span'); same.className='rcr-same'; same.textContent='same image'; el.appendChild(same); }
         el.onclick=function(){
           var sib=host.querySelectorAll('.rolo-card-row'); for(var i=0;i<sib.length;i++){ sib[i].classList.remove('sel'); }

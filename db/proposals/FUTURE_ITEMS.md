@@ -75,3 +75,13 @@ compares against that same mojibake, while rowToCard uses a clean U+2014. feat/a
 deliberately writes NULL (never the sentinel) for unresolved team. Separately, renderGrouped's
 comparison should be normalized to the clean em-dash (or an explicit null/empty check) so grouped
 view stops depending on the mojibake sentinel. Out of scope for feat/add-card-search.
+
+## 5. Rolodex meta: card-year span presented as unlabeled career span
+
+The roloSuggest player-list meta builds its year range from idx[normName].years
+(the years the player has CARDS in the checklist) and renders it bare as
+"YYYY-YYYY N yrs" with NO qualifier. Live repro: Mark McGwire shows
+"1985-2024 24 yrs" where 2024 is a reprint/insert year, not a playing season.
+Reads as a career span but is a card-year span. Fix (future): label explicitly
+as "card years", or source true debut/lastPlayed from the MLB pull for a real
+career label. Out of scope for fix/add-card-polish -- logged per instruction.

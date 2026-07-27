@@ -1291,7 +1291,7 @@ body.logged-out #appFrame{display:none !important;}
 
     <div class="form-foot">
       <button class="btn-ghost" onclick="closeForm(event,true)">Cancel</button>
-      <button class="btn-solid" onclick="saveCard()">Add to depot</button>
+      <button class="btn-solid" data-role="add-card-save" onclick="saveCard()">Add to depot</button>
     </div>
   </div>
 </div>
@@ -1324,9 +1324,9 @@ const SEED = [];
 
 const ERAS = {
   all:{title:"All", range:"every era", skin:"skin-modern", blurb:"Your entire collection, sorted AâZ by player."},
-  vintage:{title:"The Vintage Years", range:"â¤ 1985", skin:"skin-vintage",
+  vintage:{title:"The Vintage Years", range:"≤ 1985", skin:"skin-vintage",
     blurb:"Thick stock, hand-tinted color, and cardboard that smells like a drugstore in 1978."},
-  junk:{title:"The Junk Wax Era", range:"1986â1993", skin:"skin-junk",
+  junk:{title:"The Junk Wax Era", range:"1986–1993", skin:"skin-junk",
     blurb:"Overproduced, gloriously so. Glossy fronts, bold borders, and the rookie cards that defined a generation of collectors."},
   modern:{title:"The Modern Game", range:"1994 onward", skin:"skin-modern",
     blurb:"Premium foil, sharp photography, and the chase for the short print."}
@@ -2155,7 +2155,7 @@ async function ensurePlayerList(){
           const live = document.getElementById('rolo-meta-'+i);
           if(!live || live.getAttribute('data-cnm')!==cnm) continue;
           if(live.getAttribute('data-pos')==='1') continue;
-          live.textContent = [pos, live.textContent].filter(Boolean).join(' Â· ');
+          var _base=live.textContent; live.textContent = (pos && _base.indexOf(pos+' · ')!==0) ? [pos,_base].filter(Boolean).join(' · ') : _base;
           live.setAttribute('data-pos','1');
         }
       }, 320);
@@ -2612,7 +2612,7 @@ function parseStats(s){
 }
 async function saveCard(){
   const name=document.getElementById('f-name').value.trim();
-  if(!name){toast("A card needs a player name.");document.getElementById('f-name').focus();return;}
+  if(!name){toast("A card needs a player name.");document.getElementById('f-name').focus();return;} if(window.depotAddCardGateOk && !window.depotAddCardGateOk()){ toast("Add a front image first — pick a card with library art or attach your own scan."); return; } // gate EVERY save path: no confirmed front = no add
   // Position is derived, not typed: normalize whatever the form holds, and if it
   // is empty ask MLB for the primary position so EVERY new row carries one.
   let posVal = (window.depotNormalizePos ? window.depotNormalizePos(document.getElementById('f-pos').value) : null);
