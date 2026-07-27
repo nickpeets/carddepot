@@ -1,18 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <script src="js/version.js?v=b92e178"></script>
-  <script src="js/depot-core.js?v=b92e178"></script>
+  <script src="js/version.js?v=4af61d3"></script>
+  <script src="js/depot-core.js?v=4af61d3"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>The Depot</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gshtatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Spectral:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/depot-style.css?v=b92e178">
-  <link rel="stylesheet" href="css/season.css?v=b92e178">
-    <script src="js/depot-shell.js?v=b92e178"></script>
-  <script src="js/depot-season-shell.js?v=b92e178"></script>
+  <link rel="stylesheet" href="css/depot-style.css?v=4af61d3">
+  <link rel="stylesheet" href="css/season.css?v=4af61d3">
+    <script src="js/depot-shell.js?v=4af61d3"></script>
+  <script src="js/depot-season-shell.js?v=4af61d3"></script>
   <style>
     /* binder tile portrait redesign v2 (additive, contract-safe) */
     :root{--binder-cols:3}
@@ -932,6 +932,21 @@ body{
 #d4StarBtn{ border-radius:999px; font-family:'Baloo 2',sans-serif; }
 #d4Status{ color:#1d6b2a; font-family:'Baloo 2',sans-serif; }
 
+/* add-card-search: catalog row list with art badges */
+.rolo-card-list{display:flex;flex-direction:column;gap:.25rem;margin-top:.4rem;max-height:220px;overflow:auto}
+.rolo-card-row{display:flex;align-items:center;gap:.5rem;width:100%;text-align:left;padding:.35rem .5rem;border:1px solid var(--ink-soft,#8886);border-radius:6px;background:#fff;cursor:pointer;font-size:.8rem}
+.rolo-card-row:hover{border-color:var(--ink,#333)}
+.rolo-card-row.sel{outline:2px solid var(--ink,#333);background:#eef}
+.rolo-card-row .rcr-set{font-weight:600;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rolo-card-row .rcr-num{opacity:.7}
+.rolo-card-row .rcr-badge{font-size:.62rem;padding:.1rem .4rem;border-radius:999px;white-space:nowrap}
+.rcr-both{background:#d8f5dd;color:#186a2a}
+.rcr-front{background:#fef3d0;color:#7a5a00}
+.rcr-none{background:#eee;color:#666}
+.rcr-unknown{background:#eef;color:#556}
+.rolo-card-row .rcr-same{font-size:.58rem;opacity:.6;font-style:italic}
+.rolo-noimg{margin-top:.4rem;font-size:.72rem;color:#7a5a00}
+.rolo-uphint{margin-top:.2rem;font-size:.68rem;opacity:.75}
 </style>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 <!-- ===== DEPOT AUTH (Phase 1): Supabase client + auth UI styles ===== -->
@@ -1117,8 +1132,8 @@ body{
 </style>
 <!-- /PHASE5-SHARE-CSS -->
 
-  <link rel="stylesheet" href="css/depot-shop-view.css?v=b92e178">
-    <link rel="stylesheet" href="depot-v2.css?v=b92e178">
+  <link rel="stylesheet" href="css/depot-shop-view.css?v=4af61d3">
+    <link rel="stylesheet" href="depot-v2.css?v=4af61d3">
 </head>
 <body class="v2-body">
   <div id="sharedUnavailable"><div class="su-card"><div class="su-title">Not available</div><div class="su-sub">This collection isn&rsquo;t available.</div></div></div>
@@ -1213,6 +1228,9 @@ body.logged-out #appFrame{display:none !important;}
             <input id="rolo-brand-custom" placeholder="Set name" style="display:none" onchange="roloBrandCustom()" oninput="roloBrandCustom()">
           </div>
           <div id="rolo-status" class="rolo-status"></div>
+        <div id="rolo-card-list" class="rolo-card-list" style="display:none"></div>
+        <div id="rolo-noimg-msg" class="rolo-noimg" style="display:none">We don’t have this card’s image yet — add your own scan below and it’ll paint.</div>
+        <div id="rolo-upload-hint" class="rolo-uphint" style="display:none">Prefer your own scan? Attach one below — your image always wins.</div>
         </div>
         <div class="fl-row">
           <div class="fl-field" style="flex:2"><label>Player</label><input id="f-name" placeholder="Ken Griffey Jr."></div>
@@ -1403,8 +1421,11 @@ function cardToRow(c){
     owner_id: DEPOT_USER.id,
     collection_id: DEPOT_COLLECTION_ID,
     year: parseInt(c.yr,10) || null,
+    // INVARIANT: brand and set both come from c.set. The art resolver reads
+    // .set; brand==set by design (see depot-library-art.js).
     brand: c.set || null,
     set: c.set || null,
+    catalog_key: (c.catalogKey != null ? c.catalogKey : null),
     number: (c.num!=null && c.num!=='' ? String(c.num) : null),
     player: c.name || null,
     team: c.team || null,
@@ -2352,6 +2373,7 @@ function roloBrandPick(){
     renderCardVariations(note, nums, base);
   } else { note.innerHTML=''; }
 resolveCurrentCardUrl();
+  if(typeof depotAddCardEnhance==='function') depotAddCardEnhance(v);
 }
 function roloBrandCustom(){
   document.getElementById('f-set').value=document.getElementById('rolo-brand-custom').value.trim();
@@ -2556,14 +2578,6 @@ function onFile(e){
   };
   reader.readAsDataURL(file);
 }
-function useUrl(){
-  const u=document.getElementById('f-url').value.trim();
-  slotInput(activeSlot).value=u;setPreview(activeSlot, u);
-}
-function useGPaste(){
-  const u=document.getElementById('f-gpaste').value.trim();
-  slotInput(activeSlot).value=u;setPreview(activeSlot, u);
-}
 function googleImagesURL(query){
   return "https://www.google.com/search?tbm=isch&q="+encodeURIComponent(query);
 }
@@ -2574,15 +2588,6 @@ function tcdbSearchURL(name,yr,set,num){
   if(set) p.set("SetName", set);
   if(name)p.set("Name", name);
   return "https://www.tcdb.com/ViewResults.cfm?"+p.toString();
-}
-function openGoogleImages(){
-  const name=document.getElementById('f-name').value.trim();
-  const yr=document.getElementById('f-yr').value.trim();
-  const set=document.getElementById('f-set').value.trim();
-  const num=document.getElementById('f-num').value.trim();
-  const q=[yr,set,name,num?'#'+num:'',"baseball card"].filter(Boolean).join(' ');
-  if(!name && !set){toast("Add a player or set first, so the search knows what to find.");return;}
-  window.open(googleImagesURL(q),'_blank','noopener');
 }
 function openTcdbSearch(){
   const name=document.getElementById('f-name').value.trim();
@@ -2612,13 +2617,17 @@ async function saveCard(){
   // is empty ask MLB for the primary position so EVERY new row carries one.
   let posVal = (window.depotNormalizePos ? window.depotNormalizePos(document.getElementById('f-pos').value) : null);
   if(!posVal && window.depotResolvePosition){
-    try { posVal = await window.depotResolvePosition(name); } catch(_){ posVal = null; }
+      // Non-blocking: do NOT await — slow/failed MLB lookup must never delay ADD.
+      // Add null pos now; resolve (name, year) in background and backfill.
+      (function(){ var _y=parseInt(document.getElementById("f-yr").value,10)||0;
+        Promise.resolve(window.depotResolvePosition(name,_y)).then(function(pp){ try{ if(pp!=null && window.depotBackfillPosition) window.depotBackfillPosition(name,_y,pp); }catch(_){} }).catch(function(){}); })();
   }
   const typeVal = (posVal && window.depotTypeForPos) ? (window.depotTypeForPos(posVal) || document.getElementById('f-type').value) : document.getElementById('f-type').value;
   const card={
     id:newCardId(),
     name,
     pos:posVal,
+      catalogKey:(window.DEPOT_PENDING_CATALOG_KEY||null),
     team:document.getElementById('f-team').value.trim()||"â",
     yr:parseInt(document.getElementById('f-yr').value)||0,
     set:document.getElementById('f-set').value.trim()||"Unknown",
@@ -3133,18 +3142,19 @@ setAuthUI(false);
   });
 })();
 </script>
-<script src="game/season.js?v=b92e178" defer></script>
-<script src="js/depot-index-shell.js?v=b92e178"></script>
-<script src="js/depot-prestige.js?v=b92e178"></script>
-<script src="js/depot-wallet.js?v=b92e178"></script>
-  <script src="js/depot-pack-engine.js?v=b92e178"></script>
-  <script src="js/depot-pixel-card.js?v=b92e178"></script>
-  <script src="js/depot-shop.js?v=b92e178"></script>
-  <script src="js/depot-shop-view.js?v=b92e178"></script>
-  <script src="js/depot-binder-shop.js?v=b92e178"></script>
-  <script src="js/depot-library-art.js?v=b92e178"></script>
-    <script src="js/depot-position.js?v=b92e178"></script>
-  <script src="js/depot-card-detail-2b.js?v=b92e178"></script>
+<script src="game/season.js?v=4af61d3" defer></script>
+<script src="js/depot-index-shell.js?v=4af61d3"></script>
+<script src="js/depot-prestige.js?v=4af61d3"></script>
+<script src="js/depot-wallet.js?v=4af61d3"></script>
+  <script src="js/depot-pack-engine.js?v=4af61d3"></script>
+  <script src="js/depot-pixel-card.js?v=4af61d3"></script>
+  <script src="js/depot-shop.js?v=4af61d3"></script>
+  <script src="js/depot-shop-view.js?v=4af61d3"></script>
+  <script src="js/depot-binder-shop.js?v=4af61d3"></script>
+  <script src="js/depot-library-art.js?v=4af61d3"></script>
+  <script src="js/depot-add-card-search.js?v=4af61d3"></script>
+    <script src="js/depot-position.js?v=4af61d3"></script>
+  <script src="js/depot-card-detail-2b.js?v=4af61d3"></script>
 <script>
 /* Franchise Economy Slice A: arm wallet chip + payout hook. Additive, fail-loud, graceful until DDL. */
 (function(){
