@@ -360,6 +360,111 @@
     });
   }
 
+  /* ---------- stats re-pull sweep ---------- */
+
+  /* Give a provenance-less stats block its identity back.
+   *
+   * A line is rewritten only when the pull is trustworthy end to end: the person resolves
+   * to an exact accent-folded full-name match, that person's career span covers the card
+   * year, and the API actually has a split for that season. Anything short of that is
+   * SKIPPED with a reason and the card is left exactly as it was. A guessed line is worse
+   * than a blank one -- that is the whole lesson of the Jeter/Thomas incident.
+   *
+   * Writes go through withMeta(), never a from-scratch meta rebuild, so ratesMeta, the
+   * pack receipt in the bio and every other key this sweep does not know about survive.
+   */
+  function repullOne(client, row, dry, report) {
+    var meta = unpackNotes(row.notes).meta || {};
+    var name = cleanName(row.player);
+    var line = { card: row.year + ' ' + name, group: '', person: '', team: '', cells: 0, wrote: '', reason: '' };
+
+    function skip(why) {
+      line.wrote = 'SKIPPED';
+      line.reason = why;
+      console.warn(TAG + ' repull SKIP [' + line.card + ']: ' + why);
+      report.push(line);
+    }
+
+    var nHit = meta.stats ? Object.keys(meta.stats).length : 0;
+    var nPit = meta.statsPit ? Object.keys(meta.statsPit).length : 0;
+    if (!nHit && !nPit) { skip('no stats block to re-pull'); return Promise.resolve(); }
+    if (nHit && nPit) { skip('both stats and statsPit populated -- ambiguous, resolve by hand'); return Promise.resolve(); }
+    if (meta.statPersonId != null && meta.statSeason != null) { skip('already carries provenance'); return Promise.resolve(); }
+    if (!row.year) { skip('card has no year to pull'); return Promise.resolve(); }
+
+    /* Two-way players are hitter-primary in the depot: a TWP card shows the batting line,
+     * so it pulls from the hitting group like any position player. */
+    var pos = meta.pos || '';
+    var group = (!isTwoWayPos(pos) && (isPitcherPos(pos) || meta.type === 'pitcher')) ? 'pitching' : 'hitting';
+    line.group = group;
+
+    return searchPerson(row.player, row.year).then(function (p) {
+      if (!p) { skip('no exact person match for ' + name); return; }
+      /* searchPerson trusts an exact name match on its own -- identity and provenance are
+       * different questions there. On the stats side the span IS the question: a season
+       * outside a career cannot have a real line behind it. */
+      if (!spanCovers(p, row.year)) {
+        skip('span fail: ' + p.fullName + ' (' + String(p.mlbDebutDate || '?').slice(0, 4) + '-' + String(p.lastPlayedDate || '?').slice(0, 4) + ') does not cover ' + row.year);
+        return;
+      }
+      line.person = p.fullName + ' #' + p.id;
+      return seasonStatsProv(p.id, row.year, group).then(function (r) {
+        var cells = (r && r.stats) ? Object.keys(r.stats).length : 0;
+        if (!cells) { skip('no ' + group + ' split for ' + row.year); return; }
+        line.cells = cells;
+        line.team = r.team || '';
+        var notes = withMeta(row.notes, {
+          stats: r.stats,
+          statPersonId: p.id,
+          statSeason: parseInt(row.year, 10),
+          statTeam: r.team || null
+        });
+        if (dry || notes === row.notes) { line.wrote = dry ? 'dry-run' : 'no change'; report.push(line); return; }
+        return client.from('cards').update({ notes: notes }).eq('id', row.id).then(function (up) {
+          line.wrote = up.error ? ('FAILED: ' + up.error.message) : 'written';
+          if (up.error) console.warn(TAG + ' repull write FAILED [' + line.card + ']: ' + up.error.message);
+          report.push(line);
+        });
+      });
+    }).catch(function (e) {
+      skip('ERROR: ' + String((e && e.message) || e));
+    });
+  }
+
+  /* Sweep every card that has a stats block but no provenance.
+   * opts.dryRun reports without writing; opts.ids limits the sweep to specific card ids. */
+  function repull(opts) {
+    opts = opts || {};
+    var dry = !!opts.dryRun;
+    var only = (opts.ids && opts.ids.length) ? opts.ids : null;
+    var client = null;
+    try { client = (typeof window.depotSB === 'function') ? window.depotSB() : null; } catch (e) { client = null; }
+    if (!client) return Promise.reject(new Error('no supabase client -- sign in first'));
+    return client.from('cards').select('id,player,year,notes').then(function (sel) {
+      if (sel.error) throw new Error(sel.error.message);
+      var rows = (sel.data || []).filter(function (r) {
+        if (only && only.indexOf(r.id) < 0) return false;
+        var m = unpackNotes(r.notes).meta || {};
+        var has = (m.stats && Object.keys(m.stats).length) || (m.statsPit && Object.keys(m.statsPit).length);
+        return !!has && !(m.statPersonId != null && m.statSeason != null);
+      });
+      rows.sort(function (a, b) { return (a.year || 0) - (b.year || 0); });
+      var report = [];
+      return rows.reduce(function (chain, row) {
+        return chain.then(function () { return repullOne(client, row, dry, report); });
+      }, Promise.resolve()).then(function () {
+        var wrote = 0, skipped = 0, i;
+        for (i = 0; i < report.length; i++) {
+          if (report[i].wrote === 'written') wrote++;
+          if (report[i].wrote === 'SKIPPED') skipped++;
+        }
+        console.log(TAG + (dry ? ' REPULL DRY RUN -- ' : ' REPULL -- ') + report.length + ' candidate(s), ' + wrote + ' written, ' + skipped + ' skipped');
+        if (console.table) console.table(report); else console.log(report);
+        return report;
+      });
+    });
+  }
+
   /* ---------- exports ---------- */
   window.depotNormalizePos = normPos;
   window.depotPosIsPitcher = isPitcherPos;
@@ -375,5 +480,6 @@
   window.depotNormName = normName;
   window.depotEnrichPositions = enrichRows;
   window.depotBackfillPositions = backfill;
+  window.depotRepullStats = repull;
   console.debug(TAG + ' ready');
 })();
