@@ -1401,7 +1401,30 @@ function depotLoggedIn(){ return !!(DEPOT_USER && depotSB()); }
 const META_MARK = '\n\n<!--DEPOT_META:';
 const META_END  = '-->';
 function packNotes(c){
-  const meta = { pos:(window.depotNormalizePos?window.depotNormalizePos(c.pos):(c.pos||null)), type:c.type||null, rare:!!c.rare, stats:c.stats||{} };
+  /* withMeta semantics: seed meta from whatever the card's notes already carry so unknown
+     keys written by other tools (e.g. ratesMeta) survive a form save byte-intact. The shared
+     notes codec lives in depot-position.js, which loads late, so resolve it at call time with a
+     typeof guard and a local fallback -- the same pattern the name helpers use. */
+  const _unpack = (typeof window.depotNotesUnpack === 'function') ? window.depotNotesUnpack : unpackNotes;
+  /* Resolve the card's existing notes. The full-form save path may hand us a freshly built
+     object with no _notes, so if it's absent fall back to the in-memory row for this id.
+     COLLECTION is a bare global (not a window prop): reach it only behind a typeof guard. */
+  let _rawNotes = c._notes;
+  if(!_rawNotes && c.id){
+    try{
+      const _pool = (typeof COLLECTION !== 'undefined' && COLLECTION) ? COLLECTION
+                  : (typeof USER_CARDS !== 'undefined' && USER_CARDS) ? USER_CARDS : null;
+      if(_pool){ for(let _i=0; _i<_pool.length; _i++){ if(_pool[_i] && _pool[_i].id===c.id && _pool[_i]._notes){ _rawNotes = _pool[_i]._notes; break; } } }
+    }catch(e){ /* no in-memory pool in scope: null case, meta stays empty */ }
+  }
+  const meta = _unpack(_rawNotes || '').meta || {};
+  /* Re-derive every key this form owns from scratch (delete first so a cleared field really
+     clears), then overlay -- anything we do NOT own is left exactly as it was. */
+  ['pos','type','rare','stats','statsPit','statPersonId','statSeason','statTeam'].forEach(function(k){ delete meta[k]; });
+  meta.pos = (window.depotNormalizePos?window.depotNormalizePos(c.pos):(c.pos||null));
+  meta.type = c.type||null;
+  meta.rare = !!c.rare;
+  meta.stats = c.stats||{};
   if(c.statsPit && Object.keys(c.statsPit).length) meta.statsPit = c.statsPit;
   /* Stats provenance. A stats block is only trustworthy when we know WHOSE line it is
      and WHICH season it covers, so those travel with it. Written only when the caller
@@ -1449,6 +1472,7 @@ function rowToCard(r){
   const yr = r.year || 0;
   return {
     id: r.id,
+    _notes: r.notes || '', // keep raw notes so packNotes() can preserve unknown meta keys (e.g. ratesMeta) on re-save
     name: r.player || '',
     pos: (window.depotNormalizePos ? window.depotNormalizePos(u.meta.pos) : (u.meta.pos || null)), // normalize-on-read: sentinel/mojibake -> null
     team: r.team || '\u2014',
