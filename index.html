@@ -1208,7 +1208,7 @@ body.logged-out #appFrame{display:none !important;}
   <div class="form-card" onclick="event.stopPropagation()">
     <div class="form-head">
       <h2 id="formTitle">Add a card</h2>
-      <button class="spot-close" style="position:static;width:34px;height:34px" onclick="closeForm(event,true)" aria-label="Close">â</button>
+      <button class="spot-close" style="position:static;width:34px;height:34px" onclick="closeForm(event,true)" aria-label="Close">&#10005;</button>
     </div>
 
     <div class="form-body">
@@ -1216,7 +1216,7 @@ body.logged-out #appFrame{display:none !important;}
         <div class="rolodex">
           <div class="rolodex-head"><i class="ti ti-search"></i> Auto-fill from MLB records <span class="rolodex-tag">official stats</span></div>
           <div class="rolo-row">
-            <input id="rolo-name" placeholder="Search a playerâ¦ (e.g. Ken Griffey)" oninput="roloSuggest()" onkeydown="if(event.key==='Enter')roloSearch()">
+            <input id="rolo-name" placeholder="Search a player&hellip; (e.g. Ken Griffey)" oninput="roloSuggest()" onkeydown="if(event.key==='Enter')roloSearch()">
             <button onclick="roloSearch()">Find</button>
           </div>
           <div id="rolo-players" class="rolo-list" style="display:none"></div>
@@ -1241,18 +1241,18 @@ body.logged-out #appFrame{display:none !important;}
           <div class="fl-field" style="flex:1"><label>Year</label><input id="f-yr" type="number" placeholder="1989" oninput="onYearInput()" onchange="onYearInput()"></div>
         </div>
         <div class="fl-row">
-          <div class="fl-field" style="flex:2"><label>Set</label><select id="f-set"><option value="">â pick set â</option></select></div>
+          <div class="fl-field" style="flex:2"><label>Set</label><select id="f-set"><option value="">&mdash; pick set &mdash;</option></select></div>
           <div class="fl-field" style="flex:1"><label>Card #</label><input id="f-num" type="text" inputmode="text" placeholder="1"></div>
         </div>
         <div class="fl-row">
           <div class="fl-field" style="flex:1"><label>Era</label>
-            <select id="f-era"><option value="vintage">Vintage (â¤ 1985)</option><option value="junk">Junk Wax (1986â93)</option><option value="modern">Modern (1994+)</option></select>
+            <select id="f-era"><option value="vintage">Vintage (&le; 1985)</option><option value="junk">Junk Wax (1986&ndash;93)</option><option value="modern">Modern (1994+)</option></select>
           </div>
           <div class="fl-field" style="flex:1"><label>Type</label>
             <select id="f-type" onchange="updateStatHint()"></select>
           </div>
           <div class="fl-field" style="flex:0 0 auto;justify-content:flex-end"><label style="opacity:0">x</label>
-            <label class="key-toggle"><input type="checkbox" id="f-rare"> Key â</label>
+            <label class="key-toggle"><input type="checkbox" id="f-rare"> Key &#9733;</label>
           </div>
         </div>
         <div class="fl-field"><label>Season stat line <span class="hintmini" id="statHint">key:value, comma-separated</span></label>
@@ -2436,12 +2436,12 @@ async function roloYear(y,btn){
   await roloShowBrands(y);            // brand/number are independent of the stats lookup
       if(!inChecklist){
         document.getElementById('f-stats').value='';
-        roloStatus(""+y+" isnât in the checklist â thatâs fine, the dataset is patchy. Couldnât auto-confirm this card; pick the brand & number and enter the details manually.","ok");
+        roloStatus(""+y+" isn\u2019t in the checklist \u2014 that\u2019s fine, the dataset is patchy. Couldn\u2019t auto-confirm this card; pick the brand & number and enter the details manually.","ok");
         return;
       }
   const isP=document.getElementById('f-type').value==='pitcher';
   const group=isP?'pitching':'hitting';
-  roloStatus(`Pulling ${y} ${group} statsâ¦`); if(!roloPlayer.__idVerified){ const pname=cleanPlayerName(roloPlayer.fullName||roloPlayer.nameFirstLast||document.getElementById('rolo-name').value.trim()); let found=null; try{ let rs=await fetch(`${MLB_BASE}/people/search?names=${encodeURIComponent(pname)}`); if(rs.ok){const js=await rs.json(); if(js.people&&js.people.length)found=js.people;} if(!found){rs=await fetch(`${MLB_BASE}/people/search?q=${encodeURIComponent(pname)}`); if(rs.ok){const js=await rs.json(); if(js.people&&js.people.length)found=js.people;}} if(!found){const list=await ensurePlayerList(); const ql=pname.toLowerCase(); found=list.filter(p=>(p.fullName||'').toLowerCase()===ql); if(!found.length)found=list.filter(p=>(p.fullName||'').toLowerCase().includes(ql));} }catch(e){} if(found&&found.length){roloPlayer=Object.assign({},found[0],{fullName:roloPlayer.fullName||found[0].fullName,__idVerified:true});} if(!roloPlayer.id){roloStatus(`Couldnât match â${pname}â to an MLB player to pull stats. Pick the brand/number and enter stats manually.`,"err"); return;} }
+  roloStatus(`Pulling ${y} ${group} stats\u2026`); if(!roloPlayer.__idVerified){ const pname=cleanPlayerName(roloPlayer.fullName||roloPlayer.nameFirstLast||document.getElementById('rolo-name').value.trim()); let found=null; try{ let rs=await fetch(`${MLB_BASE}/people/search?names=${encodeURIComponent(pname)}`); if(rs.ok){const js=await rs.json(); if(js.people&&js.people.length)found=js.people;} if(!found){rs=await fetch(`${MLB_BASE}/people/search?q=${encodeURIComponent(pname)}`); if(rs.ok){const js=await rs.json(); if(js.people&&js.people.length)found=js.people;}} if(!found){const list=await ensurePlayerList(); const ql=pname.toLowerCase(); found=list.filter(p=>(p.fullName||'').toLowerCase()===ql); if(!found.length)found=list.filter(p=>(p.fullName||'').toLowerCase().includes(ql));} }catch(e){} if(found&&found.length){roloPlayer=Object.assign({},found[0],{fullName:roloPlayer.fullName||found[0].fullName,__idVerified:true});} if(!roloPlayer.id){roloStatus(`Couldn\u2019t match \u201c${pname}\u201d to an MLB player to pull stats. Pick the brand/number and enter stats manually.`,"err"); return;} }
   try{
     const r=await fetch(`${MLB_BASE}/people/${roloPlayer.id}/stats?stats=season&group=${group}&season=${y}`);
     if(!r.ok) throw new Error('http');
@@ -2574,6 +2574,7 @@ function onFile(e){
     downscaleDataURL(orig, 600, 0.8).then(small=>{
       slotInput(activeSlot).value=small;
       setPreview(activeSlot, small);
+      if(window.depotAddCardRefreshGate) window.depotAddCardRefreshGate();
     });
   };
   reader.readAsDataURL(file);
@@ -2757,6 +2758,7 @@ document.addEventListener('paste',e=>{
       e.preventDefault(); e.stopPropagation(); pv.classList.remove('drop-hot'); imgSlot(slot);
       fileToDataURL(f).then(orig=>downscaleDataURL(orig,600,0.8)).then(small=>{
         slotInput(slot).value=small; setPreview(slot, small);
+        if(window.depotAddCardRefreshGate) window.depotAddCardRefreshGate();
       }).catch(()=>toast("That didn't look like an image."));
     });
   });
@@ -2770,6 +2772,7 @@ document.addEventListener('paste',e=>{
   e.preventDefault();
   fileToDataURL(f).then(orig=>downscaleDataURL(orig,600,0.8)).then(small=>{
     slotInput(activeSlot).value=small; setPreview(activeSlot, small);
+    if(window.depotAddCardRefreshGate) window.depotAddCardRefreshGate();
   }).catch(()=>{});
 });
 
@@ -3206,6 +3209,11 @@ setAuthUI(false);
   /* Cards under each section header: normal card columns, tight rows (no cavernous gaps) */
   .group-grid{ display:grid !important; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)) !important; gap:12px !important; }
   .group-grid .slot{ aspect-ratio:auto !important; min-height:0 !important; }
+</style>
+<style id="depot-addbtn-disabled">
+  /* Add-card gate: make the locked state visible. The button stays clickable on purpose,
+     so the click still reaches saveCard() and the gate can toast WHY it is locked. */
+  .btn-solid.disabled{ opacity:.45; cursor:not-allowed; }
 </style>
 <script>
 /* Route Group By = Set through the labeled-sections grid (renderGrouped) instead of the
