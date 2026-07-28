@@ -229,16 +229,19 @@
     } catch (e) { return null; }
   }
 
-  function seasonStats(personId, year, group) {
+  /* Same pull as seasonStats(), but it also reports the team the chosen split belongs
+   * to, so a caller can persist stats provenance. seasonStats() delegates to it and
+   * keeps its original shape for existing callers. */
+  function seasonStatsProv(personId, year, group) {
     var map = statMap(group);
-    if (!personId || !year || !map) return Promise.resolve(null);
+    if (!personId || !year || !map) return Promise.resolve({ stats: null, team: null });
     var url = MLB + '/people/' + personId + '/stats?stats=season&group=' + group + '&season=' + year;
     return fetch(url).then(function (r) {
       if (!r.ok) return null;
       return r.json();
     }).then(function (j) {
       var splits = (j && j.stats && j.stats[0] && j.stats[0].splits) || [];
-      if (!splits.length) return null;
+      if (!splits.length) return { stats: null, team: null };
       /* Traded seasons return one split per team: take the busiest, same rule
        * the Add-a-Card stat pull already uses. */
       var split = splits.length === 1 ? splits[0] : splits.reduce(function (a, b) {
@@ -251,8 +254,12 @@
         if (st[k] == null || st[k] === '' || st[k] === '-.--') continue;
         out[map[k]] = String(st[k]);
       }
-      return Object.keys(out).length ? out : null;
-    }).catch(function () { return null; });
+      return { stats: Object.keys(out).length ? out : null, team: (split && split.team && split.team.name) || null };
+    }).catch(function () { return { stats: null, team: null }; });
+  }
+
+  function seasonStats(personId, year, group) {
+    return seasonStatsProv(personId, year, group).then(function (r) { return (r && r.stats) || null; });
   }
 
   /* ---------- post-grant enrichment (pack shop) ---------- */
@@ -316,10 +323,20 @@
       var patch = { pos: pos, type: pos ? typeForPos(pos) : (meta.type || null) };
       var refetch = !!(pos && isPitcherPos(pos) && looksLikeBattingLine(meta.stats));
       var pre = refetch ? resolvePerson(row.player, row.year).then(function (p) {
-        return p ? seasonStats(p.id, row.year, 'pitching') : null;
+        if (!p) { console.warn('[depot] backfill: pitching refetch skipped, person unresolved for ' + row.player + ' ' + row.year); return null; }
+        return seasonStatsProv(p.id, row.year, 'pitching').then(function (r) {
+          if (!r || !r.stats) { console.warn('[depot] backfill: no pitching split for ' + row.player + ' ' + row.year); return null; }
+          return { stats: r.stats, personId: p.id, season: row.year, team: r.team };
+        });
       }) : Promise.resolve(null);
       return pre.then(function (pit) {
-        if (pit) patch.stats = pit;
+        if (pit) {
+          patch.stats = pit.stats;
+          /* Provenance travels with every stats write: whose line, which season, which team. */
+          patch.statPersonId = pit.personId;
+          patch.statSeason = pit.season;
+          patch.statTeam = pit.team;
+        }
         var notes = withMeta(row.notes, patch);
         var line = {
           card: cleanName(row.player) + ' ' + (row.year || ''),
@@ -351,6 +368,7 @@
   window.depotResolvePosition = resolvePosition;
   window.depotResolvePerson = resolvePerson;
   window.depotSeasonStats = seasonStats;
+  window.depotSeasonStatsProv = seasonStatsProv;
   window.depotNotesWithMeta = withMeta;
   window.depotNotesUnpack = unpackNotes;
   window.depotCleanName = cleanName;

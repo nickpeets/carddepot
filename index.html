@@ -1403,6 +1403,12 @@ const META_END  = '-->';
 function packNotes(c){
   const meta = { pos:(window.depotNormalizePos?window.depotNormalizePos(c.pos):(c.pos||null)), type:c.type||null, rare:!!c.rare, stats:c.stats||{} };
   if(c.statsPit && Object.keys(c.statsPit).length) meta.statsPit = c.statsPit;
+  /* Stats provenance. A stats block is only trustworthy when we know WHOSE line it is
+     and WHICH season it covers, so those travel with it. Written only when the caller
+     actually carries them; the read side refuses to label a line that lacks them. */
+  if(c.statPersonId != null && c.statPersonId !== '') meta.statPersonId = c.statPersonId;
+  if(c.statSeason != null && c.statSeason !== '') meta.statSeason = parseInt(c.statSeason,10) || null;
+  if(c.statTeam) meta.statTeam = c.statTeam;
   const bio = c.bio || '';
   return bio + META_MARK + JSON.stringify(meta) + META_END;
 }
@@ -1458,6 +1464,9 @@ function rowToCard(r){
     photoBack: r.photo_back_path || '',
     tcdb_url: r.tcdb_url || '',
     stats: u.meta.stats || {},
+    statPersonId: (u.meta.statPersonId != null ? u.meta.statPersonId : null),
+    statSeason: (u.meta.statSeason != null ? parseInt(u.meta.statSeason,10) : null),
+    statTeam: u.meta.statTeam || null,
     statsPit: u.meta.statsPit || {}, // two-way pitching line (fed by fix/pitcher-statline)
     bio: u.bio || '',
     grade: (r.grade != null ? r.grade : null),
@@ -1898,9 +1907,28 @@ function statGrid(stats, cols, caption){
     + (r2.length?`<thead><tr>${headRow(r2)}</tr></thead><tbody><tr>${valRow(r2)}</tr></tbody>`:'');
   return `<div class="statgrid-wrap"><table class="statgrid">${caption?`<caption>${caption}</caption>`:''}${body}</table></div>`;
 }
+/* ---------- stats provenance gate (read side) ----------
+ * A stats block may only appear under a season label we actually pulled it for.
+ * Rows written before provenance existed carry no statSeason, so they render blank
+ * until they are re-pulled. That is deliberate: never label a line with a year it
+ * isn't. */
+function statHasNumbers(c){
+  const h=c&&c.stats, p=c&&c.statsPit;
+  return !!((h&&Object.keys(h).length)||(p&&Object.keys(p).length));
+}
+function statProvenanceOK(c){
+  if(!statHasNumbers(c)) return true;
+  if(c.statSeason==null||c.statSeason===''){ console.warn('[depot] stats hidden: no statSeason provenance on card '+(c&&c.id)); return false; }
+  if((parseInt(c.statSeason,10)||0)!==(parseInt(c.yr,10)||0)){ console.warn('[depot] stats hidden: statSeason '+c.statSeason+' does not match card year '+c.yr+' on card '+(c&&c.id)); return false; }
+  return true;
+}
 function statTable(c){
   const kind = cardType(c);
-  const cap = `${c.yr} season \u2014 ${c.team}`;
+  if(!statProvenanceOK(c)) return `<div class="no-stats">No stats recorded yet.</div>`;
+  /* The caption names the team the STATS came from, never the row's team column --
+     that column is card metadata and can legitimately disagree with the line. */
+  const capTeam = c.statTeam ? (' \u2014 ' + c.statTeam) : '';
+  const cap = `${c.yr} season${capTeam}`;
   // Two-way (TWP, e.g. Ohtani): hitter-primary with a labelled pitching section
   // beneath. Pitching numbers live in their own bucket because the two column
   // sets collide on G/H/BB/SO -- one merged bag cannot represent both lines.
@@ -2083,10 +2111,29 @@ async function cardsForPlayerYear(name,y){
 }
 
 let roloPlayer = null;
+/* Provenance of the most recent rolodex stats pull. Consumed by saveCard through
+   roloProvenanceForForm(), which re-validates it against what the form actually
+   holds before any of it is persisted. */
+let ROLO_PROV=null;
 const POS_ABBR = {Pitcher:'P','Two-Way Player':'TWP',Catcher:'C','First Base':'1B','Second Base':'2B','Third Base':'3B',Shortstop:'SS','Left Field':'LF','Center Field':'CF','Right Field':'RF',Outfielder:'OF','Designated Hitter':'DH'};
 
+/* Returns the pulled provenance ONLY if the form still holds exactly what the pull
+   wrote, for exactly the year on the form. Any manual edit of the stats box, or a
+   change of year, drops it -- and a stats block with no provenance renders as
+   'No stats recorded yet.' by design. Better a blank than a line labelled with a
+   season it does not belong to. */
+function roloProvenanceForForm(){
+  const p=ROLO_PROV;
+  if(!p){ console.warn('[depot] stats provenance absent: no rolodex pull in this form session'); return null; }
+  const raw=(document.getElementById('f-stats').value||'').trim();
+  if(raw!==String(p.statsRaw||'').trim()){ console.warn('[depot] stats provenance dropped: stats field was edited after the pull'); return null; }
+  const yr=parseInt(document.getElementById('f-yr').value,10)||0;
+  if(yr!==(parseInt(p.statSeason,10)||0)){ console.warn('[depot] stats provenance dropped: form year '+yr+' no longer matches pulled season '+p.statSeason); return null; }
+  return p;
+}
 function roloReset(){
   roloPlayer=null;
+  ROLO_PROV=null;
   document.getElementById('rolo-name').value='';
   document.getElementById('rolo-players').style.display='none';
   document.getElementById('rolo-players').innerHTML='';
@@ -2438,6 +2485,7 @@ async function roloYear(y,btn){
   applyEraFromYear(y);
   await roloShowBrands(y);            // brand/number are independent of the stats lookup
       if(!inChecklist){
+      ROLO_PROV=null;
         document.getElementById('f-stats').value='';
         roloStatus(""+y+" isn\u2019t in the checklist \u2014 that\u2019s fine, the dataset is patchy. Couldn\u2019t auto-confirm this card; pick the brand & number and enter the details manually.","ok");
         return;
@@ -2460,6 +2508,9 @@ async function roloYear(y,btn){
     if(!out.length){roloStatus(`Found ${y} but no usable stat fields. Pick brand/number and enter stats manually.`,"err");return;}
     document.getElementById('f-stats').value=out.join(', ');
     if(split.team&&split.team.name)document.getElementById('f-team').value=split.team.name;
+    /* Record who this line belongs to, which season was asked for, and which team the
+       split came from, so the save can persist provenance alongside the numbers. */
+    ROLO_PROV={ personId:roloPlayer.id, statSeason:parseInt(y,10)||null, statTeam:(split.team&&split.team.name)||null, statsRaw:out.join(', ') };
     roloStatus(`â ${roloPlayer.fullName}, ${y} filled in. Pick the brand & number, then find the front image.`,"ok");
   }catch(e){
     roloStatus("Couldn't pull that season (needs live connection â works on your deployed site). Pick brand/number and enter stats manually.","err");
@@ -2627,6 +2678,7 @@ async function saveCard(){
         Promise.resolve(window.depotResolvePosition(name,_y)).then(function(pp){ try{ if(pp!=null && window.depotBackfillPosition) window.depotBackfillPosition(name,_y,pp); }catch(_){} }).catch(function(){}); })();
   }
   const typeVal = (posVal && window.depotTypeForPos) ? (window.depotTypeForPos(posVal) || document.getElementById('f-type').value) : document.getElementById('f-type').value;
+  const _prov=roloProvenanceForForm();
   const card={
     id:newCardId(),
     name,
@@ -2643,6 +2695,9 @@ async function saveCard(){
     photoFront:document.getElementById('f-photo').value||"",
     photoBack:document.getElementById('f-photo-back').value||"",
     stats:parseStats(document.getElementById('f-stats').value),
+    statPersonId:(_prov?_prov.personId:null),
+    statSeason:(_prov?_prov.statSeason:null),
+    statTeam:(_prov?_prov.statTeam:null),
     bio:document.getElementById('f-bio').value.trim()||""
   };
   if(depotLoggedIn()){
