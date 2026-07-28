@@ -121,7 +121,21 @@
     return out.join(' ').replace(/\s+/g, ' ').trim() || raw.replace(/\s+/g, ' ').trim();
   }
 
-  function searchPerson(name) {
+  /* Does this person's MLB career plausibly cover the given card year?
+   * Returns TRUE when we have no span data at all -- absence of evidence must
+   * not be treated as evidence of a bad match. */
+  function spanCovers(p, year) {
+    var y = parseInt(year, 10);
+    if (!isFinite(y)) return true;
+    var debut = (p && p.mlbDebutDate) ? parseInt(String(p.mlbDebutDate).slice(0, 4), 10) : NaN;
+    var last  = (p && p.lastPlayedDate) ? parseInt(String(p.lastPlayedDate).slice(0, 4), 10) : NaN;
+    if (!isFinite(debut) && !isFinite(last)) return true;
+    if (isFinite(debut) && y < debut) return false;
+    if (isFinite(last) && y > last) return false;
+    return true;
+  }
+
+  function searchPerson(name, year) {
     var nm = cleanName(name);
     if (!nm) return Promise.resolve(null);
     var byNames = MLB + '/people/search?names=' + encodeURIComponent(nm);
@@ -136,26 +150,37 @@
       }).then(function (j2) { return (j2 && j2.people) || []; });
     }).then(function (people) {
       if (!people.length) return null;
-      /* Prefer an exact full-name match, else the first hit. */
-      var exact = null, i;
+      /* Prefer an exact full-name match, accent-folded via the shared helper.
+       * An exact name match is trusted on its own: a 1993 Jeter card is still
+       * Derek Jeter even though he debuted in 1995. That is a stats-provenance
+       * problem, not an identity problem, and it is handled on the stats side. */
+      var key = normName(nm), exact = null, i;
       for (i = 0; i < people.length; i++) {
-        if (cleanName(people[i].fullName).toLowerCase() === nm.toLowerCase()) { exact = people[i]; break; }
+        if (normName(cleanName(people[i].fullName)) === key) { exact = people[i]; break; }
       }
-      return exact || people[0];
+      if (exact) return exact;
+      /* No exact match, so people[0] is only a guess. Accept it ONLY if the
+       * career span can cover this card year; otherwise return null and let the
+       * caller report "unresolved" honestly. This is what stops a plain
+       * "Dante Bichette" card resolving to Dante Bichette Jr. at index [0]. */
+      return (people[0] && spanCovers(people[0], year)) ? people[0] : null;
     }).catch(function () { return null; });
   }
 
-  function resolvePerson(name) {
+  function resolvePerson(name, year) {
     var nm = cleanName(name).toLowerCase();
     if (!nm) return Promise.resolve(null);
-    if (personCache[nm]) return personCache[nm];
-    personCache[nm] = searchPerson(name);
-    return personCache[nm];
+    /* Cache key includes the year: the same name can resolve differently for
+       different card years now that the fallback is span-guarded. */
+    var ck = nm + '|' + (year == null || year === '' ? '' : String(year));
+    if (personCache[ck]) return personCache[ck];
+    personCache[ck] = searchPerson(name, year);
+    return personCache[ck];
   }
 
   /* Promise<string|null> -- the normalized primary position for a player name. */
-  function resolvePosition(name) {
-    return resolvePerson(name).then(function (p) {
+  function resolvePosition(name, year) {
+    return resolvePerson(name, year).then(function (p) {
       if (!p || !p.primaryPosition) return null;
       return normPos(p.primaryPosition.abbreviation) || normPos(p.primaryPosition.name);
     });
@@ -236,12 +261,12 @@
    * leaves the rows exactly as inserted and the backfill can pick them up. */
   function enrichRows(client, ids) {
     if (!client || !ids || !ids.length) return Promise.resolve(0);
-    return client.from('cards').select('id,player,notes').in('id', ids).then(function (sel) {
+    return client.from('cards').select('id,player,year,notes').in('id', ids).then(function (sel) {
       if (sel.error || !sel.data) return 0;
       var done = 0;
       return sel.data.reduce(function (chain, row) {
         return chain.then(function () {
-          return resolvePosition(row.player).then(function (pos) {
+          return resolvePosition(row.player, row.year).then(function (pos) {
             if (!pos) return;
             var notes = withMeta(row.notes, { pos: pos, type: typeForPos(pos) });
             if (notes === row.notes) return;
@@ -287,10 +312,10 @@
     var u = unpackNotes(row.notes);
     var meta = u.meta || {};
     var before = meta.pos;
-    return resolvePosition(row.player).then(function (pos) {
+    return resolvePosition(row.player, row.year).then(function (pos) {
       var patch = { pos: pos, type: pos ? typeForPos(pos) : (meta.type || null) };
       var refetch = !!(pos && isPitcherPos(pos) && looksLikeBattingLine(meta.stats));
-      var pre = refetch ? resolvePerson(row.player).then(function (p) {
+      var pre = refetch ? resolvePerson(row.player, row.year).then(function (p) {
         return p ? seasonStats(p.id, row.year, 'pitching') : null;
       }) : Promise.resolve(null);
       return pre.then(function (pit) {
