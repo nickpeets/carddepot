@@ -1,18 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <script src="js/version.js?v=7550427"></script>
-  <script src="js/depot-core.js?v=7550427"></script>
+  <script src="js/version.js?v=852958d"></script>
+  <script src="js/depot-core.js?v=852958d"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>The Depot</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gshtatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Spectral:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/depot-style.css?v=7550427">
-  <link rel="stylesheet" href="css/season.css?v=7550427">
-    <script src="js/depot-shell.js?v=7550427"></script>
-  <script src="js/depot-season-shell.js?v=7550427"></script>
+  <link rel="stylesheet" href="css/depot-style.css?v=852958d">
+  <link rel="stylesheet" href="css/season.css?v=852958d">
+    <script src="js/depot-shell.js?v=852958d"></script>
+  <script src="js/depot-season-shell.js?v=852958d"></script>
   <style>
     /* binder tile portrait redesign v2 (additive, contract-safe) */
     :root{--binder-cols:3}
@@ -1132,8 +1132,8 @@ body{
 </style>
 <!-- /PHASE5-SHARE-CSS -->
 
-  <link rel="stylesheet" href="css/depot-shop-view.css?v=7550427">
-    <link rel="stylesheet" href="depot-v2.css?v=7550427">
+  <link rel="stylesheet" href="css/depot-shop-view.css?v=852958d">
+    <link rel="stylesheet" href="depot-v2.css?v=852958d">
 </head>
 <body class="v2-body">
   <div id="sharedUnavailable"><div class="su-card"><div class="su-title">Not available</div><div class="su-sub">This collection isn&rsquo;t available.</div></div></div>
@@ -1403,6 +1403,12 @@ const META_END  = '-->';
 function packNotes(c){
   const meta = { pos:(window.depotNormalizePos?window.depotNormalizePos(c.pos):(c.pos||null)), type:c.type||null, rare:!!c.rare, stats:c.stats||{} };
   if(c.statsPit && Object.keys(c.statsPit).length) meta.statsPit = c.statsPit;
+  /* Stats provenance. A stats block is only trustworthy when we know WHOSE line it is
+     and WHICH season it covers, so those travel with it. Written only when the caller
+     actually carries them; the read side refuses to label a line that lacks them. */
+  if(c.statPersonId != null && c.statPersonId !== '') meta.statPersonId = c.statPersonId;
+  if(c.statSeason != null && c.statSeason !== '') meta.statSeason = parseInt(c.statSeason,10) || null;
+  if(c.statTeam) meta.statTeam = c.statTeam;
   const bio = c.bio || '';
   return bio + META_MARK + JSON.stringify(meta) + META_END;
 }
@@ -1458,6 +1464,9 @@ function rowToCard(r){
     photoBack: r.photo_back_path || '',
     tcdb_url: r.tcdb_url || '',
     stats: u.meta.stats || {},
+    statPersonId: (u.meta.statPersonId != null ? u.meta.statPersonId : null),
+    statSeason: (u.meta.statSeason != null ? parseInt(u.meta.statSeason,10) : null),
+    statTeam: u.meta.statTeam || null,
     statsPit: u.meta.statsPit || {}, // two-way pitching line (fed by fix/pitcher-statline)
     bio: u.bio || '',
     grade: (r.grade != null ? r.grade : null),
@@ -1898,9 +1907,28 @@ function statGrid(stats, cols, caption){
     + (r2.length?`<thead><tr>${headRow(r2)}</tr></thead><tbody><tr>${valRow(r2)}</tr></tbody>`:'');
   return `<div class="statgrid-wrap"><table class="statgrid">${caption?`<caption>${caption}</caption>`:''}${body}</table></div>`;
 }
+/* ---------- stats provenance gate (read side) ----------
+ * A stats block may only appear under a season label we actually pulled it for.
+ * Rows written before provenance existed carry no statSeason, so they render blank
+ * until they are re-pulled. That is deliberate: never label a line with a year it
+ * isn't. */
+function statHasNumbers(c){
+  const h=c&&c.stats, p=c&&c.statsPit;
+  return !!((h&&Object.keys(h).length)||(p&&Object.keys(p).length));
+}
+function statProvenanceOK(c){
+  if(!statHasNumbers(c)) return true;
+  if(c.statSeason==null||c.statSeason===''){ console.warn('[depot] stats hidden: no statSeason provenance on card '+(c&&c.id)); return false; }
+  if((parseInt(c.statSeason,10)||0)!==(parseInt(c.yr,10)||0)){ console.warn('[depot] stats hidden: statSeason '+c.statSeason+' does not match card year '+c.yr+' on card '+(c&&c.id)); return false; }
+  return true;
+}
 function statTable(c){
   const kind = cardType(c);
-  const cap = `${c.yr} season \u2014 ${c.team}`;
+  if(!statProvenanceOK(c)) return `<div class="no-stats">No stats recorded yet.</div>`;
+  /* The caption names the team the STATS came from, never the row's team column --
+     that column is card metadata and can legitimately disagree with the line. */
+  const capTeam = c.statTeam ? (' \u2014 ' + c.statTeam) : '';
+  const cap = `${c.yr} season${capTeam}`;
   // Two-way (TWP, e.g. Ohtani): hitter-primary with a labelled pitching section
   // beneath. Pitching numbers live in their own bucket because the two column
   // sets collide on G/H/BB/SO -- one merged bag cannot represent both lines.
@@ -2041,6 +2069,9 @@ const MLB_BASE = "https://statsapi.mlb.com/api/v1";
 let PLAYER_INDEX=null, PLAYER_INDEX_PROMISE=null;
 const YEAR_CACHE={};
 function normName(x){
+      /* Delegates to the ONE shared accent-folding helper in js/depot-position.js.
+         Local body kept only as an offline fallback if that file is absent. */
+      if (typeof window.depotNormName === 'function') return window.depotNormName(x);
   x=(x||"").normalize("NFKD").replace(/[\u0300-\u036f]/g,"");
   x=x.toLowerCase().replace(/\./g," ");
   x=x.replace(/\b(junior|jr)\b/g,"jr").replace(/\b(senior|sr)\b/g,"sr");
@@ -2080,10 +2111,29 @@ async function cardsForPlayerYear(name,y){
 }
 
 let roloPlayer = null;
+/* Provenance of the most recent rolodex stats pull. Consumed by saveCard through
+   roloProvenanceForForm(), which re-validates it against what the form actually
+   holds before any of it is persisted. */
+let ROLO_PROV=null;
 const POS_ABBR = {Pitcher:'P','Two-Way Player':'TWP',Catcher:'C','First Base':'1B','Second Base':'2B','Third Base':'3B',Shortstop:'SS','Left Field':'LF','Center Field':'CF','Right Field':'RF',Outfielder:'OF','Designated Hitter':'DH'};
 
+/* Returns the pulled provenance ONLY if the form still holds exactly what the pull
+   wrote, for exactly the year on the form. Any manual edit of the stats box, or a
+   change of year, drops it -- and a stats block with no provenance renders as
+   'No stats recorded yet.' by design. Better a blank than a line labelled with a
+   season it does not belong to. */
+function roloProvenanceForForm(){
+  const p=ROLO_PROV;
+  if(!p){ console.warn('[depot] stats provenance absent: no rolodex pull in this form session'); return null; }
+  const raw=(document.getElementById('f-stats').value||'').trim();
+  if(raw!==String(p.statsRaw||'').trim()){ console.warn('[depot] stats provenance dropped: stats field was edited after the pull'); return null; }
+  const yr=parseInt(document.getElementById('f-yr').value,10)||0;
+  if(yr!==(parseInt(p.statSeason,10)||0)){ console.warn('[depot] stats provenance dropped: form year '+yr+' no longer matches pulled season '+p.statSeason); return null; }
+  return p;
+}
 function roloReset(){
   roloPlayer=null;
+  ROLO_PROV=null;
   document.getElementById('rolo-name').value='';
   document.getElementById('rolo-players').style.display='none';
   document.getElementById('rolo-players').innerHTML='';
@@ -2121,7 +2171,7 @@ async function ensurePlayerList(){
 }
 /* ---------- static autocomplete (uses the already-loaded players.json) ---------- */
     let ROLO_SUGG=[];
-    function cleanPlayerName(s){ s=String(s||""); s=s.split(/[:\/]/)[0]; var SUF={"Jr":1,"Jr.":1,"Sr":1,"Sr.":1,"II":1,"III":1,"IV":1,"V":1}; function isName(w){ if(SUF[w])return true; if(/^(?:[A-Z]\.){1,3}$/.test(w))return true; if(/^[A-Za-z'\u2019.\-]+$/.test(w)&&/^[A-Z]/.test(w)&&/[a-z]/.test(w))return true; return false; } var toks=s.trim().split(/\s+/),out=[],core=0; for(var i=0;i<toks.length;i++){ var w=toks[i].replace(/^[ ,;()]+|[ ,;()]+$/g,""); if(!w)continue; if(!isName(w))break; if(core>=2){ if(SUF[w])out.push(w); break; } out.push(w); if(!SUF[w])core++; } return out.join(" ").trim()||String(s).trim(); }
+    function cleanPlayerName(s){ if (typeof window.depotCleanName === 'function') return window.depotCleanName(s); s=String(s||""); s=s.split(/[:\/]/)[0]; var SUF={"Jr":1,"Jr.":1,"Sr":1,"Sr.":1,"II":1,"III":1,"IV":1,"V":1}; function isName(w){ if(SUF[w])return true; if(/^(?:[A-Z]\.){1,3}$/.test(w))return true; if(/^[A-Za-z'\u2019.\-]+$/.test(w)&&/^[A-Z]/.test(w)&&/[a-z]/.test(w))return true; return false; } var toks=s.trim().split(/\s+/),out=[],core=0; for(var i=0;i<toks.length;i++){ var w=toks[i].replace(/^[ ,;()]+|[ ,;()]+$/g,""); if(!w)continue; if(!isName(w))break; if(core>=2){ if(SUF[w])out.push(w); break; } out.push(w); if(!SUF[w])core++; } return out.join(" ").trim()||String(s).trim(); }
     let ROLO_POS_CACHE = {};        /* normName -> position abbr (e.g. RF), filled lazily from MLB */
     let _roloPosTimer = null;
     /* After the type-ahead dropdown renders, fetch each visible player's primary position
@@ -2435,6 +2485,7 @@ async function roloYear(y,btn){
   applyEraFromYear(y);
   await roloShowBrands(y);            // brand/number are independent of the stats lookup
       if(!inChecklist){
+      ROLO_PROV=null;
         document.getElementById('f-stats').value='';
         roloStatus(""+y+" isn\u2019t in the checklist \u2014 that\u2019s fine, the dataset is patchy. Couldn\u2019t auto-confirm this card; pick the brand & number and enter the details manually.","ok");
         return;
@@ -2457,6 +2508,9 @@ async function roloYear(y,btn){
     if(!out.length){roloStatus(`Found ${y} but no usable stat fields. Pick brand/number and enter stats manually.`,"err");return;}
     document.getElementById('f-stats').value=out.join(', ');
     if(split.team&&split.team.name)document.getElementById('f-team').value=split.team.name;
+    /* Record who this line belongs to, which season was asked for, and which team the
+       split came from, so the save can persist provenance alongside the numbers. */
+    ROLO_PROV={ personId:roloPlayer.id, statSeason:parseInt(y,10)||null, statTeam:(split.team&&split.team.name)||null, statsRaw:out.join(', ') };
     roloStatus(`â ${roloPlayer.fullName}, ${y} filled in. Pick the brand & number, then find the front image.`,"ok");
   }catch(e){
     roloStatus("Couldn't pull that season (needs live connection â works on your deployed site). Pick brand/number and enter stats manually.","err");
@@ -2624,6 +2678,7 @@ async function saveCard(){
         Promise.resolve(window.depotResolvePosition(name,_y)).then(function(pp){ try{ if(pp!=null && window.depotBackfillPosition) window.depotBackfillPosition(name,_y,pp); }catch(_){} }).catch(function(){}); })();
   }
   const typeVal = (posVal && window.depotTypeForPos) ? (window.depotTypeForPos(posVal) || document.getElementById('f-type').value) : document.getElementById('f-type').value;
+  const _prov=roloProvenanceForForm();
   const card={
     id:newCardId(),
     name,
@@ -2640,6 +2695,9 @@ async function saveCard(){
     photoFront:document.getElementById('f-photo').value||"",
     photoBack:document.getElementById('f-photo-back').value||"",
     stats:parseStats(document.getElementById('f-stats').value),
+    statPersonId:(_prov?_prov.personId:null),
+    statSeason:(_prov?_prov.statSeason:null),
+    statTeam:(_prov?_prov.statTeam:null),
     bio:document.getElementById('f-bio').value.trim()||""
   };
   if(depotLoggedIn()){
@@ -3145,19 +3203,19 @@ setAuthUI(false);
   });
 })();
 </script>
-<script src="game/season.js?v=7550427" defer></script>
-<script src="js/depot-index-shell.js?v=7550427"></script>
-<script src="js/depot-prestige.js?v=7550427"></script>
-<script src="js/depot-wallet.js?v=7550427"></script>
-  <script src="js/depot-pack-engine.js?v=7550427"></script>
-  <script src="js/depot-pixel-card.js?v=7550427"></script>
-  <script src="js/depot-shop.js?v=7550427"></script>
-  <script src="js/depot-shop-view.js?v=7550427"></script>
-  <script src="js/depot-binder-shop.js?v=7550427"></script>
-  <script src="js/depot-library-art.js?v=7550427"></script>
-  <script src="js/depot-add-card-search.js?v=7550427"></script>
-    <script src="js/depot-position.js?v=7550427"></script>
-  <script src="js/depot-card-detail-2b.js?v=7550427"></script>
+<script src="game/season.js?v=852958d" defer></script>
+<script src="js/depot-index-shell.js?v=852958d"></script>
+<script src="js/depot-prestige.js?v=852958d"></script>
+<script src="js/depot-wallet.js?v=852958d"></script>
+  <script src="js/depot-pack-engine.js?v=852958d"></script>
+  <script src="js/depot-pixel-card.js?v=852958d"></script>
+  <script src="js/depot-shop.js?v=852958d"></script>
+  <script src="js/depot-shop-view.js?v=852958d"></script>
+  <script src="js/depot-binder-shop.js?v=852958d"></script>
+  <script src="js/depot-library-art.js?v=852958d"></script>
+  <script src="js/depot-add-card-search.js?v=852958d"></script>
+    <script src="js/depot-position.js?v=852958d"></script>
+  <script src="js/depot-card-detail-2b.js?v=852958d"></script>
 <script>
 /* Franchise Economy Slice A: arm wallet chip + payout hook. Additive, fail-loud, graceful until DDL. */
 (function(){

@@ -77,9 +77,65 @@
   /* ---------- MLB resolution ---------- */
   var personCache = {};
 
-  function cleanName(n) { return String(n || '').replace(/\s+/g, ' ').trim(); }
+  /* ---- shared name helpers (accent-aware) -------------------------------
+   * ONE implementation, exported for index.html so the add-card form and this
+   * probe can never disagree about what a player is called.
+   *
+   * cleanName(): trims a raw/OCR'd string down to the person tokens while
+   * PRESERVING accented Latin letters. The old ASCII-only token test
+   * (/^[A-Za-z'.-]+$/) rejected "Beltre" with an acute e and broke out of the
+   * loop, so cleanPlayerName("Adrian Beltre") returned just "Adrian".
+   * normName(): folds accents/punctuation for COMPARISON only -- never store
+   * its output, it is lossy by design.
+   * ---------------------------------------------------------------------- */
+  var NAME_SUF   = { 'Jr': 1, 'Jr.': 1, 'Sr': 1, 'Sr.': 1, 'II': 1, 'III': 1, 'IV': 1, 'V': 1 };
+  var NAME_TOKEN = /^[A-Za-z\u00C0-\u00D6\u00D8-\u00F6\u00F8-\u024F'\u2019.\-]+$/;
+  var NAME_UPPER = /^[A-Z\u00C0-\u00D6\u00D8-\u00DE]/;
+  var NAME_LOWER = /[a-z\u00DF-\u00F6\u00F8-\u024F]/;
 
-  function searchPerson(name) {
+  function normName(x) {
+    x = String(x == null ? '' : x).normalize('NFKD').replace(/[\u0300-\u036f]/g, '');
+    x = x.toLowerCase().replace(/\./g, ' ');
+    x = x.replace(/\b(junior|jr)\b/g, 'jr').replace(/\b(senior|sr)\b/g, 'sr');
+    return x.replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
+  }
+
+  function isNameTok(w) {
+    if (NAME_SUF[w]) return true;
+    if (/^(?:[A-Z]\.){1,3}$/.test(w)) return true;
+    return NAME_TOKEN.test(w) && NAME_UPPER.test(w) && NAME_LOWER.test(w);
+  }
+
+  function cleanName(n) {
+    var raw = String(n == null ? '' : n);
+    var s = raw.split(/[:\/|]/)[0];
+    var toks = s.trim().split(/\s+/), out = [], core = 0, i, w;
+    for (i = 0; i < toks.length; i++) {
+      w = toks[i].replace(/^[ ,;()]+|[ ,;()]+$/g, '');
+      if (!w) continue;
+      if (!isNameTok(w)) break;
+      if (core === 2) { if (NAME_SUF[w]) out.push(w); break; }
+      out.push(w);
+      if (!NAME_SUF[w]) core++;
+    }
+    return out.join(' ').replace(/\s+/g, ' ').trim() || raw.replace(/\s+/g, ' ').trim();
+  }
+
+  /* Does this person's MLB career plausibly cover the given card year?
+   * Returns TRUE when we have no span data at all -- absence of evidence must
+   * not be treated as evidence of a bad match. */
+  function spanCovers(p, year) {
+    var y = parseInt(year, 10);
+    if (!isFinite(y)) return true;
+    var debut = (p && p.mlbDebutDate) ? parseInt(String(p.mlbDebutDate).slice(0, 4), 10) : NaN;
+    var last  = (p && p.lastPlayedDate) ? parseInt(String(p.lastPlayedDate).slice(0, 4), 10) : NaN;
+    if (!isFinite(debut) && !isFinite(last)) return true;
+    if (isFinite(debut) && y < debut) return false;
+    if (isFinite(last) && y > last) return false;
+    return true;
+  }
+
+  function searchPerson(name, year) {
     var nm = cleanName(name);
     if (!nm) return Promise.resolve(null);
     var byNames = MLB + '/people/search?names=' + encodeURIComponent(nm);
@@ -94,26 +150,37 @@
       }).then(function (j2) { return (j2 && j2.people) || []; });
     }).then(function (people) {
       if (!people.length) return null;
-      /* Prefer an exact full-name match, else the first hit. */
-      var exact = null, i;
+      /* Prefer an exact full-name match, accent-folded via the shared helper.
+       * An exact name match is trusted on its own: a 1993 Jeter card is still
+       * Derek Jeter even though he debuted in 1995. That is a stats-provenance
+       * problem, not an identity problem, and it is handled on the stats side. */
+      var key = normName(nm), exact = null, i;
       for (i = 0; i < people.length; i++) {
-        if (cleanName(people[i].fullName).toLowerCase() === nm.toLowerCase()) { exact = people[i]; break; }
+        if (normName(cleanName(people[i].fullName)) === key) { exact = people[i]; break; }
       }
-      return exact || people[0];
+      if (exact) return exact;
+      /* No exact match, so people[0] is only a guess. Accept it ONLY if the
+       * career span can cover this card year; otherwise return null and let the
+       * caller report "unresolved" honestly. This is what stops a plain
+       * "Dante Bichette" card resolving to Dante Bichette Jr. at index [0]. */
+      return (people[0] && spanCovers(people[0], year)) ? people[0] : null;
     }).catch(function () { return null; });
   }
 
-  function resolvePerson(name) {
+  function resolvePerson(name, year) {
     var nm = cleanName(name).toLowerCase();
     if (!nm) return Promise.resolve(null);
-    if (personCache[nm]) return personCache[nm];
-    personCache[nm] = searchPerson(name);
-    return personCache[nm];
+    /* Cache key includes the year: the same name can resolve differently for
+       different card years now that the fallback is span-guarded. */
+    var ck = nm + '|' + (year == null || year === '' ? '' : String(year));
+    if (personCache[ck]) return personCache[ck];
+    personCache[ck] = searchPerson(name, year);
+    return personCache[ck];
   }
 
   /* Promise<string|null> -- the normalized primary position for a player name. */
-  function resolvePosition(name) {
-    return resolvePerson(name).then(function (p) {
+  function resolvePosition(name, year) {
+    return resolvePerson(name, year).then(function (p) {
       if (!p || !p.primaryPosition) return null;
       return normPos(p.primaryPosition.abbreviation) || normPos(p.primaryPosition.name);
     });
@@ -162,16 +229,19 @@
     } catch (e) { return null; }
   }
 
-  function seasonStats(personId, year, group) {
+  /* Same pull as seasonStats(), but it also reports the team the chosen split belongs
+   * to, so a caller can persist stats provenance. seasonStats() delegates to it and
+   * keeps its original shape for existing callers. */
+  function seasonStatsProv(personId, year, group) {
     var map = statMap(group);
-    if (!personId || !year || !map) return Promise.resolve(null);
+    if (!personId || !year || !map) return Promise.resolve({ stats: null, team: null });
     var url = MLB + '/people/' + personId + '/stats?stats=season&group=' + group + '&season=' + year;
     return fetch(url).then(function (r) {
       if (!r.ok) return null;
       return r.json();
     }).then(function (j) {
       var splits = (j && j.stats && j.stats[0] && j.stats[0].splits) || [];
-      if (!splits.length) return null;
+      if (!splits.length) return { stats: null, team: null };
       /* Traded seasons return one split per team: take the busiest, same rule
        * the Add-a-Card stat pull already uses. */
       var split = splits.length === 1 ? splits[0] : splits.reduce(function (a, b) {
@@ -184,8 +254,12 @@
         if (st[k] == null || st[k] === '' || st[k] === '-.--') continue;
         out[map[k]] = String(st[k]);
       }
-      return Object.keys(out).length ? out : null;
-    }).catch(function () { return null; });
+      return { stats: Object.keys(out).length ? out : null, team: (split && split.team && split.team.name) || null };
+    }).catch(function () { return { stats: null, team: null }; });
+  }
+
+  function seasonStats(personId, year, group) {
+    return seasonStatsProv(personId, year, group).then(function (r) { return (r && r.stats) || null; });
   }
 
   /* ---------- post-grant enrichment (pack shop) ---------- */
@@ -194,12 +268,12 @@
    * leaves the rows exactly as inserted and the backfill can pick them up. */
   function enrichRows(client, ids) {
     if (!client || !ids || !ids.length) return Promise.resolve(0);
-    return client.from('cards').select('id,player,notes').in('id', ids).then(function (sel) {
+    return client.from('cards').select('id,player,year,notes').in('id', ids).then(function (sel) {
       if (sel.error || !sel.data) return 0;
       var done = 0;
       return sel.data.reduce(function (chain, row) {
         return chain.then(function () {
-          return resolvePosition(row.player).then(function (pos) {
+          return resolvePosition(row.player, row.year).then(function (pos) {
             if (!pos) return;
             var notes = withMeta(row.notes, { pos: pos, type: typeForPos(pos) });
             if (notes === row.notes) return;
@@ -245,14 +319,24 @@
     var u = unpackNotes(row.notes);
     var meta = u.meta || {};
     var before = meta.pos;
-    return resolvePosition(row.player).then(function (pos) {
+    return resolvePosition(row.player, row.year).then(function (pos) {
       var patch = { pos: pos, type: pos ? typeForPos(pos) : (meta.type || null) };
       var refetch = !!(pos && isPitcherPos(pos) && looksLikeBattingLine(meta.stats));
-      var pre = refetch ? resolvePerson(row.player).then(function (p) {
-        return p ? seasonStats(p.id, row.year, 'pitching') : null;
+      var pre = refetch ? resolvePerson(row.player, row.year).then(function (p) {
+        if (!p) { console.warn('[depot] backfill: pitching refetch skipped, person unresolved for ' + row.player + ' ' + row.year); return null; }
+        return seasonStatsProv(p.id, row.year, 'pitching').then(function (r) {
+          if (!r || !r.stats) { console.warn('[depot] backfill: no pitching split for ' + row.player + ' ' + row.year); return null; }
+          return { stats: r.stats, personId: p.id, season: row.year, team: r.team };
+        });
       }) : Promise.resolve(null);
       return pre.then(function (pit) {
-        if (pit) patch.stats = pit;
+        if (pit) {
+          patch.stats = pit.stats;
+          /* Provenance travels with every stats write: whose line, which season, which team. */
+          patch.statPersonId = pit.personId;
+          patch.statSeason = pit.season;
+          patch.statTeam = pit.team;
+        }
         var notes = withMeta(row.notes, patch);
         var line = {
           card: cleanName(row.player) + ' ' + (row.year || ''),
@@ -284,8 +368,11 @@
   window.depotResolvePosition = resolvePosition;
   window.depotResolvePerson = resolvePerson;
   window.depotSeasonStats = seasonStats;
+  window.depotSeasonStatsProv = seasonStatsProv;
   window.depotNotesWithMeta = withMeta;
   window.depotNotesUnpack = unpackNotes;
+  window.depotCleanName = cleanName;
+  window.depotNormName = normName;
   window.depotEnrichPositions = enrichRows;
   window.depotBackfillPositions = backfill;
   console.debug(TAG + ' ready');
