@@ -2290,6 +2290,18 @@ async function ensurePlayerList(){
       const h=ROLO_SUGG[i]; if(!h)return;
       let idx; try{ idx=await getPlayerIndex(); }catch(e){ idx=null; }
       const _rawnm=(idx&&idx[h.k]&&idx[h.k].display)||h.d; const _canon=normName(cleanPlayerName(_rawnm)); const name=(idx&&idx[_canon]&&idx[_canon].display)||_rawnm;
+      /* A new pick is a new identity, so drop whatever the previous player left in the
+       * form. f-pos in particular used to survive a switch -- resolve Beltre, then pick
+       * Griffey, and the position still read 3B -- because nothing on this path ever
+       * cleared it. roloPick() has its own POS handling; this is the checklist path. */
+      const _prevName=roloPlayer&&(roloPlayer.fullName||roloPlayer.nameFirstLast||'');
+      if(!_prevName||!roloSameName(_prevName,name)){
+        ROLO_PROV=null;
+        const _st=document.getElementById('f-stats'); if(_st) _st.value='';
+        const _tm=document.getElementById('f-team');  if(_tm) _tm.value='';
+        const _ps=document.getElementById('f-pos');   if(_ps) _ps.value='';
+        if(_prevName) console.warn('[depot] rolodex: switched from '+_prevName+' to '+name+' -- cleared stats, team and position left by the previous player');
+      }
       roloPlayer={fullName:name, nameFirstLast:name};
       const _cn=cleanPlayerName(name);
       document.getElementById('rolo-name').value=_cn;
