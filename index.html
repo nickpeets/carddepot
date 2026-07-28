@@ -1233,7 +1233,7 @@ body.logged-out #appFrame{display:none !important;}
         <div id="rolo-upload-hint" class="rolo-uphint" style="display:none">Prefer your own scan? Attach one below — your image always wins.</div>
         </div>
         <div class="fl-row">
-          <div class="fl-field" style="flex:2"><label>Player</label><input id="f-name" placeholder="Ken Griffey Jr."></div>
+          <div class="fl-field" style="flex:2"><label>Player</label><input id="f-name" placeholder="Ken Griffey Jr." oninput="roloNameEdited()"></div>
           <div class="fl-field" style="flex:1"><label>Pos</label><input id="f-pos" placeholder="CF"></div>
         </div>
         <div class="fl-row">
@@ -2131,6 +2131,64 @@ function roloProvenanceForForm(){
   if(yr!==(parseInt(p.statSeason,10)||0)){ console.warn('[depot] stats provenance dropped: form year '+yr+' no longer matches pulled season '+p.statSeason); return null; }
   return p;
 }
+/* ---------- rolodex identity guards ---------- */
+
+/* A stats line's owner is only knowable while the resolved identity and the name in the
+ * form still agree. Every guard below fails loud rather than letting a stale identity
+ * ride along -- that is exactly how a 1993 Jeter card ended up wearing Frank Thomas's
+ * 1990 White Sox line. */
+
+function roloFormName(){
+  const el=document.getElementById('f-name');
+  return el?String(el.value||'').trim():'';
+}
+
+/* Normalised comparison through the shared accent-folding helpers when they are loaded.
+ * depotNormName/depotCleanName are window properties, so typeof-guarding is enough. */
+function roloSameName(a,b){
+  const cn=(typeof window.depotCleanName==='function')?window.depotCleanName:function(x){return String(x||'').trim();};
+  const nn=(typeof window.depotNormName==='function')?window.depotNormName:function(x){return String(x||'').trim().toLowerCase();};
+  if(!a||!b) return false;
+  return nn(cn(a))===nn(cn(b));
+}
+
+/* Career span gate. Mirrors spanCovers() in depot-position.js on purpose: keeping a local
+ * copy holds this fix to a single file. Worth unifying next time both are open. */
+function roloSpanCovers(p,year){
+  const y=parseInt(year,10);
+  if(!isFinite(y)) return true;
+  const debut=(p&&p.mlbDebutDate)?parseInt(String(p.mlbDebutDate).slice(0,4),10):NaN;
+  const last=(p&&p.lastPlayedDate)?parseInt(String(p.lastPlayedDate).slice(0,4),10):NaN;
+  if(!isFinite(debut)&&!isFinite(last)) return true;
+  if(isFinite(debut)&&y<debut) return false;
+  if(isFinite(last)&&y>last) return false;
+  return true;
+}
+
+/* Drop everything downstream of identity: the resolved person, the provenance record and
+ * the three fields the rolodex fills on its behalf. */
+function roloDropIdentity(why){
+  roloPlayer=null;
+  ROLO_PROV=null;
+  const st=document.getElementById('f-stats'); if(st) st.value='';
+  const tm=document.getElementById('f-team');  if(tm) tm.value='';
+  const ps=document.getElementById('f-pos');   if(ps) ps.value='';
+  console.warn('[depot] rolodex identity dropped: '+why);
+}
+
+/* Bound to #f-name oninput. Typing over a resolved name makes that resolution stale, so it
+ * is thrown away at once instead of surviving into the next stats write. roloPick() writes
+ * the field programmatically and programmatic writes do not fire input events, so picking
+ * a player never trips this. */
+function roloNameEdited(){
+  if(!roloPlayer) return;
+  const typed=roloFormName();
+  const resolved=roloPlayer.fullName||roloPlayer.nameFirstLast||'';
+  if(roloSameName(typed,resolved)) return;
+  roloDropIdentity('name field edited to \''+typed+'\' (was \''+resolved+'\')');
+  roloStatus('Name changed -- pick the player again before pulling stats.','err');
+}
+
 function roloReset(){
   roloPlayer=null;
   ROLO_PROV=null;
@@ -2319,7 +2377,12 @@ async function roloPick(i){
   const posName=(p.primaryPosition&&p.primaryPosition.name)||'';
   const isP=posName==='Pitcher';
   document.getElementById('f-name').value=p.fullName||p.nameFirstLast||'';
-  if(POS_ABBR[posName])document.getElementById('f-pos').value=POS_ABBR[posName];
+  const _posEl=document.getElementById('f-pos');
+  if(POS_ABBR[posName]){ _posEl.value=POS_ABBR[posName]; }
+  else { /* Do NOT leave the previous player's position sitting in the field. */
+    _posEl.value='';
+    console.warn('[depot] rolodex: no POS_ABBR mapping for '+(posName||'(none)')+' -- position cleared rather than left on the previous player');
+  }
   document.getElementById('f-type').value=isP?'pitcher':'hitter';
   updateStatHint();
   document.getElementById('rolo-brand').style.display='none';
@@ -2492,9 +2555,45 @@ async function roloYear(y,btn){
       }
   const isP=document.getElementById('f-type').value==='pitcher';
   const group=isP?'pitching':'hitting';
-  roloStatus(`Pulling ${y} ${group} stats\u2026`); if(!roloPlayer.__idVerified){ const pname=cleanPlayerName(roloPlayer.fullName||roloPlayer.nameFirstLast||document.getElementById('rolo-name').value.trim()); let found=null; try{ let rs=await fetch(`${MLB_BASE}/people/search?names=${encodeURIComponent(pname)}`); if(rs.ok){const js=await rs.json(); if(js.people&&js.people.length)found=js.people;} if(!found){rs=await fetch(`${MLB_BASE}/people/search?q=${encodeURIComponent(pname)}`); if(rs.ok){const js=await rs.json(); if(js.people&&js.people.length)found=js.people;}} if(!found){const list=await ensurePlayerList(); const ql=pname.toLowerCase(); found=list.filter(p=>(p.fullName||'').toLowerCase()===ql); if(!found.length)found=list.filter(p=>(p.fullName||'').toLowerCase().includes(ql));} }catch(e){} if(found&&found.length){roloPlayer=Object.assign({},found[0],{fullName:roloPlayer.fullName||found[0].fullName,__idVerified:true});} if(!roloPlayer.id){roloStatus(`Couldn\u2019t match \u201c${pname}\u201d to an MLB player to pull stats. Pick the brand/number and enter stats manually.`,"err"); return;} }
+  roloStatus(`Pulling ${y} ${group} stats\u2026`); /* Re-resolve when identity is unverified OR when the form name has drifted away from
+     * it. The old code latched on __idVerified alone, so a resolved player was never
+     * re-resolved after a name edit -- the stale-identity latch behind the incident. */
+    const _typed=roloFormName();
+    if(roloPlayer.__idVerified && _typed && !roloSameName(_typed, roloPlayer.fullName||roloPlayer.nameFirstLast||'')){
+      console.warn('[depot] rolodex: form name '+_typed+' no longer matches verified identity '+(roloPlayer.fullName||'')+' -- re-resolving');
+      roloPlayer={fullName:_typed, nameFirstLast:_typed};
+    }
+    if(!roloPlayer.__idVerified){ const pname=cleanPlayerName(roloPlayer.fullName||roloPlayer.nameFirstLast||document.getElementById('rolo-name').value.trim()); let found=null; try{ let rs=await fetch(`${MLB_BASE}/people/search?names=${encodeURIComponent(pname)}`); if(rs.ok){const js=await rs.json(); if(js.people&&js.people.length)found=js.people;} if(!found){rs=await fetch(`${MLB_BASE}/people/search?q=${encodeURIComponent(pname)}`); if(rs.ok){const js=await rs.json(); if(js.people&&js.people.length)found=js.people;}} if(!found){const list=await ensurePlayerList(); const ql=pname.toLowerCase(); found=list.filter(p=>(p.fullName||'').toLowerCase()===ql); /* The substring .includes() fallback that used to live here is gone. It matched any
+       * partial to whoever happened to sort first and handed the result straight to a
+       * stats write. Exact normalised match or nothing. */} }catch(e){} /* Write-side validation. found[0] used to be accepted blind, and the resolved
+     * person's real name was then masked by whatever the form already held. Both are
+     * gone: the match must be an exact normalised full name. */
+    let _picked=null;
+    if(found&&found.length){
+      for(let _i=0;_i<found.length;_i++){ if(roloSameName(found[_i].fullName,pname)){ _picked=found[_i]; break; } }
+    }
+    if(!_picked){
+      console.warn('[depot] rolodex: refused stats write -- no exact name match for '+pname);
+      ROLO_PROV=null;
+      document.getElementById('f-stats').value='';
+      roloStatus('Could not confirm '+pname+' as an exact MLB name. No stats pulled -- check the spelling or enter the line manually.','err');
+      return;
+    }
+    /* Take the resolved person's own name. The form no longer gets to mask it. */
+    roloPlayer=Object.assign({},_picked,{__idVerified:true});
+    document.getElementById('f-name').value=roloPlayer.fullName||pname; if(!roloPlayer.id){roloStatus(`Couldn\u2019t match \u201c${pname}\u201d to an MLB player to pull stats. Pick the brand/number and enter stats manually.`,"err"); return;} }
   try{
-    const r=await fetch(`${MLB_BASE}/people/${roloPlayer.id}/stats?stats=season&group=${group}&season=${y}`);
+    /* Span gate on every pull, including an already-verified identity: a season outside
+       * the player's career cannot have a real line behind it. */
+      if(!roloSpanCovers(roloPlayer,y)){
+        const _d=String(roloPlayer.mlbDebutDate||'?').slice(0,4), _l=String(roloPlayer.lastPlayedDate||'?').slice(0,4);
+        console.warn('[depot] rolodex: refused stats write -- span '+_d+'-'+_l+' does not cover '+y);
+        ROLO_PROV=null;
+        document.getElementById('f-stats').value='';
+        roloStatus((roloPlayer.fullName||'That player')+' played '+_d+'-'+_l+', so there is no '+y+' season to pull. Stats left empty.','err');
+        return;
+      }
+      const r=await fetch(`${MLB_BASE}/people/${roloPlayer.id}/stats?stats=season&group=${group}&season=${y}`);
     if(!r.ok) throw new Error('http');
     const j=await r.json();
     const splits=(j.stats&&j.stats[0]&&j.stats[0].splits)||[];
