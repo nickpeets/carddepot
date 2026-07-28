@@ -1433,7 +1433,14 @@ function packNotes(c){
   if(c.statSeason != null && c.statSeason !== '') meta.statSeason = parseInt(c.statSeason,10) || null;
   if(c.statTeam) meta.statTeam = c.statTeam;
   const bio = c.bio || '';
-  return bio + META_MARK + JSON.stringify(meta) + META_END;
+  /* Key-order stability: emit keys in the order this card already had them, then any
+     genuinely new ones. Re-deriving above re-appends the owned keys, which would
+     otherwise reshuffle the JSON and make an unchanged re-save look like a real diff. */
+  const _prevOrder = Object.keys(_unpack(_rawNotes || '').meta || {});
+  const _ordered = {};
+  _prevOrder.forEach(function(k){ if(Object.prototype.hasOwnProperty.call(meta,k)) _ordered[k] = meta[k]; });
+  Object.keys(meta).forEach(function(k){ if(!Object.prototype.hasOwnProperty.call(_ordered,k)) _ordered[k] = meta[k]; });
+  return bio + META_MARK + JSON.stringify(_ordered) + META_END;
 }
 function unpackNotes(notes){
   notes = notes || '';
