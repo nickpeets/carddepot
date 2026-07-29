@@ -211,8 +211,15 @@
     if (!meta) return;
 
     // name + set line at the top (name already emitted by openSpot as .spot-name)
-    var idx = (typeof window.spotIdx === "number") ? window.spotIdx : null;
-    var c = (idx != null && window.COLLECTION) ? window.COLLECTION[idx] : null;
+    // spotIdx and COLLECTION are BARE globals (script-scoped let/const in the page),
+    // NOT window properties. Reading them off window always gave null, which is why
+    // the .spot-set-sub line below never rendered. Resolve with the typeof pattern.
+    var idx = null, col = null;
+    try {
+      idx = (typeof spotIdx === "number") ? spotIdx : null;
+      col = (typeof COLLECTION !== "undefined") ? COLLECTION : null;
+    } catch (e) { idx = null; col = null; }
+    var c = (idx != null && col) ? col[idx] : null;
     var nameEl = meta.querySelector(".spot-name");
     if (c && nameEl && !meta.querySelector(".spot-set-sub")) {
       var sub = document.createElement("div");
@@ -234,19 +241,9 @@
       block.className = "spot-statblock";
       var head = document.createElement("div");
       head.className = "statblock-head";
-      // AGENTS.md trap: spotIdx and COLLECTION are BARE globals, not window
-      // properties, so the `c` resolved at the top of refreshMeta is always null
-      // and this heading always read "batting line" no matter what the card was.
-      // Resolve a card the safe way for the heading only -- the wider
-      // consequence of c === null higher up is logged, not touched here.
+      // c is resolved with the typeof pattern at the top of refreshMeta, so the
+      // heading now sees the real card instead of always reading "batting line".
       var statCard = c;
-      if (!statCard) {
-        try {
-          var _si = (typeof spotIdx === "number") ? spotIdx : null;
-          var _col = (typeof COLLECTION !== "undefined") ? COLLECTION : null;
-          if (_si != null && _col) statCard = _col[_si];
-        } catch (e) {}
-      }
       var yr = statCard && statCard.yr ? statCard.yr : "";
       var kind = (statCard && typeof window.cardType === "function" && window.cardType(statCard) === "pitcher") ? "pitching line" : "batting line";
       head.textContent = (yr ? (yr + " SEASON \u2014 ") : "SEASON \u2014 ") + kind;
