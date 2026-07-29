@@ -74,52 +74,277 @@
   var DOT  = " \u00b7 ";
   function esc(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");}
 
-  /* ---- computed odds (never hand-typed) ---------------------------------- */
-  function paidOddsHtml(tier, catalog) {
-    var o = null;
-    try { o = (catalog && catalog.length) ? Eng.estimateOdds(tier, catalog, window.DepotPrestige, 250) : null; }
-    catch (e) { console.warn(TAG + " odds calc failed for " + tier, e && e.message); }
-    var hb = o && o.hitBandPct;
-    if (!hb) return "Odds unavailable";
-    return "Hit odds: <b>" + (hb.gold||0) + "%</b> gold" + DOT + "<b>" + (hb.silver||0) + "%</b> silver" + DOT + "<b>" + (hb.bronze||0) + "%</b> bronze";
+  /* ===================================================================== */
+  /* PACK SHOP + RIP REDESIGN (feat/pack-shop-redesign)                    */
+  /* Design: handoff-pack-shop/README.md. Presentation ONLY -- every money  */
+  /* call below is the SAME call it was before: Shop.buy (depot_purchase_   */
+  /* pack RPC), Shop.claimFree (depot_claim_free_pack RPC), Shop.           */
+  /* redeemPending (pack_grants ledger + card insert). The rip is pure      */
+  /* THEATRE over cards that are already granted.                          */
+  /* ===================================================================== */
+
+  /* ---- bands: what the ENGINE can actually roll ------------------------
+     depot-pack-engine.js: BAND_RANK = { plain:0, bronze:1, silver:2, gold:3 }.
+     There is NO Diamond band anywhere in the engine, so GOLD is the real top
+     band: it wears the hit treatment and every "hit" string is derived from
+     gold. The Diamond visual language ships in css/pack-shop-v2.css but no
+     Diamond tier card is rendered (see db/proposals/FUTURE_ITEMS.md). */
+  var BAND_RANK  = { plain:0, bronze:1, silver:2, gold:3 };
+  var BAND_LABEL = { plain:"COMMON", bronze:"BRONZE", silver:"SILVER", gold:"GOLD" };
+  var BAND_NOUN  = { plain:"Common", bronze:"Bronze", silver:"Silver", gold:"Gold" };
+  var TOP_BAND   = "gold";
+  function bandOf(card){
+    try {
+      var shaped = (Shop.cardToShape ? Shop.cardToShape(card, card.year) : card);
+      var b = (window.DepotPrestige && window.DepotPrestige.compute)
+        ? (window.DepotPrestige.compute(shaped).band || "plain") : "plain";
+      return (BAND_RANK[b] == null) ? "plain" : b;
+    } catch(e){ console.warn(TAG + " bandOf failed: " + (e && e.message) + " -- falling back to plain"); return "plain"; }
   }
-  function freeOddsHtml() {
-    var o = null;
-    try { o = (Eng && Eng.estimateOdds) ? Eng.estimateOdds("free") : null; } catch (e) { o = null; }
-    var p = (o && o.hitBandPct) || { plain:90, bronze:8, silver:1.5, gold:0.5 };
-    return "Published odds: <b>~" + p.plain + "%</b> plain" + DOT + "<b>~" + p.bronze + "%</b> bronze" + DOT + "<b>~" + p.silver + "%</b> silver" + DOT + "<b>~" + p.gold + "%</b> gold";
+  function bestBandIdx(bands, prefer){
+    var bi = 0;
+    for (var i = 1; i < bands.length; i++){ if ((BAND_RANK[bands[i]]||0) > (BAND_RANK[bands[bi]]||0)) bi = i; }
+    // a tie goes to the hit slot -- that card is the pack's headline
+    if (prefer != null && prefer >= 0 && prefer < bands.length &&
+        (BAND_RANK[bands[prefer]]||0) === (BAND_RANK[bands[bi]]||0)) bi = prefer;
+    return bi;
+  }
+  function yy(v){ var s = String(v == null ? "" : v); return s.length >= 2 ? "\u2019" + s.slice(-2) : s; }
+  function money(n){ try { return Number(n).toLocaleString(); } catch(e){ return String(n); } }
+
+  /* ---- hooks: the mounted controller lends the theatre its live wiring.
+     playPackSession is ALSO called straight from depot-shop.js (the money
+     path), which passes no callbacks -- so the theatre reads them from here
+     instead of changing that signature. Fail loud when one is missing. */
+  var _hooks = { balance:null, signedIn:null, buyTier:null, settle:null, refresh:null };
+
+  function signedInSync(){
+    try { if (window.depotUserCached) return true; } catch(e){}
+    try { if (window.DEPOT_USER && window.DEPOT_USER.id) return true; } catch(e){}
+    return false;
   }
 
-  /* ---- tile HTML (card-sized; tier color as the back) -------------------- */
-  function paidTileHtml(tier, catalog, balance) {
-    var copy = Shop.TIER_COPY[tier] || { name: tier.toUpperCase()+" PACK", desc: "" };
-    var price = (Eng.tierConfig ? Eng.tierConfig(tier).price : 0);
-    var afford = (balance != null && balance >= price);
-    var gap = (!afford && balance != null) ? '<span class="dsv-gap">Need ' + (price-balance) + ' more ' + CUR + '</span>' : '';
-    return '' +
-      '<div class="dsv-tile tier-' + tier + (afford ? '' : ' cant-afford') + '" data-tier="' + tier + '">' +
-        '<div class="dsv-back"><span class="dsv-wrap">' + esc(copy.name.replace(" PACK","")) + '<br>PACK</span></div>' +
-        '<div class="dsv-info">' +
-          '<div class="dsv-name">' + esc(copy.name) + '</div>' +
-          '<div class="dsv-price">' + price + ' ' + CUR + '</div>' +
-          '<div class="dsv-odds">' + paidOddsHtml(tier, catalog) + '<br>5 cards' + DOT + '5th is the hit slot</div>' +
-        '</div>' +
-        '<div class="dsv-foot"><button class="dsv-btn buy" data-tier="' + tier + '"' + (afford?'':' disabled') + '>BUY</button>' + gap + '</div>' +
-      '</div>';
+  /* ===================================================================== */
+  /* REAL ART -- probe-gated exactly like the binder (depot-library-art.js).*/
+  /* Paint only on laid-out LIVE nodes; a superseded reveal never paints a  */
+  /* stale node; a probe MISS renders the 4.5 designed placeholder; never a */
+  /* broken image. DepotPixelCard stays the fallback beneath the probe when */
+  /* the resolver/probe pair is not on the page at all.                    */
+  /* ===================================================================== */
+  var _phaseTok = 0;                 // bumped on every phase / reveal step
+  function phaseTok(){ return _phaseTok; }
+  function bumpPhase(){ _phaseTok++; return _phaseTok; }
+
+  function noArtHtml(){
+    return '<div class="prip-noart">' +
+             '<div class="prip-noart-tile">D</div>' +
+             '<div class="prip-noart-lab">NO IMAGE YET</div>' +
+             '<div class="prip-noart-say">Card\u2019s confirmed \u2014 add a scan and it\u2019ll paint.</div>' +
+           '</div>';
   }
-  function freeTileHtml(nextClaimAt) {
-    var onCd = nextClaimAt && (new Date(nextClaimAt).getTime() > Date.now());
-    var btn = onCd ? '<button class="dsv-btn claim-free" disabled>ON COOLDOWN</button>' : '<button class="dsv-btn claim-free">CLAIM</button>';
-    return '' +
-      '<div class="dsv-tile tier-free" data-tier="free">' +
-        '<div class="dsv-back free"><span class="dsv-ribbon">FREE' + DOT + 'DAILY</span><span class="dsv-wrap">FREE<br>PULL</span></div>' +
-        '<div class="dsv-info">' +
-          '<div class="dsv-name">FREE DAILY PACK</div>' +
-          '<div class="dsv-price">On the house</div>' +
-          '<div class="dsv-odds">' + freeOddsHtml() + '<br>1 card' + DOT + 'once every 24h</div>' +
-        '</div>' +
-        '<div class="dsv-foot">' + btn + '<div class="dsv-cd" aria-live="polite"></div></div>' +
-      '</div>';
+  function paintNoArt(well){
+    if (!well || !well.isConnected) return;
+    well.classList.add("is-noart");
+    well.innerHTML = noArtHtml();
+  }
+  // Legacy fallback: the pixel front, used ONLY when the library-art module is
+  // absent from the page (fail-loud, and never a broken image).
+  function paintPixelFallback(well, card){
+    if (!well) return;
+    try {
+      var shaped = (Shop.cardToShape ? Shop.cardToShape(card, card.year) : card);
+      var pr = (window.DepotPrestige && window.DepotPrestige.compute) ? window.DepotPrestige.compute(shaped) : { band:"plain", total:0 };
+      var url = window.DepotPixelCard ? window.DepotPixelCard.renderDataURL(shaped, pr, { w:250, h:350 }) : "";
+      if (url){ well.style.backgroundImage = 'url("' + url + '")'; well.style.backgroundSize = "cover"; well.style.backgroundPosition = "center"; }
+      else { console.warn(TAG + " pixel fallback produced no data URL"); }
+    } catch(e){ console.warn(TAG + " pixel fallback failed: " + (e && e.message)); }
+  }
+  function isLive(el){
+    if (!el || !el.isConnected) return false;
+    return el.offsetWidth > 0 && el.offsetHeight > 0;
+  }
+  // well = the .prip-well of a card front that is ALREADY in the document.
+  function fillArt(well, card, tok){
+    if (!well) return;
+    var resolve = window.depotResolveCardArt, probe = window.depotProbeCardArt;
+    if (typeof resolve !== "function" || typeof probe !== "function"){
+      console.warn(TAG + " art: depotResolveCardArt/depotProbeCardArt missing on this page -- DepotPixelCard fallback");
+      paintPixelFallback(well, card);
+      return;
+    }
+    var r = null;
+    try { r = resolve(card, "front"); } catch(e){ console.warn(TAG + " art resolve threw: " + (e && e.message)); }
+    if (!r || !r.url || r.tier === "placeholder"){ paintNoArt(well); return; }
+    Promise.resolve(probe(card, "front")).then(function(ok){
+      if (tok !== phaseTok()) return;                 // superseded: never paint a stale node
+      if (!isLive(well)) return;                      // laid-out live nodes only
+      if (!ok){ paintNoArt(well); return; }
+      var im = document.createElement("img");
+      im.alt = ""; im.setAttribute("aria-hidden", "true");
+      im.onerror = function(){ if (tok === phaseTok() && isLive(well)) paintNoArt(well); };
+      im.src = r.url;
+      well.appendChild(im);
+    }).catch(function(e){
+      console.warn(TAG + " art probe rejected: " + (e && e.message));
+      if (tok === phaseTok() && isLive(well)) paintNoArt(well);
+    });
+  }
+
+  /* ---- 4.4 card front anatomy (band strip / photo well / nameplate) ---- */
+  function frontHtml(card, band){
+    var shaped = (Shop.cardToShape ? Shop.cardToShape(card, card.year) : card);
+    var name = shaped.player || shaped.name || "Unknown";
+    var pos  = shaped.position || shaped.pos || "";
+    var team = shaped.team || "";
+    var sub  = [pos, team].filter(Boolean).join(DOT);
+    if (!sub) console.debug(TAG + " front: no position/team on " + name);
+    return '<div class="prip-front pk-b-' + band + '">' +
+             '<div class="prip-band"><span class="prip-band-lab">' + BAND_LABEL[band] + '</span>' +
+             '<span class="prip-band-yr">' + esc(yy(shaped.year)) + '</span></div>' +
+             '<div class="prip-well"></div>' +
+             '<div class="prip-plate"><b>' + esc(name) + '</b><span>' + esc(sub) + '</span></div>' +
+           '</div>';
+  }
+
+  /* ===================================================================== */
+  /* ODDS + FLOOR COPY -- DERIVED from estimateOdds(), never transcribed.   */
+  /* The spec's numbers name a Diamond band that does not exist, so every   */
+  /* number below comes out of the live engine at render time.              */
+  /* ===================================================================== */
+  function oddsOf(tier, catalog){
+    try { return (catalog && catalog.length) ? Eng.estimateOdds(tier, catalog, window.DepotPrestige, 250) : null; }
+    catch(e){ console.warn(TAG + " odds calc failed for " + tier + ": " + (e && e.message)); return null; }
+  }
+  // Honest floor language for a BOUNDED 40-try re-roll with a best-so-far
+  // fallback (rollPack returns floorMet precisely because it CAN be false).
+  // Never the word "guaranteed".
+  function floorCopy(o){
+    var f = o && o.hitFloorBand;
+    if (!f || f === "plain"){ console.debug(TAG + " floor copy: tier has no band floor"); return ""; }
+    return (BAND_NOUN[f] || f) + " floor on the hit slot.";
+  }
+  function topBandCopy(o){
+    var pct = (o && o.hitBandPct) ? o.hitBandPct[TOP_BAND] : null;
+    if (pct == null){ console.warn(TAG + " odds copy: no " + TOP_BAND + " share in the odds payload"); return ""; }
+    if (pct <= 0)  return BAND_NOUN[TOP_BAND] + " hit is a longshot.";
+    if (pct >= 50) return BAND_NOUN[TOP_BAND] + " hit in about " + Math.round(pct) + "% of packs.";
+    return BAND_NOUN[TOP_BAND] + " hit about 1 in " + Math.round(100 / pct) + ".";
+  }
+  function topBandShort(o){
+    var pct = (o && o.hitBandPct) ? o.hitBandPct[TOP_BAND] : null;
+    if (pct == null || pct <= 0) return "";
+    if (pct >= 50) return BAND_NOUN[TOP_BAND] + " ~" + Math.round(pct) + "%";
+    return BAND_NOUN[TOP_BAND] + " ~1 in " + Math.round(100 / pct);
+  }
+  var TIER_FLAVOUR = { bronze:"The everyday rip.", silver:"Better paper.", gold:"" };
+  function oddsHtml(tier, catalog){
+    var o = oddsOf(tier, catalog);
+    if (!o) return '<span class="pks-d">Odds unavailable</span><span class="pks-m">Odds unavailable</span>';
+    var lead = TIER_FLAVOUR[tier] || "";
+    var long = [lead, floorCopy(o), topBandCopy(o)].filter(Boolean).join(" ");
+    var nCards = (o.cards || 5) + " card" + ((o.cards === 1) ? "" : "s");
+    var shortTxt = [nCards, topBandShort(o)].filter(Boolean).join(DOT);
+    return '<span class="pks-d">' + esc(long) + '</span><span class="pks-m">' + esc(shortTxt) + '</span>';
+  }
+  function freeOddsText(){
+    var o = null;
+    try { o = (Eng && Eng.estimateOdds) ? Eng.estimateOdds("free") : null; } catch(e){ o = null; }
+    var p = (o && o.hitBandPct) || null;
+    if (!p){ console.warn(TAG + " free odds unavailable"); return ""; }
+    return "Free pack odds: " + ["plain","bronze","silver","gold"].map(function(b){ return "~" + p[b] + "% " + b; }).join(DOT) + ".";
+  }
+
+  /* ---- 2.1 wrapper: one recipe, every tier ---------------------------- */
+  function wrapHtml(kind, plate, count, o){
+    o = o || {};
+    return '<div class="pk-wrap pk-wrap--' + kind + (o.breathe ? " pk-wrap--breathe" : "") + '" aria-hidden="true">' +
+             '<span class="pk-sheen"></span>' +
+             '<span class="pk-crimp pk-crimp--t"></span>' +
+             '<span class="pk-crimp pk-crimp--b"></span>' +
+             '<span class="pk-wrap-mark">THE DEPOT</span>' +
+             (o.gem ? '<span class="pk-gem"></span>' : "") +
+             '<span class="pk-plate">' + esc(plate) + '</span>' +
+             '<span class="pk-wrap-count">' + esc(count) + '</span>' +
+           '</div>';
+  }
+
+  function fmtClock(d){
+    try { return d.toLocaleTimeString(undefined, { hour:"numeric", minute:"2-digit" }).replace(/\s?([AP])M/i, function(m,g){ return g.toLowerCase() + "m"; }); }
+    catch(e){ return ""; }
+  }
+
+  /* ---- 3.1 / 3.2 / 3.5 tier card ------------------------------------- */
+  function tierCardHtml(tier, catalog, balance, signedIn){
+    var cfg = Eng.tierConfig ? Eng.tierConfig(tier) : null;
+    if (!cfg) console.warn(TAG + " tier card: no engine config for " + tier);
+    var price = cfg ? cfg.price : 0;
+    var nCards = cfg ? cfg.cards : 5;
+    var nice = tier.charAt(0).toUpperCase() + tier.slice(1) + " Pack";
+    var label, dis = false;
+    if (!signedIn){ label = "Log in to buy"; dis = true; }
+    else if (balance != null && balance < price){ label = "Need " + money(price - balance) + " more"; dis = true; }
+    else { label = "Buy" + DOT + money(price); }
+    return '<div class="pks-tier tier-' + tier + '" data-tier="' + tier + '">' +
+             wrapHtml(tier, tier.toUpperCase(), nCards + " CARDS") +
+             '<div class="pks-tier-txt">' +
+               '<div class="pks-tier-name">' + esc(nice) + '</div>' +
+               '<div class="pks-odds">' + oddsHtml(tier, catalog) + '</div>' +
+               '<button type="button" class="pks-btn buy" data-tier="' + tier + '"' + (dis ? " disabled" : "") + '>' + esc(label) + '</button>' +
+             '</div>' +
+           '</div>';
+  }
+
+  /* ---- 3.3 / 3.4 / 3.5 FREE DAILY panel -- ONE card (the live RPC) ---- */
+  var FREE_WINDOW_MS = 24 * 60 * 60 * 1000;
+  function freePanelHtml(nextClaimAt, signedIn){
+    var now = Date.now();
+    var onCd = !!(nextClaimAt && nextClaimAt.getTime() > now);
+    var head, sub, label, dis = true, breathe = false, cdRow = "";
+    if (!signedIn){
+      head  = "Your free daily pack is waiting";
+      sub   = "Log in and claim one card a day, on the house.";
+      label = "Log in to claim";
+    } else if (onCd){
+      var left = nextClaimAt.getTime() - now;
+      var claimedAt = new Date(nextClaimAt.getTime() - FREE_WINDOW_MS);
+      var pct = Math.max(0, Math.min(100, ((FREE_WINDOW_MS - left) / FREE_WINDOW_MS) * 100));
+      head  = '<span class="pks-d">Back tomorrow for another</span><span class="pks-m">Back tomorrow</span>';
+      sub   = '<span class="pks-d">You claimed today at ' + esc(fmtClock(claimedAt)) + '. Next one recharges below.</span>' +
+              '<span class="pks-m">Next in <b class="pks-cdt">' + fmtCountdown(left) + '</b></span>';
+      label = "Next pack in " + fmtCountdown(left);
+      cdRow = '<div class="pks-cdrow pks-d"><div class="pks-bar"><i style="width:' + pct.toFixed(1) + '%"></i></div>' +
+              '<div class="pks-cd pks-cdt">' + fmtCountdown(left) + '</div></div>';
+    } else {
+      head  = "Today\u2019s free pack is ready";
+      sub   = "One card, on the house. Comes back every 24 hours.";
+      label = "Open free pack"; dis = false; breathe = true;
+    }
+    return '<div class="pks-free" data-tier="free">' +
+             wrapHtml("free", "FREE", "1 CARD", { breathe: breathe }) +
+             '<div class="pks-free-body">' +
+               '<div class="pks-chip">ON THE HOUSE</div>' +
+               '<div class="pks-free-head">' + head + '</div>' +
+               '<div class="pks-free-sub">' + sub + '</div>' +
+               cdRow +
+               '<button type="button" class="pks-btn pks-btn--green pks-btn--free claim-free"' + (dis ? " disabled" : "") + '>' + esc(label) + '</button>' +
+             '</div>' +
+           '</div>';
+  }
+
+  /* ---- head row: h1 + sub + guest strip + coin / log-in pill (3.5) ---- */
+  function headHtml(balance, signedIn){
+    var wallet = signedIn
+      ? '<div class="pks-coin" title="Depot Dollars"><i></i><b class="pks-bal">' + esc(balance == null ? "\u2014" : money(balance)) + '</b></div>'
+      : '<button type="button" class="pks-login">Log in</button>';
+    var guest = signedIn ? "" :
+      '<div class="pks-guest">\ud83d\udc40 Browsing as a guest \u2014 log in to buy or claim.</div>';
+    return '<div class="pks-head">' +
+             '<div class="pks-head-txt">' +
+               '<h1 class="pks-h1">Rip a pack \u26be</h1>' +
+               '<p class="pks-sub">Five cards a pack. The last one is always the hit slot.</p>' +
+             '</div>' + guest +
+             '<div class="pks-wallet">' + wallet + '</div>' +
+           '</div>';
   }
 
   /* ---- band-scaled REVEAL CEREMONY --------------------------------------- */
@@ -310,32 +535,170 @@
     }
 
 
+    /* ---- REDESIGNED SHOP RENDER (feat/pack-shop-redesign) --------------
+       Same wiring as before: .buy -> Shop.buy(tier,...) and .claim-free ->
+       Shop.claimFree(catalog, freeUi). Only the markup changed. */
+    var _sin = signedInSync();
+
+    function loginPrompt(){
+      // Route to the page that actually owns the auth chrome. Never a modal, never a blur (3.5).
+      var btn = document.querySelector("[data-depot-account] button, .depot-account button, #loginBtn, .btn-google");
+      if (btn){ btn.click(); return; }
+      var href = /\/game\//.test(location.pathname || "") ? "../index.html" : "index.html";
+      console.warn(TAG + " no in-page auth control found; sending the guest to " + href);
+      location.href = href;
+    }
+
     function render() {
-      var html = "";
-      Shop.TIER_ORDER.forEach(function(t){ html += paidTileHtml(t, catalog, balance); });
-      html += freeTileHtml(nextClaimAt);
-      gridEl.innerHTML = html + renderHistoryHtml();
+      gridEl.classList.add("pks-host");
+      var tiers = "";
+      Shop.TIER_ORDER.forEach(function(t){ tiers += tierCardHtml(t, catalog, balance, _sin); });
+      var foot = "Odds are per pack. Cards land in your binder the moment you collect. " +
+                 "The free pack comes back 24 hours after you claim it.";
+      var freeOdds = freeOddsText();
+      gridEl.innerHTML =
+        '<div class="pks' + (context === "binder" ? " pks--binder" : "") + '">' +
+          headHtml(balance, _sin) +
+          freePanelHtml(nextClaimAt, _sin) +
+          '<div class="pks-grid">' + tiers + '</div>' +
+          '<div class="pks-foot">' + esc(foot) + (freeOdds ? " " + esc(freeOdds) : "") + '</div>' +
+          renderHistoryHtml() +
+        '</div>';
       wireHistory();
       var buys = gridEl.querySelectorAll("button.buy");
-      for (var i=0;i<buys.length;i++){ (function(btn){ btn.addEventListener("click", function(){ var t=btn.getAttribute("data-tier"); clearStatus(); if(!catalog||!catalog.length){ setStatus("err","Catalog not loaded yet."); return; } Shop.buy(t, catalog, balance, makeBuyUi(t)); }); })(buys[i]); }
+      for (var i = 0; i < buys.length; i++){ (function(btn){
+        btn.addEventListener("click", function(){
+          var t = btn.getAttribute("data-tier");
+          clearStatus();
+          if (!catalog || !catalog.length){ setStatus("err", "Catalog not loaded yet."); return; }
+          Shop.buy(t, catalog, balance, makeBuyUi(t));   // UNCHANGED money path
+        });
+      })(buys[i]); }
       var cf = gridEl.querySelector("button.claim-free");
-      if (cf) cf.addEventListener("click", function(){ clearStatus(); if(!catalog||!catalog.length){ setStatus("err","Catalog not loaded yet."); return; } cf.disabled=true; Shop.claimFree(catalog, freeUi); });
+      if (cf) cf.addEventListener("click", function(){
+        clearStatus();
+        if (!catalog || !catalog.length){ setStatus("err", "Catalog not loaded yet."); return; }
+        cf.disabled = true;
+        Shop.claimFree(catalog, freeUi);                 // UNCHANGED free-daily RPC path
+      });
+      var lg = gridEl.querySelector(".pks-login");
+      if (lg) lg.addEventListener("click", loginPrompt);
       startTicker();
     }
 
+    /* ---- 3.4 live countdown: ticks the label, the LED clock and the bar */
     function startTicker(){
-      if (cdTimer){ clearInterval(cdTimer); cdTimer=null; }
-      var cdEl = gridEl.querySelector(".dsv-cd");
-      if (!cdEl || !nextClaimAt) return;
-      function tick(){ var ms = nextClaimAt.getTime() - Date.now(); if (ms<=0){ clearInterval(cdTimer); cdTimer=null; render(); return; } cdEl.textContent = "Next free card in " + fmtCountdown(ms); }
-      tick(); cdTimer = setInterval(tick, 1000);
+      if (cdTimer){ clearInterval(cdTimer); cdTimer = null; }
+      if (!nextClaimAt) return;
+      var btn = gridEl.querySelector("button.claim-free");
+      var bar = gridEl.querySelector(".pks-bar > i");
+      function tick(){
+        var ms = nextClaimAt.getTime() - Date.now();
+        if (ms <= 0){ clearInterval(cdTimer); cdTimer = null; render(); return; }
+        var txt = fmtCountdown(ms);
+        var clocks = gridEl.querySelectorAll(".pks-cdt");
+        for (var i = 0; i < clocks.length; i++) clocks[i].textContent = txt;
+        if (btn){ btn.disabled = true; btn.textContent = "Next pack in " + txt; }
+        if (bar) bar.style.width = Math.max(0, Math.min(100, ((FREE_WINDOW_MS - ms) / FREE_WINDOW_MS) * 100)).toFixed(1) + "%";
+      }
+      tick();
+      cdTimer = setInterval(tick, 1000);
     }
 
+    /* ---- REAL cooldown: mirror the RPC's own clock, read-only ----------
+       depot_claim_free_pack computes next_claim_at as
+         max(created_at) where reason='free_pack'  +  interval '24 hours'
+       (db/proposals/free_daily_pack_fix.sql). We reproduce that from the
+       ledger with a SELECT so the countdown is live on load instead of only
+       after a refusal. NO writes. Fail-loud at every bail. */
     function probeCooldown(){
-      try {
-        if (Shop.probeFreeCooldown) { Shop.probeFreeCooldown().then(function(nca){ if(nca){ nextClaimAt=new Date(nca); render(); } }).catch(function(){}); }
-      } catch(e){}
+      settleAuth();
+      var c = _sbClient();
+      if (!c || !c.from){ console.warn(TAG + " cooldown probe skipped: no supabase client"); return; }
+      Promise.resolve((typeof window.depotUser === "function") ? window.depotUser() : null).then(function(u){
+        var uid = (u && u.id) || (u && u.data && u.data.user && u.data.user.id) || null;
+        if (!uid){ console.log(TAG + " cooldown probe: no signed-in user; free panel stays in its signed-out state"); return; }
+        return c.from("wallet_transactions").select("created_at").eq("owner_id", uid)
+          .eq("reason", "free_pack").order("created_at", { ascending:false }).limit(1)
+          .then(function(r){
+            if (r && r.error){ console.warn(TAG + " cooldown probe failed: " + r.error.message); return; }
+            var rows = (r && r.data) || [];
+            if (!rows.length){ console.log(TAG + " cooldown probe: no free_pack claim on record -- pack is ready"); return; }
+            var next = new Date(rows[0].created_at).getTime() + FREE_WINDOW_MS;
+            if (next > Date.now()){ nextClaimAt = new Date(next); console.log(TAG + " cooldown until " + nextClaimAt.toISOString()); }
+            else { nextClaimAt = null; console.log(TAG + " last free claim has lapsed -- pack is ready"); }
+            render();
+          });
+      }).catch(function(e){ console.warn(TAG + " cooldown probe threw: " + (e && e.message)); });
     }
+
+    /* Auth settles asynchronously; 3.5 is a display state, so re-render when
+       it lands and on every later auth change. */
+    function settleAuth(){
+      // Balance AND signed-in state both have to be re-read once auth lands: the
+      // first getBalance() in boot() runs pre-auth and comes back null, which is
+      // why the wallet used to read "--" and every tier button stayed buyable.
+      function apply(v){
+        var was = _sin; _sin = !!v;
+        if (_sin){
+          Promise.resolve(Shop.getBalance())
+            .then(function(b){ setBal(b); render(); })
+            .catch(function(e){ console.warn(TAG + " post-auth balance read failed: " + (e && e.message)); render(); });
+        } else if (was !== _sin){ render(); }
+      }
+      try {
+        Promise.resolve((typeof window.depotUser === "function") ? window.depotUser() : null)
+          .then(function(u){ apply(u && (u.id || (u.data && u.data.user))); })
+          .catch(function(e){ console.warn(TAG + " auth settle failed: " + (e && e.message)); });
+      } catch(e){ console.warn(TAG + " auth settle threw: " + (e && e.message)); }
+      try {
+        var c = _sbClient();
+        if (c && c.auth && c.auth.onAuthStateChange){
+          c.auth.onAuthStateChange(function(evt, session){
+            _sin = !!(session && session.user);
+            Promise.resolve(Shop.getBalance()).then(function(b){ setBal(b); render(); }).catch(function(){ render(); });
+          });
+        } else { console.warn(TAG + " auth settle: no auth client to subscribe to"); }
+      } catch(e){ console.warn(TAG + " auth subscribe failed: " + (e && e.message)); }
+    }
+
+    /* ---- lend the rip theatre this mount's live wiring ----------------- */
+    _hooks.balance  = function(){ return balance; };
+    _hooks.signedIn = function(){ return _sin; };
+    _hooks.refresh  = function(){
+      Promise.resolve(Shop.getBalance()).then(function(b){
+        setBal(b);
+        // Repaint the shop ONLY if the shop is still what is in the grid. A collect
+        // that settles into the binder navigates this container to the binder grid,
+        // and this callback resolves after that -- repainting here would yank the
+        // player straight back out of the binder they were just sent to.
+        if (gridEl && gridEl.querySelector(".pks")) render();
+        else console.log(TAG + " refresh: grid has moved on (settled into the binder); balance updated, no repaint");
+      }).catch(function(e){ console.warn(TAG + " refresh balance read failed: " + (e && e.message)); });
+    };
+    _hooks.buyTier  = function(tier){
+      if (!catalog || !catalog.length){ setStatus("err", "Catalog not loaded yet."); return; }
+      Shop.buy(tier, catalog, balance, makeBuyUi(tier));   // UNCHANGED money path
+    };
+    // 4.7: the granted cards settle into the binder grid via the EXISTING
+    // collect path (dsv-settle). The standing shop page has no binder grid to
+    // settle into -- say so instead of failing silently.
+    _hooks.settle = function(cards, bands){
+      if (typeof opts.onClaimedBatch === "function"){
+        try { opts.onClaimedBatch(cards, bands, nextClaimAt); return true; }
+        catch(e){ console.warn(TAG + " onClaimedBatch threw: " + (e && e.message)); return false; }
+      }
+      if (onClaimed){
+        var ok = true;
+        for (var i = 0; i < cards.length; i++){
+          try { onClaimed(cards[i], bands[i], nextClaimAt); }
+          catch(e){ ok = false; console.warn(TAG + " onClaimed threw: " + (e && e.message)); }
+        }
+        return ok;
+      }
+      console.log(TAG + " settle: this surface has no binder grid; cards are already granted server-side");
+      return false;
+    };
 
     function boot(){
       setBal(null);
@@ -399,100 +762,311 @@
     console.log(TAG+" history: shelved "+key+" ("+list.length+" packs)");
   }
 
-  // The blocking modal session. cards = array of card objects; hitIndex = the hit.
-  // opts: { tier, held (bool -> paid), seed, replay (bool), onCollect fn }
-  // Returns a Promise that resolves when the player COLLECTs (closes the modal).
-  function playPackSession(cards, hitIndex, opts){
-    opts = opts || {};
-    var tier = opts.tier || "bronze";
-    var held = (opts.held !== false);       // paid = held; free daily passes held:false
-    var isReplay = !!opts.replay;
-    var count = cards.length;
+/* THE RIP -- four phases: held -> reveal xN -> all N -> added (README 4).
+ * Pure THEATRE: every card handed in here is ALREADY granted (paid path:
+ * pack_grants ledger + card insert inside Shop.redeemPending; free path: the
+ * depot_claim_free_pack RPC). Nothing in this function writes to the DB, and
+ * the promise it returns is the same promise the money path awaits.
+ *
+ * cards    = the granted cards, in pull order
+ * hitIndex = the hit slot (-1 / out of range for the 1-card free variant)
+ * opts     = { tier, held, seed, replay }
+ */
+function playPackSession(cards, hitIndex, opts){
+  opts = opts || {};
+  var tier     = opts.tier || "bronze";
+  var held     = (opts.held !== false);      // paid = held; free daily passes held:false
+  var isReplay = !!opts.replay;
+  var n        = (cards && cards.length) || 0;
+  var single   = (n === 1);                  // the FREE DAILY variant: held -> one reveal -> added
+  if (!n){ console.warn(TAG + " playPackSession called with no cards; nothing to play"); return Promise.resolve({ revealed:false }); }
 
-    return new Promise(function(resolve){
-      var modal = document.createElement("div");
-      modal.className = "dpc-modal dpc-tier-"+tier+(held?" dpc-held":"");
-      modal.setAttribute("role","dialog");
-      modal.setAttribute("aria-modal","true");
-      var panel = document.createElement("div");
-      panel.className = "dpc-panel";
-      modal.appendChild(panel);
-      document.body.appendChild(modal);
-      requestAnimationFrame(function(){ modal.classList.add("dpc-in"); });
+  var bands = [];
+  for (var bi = 0; bi < n; bi++) bands.push(bandOf(cards[bi]));
+  var hit = (typeof hitIndex === "number" && hitIndex >= 0 && hitIndex < n) ? hitIndex : (single ? -1 : n - 1);
 
-      // reveal order: everything except the hit, then the hit LAST
-      var order = [];
-      for(var i=0;i<cards.length;i++){ if(i!==hitIndex) order.push(i); }
-      if(typeof hitIndex==="number" && cards[hitIndex]) order.push(hitIndex);
+  // reveal order: everything except the hit, then the hit LAST
+  var order = [];
+  for (var oi = 0; oi < n; oi++){ if (oi !== hit) order.push(oi); }
+  if (hit >= 0) order.push(hit);
 
-      function tierLabel(){ return (tier==="free"?"DAILY":tier.toUpperCase())+" PACK \u00b7 "+count+" CARD"+(count===1?"":"S"); }
+  var seen = {};                             // idx -> band, for the dots + tray
+  var cfgPrice = (Eng.tierConfig && Eng.tierConfig(tier)) ? Eng.tierConfig(tier).price : 0;
 
-      function bandOf(card){
-        try { var shaped=(Shop.cardToShape?Shop.cardToShape(card,card.year):card);
-              return (window.DepotPrestige&&window.DepotPrestige.compute)?(window.DepotPrestige.compute(shaped).band||"plain"):"plain"; }
-        catch(e){ return "plain"; }
+  return new Promise(function(resolve){
+    var root = document.createElement("div");
+    root.className = "prip prip-tier-" + tier;
+    root.setAttribute("role", "dialog");
+    root.setAttribute("aria-modal", "true");
+    root.setAttribute("aria-label", (tier === "free" ? "Free daily" : tier) + " pack rip");
+
+    var top  = document.createElement("div"); top.className = "prip-top";
+    var chip = document.createElement("div"); chip.className = "prip-tier tier-" + tier;
+    chip.textContent = (tier === "free" ? "DAILY" : tier.toUpperCase()) + " PACK";
+    var dots = document.createElement("div"); dots.className = "prip-dots";
+    var close = document.createElement("button");
+    close.type = "button"; close.className = "prip-close"; close.textContent = "Close";
+    top.appendChild(chip); top.appendChild(dots); top.appendChild(close);
+
+    var body = document.createElement("div"); body.className = "prip-body";
+    root.appendChild(top); root.appendChild(body);
+    document.body.appendChild(root);
+    // Show it on the next frame OR the next tick, whichever the browser gives us
+    // first: a throttled tab never fires rAF, which left the theatre at opacity 0.
+    function showRoot(){ root.classList.add("prip-in"); }
+    requestAnimationFrame(showRoot);
+    setTimeout(showRoot, 32);
+
+    var done = false;
+    var phaseAt = 0;                          // debounce: one advance per click, ever
+    function markPhase(){ phaseAt = Date.now(); return bumpPhase(); }
+    function tooSoon(){ return (Date.now() - phaseAt) < 260; }
+    function finish(){
+      if (done) return; done = true;
+      bumpPhase();                            // any in-flight art probe is now stale
+      root.classList.remove("prip-in");
+      setTimeout(function(){ if (root.parentNode) root.parentNode.removeChild(root); }, 300);
+      resolve({ revealed:true });
+    }
+    close.addEventListener("click", finish);
+
+    // progress dots: unrevealed / current / revealed-in-that-card's-band
+    function paintDots(curIdx){
+      if (single){ dots.innerHTML = ""; return; }
+      var html = "";
+      for (var i = 0; i < n; i++){
+        var cls = "prip-dot";
+        if (seen[i]) cls += " band-" + seen[i];
+        else if (i === curIdx) cls += " is-cur";
+        html += '<span class="' + cls + '"></span>';
       }
+      dots.innerHTML = html;
+    }
 
-      function closeModal(){
-        modal.classList.remove("dpc-in");
-        setTimeout(function(){ if(modal.parentNode) modal.parentNode.removeChild(modal); }, 300);
-      }
-
-      // ----- RIPPING phase: reveal cards one at a time, player-paced -----
-      function startRip(){
-        panel.classList && modal.classList.remove("dpc-held");
-        panel.innerHTML = "";
-        if(isReplay){ var tag=document.createElement("div"); tag.className="dpc-replaytag"; tag.textContent="REPLAY"; panel.appendChild(tag); }
-        var stage = document.createElement("div"); stage.className="dpc-stagewrap";
-        var progress = document.createElement("div"); progress.className="dpc-progress";
-        var slot = document.createElement("div"); slot.className="dpc-cardslot";
-        var tapcue = document.createElement("div"); tapcue.className="dpc-tapcue"; tapcue.textContent="TAP TO REVEAL";
-        stage.appendChild(progress); stage.appendChild(slot); stage.appendChild(tapcue);
-        panel.appendChild(stage);
-        var collect = document.createElement("button"); collect.className="dpc-collect"; collect.type="button";
-        collect.textContent = isReplay ? "CLOSE" : "COLLECT";
-        panel.appendChild(collect);
-        collect.addEventListener("click", function(){ if(collect.classList.contains("dpc-ready")){ if(opts.onCollect){try{opts.onCollect();}catch(e){}} closeModal(); resolve({revealed:true}); } });
-
-        var pos = 0, animating = false;
-        function showNext(){
-          if(animating) return;
-          if(pos >= order.length){ tapcue.style.display="none"; collect.classList.add("dpc-ready"); return; }
-          animating = true;
-          var idx = order[pos];
-          progress.textContent = "CARD "+(pos+1)+" / "+order.length;
-          var card = cards[idx];
-          var rev = buildReveal(card, bandOf(card));
-          slot.innerHTML = "";
-          slot.appendChild(rev.node);
-          playCeremony(rev).then(function(){
-            animating = false; pos++;
-            if(pos >= order.length){ tapcue.style.display="none"; collect.classList.add("dpc-ready"); }
-            else { tapcue.textContent = "TAP FOR NEXT"; }
-          });
+    function nameOf(card){
+      var s = (Shop.cardToShape ? Shop.cardToShape(card, card.year) : card);
+      return s.player || s.name || "Unknown";
+    }
+    function isNarrow(){
+      try { return !!(window.matchMedia && window.matchMedia("(max-width: 520px)").matches); } catch(e){ return false; }
+    }
+    // 4.2 tray: slot 5 is dashed in the hit colour and labelled HIT SLOT from
+    // the very first card -- the tease is on screen the whole way down.
+    function trayHtml(){
+      if (single) return "";
+      var h = '<div class="prip-tray">';
+      for (var i = 0; i < n; i++){
+        if (seen[i]){
+          h += '<div class="prip-slot is-open pk-b-' + seen[i] + '">' +
+                 '<div class="prip-slot-lab">' + BAND_LABEL[seen[i]] + '</div>' +
+                 '<div class="prip-slot-name">' + esc(nameOf(cards[i])) + '</div>' +
+               '</div>';
+        } else if (i === hit){
+          h += '<div class="prip-slot is-hitslot"><span class="q">HIT SLOT</span></div>';
+        } else {
+          h += '<div class="prip-slot"><span class="q">?</span></div>';
         }
-        // advance on tap anywhere in the stage (only when not mid-animation)
-        stage.addEventListener("click", function(){ showNext(); });
-        showNext(); // first card auto-starts its flip on tap; kick the first one
       }
+      return h + '</div>';
+    }
 
-      if(held){
-        // ----- HELD phase: pack back + tier tease, NO content leak -----
-        var back = document.createElement("div"); back.className="dpc-packback";
-        var lbl = document.createElement("div"); lbl.className="dpc-pblabel"; lbl.textContent=(tier==="free"?"DAILY":tier.toUpperCase());
-        back.appendChild(lbl);
-        var head = document.createElement("div"); head.className="dpc-head"; head.textContent = isReplay ? "REPLAY \u2014 YOUR PACK" : "YOUR PACK IS READY";
-        var sub = document.createElement("div"); sub.className="dpc-sub"; sub.textContent = tierLabel();
-        var rip = document.createElement("button"); rip.className="dpc-ripbtn"; rip.type="button"; rip.textContent="RIP IT";
-        panel.appendChild(back); panel.appendChild(head); panel.appendChild(sub); panel.appendChild(rip);
-        rip.addEventListener("click", startRip);
-        back.addEventListener("click", startRip);
-      } else {
-        // free daily: same blocking modal, but skip the held gate (auto-start)
-        startRip();
+    /* ------------------------------------------------------- 4.1 HELD ---- */
+    function phaseHeld(){
+      markPhase();
+      dots.innerHTML = "";                    // dots are reveal-phase only
+      body.innerHTML =
+        (isReplay ? '<div class="prip-replay">REPLAY</div>' : "") +
+        '<div class="prip-held-wrap">' +
+          wrapHtml(tier === "free" ? "free" : tier,
+                   tier === "free" ? "FREE" : tier.toUpperCase(),
+                   n + " CARD" + (single ? "" : "S") + " SEALED",
+                   { breathe:true }) +
+        '</div>' +
+        '<div class="prip-head">Sealed. Nobody\u2019s seen ' + (single ? "this one" : "these") + '.</div>' +
+        '<div class="prip-kicker">' + (single ? "ONE CARD \u00b7 ON THE HOUSE" : "FIVE CARDS \u00b7 HIT IN THE LAST SLOT") + '</div>' +
+        '<button type="button" class="prip-cta prip-cta--gold prip-rip">RIP IT OPEN</button>';
+      // Nothing auto-plays. Tapping the wrapper itself also starts the rip.
+      var go = function(ev){
+        if (ev && ev.stopPropagation) ev.stopPropagation();
+        if (tooSoon()) return;
+        phaseReveal();
+      };
+      var b = body.querySelector(".prip-rip"); if (b) b.addEventListener("click", go);
+      var w = body.querySelector(".prip-held-wrap"); if (w) w.addEventListener("click", go);
+    }
+
+    /* ----------------------------------------------------- 4.2 REVEAL ---- */
+    function phaseReveal(){
+      var pos = 0;
+      function step(){
+        var tok = markPhase();
+        var idx = order[pos];
+        var band = bands[idx];
+        var isHitSlot = (idx === hit);
+        var isTop = (band === TOP_BAND);      // gold is the real top band -> the hit treatment
+        paintDots(idx);
+        var counter = single ? "" :
+          (isHitSlot ? '<div class="prip-counter is-hit">HIT SLOT</div>'
+                     : '<div class="prip-counter">CARD ' + (pos + 1) + ' OF ' + n + '</div>');
+        var escCls = " esc-" + band + (isTop ? " esc-hit" : "");
+        body.innerHTML =
+          counter +
+          '<div class="prip-stage">' +
+            (isTop ? '<div class="prip-rays" aria-hidden="true"></div>' : "") +
+            '<div class="prip-card' + escCls + '">' +
+              '<div class="prip-back"><div class="prip-back-tile">D</div><div class="prip-back-mark">THE DEPOT</div></div>' +
+              frontHtml(cards[idx], band) +
+            '</div>' +
+          '</div>' +
+          '<div class="prip-prompt">' + (isNarrow() ? "TAP TO REVEAL" : "CLICK THE CARD TO REVEAL") + '</div>' +
+          trayHtml();
+        var rays = body.querySelector(".prip-rays"); if (rays) rays.style.display = "none";
+        var card = body.querySelector(".prip-card");
+        var prompt = body.querySelector(".prip-prompt");
+        var flipped = false;
+
+        function flip(){
+          flipped = true;
+          card.classList.add("is-flipped");
+          seen[idx] = band;
+          paintDots(idx);
+          // real art, probe-gated, only on this live laid-out node
+          var well = card.querySelector(".prip-well");
+          fillArt(well, cards[idx], tok);
+          // 4.3 escalation: a common gets NOTHING extra
+          if (isTop){
+            if (rays) rays.style.display = "";
+            var conf = document.createElement("div"); conf.className = "prip-confetti"; conf.setAttribute("aria-hidden","true");
+            var cols = ["#5bc0eb","#ffd23e","#ffffff","#7be36b","#f4823c"];
+            for (var c = 0; c < 8; c++){
+              var chip = document.createElement("i");
+              chip.style.left = (6 + c * 12) + "%";
+              chip.style.width = (9 + (c % 4)) + "px";
+              chip.style.height = (12 + (c % 5)) + "px";
+              chip.style.background = cols[c % cols.length];
+              chip.style.animationDuration = (2.4 + (c % 5) * 0.2).toFixed(1) + "s";
+              chip.style.animationDelay = (0.05 + c * 0.09).toFixed(2) + "s";
+              conf.appendChild(chip);
+            }
+            card.appendChild(conf);
+            var stamp = document.createElement("div"); stamp.className = "prip-stamp"; stamp.textContent = "HIT!";
+            card.appendChild(stamp);
+          }
+          var last = (pos >= order.length - 1);
+          prompt.textContent = last
+            ? (isNarrow() ? "TAP TO FINISH" : (single ? "CLICK TO FINISH" : "CLICK TO SEE THE WHOLE PACK"))
+            : (isNarrow() ? "TAP FOR NEXT" : "CLICK FOR THE NEXT CARD");
+          // repaint the tray with this slot now open
+          var tray = body.querySelector(".prip-tray");
+          if (tray){ var tmp = document.createElement("div"); tmp.innerHTML = trayHtml(); tray.parentNode.replaceChild(tmp.firstChild, tray); }
+        }
+        function advance(ev){
+          if (ev && ev.stopPropagation) ev.stopPropagation();
+          if (tooSoon()) return;
+          phaseAt = Date.now();
+          if (!flipped){ flip(); return; }
+          pos++;
+          if (pos >= order.length){ phaseAll(); return; }
+          step();
+        }
+        card.addEventListener("click", advance);
+        if (prompt) prompt.addEventListener("click", advance);
       }
-    });
-  }
+      step();
+    }
+
+    /* ---------------------------------------------------- 4.6 ALL FIVE ---- */
+    function bandSummary(){
+      var counts = { gold:0, silver:0, bronze:0, plain:0 }, i;
+      for (i = 0; i < n; i++) counts[bands[i]] = (counts[bands[i]] || 0) + 1;
+      var out = [];
+      ["gold","silver","bronze","plain"].forEach(function(b){
+        if (!counts[b]) return;
+        out.push(counts[b] + " " + BAND_NOUN[b] + (counts[b] > 1 ? "s" : ""));
+      });
+      return out.join(DOT);
+    }
+    function phaseAll(){
+      var tok = markPhase();
+      dots.innerHTML = "";
+      var row = "", i;
+      for (i = 0; i < n; i++){
+        row += '<div class="prip-mini" data-i="' + i + '">' + frontHtml(cards[i], bands[i]) + '</div>';
+      }
+      var addLabel = single ? "Add to binder" : ("Add all " + n + " to binder");
+      var ctas = isReplay
+        ? '<button type="button" class="prip-cta prip-close2">Back to shop</button>'
+        : '<button type="button" class="prip-cta prip-cta--green prip-add">' + esc(addLabel) + '</button>' + ripAnotherHtml();
+      body.innerHTML =
+        '<div class="prip-done-head">' + (single ? "Free card claimed! \ud83c\udf89" : "Pack ripped! \ud83c\udf89") + '</div>' +
+        '<div class="prip-summary">' + esc(bandSummary()) + '</div>' +
+        '<div class="prip-row">' + row + '</div>' +
+        '<div class="prip-ctas">' + ctas + '</div>';
+      // every front in the row gets the same probe-gated real art
+      var minis = body.querySelectorAll(".prip-mini .prip-well");
+      for (i = 0; i < minis.length; i++){
+        var mi = parseInt(minis[i].closest(".prip-mini").getAttribute("data-i"), 10);
+        fillArt(minis[i], cards[mi], tok);
+      }
+      var add = body.querySelector(".prip-add");
+      if (add) add.addEventListener("click", function(){
+        // "Added" runs through the EXISTING collect path: the cards are already
+        // granted, this settles them into the binder grid (dsv-settle).
+        // Refresh the shop FIRST, settle LAST: the settle navigates the binder to
+        // the pull's era and re-renders the grid, and a shop re-render after that
+        // would clobber the binder right back into the shop.
+        var settled = _hooks.settle ? _hooks.settle(cards, bands) : false;
+        if (!settled) console.log(TAG + " collect: nothing to settle on this surface (cards already granted)");
+        if (_hooks.refresh) _hooks.refresh();
+        phaseAdded();
+      });
+      wireRipAnother();
+      var c2 = body.querySelector(".prip-close2"); if (c2) c2.addEventListener("click", finish);
+    }
+
+    /* "Rip another" carries the price so re-ripping needs no thinking. It goes
+       through the SAME Shop.buy money path -- no new purchase writes here. */
+    function ripAnotherHtml(){
+      if (tier === "free" || !_hooks.buyTier) return "";
+      var sin = _hooks.signedIn ? _hooks.signedIn() : signedInSync();
+      var bal = _hooks.balance ? _hooks.balance() : null;
+      if (!sin) return '<button type="button" class="prip-cta" disabled>Log in to buy</button>';
+      if (bal != null && bal < cfgPrice) return '<button type="button" class="prip-cta" disabled>Need ' + esc(money(cfgPrice - bal)) + ' more</button>';
+      return '<button type="button" class="prip-cta prip-again">Rip another' + DOT + esc(money(cfgPrice)) + '</button>';
+    }
+    function wireRipAnother(){
+      var again = body.querySelector(".prip-again");
+      if (!again) return;
+      again.addEventListener("click", function(){
+        finish();
+        try { _hooks.buyTier(tier); } catch(e){ console.warn(TAG + " rip-another buy threw: " + (e && e.message)); }
+      });
+    }
+
+    /* -------------------------------------------------------- 4.7 ADDED --- */
+    function phaseAdded(){
+      markPhase();
+      dots.innerHTML = "";
+      var bIdx = bestBandIdx(bands, hit);
+      var shaped = (Shop.cardToShape ? Shop.cardToShape(cards[bIdx], cards[bIdx].year) : cards[bIdx]);
+      var best = nameOf(cards[bIdx]) + " " + yy(shaped.year);
+      var line = n + " card" + (single ? "" : "s") + " added" + DOT + best + " is your best pull yet.";
+      body.innerHTML =
+        '<div class="prip-check">\u2714</div>' +
+        '<div class="prip-added-head">Filed in your binder.</div>' +
+        '<div class="prip-added-line">' + esc(line) + '</div>' +
+        '<div class="prip-ctas">' + ripAnotherHtml() +
+          '<button type="button" class="prip-cta prip-toshop">Back to shop</button></div>';
+      wireRipAnother();
+      var back = body.querySelector(".prip-toshop"); if (back) back.addEventListener("click", finish);
+    }
+
+    // Kick off. The 1-card FREE variant is held too (decision 4: held -> one
+    // reveal -> added); nothing in this theatre ever auto-plays.
+    if (held || single) phaseHeld(); else phaseReveal();
+  });
+}
+
 
   // Regenerate a pack from a stored seed and play it cosmetically. ZERO DB writes.
   function replayPack(entry){
