@@ -826,7 +826,11 @@ body{
         justify-content:flex-start !important;
         gap:10px !important;
       }
-      #groupByBar{ margin-left:0 !important; flex-wrap:wrap !important; gap:8px !important; }
+      /* Group By + Add-a-card ride ABOVE the Page/prev-next row on phones.
+         The toolbar row already wraps (rule directly above), so giving the bar
+         order:-1 and a full line pushes Page/arrows down to the second line.
+         CSS-only: no markup moved, no JS touched. */
+      #groupByBar{ margin-left:0 !important; flex-wrap:wrap !important; gap:8px !important; order:-1 !important; width:100% !important; justify-content:flex-start !important; }
       /* +Add a card: keep the pill shape, never wrap into an oval */
       .depot-add-card{
         white-space:nowrap !important;
