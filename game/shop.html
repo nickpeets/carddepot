@@ -302,7 +302,7 @@
   }
 
   // Auth settles asynchronously (depot-core resolves depotUser() after load). The first
-  // balance/franchise render can run before auth is ready -> stale "â DD" and 0-0 record.
+  // balance/franchise render can run before auth is ready -> stale "— DD" and 0-0 record.
   // Settle auth, re-render both, then subscribe so a late sign-in also updates. (fix/shop-auth-settle)
   function settleAuthAndRefresh() {
     function rerender() {
