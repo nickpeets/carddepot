@@ -16,7 +16,7 @@
   <script src="../js/depot-shell.js?v=d8c1faf" defer></script>
   <style>
   :root{
-    /* The Depot palette â lightened for a brighter, more readable builder */
+    /* The Depot palette — lightened for a brighter, more readable builder */
     --field:#0d2d5c; --field-deep:#15407f; --field-dark:#0a2447;
     --green-bright:#c9a800; --green:#c9a800;
     --gold:#f8d000; --cream:#e8e4d0; --cream-dim:#c9c6b4;
@@ -242,7 +242,7 @@
     .depot-wallet-chip{display:inline-flex;align-items:baseline;gap:.25em;margin-left:.6em;padding:.12em .5em;border-radius:999px;background:rgba(212,175,55,.15);border:1px solid rgba(212,175,55,.5);font-weight:700;font-size:.8em;color:#e8c86a;vertical-align:middle}
     .depot-wallet-chip .dw-cur{opacity:.7;font-size:.85em;font-weight:600}
 
-  /* ===== NEXT-GEN LINEUP BUILDER (BUILD SESSION 1) â card-first =====
+  /* ===== NEXT-GEN LINEUP BUILDER (BUILD SESSION 1) — card-first =====
      Launch strip + prestige chips (Variant B) + spotlight. Tier colors
      driven by DepotPrestige.band(): gold>=60 / silver>=30 / bronze>=10 / plain. */
   .launch-strip{display:flex;gap:14px;align-items:stretch;margin:14px 0 4px;flex-wrap:wrap;}
@@ -355,7 +355,7 @@
     <div class="col">
       <h3>PITCHER <span class="muted">(pitching box)</span></h3>
           <div id="pitcherBox" class="pbox"><span class="muted">No pitcher chosen yet.</span></div>
-          <h3 style="margin-top:18px;">BATTING ORDER <span class="muted">(1â9 Â· drag to reorder)</span></h3>
+          <h3 style="margin-top:18px;">BATTING ORDER <span class="muted">(1&ndash;9 &middot; drag to reorder)</span></h3>
           <div id="slots"></div>
         <div id="teamNameWrap" style="margin-top:16px;"><label for="teamNameInput" style="display:block;font-size:9px;letter-spacing:1px;margin:0 0 6px;color:var(--gold);">TEAM NAME</label><input type="text" id="teamNameInput" maxlength="12" autocomplete="off" spellcheck="false" placeholder="YOUR TEAM" style="width:100%;max-width:300px;padding:10px;background:var(--field-dark);color:var(--gold);border:2px solid var(--gold);font-family:inherit;font-size:11px;letter-spacing:1px;text-transform:uppercase;"><div class="muted" style="font-size:8px;margin-top:5px;">Shows on the scoreboard &amp; field (max 12 chars).</div></div>
       <div style="margin-top:14px;display:flex;gap:8px;align-items:center;">
@@ -561,7 +561,7 @@
     try{
       if(!sb || !USER || !card || !card.id) return false;
       if(!rates) return false;
-      // Preserve existing meta (pos/type/stats/rare/â¦); only add/refresh ratesMeta.
+      // Preserve existing meta (pos/type/stats/rare/…); only add/refresh ratesMeta.
       var baseMeta = (card._meta && typeof card._meta==='object') ? card._meta : {};
       var merged = {};
       for(var k in baseMeta){ if(Object.prototype.hasOwnProperty.call(baseMeta,k)) merged[k]=baseMeta[k]; }
@@ -1264,7 +1264,7 @@
         ' | no MLB line: '+tally.noLine);
       if(noLineCards.length){
         console.log('[GAP1 coverage] cards with no MLB line (kept on fallback, no data invented):');
-        noLineCards.forEach(function(n){ console.log('  - '+n.player+' ('+n.year+'): no MLB line for '+n.year+' â '+n.note); });
+        noLineCards.forEach(function(n){ console.log('  - '+n.player+' ('+n.year+'): no MLB line for '+n.year+' \u2014 '+n.note); });
       }
     }catch(_l){}
     try{ window.__DEPOT_COVERAGE={ tally:tally, noLineCards:noLineCards }; }catch(_w){}
