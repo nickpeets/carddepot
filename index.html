@@ -677,7 +677,7 @@ button:focus-visible,[tabindex]:focus-visible{outline:3px solid var(--brass);out
 /* ===== END RBI RESKIN ===== */
 
 
-/* ===== BINDER LAYOUT RESTRUCTURE â contained scoreboard cabinet (CSS-only) ===== */
+/* ===== BINDER LAYOUT RESTRUCTURE — contained scoreboard cabinet (CSS-only) ===== */
 html{background:#2eb2e6 !important;}
 body{
   background:#2eb2e6 !important;
@@ -843,7 +843,7 @@ body{
 }
 
 
-/* ===== SPOTLIGHT VERTICAL STACK â full image, name/team + hint below, remove underneath ===== */
+/* ===== SPOTLIGHT VERTICAL STACK — full image, name/team + hint below, remove underneath ===== */
 .spot-card{
   aspect-ratio:auto !important;
   display:flex;flex-direction:column;align-items:stretch;
@@ -889,7 +889,7 @@ body{
 }
 
 
-/* ===== STAT GRID â old table look, two rows, no horizontal scroll ===== */
+/* ===== STAT GRID — old table look, two rows, no horizontal scroll ===== */
 .statgrid-wrap{overflow-x:visible !important;overflow:visible !important;margin:0 0 .6rem !important;}
 .statgrid{display:table !important;border-collapse:collapse !important;width:100%;table-layout:fixed;background:transparent;border:0 !important;}
 .statgrid caption{font-family:'Oswald',sans-serif !important;font-style:normal;font-size:.78rem;color:var(--ink-soft);font-weight:600;text-align:left;caption-side:top;margin-bottom:.35rem;}
@@ -915,7 +915,7 @@ body{
 .depot-prestige-breakdown .dp-note{margin-top:8px;font-size:.72rem;opacity:.75;font-style:italic}
 
 
-/* ==== Phase 2 cutover: card-detail (2b) demo skin â appended override, openSpot JS untouched ==== */
+/* ==== Phase 2 cutover: card-detail (2b) demo skin — appended override, openSpot JS untouched ==== */
 .spotlight{ background:rgba(16,69,107,.55); }
 .spot-card{ background:#2eb2e6; border:3px solid #10456b; border-radius:16px; box-shadow:0 18px 40px rgba(16,69,107,.35); font-family:'Baloo 2',sans-serif; color:#10456b; }
 .spot-inner{ gap:18px; }
@@ -1169,7 +1169,7 @@ body.logged-out #appFrame{display:none !important;}
 <div class="topbar">
   <div class="brand"><span class="the">The</span>Depot</div>
   <span class="tagline">a collection, pored over</span>
-  <span class="count-chip" id="countChip">â cards</span>
+  <span class="count-chip" id="countChip">&mdash; cards</span>
   <!-- DEPOT AUTH (Phase 1): account status -->
   <div class="auth-area" id="authArea">
     <span class="auth-email" id="authEmail" style="display:none"></span>
@@ -1196,9 +1196,9 @@ body.logged-out #appFrame{display:none !important;}
     <div class="set-meta" id="setMeta"></div>
   </div>
   <div class="reel">
-    <button class="reel-arrow" onclick="reelScroll(-1)" aria-label="Scroll left">â¹</button>
+    <button class="reel-arrow" onclick="reelScroll(-1)" aria-label="Scroll left">&lsaquo;</button>
     <div class="reel-track" id="reelTrack"></div>
-    <button class="reel-arrow" onclick="reelScroll(1)" aria-label="Scroll right">âº</button>
+    <button class="reel-arrow" onclick="reelScroll(1)" aria-label="Scroll right">&rsaquo;</button>
   </div>
 </div>
 
@@ -1311,19 +1311,19 @@ body.logged-out #appFrame{display:none !important;}
 /* ============================================================
    YOUR COLLECTION LIVES HERE.
    Add a card by copying one block and editing the fields.
-   - era: "vintage" (â¤ 1985) | "junk" (1986-1993) | "modern" (1994+)
+   - era: "vintage" (≤ 1985) | "junk" (1986-1993) | "modern" (1994+)
    - type: "hitter" | "pitcher"  (drives the stat columns on the back)
    - rare: true puts a gold pin on it + glow in spotlight
    - photoFront / photoBack: any image URL (or data URL), or leave "" for a colored placeholder
         (legacy single "photo" still works and is treated as the front)
    - stats: the season line for the card's year. Use standard keys:
-       hitters  â G AB R H 2B 3B HR RBI SB BB SO AVG OBP SLG OPS
-       pitchers â W L ERA G GS SV IP H BB SO WHIP
+       hitters  → G AB R H 2B 3B HR RBI SB BB SO AVG OBP SLG OPS
+       pitchers → W L ERA G GS SV IP H BB SO WHIP
    ============================================================ */
 const SEED = [];
 
 const ERAS = {
-  all:{title:"All", range:"every era", skin:"skin-modern", blurb:"Your entire collection, sorted AâZ by player."},
+  all:{title:"All", range:"every era", skin:"skin-modern", blurb:"Your entire collection, sorted A\u2192Z by player."},
   vintage:{title:"The Vintage Years", range:"≤ 1985", skin:"skin-vintage",
     blurb:"Thick stock, hand-tinted color, and cardboard that smells like a drugstore in 1978."},
   junk:{title:"The Junk Wax Era", range:"1986–1993", skin:"skin-junk",
@@ -1332,7 +1332,7 @@ const ERAS = {
     blurb:"Premium foil, sharp photography, and the chase for the short print."}
 };
 const ERA_ORDER = ["all","vintage","junk","modern"];
-// Derive era from a card's year: â¤ 1985 Vintage, 1986-1993 Junk Wax, 1994+ Modern.
+// Derive era from a card's year: ≤ 1985 Vintage, 1986-1993 Junk Wax, 1994+ Modern.
 function eraFromYear(y){
   const n = parseInt(y,10);
   if(!n) return null;
@@ -1800,7 +1800,7 @@ function groupKeyFor(c, mode){
     var d = Math.floor(c.yr/10)*10; return {key:'d'+d, label:d+'s', sort:d};
   }
   if(mode === 'brand'){
-    var b = (c.set||'').trim(); if(!b || b==='Unknown' || b==='â') return {key:'unknown', label:'Unknown', sort:null};
+    var b = (c.set||'').trim(); if(!b || b==='Unknown' || b==='\u2014') return {key:'unknown', label:'Unknown', sort:null};
     return {key:'b:'+b.toLowerCase(), label:b, sort:b.toLowerCase()};
   }
   if(mode === 'team'){
@@ -1812,7 +1812,7 @@ function groupKeyFor(c, mode){
     return {key:'p:'+p.toLowerCase(), label:p, sort:p.toLowerCase()};
   }
   if(mode === 'set'){
-    var st = (c.set||'').trim(); if(!st || st==='Unknown' || st==='—') return {key:'unknown', label:'Unknown', sort:null};
+    var st = (c.set||'').trim(); if(!st || st==='Unknown' || st==='\u2014') return {key:'unknown', label:'Unknown', sort:null};
     return {key:'s:'+st.toLowerCase(), label:st, sort:st.toLowerCase()};
   }
   var ek = c.era || 'unknown';
@@ -2040,7 +2040,7 @@ function setMode(m){
 }
 
 /* ---------- rolodex: MLB Stats API auto-fill ----------
-   Uses MLB's public Stats API (statsapi.mlb.com) â no key, CORS-open,
+   Uses MLB's public Stats API (statsapi.mlb.com) — no key, CORS-open,
    free for personal use. Search a player, pick a season, stats auto-fill.
    Fails soft: if a lookup returns nothing, manual entry still works. */
 const MLB_BASE = "https://statsapi.mlb.com/api/v1";
@@ -2215,7 +2215,7 @@ async function ensurePlayerList(){
     let _roloPosTimer = null;
     /* After the type-ahead dropdown renders, fetch each visible player's primary position
        from the MLB Stats API (one lookup per uncached name, debounced, never per-keystroke),
-       then patch the meta label in place to read "POS Â· span Â· N yrs". Graceful if offline
+       then patch the meta label in place to read "POS · span · N yrs". Graceful if offline
        or no position is found. */
     async function roloFillPositions(sugg, qWhenIssued){
       if(!sugg || !sugg.length) return;
@@ -2244,7 +2244,7 @@ async function ensurePlayerList(){
           const live = document.getElementById('rolo-meta-'+i);
           if(!live || live.getAttribute('data-cnm')!==cnm) continue;
           if(live.getAttribute('data-pos')==='1') continue;
-          var _base=live.textContent; live.textContent = (pos && _base.indexOf(pos+' · ')!==0) ? [pos,_base].filter(Boolean).join(' · ') : _base;
+          var _base=live.textContent; live.textContent = (pos && _base.indexOf(pos+' \u00b7 ')!==0) ? [pos,_base].filter(Boolean).join(' \u00b7 ') : _base;
           live.setAttribute('data-pos','1');
         }
       }, 320);
@@ -2304,7 +2304,7 @@ async function ensurePlayerList(){
   if(!q){roloStatus("Type a player name first.");return;}
   if(roloLoading) return;
   roloLoading=true;
-  roloStatus("Searching MLB recordsâ¦");
+  roloStatus("Searching MLB records\u2026");
   document.getElementById('rolo-years').style.display='none';
   document.getElementById('rolo-brand').style.display='none';
   let people=[];
@@ -2319,7 +2319,7 @@ async function ensurePlayerList(){
     }
     // Fallback B: filter the full player list locally (catches retired players)
     if(!people.length){
-      roloStatus("Searching full player listâ¦");
+      roloStatus("Searching full player list\u2026");
       const list=await ensurePlayerList();
       const ql=q.toLowerCase();
       people=list.filter(p=>(p.fullName||'').toLowerCase().includes(ql)
@@ -2328,7 +2328,7 @@ async function ensurePlayerList(){
     }
   }catch(e){
     roloLoading=false;
-    roloStatus("Couldn't reach MLB records (needs a live connection â works on your deployed site). Enter stats manually below.","err");
+    roloStatus("Couldn't reach MLB records (needs a live connection \u2014 works on your deployed site). Enter stats manually below.","err");
     return;
   }
   roloLoading=false;
@@ -2341,13 +2341,13 @@ async function ensurePlayerList(){
   const box=document.getElementById('rolo-players');
   box.innerHTML=people.slice(0,15).map((p,i)=>{
     const pos=(p.primaryPosition&&p.primaryPosition.abbreviation)||'';
-    const yrs=[p.mlbDebutDate?p.mlbDebutDate.slice(0,4):'',p.lastPlayedDate?p.lastPlayedDate.slice(0,4):''].filter(Boolean).join('â');
+    const yrs=[p.mlbDebutDate?p.mlbDebutDate.slice(0,4):'',p.lastPlayedDate?p.lastPlayedDate.slice(0,4):''].filter(Boolean).join('\u2013');
     roloCache[i]=p;
     return `<div class="rolo-player" onclick="roloPick(${i})">
-      <span>${p.fullName||p.nameFirstLast||'(unknown)'}</span><span class="meta">${[pos,yrs].filter(Boolean).join(' Â· ')}</span></div>`;
+      <span>${p.fullName||p.nameFirstLast||'(unknown)'}</span><span class="meta">${[pos,yrs].filter(Boolean).join(' \u00b7 ')}</span></div>`;
   }).join('');
   box.style.display='block';
-  roloStatus(`${people.length} match${people.length>1?'es':''} â pick one.`);
+  roloStatus(`${people.length} match${people.length>1?'es':''} \u2014 pick one.`);
 }
 let roloCache={};
 async function hydratePlayer(p){
@@ -2363,7 +2363,7 @@ async function roloPick(i){
   let p=roloCache[i]; if(!p)return;
   document.querySelectorAll('.rolo-player').forEach(el=>el.classList.remove('sel'));
   const els=document.querySelectorAll('.rolo-player'); if(els[i])els[i].classList.add('sel');
-  roloStatus("Loading playerâ¦");
+  roloStatus("Loading player\u2026");
   p=await hydratePlayer(p);
   roloCache[i]=p;
   roloPlayer=p;
@@ -2399,8 +2399,8 @@ const STAT_MAP_HIT={gamesPlayed:'G',atBats:'AB',runs:'R',hits:'H',doubles:'2B',t
 const STAT_MAP_PIT={wins:'W',losses:'L',era:'ERA',gamesPlayed:'G',gamesStarted:'GS',completeGames:'CG',shutouts:'SHO',saves:'SV',inningsPitched:'IP',hits:'H',baseOnBalls:'BB',strikeOuts:'SO',whip:'WHIP'};
 
 /* Major baseball-card brands and the (approx.) flagship-run years they printed.
-   [startYear, endYear] â endYear null means still active. Used to offer a
-   year-aware brand list. "Otherâ¦" always lets you type a set we don't list. */
+   [startYear, endYear] — endYear null means still active. Used to offer a
+   year-aware brand list. "Other…" always lets you type a set we don't list. */
 const BRANDS=[
   {name:"Topps", from:1951, to:null},
   {name:"Bowman", from:1948, to:1955},      // original run
@@ -2487,7 +2487,7 @@ function roloBrandCustom(){
 function renderCardVariations(note, nums, current){
   note.innerHTML='';
   var flag=document.createElement('span'); flag.className='rolo-var-flag';
-  flag.textContent='â  '+nums.length+' versions â base #'+current+' selected:';
+  flag.textContent='\u26a0 '+nums.length+' versions \u2014 base #'+current+' selected:';
   note.appendChild(flag);
   nums.forEach(function(n){
     var chip=document.createElement('button'); chip.type='button';
@@ -2497,7 +2497,7 @@ function renderCardVariations(note, nums, current){
       document.getElementById('rolo-num').value=n; roloNumPick();
       var sib=note.querySelectorAll('.rolo-var-chip');
       for(var i=0;i<sib.length;i++){ sib[i].classList.toggle('sel', sib[i]===chip); }
-      flag.textContent='â  '+nums.length+' versions â #'+n+' selected:';
+      flag.textContent='\u26a0 '+nums.length+' versions \u2014 #'+n+' selected:';
     };
     note.appendChild(chip);
   });
@@ -2603,9 +2603,9 @@ async function roloYear(y,btn){
     /* Record who this line belongs to, which season was asked for, and which team the
        split came from, so the save can persist provenance alongside the numbers. */
     ROLO_PROV={ personId:roloPlayer.id, statSeason:parseInt(y,10)||null, statTeam:(split.team&&split.team.name)||null, statsRaw:out.join(', ') };
-    roloStatus(`â ${roloPlayer.fullName}, ${y} filled in. Pick the brand & number, then find the front image.`,"ok");
+    roloStatus(`\u2713 ${roloPlayer.fullName}, ${y} filled in. Pick the brand & number, then find the front image.`,"ok");
   }catch(e){
-    roloStatus("Couldn't pull that season (needs live connection â works on your deployed site). Pick brand/number and enter stats manually.","err");
+    roloStatus("Couldn't pull that season (needs live connection \u2014 works on your deployed site). Pick brand/number and enter stats manually.","err");
   }
 }
 
@@ -2672,7 +2672,7 @@ function setPreview(slot, src){
   if(!pv) return;
   if(src){
     pv.classList.add('has-img');
-    pv.innerHTML='<span class="ph-text">loadingâ¦</span>';
+    pv.innerHTML='<span class="ph-text">loading\u2026</span>';
     const img=new Image();
     img.onload=()=>{ pv.innerHTML=''; pv.appendChild(img); };
     img.onerror=()=>{
