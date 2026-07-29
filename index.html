@@ -1482,7 +1482,7 @@ function rowToCard(r){
     _notes: r.notes || '', // keep raw notes so packNotes() can preserve unknown meta keys (e.g. ratesMeta) on re-save
     name: r.player || '',
     pos: (window.depotNormalizePos ? window.depotNormalizePos(u.meta.pos) : (u.meta.pos || null)), // normalize-on-read: sentinel/mojibake -> null
-    team: r.team || '\u2014',
+    team: r.team || null,
     yr: yr,
     set: r.brand || r.set || 'Unknown',
     brand: r.brand || r.set || 'Unknown',
@@ -1804,7 +1804,7 @@ function groupKeyFor(c, mode){
     return {key:'b:'+b.toLowerCase(), label:b, sort:b.toLowerCase()};
   }
   if(mode === 'team'){
-    var t = (c.team||'').trim(); if(!t || t==='â') return {key:'unknown', label:'Unknown', sort:null};
+    var t = (c.team||'').trim(); if(!t || t==='\u2014') return {key:'unknown', label:'Unknown', sort:null};
     return {key:'t:'+t.toLowerCase(), label:t, sort:t.toLowerCase()};
   }
   if(mode === 'player'){
@@ -2776,7 +2776,7 @@ async function saveCard(){
     name,
     pos:posVal,
       catalogKey:(window.DEPOT_PENDING_CATALOG_KEY||null),
-    team:document.getElementById('f-team').value.trim()||"â",
+    team:document.getElementById('f-team').value.trim()|| null,
     yr:parseInt(document.getElementById('f-yr').value)||0,
     set:document.getElementById('f-set').value.trim()||"Unknown",
     num:(document.getElementById('f-num').value.trim()||""),
