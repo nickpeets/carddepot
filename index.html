@@ -3653,6 +3653,94 @@ setAuthUI(false);
   #formScrim #f-stats,
   #formScrim #f-bio{ font-size:16px; }
 }
+  /* ==================================================================
+     RETRO RETIREMENT (chore/retro-css-retire)
+     The skin now OWNS the property families it used to inherit from the
+     two legacy add-card CSS blocks that this branch deletes: the original
+     "add-card form" block and the RBI-reskin add-card sub-block.
+     Every declaration below was proven to be the WINNING source for the
+     property it sets by a CSSOM delete-and-diff on the deployed build
+     (modal open, rolodex materialised, synthetic probes for every state
+     the live DOM cannot reach). Result: computed styles are byte-identical
+     for every element, inside and outside the modal, at 1440/900/700/600/
+     400px, with :hover and :focus simulated. Scoped to #formScrim so
+     nothing outside the modal can move.
+     ================================================================== */
+
+  /* (1) scrim: show/hide + fixed positioning + stacking + backdrop */
+  #formScrim{ display:none; position:fixed; inset:0; z-index:60; backdrop-filter:blur(6px); }
+  #formScrim.open{ display:flex; }
+
+  /* (2) card + field + chip shadows */
+  #formScrim .form-card{ box-shadow:8px 8px 0 #000; }
+  #formScrim .preview-slot.active-slot .preview{ box-shadow:3px 3px 0 var(--brass); }
+  #formScrim .search-results img{
+    width:100%; aspect-ratio:5/7; object-fit:cover; cursor:pointer; border-radius:4px;
+    border:3px solid #000; box-shadow:2px 2px 0 #000;
+  }
+  #formScrim .search-results img:hover{ border-color:var(--brass); }
+
+  /* (3) letter-spacing / pixel-font resets on the modal label family */
+  #formScrim .fl-field label, #formScrim .form-right label, #formScrim .rolo-brand-label,
+  #formScrim .slot-cap, #formScrim .rolodex-tag, #formScrim .img-tab, #formScrim .slot-tab,
+  #formScrim .pane-note, #formScrim .hintmini, #formScrim .key-toggle{
+    font-family:'Press Start 2P',monospace !important; letter-spacing:0;
+  }
+  #formScrim .fl-field label, #formScrim .form-right label{ line-height:1.6; }
+  #formScrim .form-head h2{ line-height:1.5; }
+  #formScrim .form-right label{ display:block; margin-bottom:.35rem; }
+  #formScrim .rolodex-head{ line-height:1.7; margin-bottom:.55rem; }
+  #formScrim .rolodex-tag{ margin-left:auto; }
+  #formScrim .hintmini{ font-style:italic; opacity:.7; text-transform:none; }
+  #formScrim .hintmini, #formScrim .pane-note{ font-size:.42rem; line-height:1.7; color:var(--ink-soft); }
+  #formScrim .pane-note{ font-style:italic; margin-top:.5rem; }
+  #formScrim .key-toggle{ display:flex; line-height:1.7; text-transform:uppercase; white-space:nowrap; }
+  #formScrim .rolo-brand-label{ text-transform:uppercase; width:100%; }
+  #formScrim .rolo-player .meta{ font-family:'JetBrains Mono',monospace; font-size:.7rem; color:var(--ink-soft); }
+  #formScrim .rolo-num-list{ font-family:'JetBrains Mono',monospace; font-size:.7rem; color:var(--ink-soft); }
+  #formScrim .rolo-status{ font-style:italic; min-height:1rem; }
+  #formScrim .rolo-yr.nocard{ opacity:.4; }
+
+  /* (4) the three file/photo inputs (and every .fl-field control) */
+  #formScrim .fl-field input, #formScrim .fl-field select, #formScrim .fl-field textarea,
+  #formScrim .form-right input{
+    width:100%; border-radius:5px; background-color:#fff;
+    border:3px solid #000 !important; box-shadow:2px 2px 0 #000 inset;
+    font-family:'Oswald',sans-serif !important; font-size:.92rem; color:var(--ink);
+    padding:.5rem .6rem;
+  }
+  #formScrim .fl-field textarea:focus, #formScrim .form-right input:focus{ outline:3px solid var(--brass); outline-offset:0; }
+  #formScrim .fl-field textarea{ resize:vertical; min-height:4rem; }
+  #formScrim .img-pane input[type="file"]{ font-size:.78rem; }
+
+  /* (5) .form-body / .form-left / .form-right flex structure + gaps */
+  #formScrim .form-left{ display:flex; flex-direction:column; gap:.7rem; }
+  #formScrim .form-right{ display:flex; flex-direction:column; }
+  #formScrim .fl-field{ flex-grow:1; flex-basis:0%; }
+
+  /* (6) .rolo-list scroll container + tab/field structure */
+  #formScrim .rolo-list{ max-height:140px; overflow-y:auto; border:1px solid rgba(0,0,0,.12); border-radius:5px; background-color:#fff; }
+  #formScrim .rolo-player{ display:flex; justify-content:space-between; gap:.5rem; }
+  #formScrim .rolo-brand{ align-items:center; }
+  #formScrim .rolo-brand select{ flex-grow:1; flex-basis:0%; }
+  #formScrim .rolo-brand input[type="number"]{ width:70px; }
+  #formScrim .rolo-brand input#rolo-brand-custom{ flex-grow:1; flex-basis:0%; }
+  #formScrim .rolo-row button, #formScrim .search-wrap button{ flex-shrink:0; }
+  #formScrim .img-tab, #formScrim .slot-tab{ flex-grow:1; flex-basis:0%; text-transform:uppercase; }
+  #formScrim .preview-row{ margin-bottom:.7rem; }
+  #formScrim .search-wrap{ display:flex; gap:.4rem; }
+  #formScrim .search-results{ display:grid; gap:.4rem; margin-top:.5rem; }
+
+  /* #responsive-fixes still owns these below its breakpoints -- it sits earlier
+     in the cascade but lower in specificity, so the hoist is width-guarded. */
+  @media (min-width:769px){
+    #formScrim{ padding:1.5rem; }
+    #formScrim .rolo-brand select{ min-width:130px; }
+    #formScrim .rolo-brand input#rolo-brand-custom{ min-width:120px; }
+  }
+  @media (min-width:481px){
+    #formScrim .search-results{ grid-template-columns:repeat(3,1fr); }
+  }
 </style>
 <script>
 /* Route Group By = Set through the labeled-sections grid (renderGrouped) instead of the
