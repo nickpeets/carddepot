@@ -247,91 +247,33 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--brass);out
 }
 .spot-close:hover{background:var(--brass);color:var(--leather-dark)}
 
-/* ---------- add-card form ---------- */
-.form-scrim{
-  position:fixed;inset:0;background:rgba(20,8,4,.82);backdrop-filter:blur(6px);
-  display:none;align-items:center;justify-content:center;z-index:60;padding:1.5rem;
-}
-.form-scrim.open{display:flex}
-.form-card{
-  background:var(--paper);border-radius:12px;width:min(720px,96vw);max-height:92vh;overflow-y:auto;
-  box-shadow:0 30px 70px rgba(0,0,0,.6),0 0 0 1px rgba(199,154,59,.4);
-}
-.form-head{display:flex;align-items:center;justify-content:space-between;padding:1.1rem 1.4rem;border-bottom:2px solid var(--leather)}
-.form-head h2{font-family:'Oswald',sans-serif;text-transform:uppercase;letter-spacing:.04em;font-size:1.3rem;color:var(--ink)}
-.form-body{display:flex;gap:1.5rem;padding:1.3rem 1.4rem}
-.rolodex{background:linear-gradient(180deg,#f6efe0,#efe6d2);border:1px solid var(--brass);border-radius:8px;padding:.8rem .9rem;margin-bottom:.4rem}
-.rolodex-head{font-family:'Oswald',sans-serif;text-transform:uppercase;letter-spacing:.05em;font-size:.72rem;color:var(--leather);display:flex;align-items:center;gap:.35rem;margin-bottom:.55rem}
-.rolodex-tag{margin-left:auto;font-family:'JetBrains Mono',monospace;font-size:.56rem;background:var(--leather);color:var(--cream);padding:.15rem .4rem;border-radius:3px;letter-spacing:.02em}
-.rolo-row{display:flex;gap:.4rem}
-.rolo-row input{flex:1;font-family:'Spectral',serif;font-size:.88rem;padding:.45rem .55rem;border:1px solid rgba(0,0,0,.2);border-radius:5px;background:#fff}
-.rolo-row button{flex:0 0 auto;font-family:'Oswald',sans-serif;text-transform:uppercase;font-size:.72rem;letter-spacing:.04em;padding:0 1rem;background:var(--leather);color:var(--cream);border-radius:5px}
-.rolo-list{margin-top:.5rem;max-height:140px;overflow-y:auto;border:1px solid rgba(0,0,0,.12);border-radius:5px;background:#fff}
-.rolo-player{padding:.45rem .6rem;font-size:.82rem;cursor:pointer;border-bottom:1px solid rgba(0,0,0,.06);display:flex;justify-content:space-between;gap:.5rem}
-.rolo-player:last-child{border-bottom:none}
-.rolo-player:hover{background:var(--cream-dim)}
-.rolo-player .meta{font-family:'JetBrains Mono',monospace;font-size:.66rem;color:var(--ink-soft)}
-.rolo-player.sel{background:var(--brass);color:var(--leather-dark)}
-.rolo-years{margin-top:.55rem;display:flex;flex-wrap:wrap;gap:.3rem}
-.rolo-brand{margin-top:.55rem;display:flex;flex-wrap:wrap;align-items:center;gap:.4rem}
-.rolo-brand-label{font-family:'Oswald',sans-serif;font-size:.66rem;text-transform:uppercase;color:var(--leather);letter-spacing:.04em;width:100%}
-.rolo-brand select,.rolo-brand input{font-family:'Spectral',serif;font-size:.82rem;padding:.35rem .45rem;border:1px solid rgba(0,0,0,.2);border-radius:5px;background:#fff;color:var(--ink)}
-.rolo-brand select{flex:1;min-width:130px}
-.rolo-brand input[type=number]{width:70px}
-.rolo-brand input#rolo-brand-custom{flex:1;min-width:120px}
-.rolo-yr{font-family:'JetBrains Mono',monospace;font-size:.72rem;padding:.3rem .55rem;border:1px solid rgba(0,0,0,.2);border-radius:4px;cursor:pointer;background:#fff;color:var(--ink)}
-.rolo-yr:hover{border-color:var(--brass);background:var(--cream-dim)}
-.rolo-yr.sel{background:var(--leather);color:var(--cream);border-color:var(--leather)}
-.rolo-status{font-family:'Spectral',serif;font-style:italic;font-size:.74rem;color:var(--ink-soft);margin-top:.45rem;min-height:1rem}
-.rolo-status.err{color:#9a3324}
-.rolo-status.ok{color:#2c6b4f}
-.form-left{flex:1.1;display:flex;flex-direction:column;gap:.7rem}
-.form-right{flex:.9;display:flex;flex-direction:column}
-.fl-row{display:flex;gap:.7rem}
-.fl-field{display:flex;flex-direction:column;gap:.25rem;flex:1}
-.fl-field label{font-family:'Oswald',sans-serif;text-transform:uppercase;letter-spacing:.06em;font-size:.66rem;color:var(--leather)}
-.hintmini{text-transform:none;letter-spacing:0;font-family:'Spectral',serif;font-style:italic;color:var(--ink-soft);opacity:.7;font-size:.72rem}
-.fl-field input,.fl-field select,.fl-field textarea,.form-right input{
-  font-family:'Spectral',serif;font-size:.9rem;color:var(--ink);background:#fff;
-  border:1px solid rgba(0,0,0,.18);border-radius:5px;padding:.45rem .55rem;width:100%;
-}
-.fl-field input:focus,.fl-field select:focus,.fl-field textarea:focus,.form-right input:focus{outline:2px solid var(--brass);outline-offset:0;border-color:var(--brass)}
-.fl-field textarea{resize:vertical;font-family:'Spectral',serif}
-.key-toggle{display:flex;align-items:center;gap:.4rem;font-family:'Oswald',sans-serif;font-size:.78rem;color:var(--leather);text-transform:uppercase;letter-spacing:.04em;white-space:nowrap;cursor:pointer;padding:.45rem 0}
-.key-toggle input{width:auto}
-.form-right label{font-family:'Oswald',sans-serif;text-transform:uppercase;letter-spacing:.06em;font-size:.66rem;color:var(--leather);margin-bottom:.35rem;display:block}
-.preview{aspect-ratio:5/7;border-radius:8px;border:1.5px dashed rgba(0,0,0,.2);background:#e9e0cc center/cover no-repeat;display:flex;align-items:center;justify-content:center;margin-bottom:.7rem;overflow:hidden}
-.preview.has-img{border-style:solid;border-color:var(--brass)}
+/* ---------- add-card form: RETIRED (chore/retro-css-retire) ----------
+   The modal-only rules that used to live here -- and in the RBI-reskin
+   add-card sub-block further down -- now live in the appended skin block
+   style#add-card-v2-skin, which already owned everything else about the
+   modal. What stays in this section is only the handful of rules whose
+   selectors are NOT modal-only and therefore cannot be deleted as whole
+   rules:
+     .ph-text / .ph-text.err / .img-missing   imgFail() placeholders on
+                                              any broken card image
+     .spot-back-img, .spot-back-scroll        spotlight back view
+     .btn-google                              spotlight #spotNoArt button
+     .btn-ghost                               .depot-account + .spot-meta
+     .toast / .toast.show                     global toast
+     .drop-hot                                binder-card drag target
+     .spot-remove, .spot-meta .btn-ghost      spotlight
+     the two @media blocks                    .stage/.rail/.grid/.brand
+                                              and prefers-reduced-motion
+   -------------------------------------------------------------------- */
 .ph-text{font-family:'JetBrains Mono',monospace;font-size:.72rem;color:rgba(0,0,0,.3)}
-.img-tabs{display:flex;gap:.3rem;margin-bottom:.6rem}
-.img-tab{flex:1;font-family:'Oswald',sans-serif;font-size:.72rem;text-transform:uppercase;letter-spacing:.03em;padding:.4rem;border:1px solid rgba(0,0,0,.18);border-radius:5px;color:var(--ink-soft);background:#fff}
-.img-tab.active{background:var(--leather);color:var(--cream);border-color:var(--leather)}
-.slot-tabs{display:flex;gap:.3rem;margin-bottom:.5rem}
-.slot-tab{flex:1;font-family:'Oswald',sans-serif;font-size:.72rem;text-transform:uppercase;letter-spacing:.03em;padding:.4rem;border:1px solid rgba(0,0,0,.18);border-radius:5px;color:var(--ink-soft);background:#fff;cursor:pointer}
-.slot-tab.active{background:var(--brass);color:var(--cream);border-color:var(--brass)}
-.preview-row{display:flex;gap:.5rem;margin-bottom:.7rem}
-.preview-slot{flex:1;display:flex;flex-direction:column;gap:.25rem;min-width:0}
-.preview-slot .preview{margin-bottom:0;cursor:pointer}
-.preview-slot.active-slot .preview{border-color:var(--brass);box-shadow:0 0 0 2px var(--brass)}
-.slot-cap{font-family:'Oswald',sans-serif;text-transform:uppercase;letter-spacing:.06em;font-size:.6rem;color:var(--leather);text-align:center}
 .spot-back-img{flex:none;width:100%;aspect-ratio:5/7;border-radius:6px;overflow:hidden;margin-bottom:.6rem;background:#e9e0cc center top/cover no-repeat;box-shadow:0 0 0 1px rgba(0,0,0,.12)}
 .spot-back-img img{width:100%;height:100%;object-fit:cover;object-position:center top;display:block}
 .spot-back-scroll{flex:none;overflow:visible;scrollbar-width:thin;scrollbar-color:var(--brass) transparent}
 .spot-back-scroll::-webkit-scrollbar{width:5px}
 .spot-back-scroll::-webkit-scrollbar-thumb{background:var(--brass);border-radius:3px}
-.img-pane input[type=file]{font-size:.78rem;font-family:'Spectral',serif}
-.pane-note{font-family:'Spectral',serif;font-style:italic;font-size:.74rem;color:var(--ink-soft);margin-top:.5rem;line-height:1.4}
-.search-wrap{display:flex;gap:.4rem}
 .btn-google{width:100%;font-family:'Oswald',sans-serif;text-transform:uppercase;letter-spacing:.04em;font-size:.8rem;padding:.6rem;background:var(--leather);color:var(--cream);border-radius:5px;font-weight:500}
 .btn-google:hover{background:var(--leather-light)}
-.search-wrap button{flex:0 0 auto;font-family:'Oswald',sans-serif;text-transform:uppercase;font-size:.72rem;padding:0 .8rem;background:var(--leather);color:var(--cream);border-radius:5px}
-.search-results{display:grid;grid-template-columns:repeat(3,1fr);gap:.4rem;margin-top:.5rem}
-.search-results img{width:100%;aspect-ratio:5/7;object-fit:cover;border-radius:4px;cursor:pointer;border:2px solid transparent}
-.search-results img:hover{border-color:var(--brass)}
-.form-foot{display:flex;justify-content:flex-end;gap:.7rem;padding:1rem 1.4rem;border-top:1px solid rgba(0,0,0,.12)}
 .btn-ghost{font-family:'Oswald',sans-serif;text-transform:uppercase;letter-spacing:.05em;font-size:.82rem;color:var(--ink-soft);padding:.55rem 1.1rem;border:1px solid rgba(0,0,0,.2);border-radius:5px}
-.btn-solid{font-family:'Oswald',sans-serif;text-transform:uppercase;letter-spacing:.05em;font-size:.82rem;color:var(--cream);background:var(--leather);padding:.55rem 1.3rem;border-radius:5px;font-weight:600}
-.btn-solid:hover{background:var(--leather-light)}
 .toast{position:fixed;bottom:1.5rem;left:50%;transform:translateX(-50%);background:var(--felt);color:var(--cream);font-family:'Oswald',sans-serif;letter-spacing:.04em;font-size:.85rem;padding:.7rem 1.3rem;border-radius:6px;box-shadow:0 8px 24px rgba(0,0,0,.4);z-index:80;opacity:0;transition:opacity .25s;pointer-events:none}
 .toast.show{opacity:1}
 
@@ -355,9 +297,6 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--brass);out
 .ph-text.err{color:#9a3b1f;line-height:1.35;font-size:.7rem;padding:.4rem}
 .spot-remove{margin-top:.55rem}
 .spot-meta .btn-ghost{display:inline-block;width:auto;padding:.4rem 1rem;font-size:.68rem;cursor:pointer}
-.rolo-yr.nocard{opacity:.7;border-style:dashed;border-color:rgba(0,0,0,.28)}
-.rolo-yr.nocard:hover{border-color:var(--brass);background:var(--cream-dim)}
-.rolo-num-list{font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--ink-soft);margin-top:.25rem}
 .drop-hot{outline:3px dashed var(--brass,#c79a3b);outline-offset:-6px;box-shadow:0 0 0 9999px rgba(199,154,59,.08) inset;transition:outline-color .1s}
 
 
@@ -589,66 +528,22 @@ button:focus-visible,[tabindex]:focus-visible{outline:3px solid var(--brass);out
 .btn-bref:hover{background:var(--sb-blue-lite);color:var(--brass)}
 .spot-meta{font-family:'Press Start 2P',monospace !important;font-size:.42rem;color:#fff}
 .spot-meta .hint{color:#cfe0ff}
-.form-scrim{background:rgba(13,45,92,.9)}
-.form-card{
-  background:var(--cream);border:4px solid #000 !important;box-shadow:8px 8px 0 #000;
-  width:min(720px,96vw);
-}
-.form-head{background:var(--sb-blue);border-bottom:4px solid #000;padding:1rem 1.2rem}
-.form-head h2{font-family:'Press Start 2P',monospace !important;font-size:.85rem;line-height:1.5;color:var(--brass);text-shadow:2px 2px 0 #000;letter-spacing:0}
-.fl-field label, .form-right label, .rolo-brand-label, .slot-cap, .rolodex-tag, .img-tab, .slot-tab, .pane-note, .hintmini, .key-toggle{
-  font-family:'Press Start 2P',monospace !important;letter-spacing:0;
-}
-.fl-field label, .form-right label{font-size:.5rem;line-height:1.6;color:var(--sb-blue);text-transform:uppercase}
-.hintmini, .pane-note{font-size:.42rem;color:var(--ink-soft);line-height:1.7}
-.fl-field input,.fl-field select,.fl-field textarea,.form-right input{
-  font-family:'Oswald',sans-serif !important;font-size:.92rem;color:var(--ink);
-  background:#fff;border:3px solid #000 !important;box-shadow:2px 2px 0 #000 inset;padding:.5rem .6rem;
-}
-.fl-field input:focus,.fl-field select:focus,.fl-field textarea:focus,.form-right input:focus{outline:3px solid var(--brass);outline-offset:0}
-.fl-field textarea{min-height:4rem}
-.preview{border:3px solid #000 !important;background:#cfc9b0 center/cover no-repeat}
-.preview.has-img{border-style:solid}
+/* add-card modal rules RETIRED here too (chore/retro-css-retire) -- they now
+   live in style#add-card-v2-skin. Kept below because their selectors are not
+   modal-only: .ph-text, .ph-text.err/.rolo-status.err, the .rolo-row button
+   /.search-wrap button/.btn-google group plus its :hover, and .btn-ghost. */
 .ph-text{font-family:'Press Start 2P',monospace !important;font-size:.45rem;color:var(--ink-soft);line-height:1.7;text-align:center}
 .ph-text.err, .rolo-status.err{color:#c1121f}
-.img-tab, .slot-tab{font-size:.45rem;color:#fff;background:var(--sb-blue);border:3px solid #000 !important;box-shadow:2px 2px 0 #000;padding:.45rem .55rem}
-.img-tab.active, .slot-tab.active{background:var(--brass);color:#000}
-.preview-slot.active-slot .preview{border-color:var(--brass) !important;box-shadow:3px 3px 0 var(--brass)}
-.slot-cap{font-size:.42rem;color:var(--sb-blue)}
-.key-toggle{font-size:.45rem;color:var(--sb-blue);line-height:1.7}
-.rolodex{background:rgba(13,45,92,.06);border:3px solid #000;box-shadow:3px 3px 0 #000;padding:.8rem}
-.rolodex-head{font-family:'Press Start 2P',monospace !important;font-size:.5rem;line-height:1.7;color:var(--sb-blue)}
-.rolodex-tag{font-family:'Press Start 2P',monospace !important;font-size:.4rem;background:var(--brass);color:#000;border:2px solid #000;padding:.2rem .4rem}
-.rolo-row input{font-family:'Oswald',sans-serif !important;border:3px solid #000 !important;background:#fff;padding:.5rem .6rem}
 .rolo-row button, .search-wrap button, .btn-google{
   font-family:'Press Start 2P',monospace !important;font-size:.45rem;color:#fff;background:var(--sb-blue);
   border:3px solid #000 !important;box-shadow:2px 2px 0 #000;padding:.5rem .6rem;
 }
 .rolo-row button:hover, .btn-google:hover{background:var(--sb-blue-lite);color:var(--brass)}
-.rolo-player{font-family:'Oswald',sans-serif;border-bottom:2px solid rgba(0,0,0,.15)}
-.rolo-player.sel, .rolo-player:hover{background:rgba(248,208,0,.25)}
-.rolo-player .meta{font-family:'JetBrains Mono',monospace;font-size:.7rem;color:var(--ink-soft)}
-.rolo-yr, .rolo-num-list>*{font-family:'Press Start 2P',monospace !important;font-size:.45rem;border:2px solid #000 !important;background:#fff;color:var(--ink);padding:.4rem .45rem}
-.rolo-yr:hover{background:rgba(248,208,0,.3)}
-.rolo-yr.sel{background:var(--brass);color:#000}
-.rolo-yr.nocard{opacity:.4}
-.rolo-brand-label{font-size:.45rem;color:var(--sb-blue)}
-.rolo-brand select,.rolo-brand input{font-family:'Oswald',sans-serif !important;border:3px solid #000 !important;background:#fff;padding:.45rem}
-.rolo-status{font-family:'Press Start 2P',monospace !important;font-size:.42rem;line-height:1.7}
-.rolo-status.ok{color:#1d4a1d}
-.search-results img{border:3px solid #000;box-shadow:2px 2px 0 #000}
-.search-results img:hover{border-color:var(--brass)}
-.form-foot{border-top:3px solid #000}
 .btn-ghost{
   font-family:'Press Start 2P',monospace !important;font-size:.5rem;color:var(--sb-blue);
   background:#fff;border:3px solid #000 !important;box-shadow:3px 3px 0 #000;padding:.6rem .85rem;
 }
 .btn-ghost:hover{background:var(--cream-dim)}
-.btn-solid{
-  font-family:'Press Start 2P',monospace !important;font-size:.5rem;letter-spacing:0;
-  color:#000;background:var(--brass);border:3px solid #000 !important;box-shadow:3px 3px 0 #000;padding:.6rem 1rem;
-}
-.btn-solid:hover{background:#ffe24d}
 .btn-solid:active,.btn-ghost:active,.mode-btn:active{transform:translate(3px,3px);box-shadow:0 0 0 #000}
 .spot-remove{margin-top:1.1rem;text-align:center;background:none !important;border:none !important;box-shadow:none !important;padding:0}.spot-remove .btn-ghost{font-family:'Oswald',sans-serif !important;text-transform:none !important;letter-spacing:normal !important;font-size:.72rem !important;color:#9a4b52 !important;background:none !important;border:none !important;box-shadow:none !important;padding:.2rem .3rem !important;width:auto !important;text-decoration:underline;cursor:pointer;opacity:.75}.spot-remove .btn-ghost:hover{color:#c1121f !important;opacity:1}
 .toast{
