@@ -24,7 +24,8 @@
 <link rel="stylesheet" href="../css/depot-style.css?v=ae42696">
 <link rel="stylesheet" href="../css/shop.css?v=ae42696">
   <link rel="stylesheet" href="../css/depot-shop-view.css?v=ae42696">
-    <link rel="stylesheet" href="../depot-v2.css">
+  <link rel="stylesheet" href="../css/pack-shop-v2.css?v=ae42696">
+    <link rel="stylesheet" href="../depot-v2.css?v=ae42696">
 <script src="../js/depot-shell.js?v=ae42696" defer></script>
 </head>
 <body class="v2-body">
@@ -40,14 +41,6 @@
 </script>
 
 <main class="depot-stage" data-depot-stage>
-  <div class="shop-head">
-    <h1 class="h1">PACK SHOP</h1>
-    <div class="shop-bal">Balance: <span class="amt" id="shopBal">&mdash;</span></div>
-  </div>
-  <p class="mock-note">Where the money goes &mdash; and the <b>only</b> things it buys: card
-    <b>PACKS</b>. Never stat boosts. Cards always play as their card-year selves; that's sacred.
-    Published odds below are computed from the live draw engine &mdash; no hidden rates.</p>
-
   <div class="shop-grid" id="shopGrid"><!-- packs injected here --></div>
 
   <div class="shop-status" id="shopStatus" role="status" aria-live="polite"></div>
@@ -60,287 +53,36 @@
 <script src="../js/depot-pixel-card.js?v=ae42696"></script>
 <script src="../js/depot-position.js?v=ae42696"></script>
 <script src="../js/depot-shop.js?v=ae42696"></script>
+  <script src="../js/depot-library-art.js?v=ae42696"></script>
   <script src="../js/depot-shop-view.js?v=ae42696"></script>
 <script src="../js/depot-shop-entry.js?v=ae42696"></script>
 
 <script>
-(function () {
-  var LOG = '[depot] shop-page:';
-  var Shop = window.DepotShop, Eng = window.DepotPackEngine;
-  var grid = document.getElementById('shopGrid');
-  var balEl = document.getElementById('shopBal');
-  var statusEl = document.getElementById('shopStatus');
-  var CUR = (window.DepotWallet && window.DepotWallet.CURRENCY) || 'coins';
-
-  function fmt(n) { return (n == null ? '\u2014' : String(n)) + ' ' + CUR; }
-  function setStatus(kind, html) {
-    statusEl.className = 'shop-status show ' + kind;
-    statusEl.innerHTML = html;
-  }
-  function clearStatus() { statusEl.className = 'shop-status'; statusEl.innerHTML = ''; }
-
-  // UI callback bundle handed to Shop.buy() for each purchase attempt.
-  function makeUi(tier) {
-    return {
-      pending: function () { setStatus('warn', 'Opening ' + tier.toUpperCase() + ' pack\u2026'); },
-      insufficient: function (cost, bal, rawMsg) {
-      if (rawMsg && /insufficient funds/i.test(rawMsg)) {
-        setStatus('err', '<b>' + rawMsg + '</b> No pack was purchased and no Depot Dollars were spent. Win season games to earn more.');
+  /* ONE RENDERER, BOTH SURFACES (feat/pack-shop-redesign).
+   * This page used to carry its own forked copy of the tile/odds/free-pack
+   * renderer (~230 lines). It drifted from the in-binder PACK SHOP tab and had
+   * no rip ceremony at all -- a paid pack here fell through to "saved, opens
+   * next load". It now mounts the SHARED DepotShopView, the same renderer the
+   * binder tab mounts, so the redesign lands on both surfaces and cannot fork
+   * again. All money logic still lives in DepotShop / DepotPackEngine: this
+   * file wires nothing to the RPCs itself.
+   */
+  (function () {
+    var LOG = '[depot] shop-page:';
+    function boot() {
+      var grid = document.getElementById('shopGrid');
+      var status = document.getElementById('shopStatus');
+      if (!grid) { console.error(LOG + ' #shopGrid missing; shop cannot mount'); return; }
+      if (!window.DepotShopView || !window.DepotShopView.mount) {
+        console.error(LOG + ' DepotShopView.mount missing (include-order bug); shop cannot mount');
         return;
       }
-        setStatus('err', '<b>Insufficient funds.</b> ' + tier.toUpperCase() + ' pack costs ' +
-          fmt(cost) + ' but your balance is ' + fmt(bal) + '. No pack was purchased and no ' +
-          'Depot Dollars were spent. Win season games to earn more.');
-      },
-      offline: function () {
-        setStatus('warn', 'Shop is temporarily offline (purchase service unavailable). ' +
-          'No Depot Dollars were spent.');
-      },
-      savedNoRip: function (newBal) {
-        setStatus('ok', '<b>Pack purchased.</b> Your pack is <b>saved</b> and the opening ' +
-          'ceremony arrives in the next update. New balance: ' + fmt(newBal) + '.');
-        refreshBalance();
-      },
-      fail: function (msg) { setStatus('err', msg || 'Something went wrong.'); }
-    };
-  }
-
-  var _catalog = null, _balance = null;
-
-  function packCardHtml(tier, odds, balance) {
-    var copy = Shop.TIER_COPY[tier];
-    var price = Eng.tierConfig(tier).price;
-    var afford = (balance != null && balance >= price);
-    var hb = odds ? odds.hitBandPct : null;
-    var oddsHtml = hb ? ('Hit odds: <b>' + (hb.gold || 0) + '%</b> gold \u00b7 <b>' +
-      (hb.silver || 0) + '%</b> silver \u00b7 <b>' + (hb.bronze || 0) + '%</b> bronze') :
-      'Odds unavailable';
-    var gap = (!afford && balance != null) ? '<span class="gap">Need ' + (price - balance) +
-      ' more ' + CUR + '</span>' : '';
-    return '' +
-      '<div class="pack ' + tier + (afford ? '' : ' cant-afford') + '" data-tier="' + tier + '">' +
-        '<div class="wrapart">' + copy.name.replace(' PACK', '') + '<br>PACK</div>' +
-        '<span class="pname">' + copy.name + '</span>' +
-        '<div class="pdesc">' + copy.desc + '</div>' +
-        '<div class="odds">' + oddsHtml + '<br>5 cards \u00b7 5th is the hit slot</div>' +
-        '<button class="buy" data-tier="' + tier + '">' +
-          'BUY \u2014 <span class="price"><span class="coin">' + CUR + '</span>' + price + '</span>' + gap +
-        '</button>' +
-      '</div>';
-  }
-
-  // ============ FREE DAILY pack: 4th tile, claim flow, reveal, cooldown ============
-  var FREE_WINDOW_MS = 24 * 60 * 60 * 1000;
-  var _freeNextClaimAt = null;   // Date (or null) of when the next free claim unlocks
-  var _cooldownTimer = null;
-
-  function freeTileHTML() {
-    var onCooldown = _freeNextClaimAt && (_freeNextClaimAt.getTime() > Date.now());
-    var btn = onCooldown
-      ? '<button class="claim-free" disabled>ON COOLDOWN</button>'
-      : '<button class="claim-free">CLAIM FREE CARD</button>';
-    // Odds are COMPUTED from the live draw engine (band-first draw) -- never a hand-typed string.
-    var _o = null;
-    try { _o = window.DepotPackEngine && window.DepotPackEngine.estimateOdds('free'); } catch (e) { _o = null; }
-    var _p = (_o && _o.hitBandPct) || { plain: 90, bronze: 8, silver: 1.5, gold: 0.5 };
-    var _oddsHtml = 'Published odds: <b>~' + _p.plain + '%</b> plain \u00b7 <b>~' + _p.bronze + '%</b> bronze \u00b7 <b>~' + _p.silver + '%</b> silver \u00b7 <b>~' + _p.gold + '%</b> gold';
-    return '' +
-      '<div class="pack free" data-tier="free">' +
-        '<div class="free-ribbon">FREE \u00b7 DAILY</div>' +
-        '<div class="wrapart">FREE<br>PULL</div>' +
-        '<span class="pname">FREE DAILY PACK</span>' +
-        '<div class="pdesc">One card on the house, every day. No Depot Dollars. No hit-slot guarantee \u2014 pure luck of the draw.</div>' +
-        '<div class="odds">' + _oddsHtml + '<br>1 card \u00b7 once every 24h</div>' +
-        btn +
-        '<div class="cooldown" aria-live="polite"></div>' +
-      '</div>';
-  }
-
-  function fmtCountdown(ms) {
-    if (ms < 0) ms = 0;
-    var s = Math.floor(ms / 1000);
-    var h = Math.floor(s / 3600); s -= h * 3600;
-    var m = Math.floor(s / 60); s -= m * 60;
-    function pad(n) { return (n < 10 ? '0' : '') + n; }
-    return pad(h) + ':' + pad(m) + ':' + pad(s);
-  }
-
-  function startCooldownTicker() {
-    if (_cooldownTimer) { clearInterval(_cooldownTimer); _cooldownTimer = null; }
-    var el = grid.querySelector('.pack.free .cooldown');
-    var btn = grid.querySelector('.pack.free button.claim-free');
-    if (!el) return;
-    function tick() {
-      if (!_freeNextClaimAt) { el.textContent = ''; return; }
-      var remain = _freeNextClaimAt.getTime() - Date.now();
-      if (remain <= 0) {
-        el.textContent = '';
-        if (btn) { btn.disabled = false; btn.textContent = 'CLAIM FREE CARD'; }
-        if (_cooldownTimer) { clearInterval(_cooldownTimer); _cooldownTimer = null; }
-        return;
-      }
-      if (btn) { btn.disabled = true; btn.textContent = 'ON COOLDOWN'; }
-      el.textContent = 'Next free card in ' + fmtCountdown(remain);
+      window.DepotShopView.mount({ gridEl: grid, statusEl: status, context: 'shop' });
+      console.log(LOG + ' mounted the shared pack-shop renderer');
     }
-    tick();
-    _cooldownTimer = setInterval(tick, 1000);
-  }
-
-  // Read-only boot probe: find the last free_pack claim so the countdown shows on load.
-  function probeFreeCooldown() {
-    try {
-      var sb = (typeof window.depotSB === 'function') ? window.depotSB() : null;
-      var uid = (window.DEPOT_USER && window.DEPOT_USER.id) || null;
-      if (!sb || !uid) return;
-      sb.from('wallet_transactions').select('created_at').eq('owner_id', uid)
-        .eq('reason', 'free_pack').order('created_at', { ascending: false }).limit(1)
-        .then(function (r) {
-          var rows = r && r.data ? r.data : [];
-          if (!rows.length) return;
-          var last = new Date(rows[0].created_at).getTime();
-          var next = last + FREE_WINDOW_MS;
-          if (next > Date.now()) { _freeNextClaimAt = new Date(next); startCooldownTicker(); }
-        }).catch(function () {});
-    } catch (e) {}
-  }
-
-  // Renders the pulled card as a real pixel front (never a black box) into a one-flip reveal.
-  function revealCard(card, band) {
-    var shaped = (Shop.cardToShape ? Shop.cardToShape(card, card.year) : card);
-    var pr = (window.DepotPrestige && window.DepotPrestige.compute) ? window.DepotPrestige.compute(shaped) : { band: band || 'bronze', total: 0 };
-    var src = '';
-    try { src = window.DepotPixelCard.renderDataURL(shaped, pr, { w: 250, h: 350 }); } catch (e) {}
-    var name = shaped.player || shaped.name || 'Unknown';
-    var meta = [shaped.year, shaped.brand, shaped.set].filter(Boolean).join(' \u00b7 ');
-    return '' +
-      '<div class="reveal-wrap">' +
-        '<div class="reveal-card flip band-' + (pr.band || band || 'bronze') + '">' +
-          '<div class="rc-back"></div>' +
-          '<div class="rc-front">' + (src ? '<img alt="" src="' + src + '">' : '') + '</div>' +
-        '</div>' +
-        '<div class="reveal-cap"><b>' + name + '</b><br>' + meta + '<br><span class="band-tag band-' + (pr.band || 'bronze') + '">' + (pr.band || 'bronze').toUpperCase() + '</span></div>' +
-      '</div>';
-  }
-
-  function makeFreeUi() {
-    return {
-      pending: function () { setStatus('warn', 'Opening your free daily pack\u2026'); },
-      claimed: function (card, band, nextClaimAt) {
-        if (nextClaimAt) { _freeNextClaimAt = new Date(nextClaimAt); }
-        clearStatus();
-        // SHARED band-scaled reveal ceremony (same code the in-binder shop uses -- no fork).
-        if (window.DepotShopView && DepotShopView.buildReveal) {
-          var rev = DepotShopView.buildReveal(card, band);
-          var host = document.createElement('div'); host.className = 'dsv-reveal-host';
-          host.appendChild(rev.node); document.body.appendChild(host);
-          rev.node.addEventListener('click', function () {
-            if (rev.node.classList.contains('landed')) { rev.node.classList.add('dismissing'); setTimeout(function(){ if(host.parentNode) host.parentNode.removeChild(host); }, 320); }
-          });
-          DepotShopView.playCeremony(rev).then(function () {
-            setStatus('ok', '<b>Free card claimed!</b> It has been added to your collection.');
-            setTimeout(function(){ rev.node.classList.add('dismissing'); setTimeout(function(){ if(host.parentNode) host.parentNode.removeChild(host); }, 320); }, 2600);
-          });
-        } else {
-          setStatus('ok', '<b>Free card claimed!</b> It has been added to your collection. ' + revealCard(card, band));
-          setTimeout(function () { var c = document.querySelector('.reveal-card.flip'); if (c) c.classList.add('flipped'); }, 60);
-        }
-        renderGrid();
-      },
-      cooldown: function (nextClaimAt) {
-        if (nextClaimAt) { _freeNextClaimAt = new Date(nextClaimAt); }
-        setStatus('warn', 'You already claimed your free card today. Come back after the countdown.');
-        renderGrid();
-      },
-      offline: function () { setStatus('warn', 'Free pack service is temporarily offline. Please try again shortly.'); renderGrid(); },
-      notSignedIn: function () { setStatus('err', 'Please sign in to claim your free daily card.'); renderGrid(); },
-      fail: function (msg) { setStatus('err', msg || 'Free claim failed.'); renderGrid(); }
-    };
-  }
-
-  function renderGrid() {
-    if (!Eng) { setStatus('err', 'Pack engine failed to load.'); return; }
-    var html = '';
-    Shop.TIER_ORDER.forEach(function (tier) {
-      var odds = null;
-      try { odds = _catalog && _catalog.length ? Eng.estimateOdds(tier, _catalog, window.DepotPrestige, 250) : null; }
-      catch (e) { console.warn(LOG + ' odds calc failed for ' + tier, e && e.message); }
-      html += packCardHtml(tier, odds, _balance);
-    });
-    html += freeTileHTML();
-    grid.innerHTML = html;
-    // wire buy buttons
-    var btns = grid.querySelectorAll('button.buy');
-    for (var i = 0; i < btns.length; i++) {
-      (function (btn) {
-        btn.addEventListener('click', function () {
-          var tier = btn.getAttribute('data-tier');
-          clearStatus();
-          if (!_catalog || !_catalog.length) { setStatus('err', 'Card catalog not loaded yet.'); return; }
-          Shop.buy(tier, _catalog, _balance, makeUi(tier));
-        });
-      })(btns[i]);
-    }
-    // wire the FREE DAILY claim button + start its cooldown ticker
-    var claimBtn = grid.querySelector('button.claim-free');
-    if (claimBtn) {
-      claimBtn.addEventListener('click', function () {
-        clearStatus();
-        if (!_catalog || !_catalog.length) { setStatus('err', 'Card catalog not loaded yet.'); return; }
-        claimBtn.disabled = true;
-        Shop.claimFree(_catalog, makeFreeUi());
-      });
-    }
-    startCooldownTicker();
-  }
-
-  function refreshBalance() {
-    Shop.getBalance().then(function (bal) {
-      _balance = bal; balEl.textContent = fmt(bal) + ' ' + CUR;
-      console.log(LOG + ' balance = ' + bal);
-      renderGrid();
-    }).catch(function () { balEl.textContent = fmt(null); renderGrid(); });
-  }
-
-  // Auth settles asynchronously (depot-core resolves depotUser() after load). The first
-  // balance/franchise render can run before auth is ready -> stale "— DD" and 0-0 record.
-  // Settle auth, re-render both, then subscribe so a late sign-in also updates. (fix/shop-auth-settle)
-  function settleAuthAndRefresh() {
-    function rerender() {
-      try { refreshBalance(); } catch (e) { console.warn(LOG + ' settleAuth: refreshBalance threw', e); }
-      try { if (window.DepotShell && window.DepotShell.refreshFranchise) window.DepotShell.refreshFranchise(); }
-      catch (e) { console.warn(LOG + ' settleAuth: refreshFranchise threw', e); }
-    }
-    var settle = (typeof window.depotUser === 'function') ? window.depotUser() : Promise.resolve(null);
-    Promise.resolve(settle).then(function () { rerender(); }).catch(function () { rerender(); });
-    // Re-render on any future auth state change (sign-in/out/token refresh).
-    try {
-      var _sb = (typeof window.depotSB === 'function') ? window.depotSB() : null;
-      if (_sb && _sb.auth && typeof _sb.auth.onAuthStateChange === 'function') {
-        _sb.auth.onAuthStateChange(function () { rerender(); });
-      }
-    } catch (e) { console.warn(LOG + ' settleAuth: subscribe failed', e); }
-  }
-
-  function boot() {
-    if (!Shop || !Eng) { console.error(LOG + ' shop/engine missing'); return; }
-    balEl.textContent = 'loading\u2026';
-    // load catalog + balance in parallel; prestige tables ready first for odds.
-    var ready = (window.DepotPrestige && window.DepotPrestige.ready) ? window.DepotPrestige.ready() : Promise.resolve();
-    Promise.all([ Shop.loadCatalog(), ready ]).then(function (r) {
-      _catalog = r[0] || [];
-      console.log(LOG + ' catalog loaded: ' + _catalog.length + ' cards');
-      refreshBalance();
-      settleAuthAndRefresh(); // re-render balance + franchise once auth resolves (fix/shop-auth-settle)
-      probeFreeCooldown();  // seed the free-pack cooldown countdown from the ledger, if any
-    }).catch(function (e) {
-      console.error(LOG + ' boot failed', e && e.message || e);
-      setStatus('err', 'Shop failed to load its catalog.');
-    });
-  }
-
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
-  else boot();
-})();
-</script>
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+    else boot();
+  })();
+  </script>
 </body>
 </html>
