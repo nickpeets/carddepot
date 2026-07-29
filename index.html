@@ -1526,7 +1526,7 @@ async function depotLoadCards(){
   USER_CARDS.length = 0;
   cards.forEach(c=>USER_CARDS.push(c));
   rebuild();
-  if(mode==='binder'){ renderBinder(); } else { renderSetPicker(); }
+  renderBinder();
 }
 async function depotInsertCard(c){
   const sb = depotSB(); const row = cardToRow(c);
@@ -1886,28 +1886,6 @@ function renderGrouped(){
 }
 
 /* ---------- carousel ---------- */
-function setKey(c){return `${c.yr} ${c.set}`}
-function renderSetPicker(){
-  const sets={};
-  COLLECTION.forEach(c=>{const k=setKey(c);(sets[k]=sets[k]||[]).push(c)});
-  const keys=Object.keys(sets).sort();
-  if(!curSet||!sets[curSet])curSet=keys[0];
-  document.getElementById('setPicker').innerHTML=keys.map(k=>
-    `<button class="set-pill ${k===curSet?'active':''}" onclick="selectSet('${k.replace(/'/g,"\\'")}')">${k}<small>${sets[k].length}</small></button>`
-  ).join('');
-  renderReel(sets[curSet]);
-}
-function selectSet(k){curSet=k;renderSetPicker()}
-function renderReel(cards){
-  cards=cards.slice().sort((a,b)=>((a.numSort!=null?a.numSort:parseInt(a.num)||0)-(b.numSort!=null?b.numSort:parseInt(b.num)||0)));
-  const c0=cards[0];
-  document.getElementById('setName').textContent=curSet;
-  document.getElementById('setMeta').textContent=`${cards.length} cards in your run Â· ${ERAS[c0.era].title}`;
-  document.getElementById('reelTrack').innerHTML=cards.map(c=>{
-    const gi=COLLECTION.indexOf(c);
-    return `<div class="reel-card">${cardHTML(c,gi,ERAS[c.era].skin)}</div>`;
-  }).join('');
-}
 function reelScroll(d){document.getElementById('reelTrack').scrollBy({left:d*200,behavior:'smooth'})}
 
 /* ---------- spotlight ---------- */
@@ -1978,7 +1956,7 @@ function brefURL(c){
 function escAttr(s){ return String(s).replace(/&/g,"&amp;").replace(/"/g,"&quot;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
 function imgFail(el){ if(el.dataset.failed)return; el.dataset.failed="1"; const ph=document.createElement("div"); ph.className=el.className+" img-missing"; ph.setAttribute("style",el.getAttribute("style")||""); ph.title="Image unavailable (broken link or hotlinking blocked)"; ph.innerHTML="<span class=\"ph-text err\">image unavailable</span>"; el.replaceWith(ph); }
 function imgOk(el){ el.classList.add("loaded"); }
-async function removeFromDepot(idx,e){ if(e)e.stopPropagation(); const c=COLLECTION[idx]; if(!c){ toast("Card not found."); return; } if(!confirm("Remove "+(c.name||"this card")+" from the depot? This cannot be undone.")) return; const ui=USER_CARDS.indexOf(c); if(ui===-1){ toast("This card cannot be removed."); return; } if(depotLoggedIn()){ if(!(await depotDeleteCard(c))){ return; } USER_CARDS.splice(ui,1); } else { toast("Please log in."); return; } rebuild(); if(mode==="binder"){ renderBinder(); } else { renderSetPicker(); } closeSpot(null,true); toast((c.name||"Card")+" removed from the depot."); }
+async function removeFromDepot(idx,e){ if(e)e.stopPropagation(); const c=COLLECTION[idx]; if(!c){ toast("Card not found."); return; } if(!confirm("Remove "+(c.name||"this card")+" from the depot? This cannot be undone.")) return; const ui=USER_CARDS.indexOf(c); if(ui===-1){ toast("This card cannot be removed."); return; } if(depotLoggedIn()){ if(!(await depotDeleteCard(c))){ return; } USER_CARDS.splice(ui,1); } else { toast("Please log in."); return; } rebuild(); renderBinder(); closeSpot(null,true); toast((c.name||"Card")+" removed from the depot."); }
 function findStatsFor(idx,e){
   if(e)e.stopPropagation();
   const c=COLLECTION[idx];
@@ -2086,7 +2064,6 @@ function setMode(m){
   var c=document.getElementById('m-carousel'); if(c) c.classList.toggle('active',m==='carousel');
   var bs=document.getElementById('binderStage'); if(bs){ bs.style.display=m==='binder'?'flex':'none'; bs.toggleAttribute('data-hidden',m!=='binder'); }
   var cs=document.getElementById('carouselStage'); if(cs) cs.style.display=m==='carousel'?'flex':'none';
-  if(m==='carousel') renderSetPicker();
 }
 
 /* ---------- rolodex: MLB Stats API auto-fill ----------
@@ -2982,7 +2959,7 @@ function setAuthUI(loggedIn){
   document.body.classList.toggle('logged-out', !loggedIn);
   if(gate) gate.classList.toggle('show', !loggedIn);
   if(loggedIn){
-    if(mode==='binder'){ renderBinder(); } else { renderSetPicker(); }
+    renderBinder();
   }
 }
 /* ---------- init ---------- */
