@@ -212,7 +212,7 @@
   /* number below comes out of the live engine at render time.              */
   /* ===================================================================== */
   function oddsOf(tier, catalog){
-    try { return (catalog && catalog.length) ? Eng.estimateOdds(tier, catalog, window.DepotPrestige, 250) : null; }
+    try { return (catalog && catalog.length) ? Eng.estimateOdds(tier, catalog, window.DepotPrestige, 8000) : null; }
     catch(e){ console.warn(TAG + " odds calc failed for " + tier + ": " + (e && e.message)); return null; }
   }
   // Honest floor language for a BOUNDED 40-try re-roll with a best-so-far
