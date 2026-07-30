@@ -2771,6 +2771,26 @@ async function saveCard(){
     const _id = await depotInsertCard(card);
     if(!_id){ return; }
     USER_CARDS.push(card);
+    /* Stats are a GAME INPUT, not decoration: the builder refuses a card with no
+     * usable line (isUsableHitter), so a stat-less add is a card that cannot be
+     * played. The v2 add flow only fills #f-stats when the collector runs the
+     * rolodex season pull, so a catalog-tile add lands blank -- that is how Bob
+     * Abreu 1999 arrived with 'No stats recorded yet.' Fire the same
+     * span-validated pull the pack grants use, AFTER the insert and WITHOUT
+     * awaiting it: a slow or dead statsapi must never delay or fail an add. */
+    if(!card.stats || !Object.keys(card.stats).length){
+      (function(_cid){
+        var _c=null;
+        try{ _c=(typeof depotSB==='function')?depotSB():null; }catch(e){ _c=null; }
+        if(!_c){ console.warn('[depot] add: stats enrichment skipped for '+_cid+' -- no supabase client'); return; }
+        if(typeof window.depotEnrichStats!=='function'){ console.warn('[depot] add: stats enrichment skipped for '+_cid+' -- depot-position.js not loaded'); return; }
+        Promise.resolve(window.depotEnrichStats(_c,[_cid])).then(function(n){
+          if(!n) return;
+          console.log('[depot] add: season line filled in after the fact for '+_cid);
+          if(typeof depotLoadCards==='function') return depotLoadCards();
+        }).catch(function(e){ console.warn('[depot] add: stats enrichment failed for '+_cid+': '+((e&&e.message)||e)); });
+      })(_id);
+    }
   } else {
     toast("Please log in to save cards."); return;
   }

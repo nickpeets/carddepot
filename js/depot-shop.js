@@ -267,7 +267,12 @@ function loadCatalog() {
       // depotBackfillPositions().
       try {
         if(data.card_id && typeof window.depotEnrichPositions === 'function'){
-          window.depotEnrichPositions(client, [data.card_id]).catch(function(){});
+          window.depotEnrichPositions(client, [data.card_id])
+            .then(function(){ if(typeof window.depotEnrichStats === 'function') return window.depotEnrichStats(client, [data.card_id]); })
+            .catch(function(){});
+        } else if(data.card_id && typeof window.depotEnrichStats === 'function'){
+          /* Positions module absent: the season line still gets its shot. */
+          window.depotEnrichStats(client, [data.card_id]).catch(function(){});
         }
       } catch(e2){ console.debug(TAG+' free position enrichment skipped: '+((e2&&e2.message)||e2)); }
     }).catch(function (e) {
@@ -363,7 +368,11 @@ function loadCatalog() {
         try {
           var newIds = (ins.data||[]).map(function(r){ return r && r.id; }).filter(Boolean);
           if(newIds.length && typeof window.depotEnrichPositions === 'function'){
-            window.depotEnrichPositions(client, newIds).catch(function(){});
+            window.depotEnrichPositions(client, newIds)
+            .then(function(){ if(typeof window.depotEnrichStats === 'function') return window.depotEnrichStats(client, newIds); })
+            .catch(function(){});
+        } else if(newIds.length && typeof window.depotEnrichStats === 'function'){
+          window.depotEnrichStats(client, newIds).catch(function(){});
           }
         } catch(e){ console.debug(TAG+' position enrichment skipped: '+((e&&e.message)||e)); }
         return {skipInsert:false};
