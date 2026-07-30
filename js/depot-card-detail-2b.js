@@ -274,11 +274,10 @@
       var chipHost = document.getElementById("spotChips");
       if (chipHost) {
         chipHost.innerHTML = "";
-        var overlayEl = document.getElementById("spotlight");
-        var backSub = overlayEl ? overlayEl.querySelector(".back-sub") : null;
-        var subTxt = backSub ? backSub.textContent : "";
-        var yrM = subTxt.match(/\b(18|19|20)\d{2}\b/);
-        var setM = subTxt.match(/(Topps|Donruss|Bowman|Upper Deck|Fleer|Score|Panini|Leaf|O-Pee-Chee)/i);
+        // Task B: the back face no longer carries a text overlay, so the
+        // chips read the resolved card directly instead of scraping .back-sub.
+        var chipYear = (c && c.yr) ? String(c.yr) : "";
+        var chipSet = (c && c.set) ? String(c.set).toUpperCase() : "";
         function addChip(k, v) {
           if (!v) return;
           var el = document.createElement("span");
@@ -286,8 +285,8 @@
           el.innerHTML = "<span class=\"k\">" + k + "</span> <b>" + v + "</b>";
           chipHost.appendChild(el);
         }
-        addChip("YEAR", yrM ? yrM[0] : "");
-        addChip("SET", setM ? setM[0].toUpperCase() : "");
+        addChip("YEAR", chipYear);
+        addChip("SET", chipSet);
         var gsel = document.getElementById("d4GradeSel");
         var gval = gsel ? (gsel.value || "").trim() : "";
         if (gval && /^(\d{1,2}|GEM 10|AUTH)$/i.test(gval)) addChip("GRADE", gval);

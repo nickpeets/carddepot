@@ -1,18 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <script src="js/version.js?v=40b7a39"></script>
-  <script src="js/depot-core.js?v=40b7a39"></script>
+  <script src="js/version.js?v=9757a16"></script>
+  <script src="js/depot-core.js?v=9757a16"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>The Depot</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gshtatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Spectral:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/depot-style.css?v=40b7a39">
-  <link rel="stylesheet" href="css/season.css?v=40b7a39">
-    <script src="js/depot-shell.js?v=40b7a39"></script>
-  <script src="js/depot-season-shell.js?v=40b7a39"></script>
+  <link rel="stylesheet" href="css/depot-style.css?v=9757a16">
+  <link rel="stylesheet" href="css/season.css?v=9757a16">
+    <script src="js/depot-shell.js?v=9757a16"></script>
+  <script src="js/depot-season-shell.js?v=9757a16"></script>
   <style>
     /* binder tile portrait redesign v2 (additive, contract-safe) */
     :root{--binder-cols:3}
@@ -1031,9 +1031,9 @@ body{
 </style>
 <!-- /PHASE5-SHARE-CSS -->
 
-  <link rel="stylesheet" href="css/depot-shop-view.css?v=40b7a39">
-  <link rel="stylesheet" href="css/pack-shop-v2.css?v=40b7a39">
-    <link rel="stylesheet" href="depot-v2.css?v=40b7a39">
+  <link rel="stylesheet" href="css/depot-shop-view.css?v=9757a16">
+  <link rel="stylesheet" href="css/pack-shop-v2.css?v=9757a16">
+    <link rel="stylesheet" href="depot-v2.css?v=9757a16">
 </head>
 <body class="v2-body">
   <div id="sharedUnavailable"><div class="su-card"><div class="su-title">Not available</div><div class="su-sub">This collection isn&rsquo;t available.</div></div></div>
@@ -1862,12 +1862,9 @@ function openSpot(idx){
   </div>`;
   const isP=cardType(c)==='pitcher';
   document.getElementById('spotBack').innerHTML=`
-    <div class="back-head">
-      <h3>${c.name}</h3>
-      
-    </div>
-    <div class="back-sub">${c.yr} ${c.set} · #${c.num}${c.rare?' · KEY CARD':''}</div>
-    ${cback?`<div class="spot-back-img"><img src="${escAttr(cback)}" alt="card back" onload="imgOk(this)" onerror="imgFail(this)"></div>`:''}
+        <!-- Task B #3: the back face is the SCAN. Name / set / number
+             already live in the meta panel, so no text overlay here. -->
+        ${cback?`<div class="spot-back-img"><img src="${escAttr(cback)}" alt="card back" onload="imgOk(this)" onerror="imgFail(this)"></div>`:''}
     <div class="spot-back-scroll">
     ${statTable(c)}
     ${c.bio?`<div class="bio">${c.bio}</div>`:''}
@@ -1939,7 +1936,7 @@ function refreshSpotTile(){
     try{ if(typeof window.renderBinder==='function') window.renderBinder(); }catch(_){}
   }
 }
-document.addEventListener('keydown',e=>{if(e.key==='Escape'){document.getElementById('spotlight').classList.remove('open');refreshSpotTile();}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){if(window.dcZoomOpen&&window.dcZoomOpen()){window.dcZoomClose();return;}document.getElementById('spotlight').classList.remove('open');refreshSpotTile();}});
 
 /* ---------- mode switch ---------- */
 function setMode(m){
@@ -3257,19 +3254,20 @@ setAuthUI(false);
   });
 })();
 </script>
-<script src="game/season.js?v=40b7a39" defer></script>
-<script src="js/depot-index-shell.js?v=40b7a39"></script>
-<script src="js/depot-prestige.js?v=40b7a39"></script>
-<script src="js/depot-wallet.js?v=40b7a39"></script>
-  <script src="js/depot-pack-engine.js?v=40b7a39"></script>
-  <script src="js/depot-pixel-card.js?v=40b7a39"></script>
-  <script src="js/depot-shop.js?v=40b7a39"></script>
-  <script src="js/depot-shop-view.js?v=40b7a39"></script>
-  <script src="js/depot-binder-shop.js?v=40b7a39"></script>
-  <script src="js/depot-library-art.js?v=40b7a39"></script>
-  <script src="js/depot-add-card-search.js?v=40b7a39"></script>
-    <script src="js/depot-position.js?v=40b7a39"></script>
-  <script src="js/depot-card-detail-2b.js?v=40b7a39"></script>
+<script src="game/season.js?v=9757a16" defer></script>
+<script src="js/depot-index-shell.js?v=9757a16"></script>
+<script src="js/depot-prestige.js?v=9757a16"></script>
+<script src="js/depot-wallet.js?v=9757a16"></script>
+  <script src="js/depot-pack-engine.js?v=9757a16"></script>
+  <script src="js/depot-pixel-card.js?v=9757a16"></script>
+  <script src="js/depot-shop.js?v=9757a16"></script>
+  <script src="js/depot-shop-view.js?v=9757a16"></script>
+  <script src="js/depot-binder-shop.js?v=9757a16"></script>
+  <script src="js/depot-library-art.js?v=9757a16"></script>
+  <script src="js/depot-add-card-search.js?v=9757a16"></script>
+    <script src="js/depot-position.js?v=9757a16"></script>
+  <script src="js/depot-card-detail-2b.js?v=9757a16"></script>
+  <script src="js/depot-card-detail-polish.js?v=9757a16"></script>
 <script>
 /* Franchise Economy Slice A: arm wallet chip + payout hook. Additive, fail-loud, graceful until DDL. */
 (function(){
