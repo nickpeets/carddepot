@@ -85,3 +85,55 @@ The roloSuggest player-list meta builds its year range from idx[normName].years
 Reads as a career span but is a card-year span. Fix (future): label explicitly
 as "card years", or source true debut/lastPlayed from the MLB pull for a real
 career label. Out of scope for fix/add-card-polish -- logged per instruction.
+
+## 6. DIAMOND: a fourth prestige band + a fourth pack tier (scoping)
+
+Raised by the pack-shop redesign handoff (`handoff-pack-shop/README.md`), which designs a
+**Diamond** tier at **2,000** with the copy "Every pack lands a Diamond in the hit slot."
+**There is no Diamond band in the engine.** `js/depot-pack-engine.js` has
+`BAND_RANK = { plain:0, bronze:1, silver:2, gold:3 }` and three paid tiers (bronze/silver/gold);
+`js/depot-prestige.js` scores into those four bands only. feat/pack-shop-redesign therefore ships
+**three tiers**, keeps the Diamond visual language in `css/pack-shop-v2.css` (foil, crimp, pixel
+diamond, `GUARANTEED HIT` ribbon, `--pk-band-diamond`, the hit treatment) and renders **no Diamond
+tier card**. Gold is the real top band and wears the hit ceremony.
+
+Shipping Diamond for real needs all of:
+
+1. **A new prestige band.** `depot-prestige.js` must be able to *score* a card as diamond -- a new
+   threshold above gold, with a defensible definition (what makes a card diamond and not gold?).
+   Today the band ladder tops out at gold, so a Diamond tier would have nothing to land.
+2. **`BAND_RANK` entry** (`diamond: 4`) in `depot-pack-engine.js`. Every floor comparison, the
+   `sampleHitBands` counter object, `estimateOdds().hitBandPct` and the free-pack band table read
+   this map, so the addition has to be made in one place and verified in all four.
+3. **Tier config** in `TIERS`: price, `cards`, `eraWeight`, `starBias`, `hitFloorBand:'diamond'`,
+   `hitStarBias`. Note the hit slot is a **bounded 40-try re-roll with a best-so-far fallback**
+   (`rollPack` returns `floorMet` precisely because it can be false), so a Diamond tier can NOT
+   honestly promise "every pack lands a Diamond" unless the re-roll is made unbounded or the draw
+   is made band-first like the free pack (`FREE_BAND_ODDS` / `drawFreeIndex` is the existing
+   pattern for exact, publishable odds).
+4. **Server-side purchase validation.** `depot_purchase_pack(p_cost, p_tier)` takes the cost from
+   the CLIENT. Today the three prices are low and the tier list is fixed; a 2,000 tier makes the
+   unvalidated cost parameter worth closing: validate `p_tier` against a server-side price table
+   inside the RPC (and reject unknown tiers) before adding it. This is a **schema/DDL change** and
+   needs Nick's sign-off per AGENTS.md section 2.
+5. **The 2,000-vs-earn-rate question.** `ECONOMY_DESIGN.md` sets the earn rate; the handoff itself
+   flags 2,000 as a placeholder (its section 8.1). At an exhibition win of 25 DD, 2,000 is 80 wins
+   per pack. Either the price or the earn rate has to move; that is an economy decision, not a UI one.
+
+## 7. Dupes: a "dupe -> coins" chip during the reveal
+
+The handoff's open question 4. Current behaviour (unchanged by feat/pack-shop-redesign) is
+**silent**: a pull already in the binder is inserted again and simply shows up as a second copy --
+no chip, no coins, no dedupe. Designing this needs a decision on whether a duplicate converts to
+currency (a wallet CREDIT, i.e. money path, i.e. an RPC + ledger reason) or is purely cosmetic
+("DUPE" chip on the card front during the reveal). If it credits coins it must be atomic with the
+grant, which means it belongs in the same RPC as the insert, not in the client.
+
+## 8. Sound: rip / flip / hit sting
+
+The handoff's open question 5, deliberately out of scope. The ceremony is built to carry it: the
+phase boundaries in `playPackSession` (held -> reveal -> all-five -> added) and the escalation
+branch (`isTop`) are the natural cue points, and `prefers-reduced-motion` already has a parallel
+in `prefers-reduced-transparency`/muted-by-default audio policy: browsers block autoplaying audio
+until a user gesture, and the rip is entirely gesture-driven, so the cues would actually be
+allowed to play. Needs assets and a mute affordance before it is worth building.

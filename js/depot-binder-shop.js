@@ -48,8 +48,74 @@
       if (view) view.destroy();
       view = window.DepotShopView.mount({
         gridEl: grid, statusEl: status, context: "binder",
-        onClaimed: settleClaimedCard
+        onClaimed: settleClaimedCard,
+        onClaimedBatch: settleClaimedCards
       });
+    }
+
+    // Build the in-memory binder row for a pulled catalog card. Display only:
+    // the card itself was already granted server-side.
+    function packCardToBinderCard(catCard, band) {
+      var yr = parseInt(catCard.year || catCard.yr, 10) || 0;
+      var eraFromYear = window.eraFromYear || function(){ return "modern"; };
+      return {
+        id: (catCard.card_id || catCard.id || ("pack-" + Date.now() + "-" + Math.random().toString(36).slice(2,7))),
+        name: catCard.player || catCard.name || "Unknown",
+        pos: "\u2014", team: catCard.team || "\u2014", yr: yr,
+        set: catCard.brand || catCard.set || "Pack Pull",
+        num: (catCard.number != null ? String(catCard.number) : ""), numSort: 0,
+        era: eraFromYear(yr) || "modern",
+        type: "hitter", rare: false, photoFront: "", photoBack: "",
+        source: "pack", _band: band || "plain"
+      };
+    }
+
+    // 3b) design 4.7: the WHOLE pack settles into the binder grid at once,
+    // using the existing dsv-settle animation. One rebuild, one era jump (the
+    // best pull's era), every landed slot flashed.
+    function settleClaimedCards(cards, bands) {
+      if (!cards || !cards.length) { console.warn(TAG + " settle batch: no cards handed over"); return; }
+      var USER_CARDS = G("USER_CARDS");
+      var made = [], i;
+      for (i = 0; i < cards.length; i++) made.push(packCardToBinderCard(cards[i], bands && bands[i]));
+      try { if (USER_CARDS && USER_CARDS.push) { for (i = 0; i < made.length; i++) USER_CARDS.push(made[i]); } }
+      catch (e) { console.warn(TAG + " settle batch: USER_CARDS push failed: " + (e && e.message)); }
+      try { if (typeof window.rebuild === "function") window.rebuild(); }
+      catch (e) { console.warn(TAG + " settle batch: rebuild failed: " + (e && e.message)); }
+      var RANK = { plain:0, bronze:1, silver:2, gold:3 };
+      var best = 0;
+      for (i = 1; i < made.length; i++) { if ((RANK[made[i]._band]||0) > (RANK[made[best]._band]||0)) best = i; }
+      if (typeof window.selectEra === "function") window.selectEra(made[best].era);
+      // The v2 binder renders tiles as .dc-tile[data-idx] (the inherited '.card' +
+      // aria-label match silently matched nothing, so dsv-settle never played).
+      // Index into the live COLLECTION instead: the pushed objects are the same
+      // references rebuild() re-collects. The era view paginates at PER_PAGE, so
+      // walk forward with the binder's own turnPage() until the pull is on screen.
+      function flashLanded(tries) {
+        var COLLECTION = G("COLLECTION") || [];
+        var landed = 0;
+        for (var k = 0; k < made.length; k++) {
+          var idx = COLLECTION.indexOf(made[k]);
+          if (idx < 0) continue;
+          var tile = document.querySelector('#binderGrid .dc-tile[data-idx="' + idx + '"], #binderGrid .card[data-idx="' + idx + '"]');
+          if (!tile) continue;
+          tile.classList.add("just-landed");           // dsv-settle (css/depot-shop-view.css)
+          if (!landed) { try { tile.scrollIntoView({ behavior:"smooth", block:"center" }); } catch (e) {} }
+          landed++;
+        }
+        if (landed) {
+          console.log(TAG + " settle batch: " + landed + "/" + made.length + " slot(s) flashed with dsv-settle");
+          return;
+        }
+        if (tries < 12 && typeof window.turnPage === "function") {
+          window.turnPage(1);                          // the binder's own pager
+          setTimeout(function () { flashLanded(tries + 1); }, 90);
+          return;
+        }
+        console.warn(TAG + " settle batch: none of the " + made.length +
+          " pulls could be located in the binder grid (paged " + tries + " time(s)); cards ARE granted, only the flash was missed");
+      }
+      setTimeout(function () { flashLanded(0); }, 260);
     }
 
     // 3) a freshly-claimed card SETTLES into the collection grid.
@@ -94,8 +160,12 @@
         if (typeof window.showEraChrome === "function") window.showEraChrome(true);
         if (typeof window.renderEraTabs === "function") window.renderEraTabs();
         var e = ERAS.packshop;
-        var t = document.getElementById("eraTitle"); if (t) t.textContent = e.title;
-        var bl = document.getElementById("eraBlurb"); if (bl) bl.textContent = e.blurb;
+        // The redesigned shop screen owns its heading copy (design section 6 copy
+        // deck) and renders its own h1 only on the standing shop page, so here the
+        // binder's era heading carries it instead -- one heading, not two. The era
+        // TAB label (ERAS.packshop.title) is untouched.
+        var t = document.getElementById("eraTitle"); if (t) t.textContent = "RIP A PACK";
+        var bl = document.getElementById("eraBlurb"); if (bl) bl.textContent = "Five cards a pack. The last one is always the hit slot.";
         // hide pager for the shop
         ["pageDots","prevPage","nextPage"].forEach(function(id){ var el=document.getElementById(id); if(el) el.style.visibility="hidden"; });
         mountShop();
