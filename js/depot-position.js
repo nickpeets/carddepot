@@ -134,6 +134,48 @@
     if (isFinite(last) && y > last) return false;
     return true;
   }
+  /* Every official spelling MLB itself publishes for a person, accent-folded for
+   * comparison only. This exists because card fronts and MLB do not always agree
+   * on a first name: the 1999 Topps card says "Bob Abreu", MLB's record says
+   * fullName "Bobby Abreu" -- with firstName "Bob". Matching the card against
+   * the person's OWN variants is still an exact match, not a fuzzy one. */
+  function nameVariants(p) {
+    var out = [];
+    function push(v) { var c = cleanName(v || ''); if (c) out.push(normName(c)); }
+    if (!p) return out;
+    push(p.fullName); push(p.nameFirstLast); push(p.firstLastName);
+    if (p.lastName) { push((p.firstName || '') + ' ' + p.lastName); push((p.useName || '') + ' ' + p.lastName); }
+    if (p.useLastName) { push((p.useName || '') + ' ' + p.useLastName); push((p.firstName || '') + ' ' + p.useLastName); }
+    return out;
+  }
+
+  /* Last resort before giving up: search the SURNAME alone and accept a person
+   * only when exactly one candidate both matches an official variant of the card
+   * name and has a career span covering the card year. Two candidates, or none,
+   * is a refusal -- ambiguity must never become a stats write. The generic
+   * ?q= search is deliberately not used for this: asked for "Bob Abreu" it
+   * returns Freddie Freeman, Andrew McCutchen and Manny Machado. */
+  function surnameRetry(name, year) {
+    var nm = cleanName(name), key = normName(nm);
+    var toks = nm.split(/\s+/);
+    var last = toks.length > 1 ? toks[toks.length - 1] : '';
+    if (!last) return Promise.resolve(null);
+    return fetch(MLB + '/people/search?names=' + encodeURIComponent(last)).then(function (r) {
+      return r.ok ? r.json() : { people: [] };
+    }).then(function (j) {
+      var people = (j && j.people) || [], hits = [], i, v;
+      for (i = 0; i < people.length; i++) {
+        v = nameVariants(people[i]);
+        if (v.indexOf(key) >= 0 && spanCovers(people[i], year)) hits.push(people[i]);
+      }
+      if (hits.length === 1) {
+        console.log(TAG + ' surname retry matched "' + nm + '" to ' + hits[0].fullName + ' #' + hits[0].id + ' via an official name variant');
+        return hits[0];
+      }
+      if (hits.length > 1) console.warn(TAG + ' surname retry refused "' + nm + '": ' + hits.length + ' people share that name and cover ' + year);
+      return null;
+    }).catch(function (e) { console.warn(TAG + ' surname retry failed for "' + nm + '": ' + ((e && e.message) || e)); return null; });
+  }
 
   function searchPerson(name, year) {
     var nm = cleanName(name);
@@ -159,11 +201,16 @@
         if (normName(cleanName(people[i].fullName)) === key) { exact = people[i]; break; }
       }
       if (exact) return exact;
+      /* No exact fullName match. Before falling back to a positional guess, ask
+       * MLB by surname and require an exact match on one of ITS OWN spellings. */
+      return surnameRetry(nm, year).then(function (alt) {
+        if (alt) return alt;
       /* No exact match, so people[0] is only a guess. Accept it ONLY if the
        * career span can cover this card year; otherwise return null and let the
        * caller report "unresolved" honestly. This is what stops a plain
        * "Dante Bichette" card resolving to Dante Bichette Jr. at index [0]. */
       return (people[0] && spanCovers(people[0], year)) ? people[0] : null;
+      });
     }).catch(function () { return null; });
   }
 
@@ -373,7 +420,7 @@
    * Writes go through withMeta(), never a from-scratch meta rebuild, so ratesMeta, the
    * pack receipt in the bio and every other key this sweep does not know about survive.
    */
-  function repullOne(client, row, dry, report) {
+  function repullOne(client, row, dry, report, allowEmpty) {
     var meta = unpackNotes(row.notes).meta || {};
     var name = cleanName(row.player);
     var line = { card: row.year + ' ' + name, group: '', person: '', team: '', cells: 0, wrote: '', reason: '' };
@@ -387,9 +434,9 @@
 
     var nHit = meta.stats ? Object.keys(meta.stats).length : 0;
     var nPit = meta.statsPit ? Object.keys(meta.statsPit).length : 0;
-    if (!nHit && !nPit) { skip('no stats block to re-pull'); return Promise.resolve(); }
+    if (!nHit && !nPit && !allowEmpty) { skip('no stats block to re-pull'); return Promise.resolve(); }
     if (nHit && nPit) { skip('both stats and statsPit populated -- ambiguous, resolve by hand'); return Promise.resolve(); }
-    if (meta.statPersonId != null && meta.statSeason != null) { skip('already carries provenance'); return Promise.resolve(); }
+    if (meta.statPersonId != null && meta.statSeason != null && (nHit || nPit)) { skip('already carries provenance'); return Promise.resolve(); }
     if (!row.year) { skip('card has no year to pull'); return Promise.resolve(); }
 
     /* Two-way players are hitter-primary in the depot: a TWP card shows the batting line,
@@ -407,7 +454,15 @@
         skip('span fail: ' + p.fullName + ' (' + String(p.mlbDebutDate || '?').slice(0, 4) + '-' + String(p.lastPlayedDate || '?').slice(0, 4) + ') does not cover ' + row.year);
         return;
       }
-      line.person = p.fullName + ' #' + p.id;
+      /* A row that has not been position-enriched yet -- every fresh add is in that
+     * state -- carries no pos, and pulling a pitcher from the hitting group returns
+     * either nothing or a token four-at-bat line. Take the group from the person MLB
+     * itself resolved when the card cannot say. */
+    if (!pos && p.primaryPosition) {
+      var pp = normPos(p.primaryPosition.abbreviation) || normPos(p.primaryPosition.name);
+      if (pp && !isTwoWayPos(pp) && isPitcherPos(pp)) { group = 'pitching'; line.group = group; }
+    }
+    line.person = p.fullName + ' #' + p.id;
       return seasonStatsProv(p.id, row.year, group).then(function (r) {
         var cells = (r && r.stats) ? Object.keys(r.stats).length : 0;
         if (!cells) { skip('no ' + group + ' split for ' + row.year); return; }
@@ -437,6 +492,9 @@
     opts = opts || {};
     var dry = !!opts.dryRun;
     var only = (opts.ids && opts.ids.length) ? opts.ids : null;
+    /* includeEmpty widens the sweep from 'stats with no provenance' to 'no stats
+     * at all' -- the backfill case for rows the add flow never filled. */
+    var empty = !!opts.includeEmpty;
     var client = null;
     try { client = (typeof window.depotSB === 'function') ? window.depotSB() : null; } catch (e) { client = null; }
     if (!client) return Promise.reject(new Error('no supabase client -- sign in first'));
@@ -446,12 +504,13 @@
         if (only && only.indexOf(r.id) < 0) return false;
         var m = unpackNotes(r.notes).meta || {};
         var has = (m.stats && Object.keys(m.stats).length) || (m.statsPit && Object.keys(m.statsPit).length);
-        return !!has && !(m.statPersonId != null && m.statSeason != null);
+        if (!has) return empty;
+      return !(m.statPersonId != null && m.statSeason != null);
       });
       rows.sort(function (a, b) { return (a.year || 0) - (b.year || 0); });
       var report = [];
       return rows.reduce(function (chain, row) {
-        return chain.then(function () { return repullOne(client, row, dry, report); });
+        return chain.then(function () { return repullOne(client, row, dry, report, empty); });
       }, Promise.resolve()).then(function () {
         var wrote = 0, skipped = 0, i;
         for (i = 0; i < report.length; i++) {
@@ -463,6 +522,44 @@
         return report;
       });
     });
+  }
+
+    /* ---------- post-add / post-grant stats enrichment ---------- */
+
+  /* The safety net for a row that lands with no season line at all.
+   *
+   * Same contract as enrichRows() above: it runs AFTER the insert, fire and
+   * forget, and never sits in front of an add or a grant. Stats drive the sim's
+   * probabilities, so a stat-less card is a broken game piece -- but a WRONG
+   * line is worse than a blank one, so this reuses repullOne()'s guards
+   * unchanged: exact accent-folded name, career span must cover the card year,
+   * and the API must actually have a split. Anything short of that is skipped
+   * with a reason (a 1993 Jeter card and Bo Jackson's lost 1992 season are
+   * genuine no-data rows, not failures).
+   *
+   * Writes go through withMeta(), so ratesMeta, the pack receipt in the bio and
+   * every other key survive, and the provenance triple travels with the line. */
+  function enrichStats(client, ids) {
+    if (!client) { console.warn(TAG + ' stats enrichment skipped: no supabase client'); return Promise.resolve(0); }
+    if (!ids || !ids.length) { console.warn(TAG + ' stats enrichment skipped: no card ids given'); return Promise.resolve(0); }
+    return client.from('cards').select('id,player,year,notes').in('id', ids).then(function (sel) {
+      if (sel.error) { console.warn(TAG + ' stats enrichment read failed: ' + sel.error.message); return 0; }
+      var rows = (sel.data || []).filter(function (r) {
+        var m = unpackNotes(r.notes).meta || {};
+        var has = (m.stats && Object.keys(m.stats).length) || (m.statsPit && Object.keys(m.statsPit).length);
+        return !has;
+      });
+      if (!rows.length) { console.debug(TAG + ' stats enrichment: none of the ' + ids.length + ' row(s) landed stat-less'); return 0; }
+      var report = [];
+      return rows.reduce(function (chain, row) {
+        return chain.then(function () { return repullOne(client, row, false, report, true); });
+      }, Promise.resolve()).then(function () {
+        var wrote = 0, i;
+        for (i = 0; i < report.length; i++) { if (report[i].wrote === 'written') wrote++; }
+        console.log(TAG + ' stats enrichment: filled ' + wrote + ' of ' + rows.length + ' stat-less row(s)');
+        return wrote;
+      });
+    }).catch(function (e) { console.warn(TAG + ' stats enrichment threw: ' + ((e && e.message) || e)); return 0; });
   }
 
   /* ---------- exports ---------- */
@@ -481,5 +578,6 @@
   window.depotEnrichPositions = enrichRows;
   window.depotBackfillPositions = backfill;
   window.depotRepullStats = repull;
+  window.depotEnrichStats = enrichStats;
   console.debug(TAG + ' ready');
 })();

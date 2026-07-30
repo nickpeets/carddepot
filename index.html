@@ -1,18 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <script src="js/version.js?v=8522149"></script>
-  <script src="js/depot-core.js?v=8522149"></script>
+  <script src="js/version.js?v=3d1c5f2"></script>
+  <script src="js/depot-core.js?v=3d1c5f2"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>The Depot</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gshtatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Spectral:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/depot-style.css?v=8522149">
-  <link rel="stylesheet" href="css/season.css?v=8522149">
-    <script src="js/depot-shell.js?v=8522149"></script>
-  <script src="js/depot-season-shell.js?v=8522149"></script>
+  <link rel="stylesheet" href="css/depot-style.css?v=3d1c5f2">
+  <link rel="stylesheet" href="css/season.css?v=3d1c5f2">
+    <script src="js/depot-shell.js?v=3d1c5f2"></script>
+  <script src="js/depot-season-shell.js?v=3d1c5f2"></script>
   <style>
     /* binder tile portrait redesign v2 (additive, contract-safe) */
     :root{--binder-cols:3}
@@ -1031,9 +1031,9 @@ body{
 </style>
 <!-- /PHASE5-SHARE-CSS -->
 
-  <link rel="stylesheet" href="css/depot-shop-view.css?v=8522149">
-  <link rel="stylesheet" href="css/pack-shop-v2.css?v=8522149">
-    <link rel="stylesheet" href="depot-v2.css?v=8522149">
+  <link rel="stylesheet" href="css/depot-shop-view.css?v=3d1c5f2">
+  <link rel="stylesheet" href="css/pack-shop-v2.css?v=3d1c5f2">
+    <link rel="stylesheet" href="depot-v2.css?v=3d1c5f2">
 </head>
 <body class="v2-body">
   <div id="sharedUnavailable"><div class="su-card"><div class="su-title">Not available</div><div class="su-sub">This collection isn&rsquo;t available.</div></div></div>
@@ -2771,6 +2771,26 @@ async function saveCard(){
     const _id = await depotInsertCard(card);
     if(!_id){ return; }
     USER_CARDS.push(card);
+    /* Stats are a GAME INPUT, not decoration: the builder refuses a card with no
+     * usable line (isUsableHitter), so a stat-less add is a card that cannot be
+     * played. The v2 add flow only fills #f-stats when the collector runs the
+     * rolodex season pull, so a catalog-tile add lands blank -- that is how Bob
+     * Abreu 1999 arrived with 'No stats recorded yet.' Fire the same
+     * span-validated pull the pack grants use, AFTER the insert and WITHOUT
+     * awaiting it: a slow or dead statsapi must never delay or fail an add. */
+    if(!card.stats || !Object.keys(card.stats).length){
+      (function(_cid){
+        var _c=null;
+        try{ _c=(typeof depotSB==='function')?depotSB():null; }catch(e){ _c=null; }
+        if(!_c){ console.warn('[depot] add: stats enrichment skipped for '+_cid+' -- no supabase client'); return; }
+        if(typeof window.depotEnrichStats!=='function'){ console.warn('[depot] add: stats enrichment skipped for '+_cid+' -- depot-position.js not loaded'); return; }
+        Promise.resolve(window.depotEnrichStats(_c,[_cid])).then(function(n){
+          if(!n) return;
+          console.log('[depot] add: season line filled in after the fact for '+_cid);
+          if(typeof depotLoadCards==='function') return depotLoadCards();
+        }).catch(function(e){ console.warn('[depot] add: stats enrichment failed for '+_cid+': '+((e&&e.message)||e)); });
+      })(_id);
+    }
   } else {
     toast("Please log in to save cards."); return;
   }
@@ -3270,21 +3290,21 @@ setAuthUI(false);
   });
 })();
 </script>
-<script src="game/season.js?v=8522149" defer></script>
-<script src="js/depot-index-shell.js?v=8522149"></script>
-<script src="js/depot-prestige.js?v=8522149"></script>
-<script src="js/depot-wallet.js?v=8522149"></script>
-  <script src="js/depot-pack-engine.js?v=8522149"></script>
-  <script src="js/depot-pixel-card.js?v=8522149"></script>
-  <script src="js/depot-library-index.js?v=8522149"></script>
-  <script src="js/depot-shop.js?v=8522149"></script>
-  <script src="js/depot-shop-view.js?v=8522149"></script>
-  <script src="js/depot-binder-shop.js?v=8522149"></script>
-  <script src="js/depot-library-art.js?v=8522149"></script>
-  <script src="js/depot-add-card-search.js?v=8522149"></script>
-    <script src="js/depot-position.js?v=8522149"></script>
-  <script src="js/depot-card-detail-2b.js?v=8522149"></script>
-  <script src="js/depot-card-detail-polish.js?v=8522149"></script>
+<script src="game/season.js?v=3d1c5f2" defer></script>
+<script src="js/depot-index-shell.js?v=3d1c5f2"></script>
+<script src="js/depot-prestige.js?v=3d1c5f2"></script>
+<script src="js/depot-wallet.js?v=3d1c5f2"></script>
+  <script src="js/depot-pack-engine.js?v=3d1c5f2"></script>
+  <script src="js/depot-pixel-card.js?v=3d1c5f2"></script>
+  <script src="js/depot-library-index.js?v=3d1c5f2"></script>
+  <script src="js/depot-shop.js?v=3d1c5f2"></script>
+  <script src="js/depot-shop-view.js?v=3d1c5f2"></script>
+  <script src="js/depot-binder-shop.js?v=3d1c5f2"></script>
+  <script src="js/depot-library-art.js?v=3d1c5f2"></script>
+  <script src="js/depot-add-card-search.js?v=3d1c5f2"></script>
+    <script src="js/depot-position.js?v=3d1c5f2"></script>
+  <script src="js/depot-card-detail-2b.js?v=3d1c5f2"></script>
+  <script src="js/depot-card-detail-polish.js?v=3d1c5f2"></script>
 <script>
 /* Franchise Economy Slice A: arm wallet chip + payout hook. Additive, fail-loud, graceful until DDL. */
 (function(){

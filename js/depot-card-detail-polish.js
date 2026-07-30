@@ -29,8 +29,8 @@
       ".spotlight.dc2b #spotFront img.photo{width:100%;height:100%;min-height:0;}",
       ".spotlight.dc2b .spot-face.is-landscape{background:#0d2d5c;}",
       ".spotlight.dc2b .spot-face.is-landscape img{width:100%;height:auto;max-height:100%;}",
-      ".spotlight.dc2b #spotBack .spot-back-img{height:100%;max-height:none;}",
-      ".spotlight.dc2b #spotBack .spot-back-img img{height:100%;max-height:none;}",
+      ".spotlight.dc2b #spotBack .spot-back-img{flex:1 1 0;min-height:0;height:auto;max-height:100%;margin:0 !important;aspect-ratio:auto;}",
+      ".spotlight.dc2b #spotBack .spot-back-img img{width:100%;height:100%;max-height:100%;}",
       /* 2. flip: 0.5s ease-out + scale beat (rip dFlip quality bar) */
       ".spotlight.dc2b .spot-inner{transition:transform .5s cubic-bezier(.2,.85,.25,1) !important;}",
       "@keyframes dcFlipPop{0%{transform:scale(1);}38%{transform:scale(1.055);}100%{transform:scale(1);}}",
@@ -38,7 +38,10 @@
       ".spotlight.dc2b .spot-card.is-flipping .spot-face{box-shadow:0 22px 44px rgba(7,44,71,.45);}",
       /* 3. back face = art only */
       ".spotlight.dc2b #spotBack .back-head,.spotlight.dc2b #spotBack .back-sub{display:none !important;}",
-      ".spotlight.dc2b #spotBack{padding:0 !important;}",
+      ".spotlight.dc2b .spot-face{overflow:hidden !important;}",
+      ".spotlight.dc2b #spotBack{padding:0 !important;overflow:hidden !important;gap:0 !important;}",
+      ".spotlight.dc2b #spotBack .spot-back-scroll{flex:0 1 auto;min-height:0;overflow:hidden !important;margin:0 !important;}",
+      ".spotlight.dc2b #spotBack .statgrid-wrap{overflow:hidden !important;margin:0 !important;}",
       ".spotlight.dc2b .spot-back-empty{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;text-align:center;padding:18px;font-family:'Baloo 2',sans-serif;font-weight:800;font-size:.86rem;color:#5b7f97;background:#eaf5fd;}",
       ".spotlight.dc2b .spot-back-empty small{display:block;font-weight:600;font-size:.72rem;color:#8fb2c6;}",
       ".spotlight.dc2b #spotBack.has-art .spot-back-empty{display:none;}",
@@ -48,13 +51,18 @@
       ".spotlight.dc2b .dc-zoom-btn[disabled]{opacity:.45;cursor:default;box-shadow:none;}",
       "#dcZoom{position:fixed;inset:0;z-index:70;display:none;align-items:center;justify-content:center;flex-direction:column;gap:12px;padding:24px;background:rgba(7,44,71,.94);cursor:zoom-out;}",
       "#dcZoom.open{display:flex;}",
-      "#dcZoom img{max-width:94vw;max-height:84vh;width:auto;height:auto;object-fit:contain;border:4px solid #10456b;border-radius:12px;background:#0d2d5c;box-shadow:0 24px 60px rgba(0,0,0,.5);}",
+      "#dcZoom .dc-zoom-stage{position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;border:4px solid #10456b;border-radius:12px;background:#0d2d5c;box-shadow:0 24px 60px rgba(0,0,0,.5);cursor:zoom-in;touch-action:none;}",
+      "#dcZoom.is-mag .dc-zoom-stage{cursor:grab;}",
+      "#dcZoom.is-panning .dc-zoom-stage{cursor:grabbing;}",
+      "#dcZoom img{display:block;max-width:none;max-height:none;width:auto;height:auto;object-fit:contain;transition:transform .18s ease-out,width .18s ease-out,height .18s ease-out;}",
+      "#dcZoom .dc-zoom-lvl{font-family:'Baloo 2',sans-serif;font-weight:800;font-size:.72rem;color:#9dc9e2;}",
       "#dcZoom .dc-zoom-cap{font-family:'Baloo 2',sans-serif;font-weight:800;font-size:.84rem;color:#dff1fb;text-align:center;}",
       "#dcZoom .dc-zoom-cap small{display:block;font-weight:600;color:#9dc9e2;font-size:.72rem;margin-top:3px;}",
       "#dcZoom .dc-zoom-x{position:absolute;top:16px;right:18px;width:40px;height:40px;display:flex;align-items:center;justify-content:center;border:3px solid #10456b;border-radius:999px;background:#fff;box-shadow:0 4px 0 #10456b;color:#10456b;font-family:'Baloo 2',sans-serif;font-weight:800;font-size:1rem;cursor:pointer;}",
       "@media (prefers-reduced-motion:reduce){",
       "  .spotlight.dc2b .spot-inner{transition:transform .2s linear !important;}",
       "  .spotlight.dc2b .spot-card.is-flipping{animation:none !important;}",
+      "  #dcZoom img{transition:none !important;}",
       "}"
     ].join("\n");
     var s = document.createElement("style");
@@ -161,6 +169,135 @@
     return src ? { url: src, side: back ? "back" : "front" } : null;
   }
 
+    /* ---- zoom engine: fit <-> magnified, drag pan, wheel, pinch --------- */
+  var Z = { nw: 0, nh: 0, scale: 0, tx: 0, ty: 0, drag: null, pinch: null, moved: false, lastTap: 0 };
+
+  function zoomBounds() {
+    var maxW = Math.max(120, window.innerWidth * 0.94);
+    var maxH = Math.max(120, window.innerHeight * 0.84);
+    var fit = (Z.nw && Z.nh) ? Math.min(maxW / Z.nw, maxH / Z.nh) : 1;
+    if (!isFinite(fit) || fit <= 0) fit = 1;
+    return { maxW: maxW, maxH: maxH, fit: fit,
+             mag: Math.max(2, fit * 2),   /* the genuinely magnified level */
+             start: Math.max(fit, 2),     /* open at fit-to-viewport OR 2x natural, whichever is larger */
+             lo: Math.min(fit, 1), hi: Math.max(fit * 4, 6) };
+  }
+
+  function touchDist(t) {
+    var dx = t[0].clientX - t[1].clientX, dy = t[0].clientY - t[1].clientY;
+    return Math.sqrt(dx * dx + dy * dy);
+  }
+
+  function paintZoom() {
+    var z = document.getElementById("dcZoom");
+    if (!z || !Z.nw || !Z.scale) return;
+    var stage = z.querySelector(".dc-zoom-stage"), im = z.querySelector("img");
+    if (!stage || !im) return;
+    var B = zoomBounds();
+    var w = Math.round(Z.nw * Z.scale), h = Math.round(Z.nh * Z.scale);
+    var sw = Math.min(w, Math.round(B.maxW)), sh = Math.min(h, Math.round(B.maxH));
+    stage.style.width = sw + "px"; stage.style.height = sh + "px";
+    im.style.width = w + "px"; im.style.height = h + "px";
+    var mx = Math.max(0, (w - sw) / 2), my = Math.max(0, (h - sh) / 2);
+    if (Z.tx > mx) Z.tx = mx;
+    if (Z.tx < -mx) Z.tx = -mx;
+    if (Z.ty > my) Z.ty = my;
+    if (Z.ty < -my) Z.ty = -my;
+    im.style.transform = "translate(" + Z.tx.toFixed(1) + "px," + Z.ty.toFixed(1) + "px)";
+    z.classList.toggle("is-mag", Z.scale > B.fit * 1.01);
+    var lvl = z.querySelector(".dc-zoom-lvl");
+    if (lvl) lvl.textContent = Math.round(Z.scale * 100) + "% of scan \u00b7 " + w + "\u00d7" + h + " px";
+  }
+
+  function setZoomScale(s, keepPan) {
+    var B = zoomBounds();
+    if (!(s > 0)) s = B.start;
+    if (s < B.lo) s = B.lo;
+    if (s > B.hi) s = B.hi;
+    Z.scale = s;
+    if (!keepPan) { Z.tx = 0; Z.ty = 0; }
+    paintZoom();
+  }
+
+  function measureZoom(im) {
+    if (!im || !im.naturalWidth) return;
+    Z.nw = im.naturalWidth; Z.nh = im.naturalHeight;
+    setZoomScale(zoomBounds().start, false);
+  }
+
+  function toggleZoomLevel() {
+    if (!Z.nw) return;
+    var B = zoomBounds();
+    setZoomScale(Z.scale > B.fit * 1.01 ? B.fit : B.mag, false);
+  }
+
+  function onStage(e) {
+    var t = e.target;
+    return !!(t && t.closest && t.closest(".dc-zoom-stage"));
+  }
+
+  function bindZoom(z) {
+    z.addEventListener("click", function (e) {
+      e.stopPropagation();
+      if (Z.moved) { Z.moved = false; return; }
+      if (onStage(e)) toggleZoomLevel(); else closeZoom();
+    });
+    z.addEventListener("wheel", function (e) {
+      if (!Z.nw) return;
+      e.preventDefault();
+      setZoomScale(Z.scale * (e.deltaY < 0 ? 1.18 : 1 / 1.18), true);
+    }, { passive: false });
+    z.addEventListener("mousedown", function (e) {
+      if (!Z.nw || e.button !== 0 || !onStage(e)) return;
+      Z.drag = { x: e.clientX, y: e.clientY, tx: Z.tx, ty: Z.ty };
+      Z.moved = false;
+      z.classList.add("is-panning");
+      e.preventDefault();
+    });
+    document.addEventListener("mousemove", function (e) {
+      if (!Z.drag) return;
+      var dx = e.clientX - Z.drag.x, dy = e.clientY - Z.drag.y;
+      if (Math.abs(dx) > 4 || Math.abs(dy) > 4) Z.moved = true;
+      Z.tx = Z.drag.tx + dx; Z.ty = Z.drag.ty + dy;
+      paintZoom();
+    });
+    document.addEventListener("mouseup", function () {
+      if (!Z.drag) return;
+      Z.drag = null;
+      var zz = document.getElementById("dcZoom");
+      if (zz) zz.classList.remove("is-panning");
+    });
+    z.addEventListener("touchstart", function (e) {
+      if (!Z.nw) return;
+      if (e.touches.length === 2) { Z.pinch = { d: touchDist(e.touches), s: Z.scale }; Z.drag = null; }
+      else if (e.touches.length === 1) { Z.drag = { x: e.touches[0].clientX, y: e.touches[0].clientY, tx: Z.tx, ty: Z.ty }; Z.moved = false; }
+    }, { passive: true });
+    z.addEventListener("touchmove", function (e) {
+      if (!Z.nw) return;
+      if (Z.pinch && e.touches.length === 2) {
+        e.preventDefault();
+        if (Z.pinch.d > 0) setZoomScale(Z.pinch.s * (touchDist(e.touches) / Z.pinch.d), true);
+      } else if (Z.drag && e.touches.length === 1) {
+        e.preventDefault();
+        var dx = e.touches[0].clientX - Z.drag.x, dy = e.touches[0].clientY - Z.drag.y;
+        if (Math.abs(dx) > 6 || Math.abs(dy) > 6) Z.moved = true;
+        Z.tx = Z.drag.tx + dx; Z.ty = Z.drag.ty + dy;
+        paintZoom();
+      }
+    }, { passive: false });
+    z.addEventListener("touchend", function (e) {
+      Z.pinch = null;
+      var wasDrag = Z.moved;
+      Z.drag = null;
+      if (!wasDrag && e.changedTouches && e.changedTouches.length === 1) {
+        var t = Date.now();
+        if (t - Z.lastTap < 320) { toggleZoomLevel(); Z.lastTap = 0; } else Z.lastTap = t;
+      }
+      Z.moved = false;
+    }, { passive: true });
+    window.addEventListener("resize", function () { if (zoomIsOpen()) paintZoom(); });
+  }
+
   function zoomEl() {
     var z = document.getElementById("dcZoom");
     if (z) return z;
@@ -169,9 +306,9 @@
     z.setAttribute("role", "dialog");
     z.setAttribute("aria-label", "Card scan, zoomed");
     z.innerHTML = '<button type="button" class="dc-zoom-x" aria-label="Close zoom">\u2715</button>'
-      + '<img alt="card scan, zoomed">'
-      + '<div class="dc-zoom-cap"></div>';
-    z.addEventListener("click", function (e) { e.stopPropagation(); closeZoom(); });
+      + '<div class="dc-zoom-stage"><img alt="card scan, zoomed"></div>'
+      + '<div class="dc-zoom-cap"></div>' + '<div class="dc-zoom-lvl"></div>';
+    bindZoom(z);
     document.body.appendChild(z);
     return z;
   }
@@ -182,7 +319,11 @@
     if (!art) return;
     var z = zoomEl();
     var im = z.querySelector("img");
+    Z.nw = 0; Z.nh = 0; Z.scale = 0; Z.tx = 0; Z.ty = 0;
+    im.removeAttribute("style");
+    im.onload = function () { measureZoom(im); };
     im.src = art.url;
+    if (im.complete && im.naturalWidth) measureZoom(im);
     var name = "";
     try {
       var n = document.querySelector("#spotMeta .spot-name");
@@ -190,13 +331,14 @@
     } catch (e2) {}
     z.querySelector(".dc-zoom-cap").innerHTML =
       (name ? name + " \u00b7 " : "") + (art.side === "back" ? "back" : "front")
-      + "<small>Esc or click anywhere to leave the zoom</small>";
+      + "<small>Click the card to magnify \u00b7 drag to pan \u00b7 Esc or click outside to close</small>";
     z.classList.add("open");
   }
 
   function closeZoom() {
     var z = document.getElementById("dcZoom");
-    if (z) z.classList.remove("open");
+    if (z) { z.classList.remove("open"); z.classList.remove("is-mag"); z.classList.remove("is-panning"); }
+    Z.nw = 0; Z.nh = 0; Z.scale = 0; Z.tx = 0; Z.ty = 0; Z.drag = null; Z.pinch = null; Z.moved = false;
   }
 
   function zoomIsOpen() {

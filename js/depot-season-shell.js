@@ -68,8 +68,8 @@
     view.style.position = 'fixed'; view.style.inset = '0'; view.style.zIndex = '9000';
     view.style.overflow = 'auto'; view.style.background = 'var(--depot-navy-bg)';
     view.innerHTML = '';
-    var bunt = document.createElement('div'); bunt.className = 'depot-bunting';
-    view.appendChild(bunt);
+    // Bunting strip RETIRED: the v2 nav replaced the Session-1 shell chrome, and
+    // the pinstripe read as a stray multicolored bar under the new nav.
     var shell = document.createElement('div'); shell.className = 'depot-shell';
     view.appendChild(shell);
     var franchiseBlock = id.anon ? '<div class="depot-franchise"><span class="name"><a class="btn ghost" href="#" style="min-height:0;padding:6px 10px">LOG IN</a></span></div>' : '<div class="depot-franchise"><span class="name"></span><span class="record"></span></div>';
