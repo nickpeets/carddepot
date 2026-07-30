@@ -96,7 +96,7 @@ The rule is one line: *never trust a handoff summary; verify against the repo, a
 
 **Where the stamp lives.** Inside the fix branch, at the tip, committed with `js/version.js` and every `?v=` string together. Then the web-UI `--no-ff` merge is itself the action that fires Pages: one merge, one deploy, label and queries atomic by construction, no post-merge bump commit **[repo]** AGENTS.md §6 branch-tip label.
 
-**Count, don't trust — and the history of why the number moved.** The count is not a constant. It has changed nine times in four days:
+**Count, don't trust — and the history of why the number moved.** The count is not a constant. It has taken eight different values across seventeen stamp commits in four days:
 
 | Count | Commit | What moved it |
 |---|---|---|
