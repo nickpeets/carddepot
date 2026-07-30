@@ -1851,12 +1851,9 @@ function openSpot(idx){
   </div>`;
   const isP=cardType(c)==='pitcher';
   document.getElementById('spotBack').innerHTML=`
-    <div class="back-head">
-      <h3>${c.name}</h3>
-      
-    </div>
-    <div class="back-sub">${c.yr} ${c.set} · #${c.num}${c.rare?' · KEY CARD':''}</div>
-    ${cback?`<div class="spot-back-img"><img src="${escAttr(cback)}" alt="card back" onload="imgOk(this)" onerror="imgFail(this)"></div>`:''}
+        <!-- Task B #3: the back face is the SCAN. Name / set / number
+             already live in the meta panel, so no text overlay here. -->
+        ${cback?`<div class="spot-back-img"><img src="${escAttr(cback)}" alt="card back" onload="imgOk(this)" onerror="imgFail(this)"></div>`:''}
     <div class="spot-back-scroll">
     ${statTable(c)}
     ${c.bio?`<div class="bio">${c.bio}</div>`:''}
@@ -1928,7 +1925,7 @@ function refreshSpotTile(){
     try{ if(typeof window.renderBinder==='function') window.renderBinder(); }catch(_){}
   }
 }
-document.addEventListener('keydown',e=>{if(e.key==='Escape'){document.getElementById('spotlight').classList.remove('open');refreshSpotTile();}});
+document.addEventListener('keydown',e=>{if(e.key==='Escape'){if(window.dcZoomOpen&&window.dcZoomOpen()){window.dcZoomClose();return;}document.getElementById('spotlight').classList.remove('open');refreshSpotTile();}});
 
 /* ---------- mode switch ---------- */
 function setMode(m){
@@ -3208,6 +3205,7 @@ setAuthUI(false);
   <script src="js/depot-add-card-search.js?v=e122e6f"></script>
     <script src="js/depot-position.js?v=e122e6f"></script>
   <script src="js/depot-card-detail-2b.js?v=e122e6f"></script>
+  <script src="js/depot-card-detail-polish.js?v=e122e6f"></script>
 <script>
 /* Franchise Economy Slice A: arm wallet chip + payout hook. Additive, fail-loud, graceful until DDL. */
 (function(){
