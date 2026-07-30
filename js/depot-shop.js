@@ -63,6 +63,51 @@ function catalogCardToPrestigeShape(c, y) {
   if (c.name == null && c.player != null) c.name = c.player;
   return c;
 }
+/* Task D -- ART GATE ON THE ROLL POOL.
+ * Nick's rule: any card grabbable via pack shop must have an image. The roll is
+ * client-side (the RPCs only move money / record the grant), so both the paid
+ * and the free path get the gate for free by filtering the pool HERE, once,
+ * before rollPack / rollFree / redeem ever see it.
+ *
+ * DETERMINISM: rollPack is deterministic in (seed, catalog, tier). Narrowing the
+ * catalog therefore changes what a historical seed reproduces. That is accepted
+ * for future rolls; the pack_grants ledger is the record of what was actually
+ * granted and is untouched. See the PR body + FUTURE_ITEMS.
+ *
+ * FAILS OPEN: no index, or a filter that would empty the pool, ships the raw
+ * catalog rather than breaking the shop.
+ */
+function artKeyOf(c) {
+  return (typeof window.depotCatalogArtKey === 'function') ? window.depotCatalogArtKey(c) : '';
+}
+function filterToArtBacked(all) {
+  if (!window.DepotLibraryIndex || typeof window.DepotLibraryIndex.load !== 'function') {
+    console.warn(TAG + ' art index module missing; rolling the UNFILTERED catalog');
+    return Promise.resolve(all);
+  }
+  if (typeof window.depotCatalogArtKey !== 'function') {
+    console.warn(TAG + ' depotCatalogArtKey missing (depot-library-art.js not loaded); rolling the UNFILTERED catalog');
+    return Promise.resolve(all);
+  }
+  return window.DepotLibraryIndex.load().then(function (keys) {
+    if (!keys || !keys.size) {
+      console.warn(TAG + ' no art index; rolling the UNFILTERED catalog (' + all.length + ' rows)');
+      return all;
+    }
+    var out = [];
+    for (var i = 0; i < all.length; i++) { if (keys.has(artKeyOf(all[i]))) out.push(all[i]); }
+    if (!out.length) {
+      console.error(TAG + ' art filter emptied the catalog; rolling the UNFILTERED catalog');
+      return all;
+    }
+    console.log(TAG + ' art-backed roll pool: ' + out.length + '/' + all.length +
+                ' (' + (out.length / all.length * 100).toFixed(1) + '%)');
+    return out;
+  }).catch(function (e) {
+    console.error(TAG + ' art filter threw: ' + (e && (e.message || e)) + '; rolling the UNFILTERED catalog');
+    return all;
+  });
+}
 function loadCatalog() {
   return catalogYears().then(function (years) {
     return Promise.all(years.map(function (y) {
@@ -71,7 +116,8 @@ function loadCatalog() {
         .then(function (arr) { return (arr || []).map(function (c) { return catalogCardToPrestigeShape(c, y); }); })
         .catch(function () { return []; });
     })).then(function (chunks) {
-      var all = []; chunks.forEach(function (c) { all = all.concat(c); }); return all;
+      var all = []; chunks.forEach(function (c) { all = all.concat(c); });
+      return filterToArtBacked(all);
     });
   });
 }
