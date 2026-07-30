@@ -219,3 +219,54 @@ misreported. But pack VALUE went up at a fixed price, which is an
 `ECONOMY_DESIGN.md` question, not a rendering one: either accept the richer pull
 (and revisit prices/earn rate), or re-tune `cardWeight`/band rates against the
 filtered pool so the published odds hold steady. Nick's call.
+
+### 12a. Measured A/B (high-sample, 2026-07-30, main @ b20a57d)
+
+The table above came off the shop's render-time estimate, which rolls only 250
+packs. Re-measured with the same engine at 20,000 rolls per tier against both
+catalogs -- the art-backed pool as shipped, and the raw pool obtained by making
+the art index return nothing so `filterToArtBacked()` takes its fail-open path:
+
+| tier | raw pool (155,844 rows) | art-backed pool (84,272 = 54.1%) | gold-hit delta |
+| --- | --- | --- | --- |
+| Free | 90 / 8 / 1.5 / 0.5 plain/bronze/silver/gold | identical | none -- free floors at plain |
+| Bronze | gold 4.0% (1 in 25) | gold 5.6% (1 in 18) | +1.6 pts, +40% relative |
+| Silver | gold 12.6% (1 in 8) | gold 15.2% (1 in 7) | +2.6 pts, +21% relative |
+| Gold | gold 97.2% | gold 96.6% | flat -- already at the band ceiling |
+
+Method: `DepotPackEngine.estimateOdds(tier, catalog, DepotPrestige, 20000)` in the
+live shop; filtered catalog from `DepotShop.loadCatalog()`, raw catalog from the
+same loader with `DepotLibraryIndex.load` temporarily resolving null. Read-only:
+no pack was bought, no receipt written, no DD spent.
+
+### 12b. Sample count: the printed copy was not noisy, it was biased
+
+`estimateOdds` is deterministic -- it seeds its own RNG, so repeated calls at any
+sample count return the identical number. The printed odds therefore never
+wobbled between loads. The defect was accuracy, not stability: 250 rolls is a
+biased read of the same pool.
+
+| samples | bronze gold-hit | printed as | ms per tier |
+| --- | --- | --- | --- |
+| 250 | 6.4% | 1 in 16 | 1 |
+| 500 | 5.8% | 1 in 17 | 2 |
+| 1,000 | 4.9% | 1 in 20 | 2 |
+| 2,000 | 5.2% | 1 in 19 | 6 |
+| 4,000 | 5.3% | 1 in 19 | 8 |
+| 8,000 | 5.4% | 1 in 19 | 11 |
+| 16,000 | 5.5% | 1 in 18 | 48 |
+
+Fixed in this PR: `oddsOf()` in `js/depot-shop-view.js` goes 250 -> 8,000 rolls.
+Four tiers at ~11 ms is ~45 ms per shop render, and bronze's printed value
+settles from "1 in 16" onto a stable "1 in 19".
+
+Still open, copy rather than math: the "1 in N" integer rounding flips silver
+between 1 in 6 and 1 in 7, because the true value (15.2-15.7%) straddles the
+100 / 6.5 = 15.4% rounding boundary. One decimal place, or an honest range,
+would stop the flip. Not changed here -- that is a copy call, not a bug.
+
+### 12c. Decision (Nick, 2026-07-30): retune DEFERRED
+
+Accept the richer pull for now. The economy retune -- prices, earn rate, or
+`cardWeight` / band rates -- lands alongside the Diamond-tier work in section 6,
+so the whole curve gets priced once instead of twice.
