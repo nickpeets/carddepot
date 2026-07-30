@@ -548,3 +548,37 @@
    .dc-tile, so bind the same keyframes to the class the pack path actually
    applies. Only the pack-collect path ever adds .just-landed. */
 .dc-tile.just-landed { animation:dsv-settle .7s cubic-bezier(.2,.9,.3,1); z-index:3; position:relative; }
+
+/* ---- Pack History: expandable contents (feat/pack-history-cards) --------
+   The shelf row keeps its old shape; CARDS opens the pack underneath it. The
+   list is read from the binder rows that carry the pack's seed, so every
+   entry with an id is a card the collector actually owns and can open. */
+.pks .dpc-hist-row { display:flex; flex-direction:column; gap:0; }
+.pks .dpc-cardsbtn {
+  font-family:'Baloo 2',sans-serif; font-weight:800; font-size:.72rem; letter-spacing:.02em;
+  color:var(--pk-navy); background:var(--pk-sky,#dff1fb); border:3px solid var(--pk-navy);
+  border-radius:999px; padding:5px 12px; margin-right:8px; cursor:pointer;
+}
+.pks .dpc-cardsbtn[aria-expanded="true"] { background:var(--pk-navy); color:#fff; }
+.pks .dpc-hist-cards {
+  margin:-6px 0 10px; padding:10px 12px 12px; background:var(--pk-white,#fff);
+  border:3px solid var(--pk-navy); border-top:0; border-radius:0 0 14px 14px;
+}
+.pks .dpc-hist-cards[hidden] { display:none; }
+.pks .dpc-hist-note, .pks .dpc-hist-none {
+  font-family:'Baloo 2',sans-serif; font-weight:600; font-size:.74rem; color:var(--pk-muted1,#5b7f97); margin:0 0 8px;
+}
+.pks .dpc-hist-cardlist { list-style:none; margin:0; padding:0; display:flex; flex-direction:column; gap:6px; }
+.pks .dpc-hist-card {
+  display:flex; align-items:center; gap:10px; padding:7px 10px; border-radius:10px;
+  background:var(--pk-sky,#dff1fb); font-family:'Baloo 2',sans-serif; color:var(--pk-navy);
+}
+.pks .dpc-hist-card.is-linked { cursor:pointer; }
+.pks .dpc-hist-card.is-linked:hover, .pks .dpc-hist-card.is-linked:focus-visible { outline:3px solid var(--pk-navy); outline-offset:1px; }
+.pks .dpc-hist-cardname { font-weight:800; font-size:.82rem; }
+.pks .dpc-hist-cardmeta { font-weight:600; font-size:.72rem; color:var(--pk-muted1,#5b7f97); }
+.pks .dpc-hist-go { margin-left:auto; font-weight:800; font-size:.68rem; letter-spacing:.04em; }
+@media (max-width:430px){
+  .pks .dpc-hist-card { flex-wrap:wrap; gap:2px 8px; }
+  .pks .dpc-hist-go { margin-left:auto; }
+}

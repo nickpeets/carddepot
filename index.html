@@ -1438,6 +1438,34 @@ async function depotLoadCards(){
   cards.forEach(c=>USER_CARDS.push(c));
   rebuild();
   renderBinder();
+  depotSpotFromQuery();
+}
+/* ---- spotlight deep link: ?card=<row id> ------------------------------
+ * Pack History lists the cards a pack produced and links each one here. The id
+ * is the cards-table row id, which rowToCard() keeps on every COLLECTION entry,
+ * so the lookup is exact rather than a name/year guess. Fail-loud per AGENTS 4:
+ * an id we cannot place says so instead of quietly doing nothing. */
+window.depotOpenSpotById = function(id){
+  if(!id){ console.warn('[depot] spotlight deep-link: called with no card id'); return false; }
+  var pool = null;
+  try{ pool = (typeof COLLECTION !== 'undefined' && COLLECTION) ? COLLECTION : null; }catch(e){ pool = null; }
+  if(!pool){ console.warn('[depot] spotlight deep-link: COLLECTION is not built yet; cannot open '+id); return false; }
+  for(var i=0;i<pool.length;i++){
+    if(pool[i] && String(pool[i].id) === String(id)){ openSpot(i); return true; }
+  }
+  console.warn('[depot] spotlight deep-link: no card in this collection carries id '+id);
+  return false;
+};
+function depotSpotFromQuery(){
+  var id = null;
+  try{ id = new URLSearchParams(location.search).get('card'); }
+  catch(e){ console.warn('[depot] spotlight deep-link: query parse failed: '+((e&&e.message)||e)); return; }
+  if(!id) return;
+  if(window.depotOpenSpotById(id)){
+    try{ history.replaceState(null, '', location.pathname + location.hash); }catch(e){}
+  } else {
+    toast('That card is not in this collection.');
+  }
 }
 async function depotInsertCard(c){
   const sb = depotSB(); const row = cardToRow(c);
@@ -3299,6 +3327,7 @@ setAuthUI(false);
   <script src="js/depot-library-index.js?v=3d1c5f2"></script>
   <script src="js/depot-shop.js?v=3d1c5f2"></script>
   <script src="js/depot-shop-view.js?v=3d1c5f2"></script>
+  <script src="js/depot-pack-history.js?v=3d1c5f2"></script>
   <script src="js/depot-binder-shop.js?v=3d1c5f2"></script>
   <script src="js/depot-library-art.js?v=3d1c5f2"></script>
   <script src="js/depot-add-card-search.js?v=3d1c5f2"></script>
