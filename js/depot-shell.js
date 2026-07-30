@@ -73,6 +73,7 @@
           '<div class="depot-account v2-account" data-depot-account>' +
             '<span class="depot-bell" aria-hidden="true">&#9679;</span>' +
             '<span class="email" data-depot-email></span>' +
+            '<button type="button" class="auth-btn depot-logout" data-depot-logout style="display:none">Log out</button>' +
           '</div>' +
         '</header>' +
         '<nav class="depot-nav v2-nav" data-depot-nav>' +
@@ -189,6 +190,7 @@ box.querySelector('.record').textContent = w + '-' + l;
       // Shop/binder header: derive via resolveRecord, then paint the shared shell chrome.
       function refreshFranchise(){
         return resolveRecord().then(function (rec){
+          paintAccount(); // email + Log out follow the USER, not the franchise row
           if (!rec){ setAnonymous(); return null; }
           var email = q('[data-depot-email]');
           if (email && rec.email){ email.textContent = rec.email; }
@@ -218,6 +220,50 @@ function attachNavCarry(root){
     });
 }
 
+// ---- account cluster: ONE email + Log out treatment on every surface -------
+// Task 5 (fix/subset-name-stats). The four surfaces used to render this three
+// different ways: the binder relocated its own .auth-btn Log out into the
+// cluster and inherited index.html's pixel body font; the lineup builder
+// relocated a .btn-ghost one plus its own #whoami; the pack shop and Play Ball
+// rendered no control at all, just an email in the body font. The cluster is
+// now shell-owned markup on all four, styled once in css/depot-style.css
+// (.depot-account .email / .depot-account .auth-btn), and the click DELEGATES
+// to whatever handler that page has already live-verified. Fail-loud per
+// AGENTS.md - every bail says which control was missing.
+function accountBtn(){ return q('[data-depot-logout]'); }
+
+function shellLogout(){
+  var owned = document.getElementById('authLogoutBtn') || document.getElementById('logoutBtn');
+  if (owned && owned !== accountBtn() && typeof owned.click === 'function'){
+    console.log('[depot] shell: Log out delegating to #' + owned.id);
+    owned.click();
+    return;
+  }
+  if (window.DepotAuth && typeof window.DepotAuth.logout === 'function'){ window.DepotAuth.logout(); return; }
+  if (typeof window.depotSB !== 'function'){ console.warn('[depot] shell: Log out has no page handler and no window.depotSB; nothing happened'); return; }
+  var sb = window.depotSB();
+  if (!sb || !sb.auth){ console.warn('[depot] shell: Log out found no supabase client; nothing happened'); return; }
+  sb.auth.signOut().catch(function (e){ console.warn('[depot] shell: signOut threw:', e); });
+}
+
+// Email + Log out track the USER, not the franchise. setFranchise/setAnonymous
+// speak only for the identity plate, and a signed-in collector with no
+// franchise row still owns their account cluster.
+function paintAccount(){
+  var em = q('[data-depot-email]'), btn = accountBtn();
+  if (!em && !btn){ console.warn('[depot] shell.paintAccount: no account cluster mounted; nothing to paint'); return Promise.resolve(null); }
+  var userP = (window.depotUserCached)
+    ? Promise.resolve(window.depotUserCached)
+    : (typeof window.depotUser === 'function' ? window.depotUser() : Promise.resolve(null));
+  return Promise.resolve(userP).then(function (user){
+    if (em){ em.textContent = user ? (user.email || '') : ''; }
+    else { console.warn('[depot] shell.paintAccount: no [data-depot-email] span; email not painted'); }
+    if (btn){ btn.style.display = user ? '' : 'none'; }
+    else { console.warn('[depot] shell.paintAccount: no [data-depot-logout] button; Log out not shown'); }
+    return user || null;
+  }).catch(function (e){ console.warn('[depot] shell.paintAccount: user lookup threw:', e); return null; });
+}
+
 function mount(opts){
     opts = opts || {};
     var el = opts.el || document.body;
@@ -228,6 +274,10 @@ function mount(opts){
     if (_root) { _root.setAttribute('data-depot-active', (opts.active || 'binder')); }
     _mounted = true;
     attachNavCarry(_root);
+    var _lo = accountBtn();
+    if (_lo){ _lo.addEventListener('click', shellLogout); }
+    else { console.warn('[depot] shell.mount: no [data-depot-logout] in the account cluster; this surface has no Log out'); }
+    paintAccount();
     console.log('[depot] depot-shell mounted (active=' + (opts.active || 'none') + ')');
     // Auto-resolve franchise/record unless caller opts out.
     if (opts.autoFranchise !== false){ refreshFranchise(); }
@@ -244,6 +294,7 @@ function mount(opts){
     setAnonymous: setAnonymous,
     setActive: setActive,
     refreshFranchise: refreshFranchise,
+    paintAccount: paintAccount,
     resolveRecord: resolveRecord,
     stageEl: function(){ return q('[data-depot-stage]'); }
   };

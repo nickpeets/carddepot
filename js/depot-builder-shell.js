@@ -104,7 +104,11 @@
 
     var acct = document.querySelector('.depot-shell .depot-account');
     if (acct) {
-      ['notifWrap', 'whoami', 'logoutBtn'].forEach(function (id) {
+      // #whoami and #logoutBtn are no longer relocated: the shell renders the email
+      // and a Log out in the shared 8-bit treatment, and delegates the click to
+      // #logoutBtn (still in the retired header, listener intact). Only the
+      // notification bell is page-owned chrome that belongs in the cluster.
+      ['notifWrap'].forEach(function (id) {
         var el = document.getElementById(id);
         if (el) { acct.appendChild(el); }
         else { console.warn('[depot] builder-shell: #' + id + ' not found to relocate'); }
