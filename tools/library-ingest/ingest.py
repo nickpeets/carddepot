@@ -348,6 +348,28 @@ def main(argv=None):
         log("depot", "set '{}' resolved to catalog set '{}' (separator-insensitive)".format(args.set_name, canon))
         args.set_name = canon
         args.brand = canon
+
+    # --- BRAND GUARD (F1) -------------------------------------------------
+    # The brand arrives from the zip FILENAME and, unlike the set, was never
+    # checked against the catalog.  A zip named 1998-Fleer-Tradition.zip made
+    # brand="Fleer-Tradition", but the catalog files that set under brand
+    # "Fleer" -- so every key we minted was well-formed and matched nothing.
+    # Read the brand off the catalog; never mint one from the set token.
+    cat_brand = recover.resolve_brand(catalog_rows, args.set_name)
+    if cat_brand and norm_text(cat_brand) != norm_text(args.brand):
+        log("depot", "brand '{}' -> catalog brand '{}' for set '{}'".format(
+            args.brand, cat_brand, args.set_name))
+        args.brand = cat_brand
+    # Fail loud on a brand the catalog has never heard of.  Ingesting
+    # clean-but-unreachable objects is strictly worse than stopping.
+    known = recover.catalog_brands(catalog_rows)
+    if not any(norm_text(b) == norm_text(args.brand) for b in known):
+        log("depot", "BRAND GUARD: '{}' matches no brand in cards-{}.json "
+            "(set '{}') -- abort".format(args.brand, args.year, args.set_name))
+        log("depot", "BRAND GUARD: catalog brands for {}: {}".format(
+            args.year, sorted(known)))
+        return 3
+    # ----------------------------------------------------------------------
     catalog_numbers = load_catalog_numbers(catalog_path, args.set_name)
     titles_by_number = recover.catalog_titles(catalog_rows, args.set_name)
     log("depot", "catalog '{}' {}: {} normalized numbers".format(args.set_name, args.year, len(catalog_numbers)))

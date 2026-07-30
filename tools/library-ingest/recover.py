@@ -155,3 +155,36 @@ def override_number(filename, numbers, titles):
     if not _title_agrees(titles.get(cand), m.group(3)):
         return None
     return cand
+
+
+def catalog_brands(rows, set_name=None):
+    """Every distinct brand label the catalog itself carries.
+
+    Optionally scoped to one set.  This is the authority for what a brand
+    token is *allowed* to be -- the ingester must never mint its own.
+    """
+    want = norm_text(set_name) if set_name else None
+    out = {}
+    for r in rows:
+        s = r.get("set", "") or ""
+        if want is not None and norm_text(s) != want:
+            continue
+        b = (r.get("brand", "") or "").strip()
+        if b:
+            out[b] = out.get(b, 0) + 1
+    return out
+
+
+def resolve_brand(rows, set_name):
+    """The catalog's own brand label for an already-resolved set.
+
+    Base sets carry brand == set ('Topps'/'Topps') so this is a no-op there.
+    Sub-brands diverge: set 'Fleer Tradition' lives under brand 'Fleer'.
+    Deriving the brand from the set token instead of from the catalog mints a
+    key no catalog row can ever produce -- clean, uploaded, and unreachable.
+    Returns None when the set is unknown, so the caller can fail loud.
+    """
+    counts = catalog_brands(rows, set_name)
+    if not counts:
+        return None
+    return max(counts.items(), key=lambda kv: (kv[1], kv[0]))[0]

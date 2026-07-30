@@ -271,3 +271,161 @@ AGENTS.md §2 human sign-off. See asks below.
    step by exactly 11. If those ids are stable, a future ingest could key off
    them directly instead of inferring n*11. Worth knowing where the 1993 scans
    came from.
+
+---
+
+# F1 RE-KEY PASS — Fleer Tradition 1998-2006
+
+Signed off under AGENTS.md §2 (destructive migration). Executed after the
+follow-up pass above.
+
+## What was wrong
+
+`run_stage2.py` derives **both** brand and set from the zip filename. Nine zips
+are named `YYYY-Fleer-Tradition.zip`, so the ingester used brand
+`Fleer-Tradition`. The catalog files those nine sets under brand **`Fleer`**,
+set **`Fleer Tradition`** — uniformly, all nine years, no divergence.
+
+`ingest.py` already resolved the *set* token against the catalog
+(`recover.resolve_set_name`) but never the *brand*. Nothing failed. 8,338
+objects uploaded cleanly to `YYYY/fleer-tradition/fleer-tradition/N_side.jpg`
+and 8,338 rows landed with key `YYYY|fleer tradition|fleer tradition|N` — a
+string **no catalog row can ever produce**. Clean, uploaded, unreachable.
+
+This is also what inflated the retired 64.65%: that figure divided all library
+front keys by the corpus key count without intersecting against the catalog, so
+these 4,169 phantom keys were counted as coverage. See `METRIC_DEFINITIONS.md`.
+
+## Why the resolver made it invisible
+
+Per `LIBRARY_RESOLVER_SPEC.md` §1/§2 the resolver looks up `card_library` by
+`catalog_key` + `side` and reads `object_path` **off the row**. So the key is
+the load-bearing field; the path is only the fallback derivation. Both were
+corrected, so both routes now agree.
+
+Worth recording: the app has **no resolver code yet** — `grep` for
+`card-library`/`card_library` across the JS/HTML returns nothing. The spec is
+the only contract, which is why it was the thing to verify against.
+
+## The guard (so the class cannot recur)
+
+`recover.catalog_brands(rows, set_name=None)` — the brands the catalog actually
+carries. `recover.resolve_brand(rows, set_name)` — the catalog's own brand for a
+resolved set. `ingest.py` now, after set resolution:
+
+1. rewrites the filename-derived brand to the catalog's brand when they differ
+   (logged: `brand 'Fleer-Tradition' -> catalog brand 'Fleer' for set ...`);
+2. **fails loud with exit code 3** if the final brand matches no brand in
+   `cards-YYYY.json`, printing the catalog's brand list.
+
+Base sets are unaffected (brand == set, so step 1 is a no-op). Tests: 9 new
+guard assertions plus the existing 21 — 30/30 green. Live dry-run on
+1998-Fleer-Tradition.zip logs the rewrite and holds 100.00% match.
+
+## Execution
+
+Bucket writes were **copy** (additive), so no object was destroyed; table and
+manifest rows were updated **in place**, so no rows were created or removed.
+Run per-year with verification between years.
+
+| year | rows | copied | card_library | manifest | failed |
+|------|------|--------|--------------|----------|--------|
+| 1998 | 1200 |  1200  |    1200      |   1200   |   0    |
+| 1999 | 1200 |  1200  |    1200      |   1200   |   0    |
+| 2000 |  900 |   900  |     900      |    900   |   0    |
+| 2001 |  968 |   968  |     968      |    968   |   0    |
+| 2002 | 1000 |  1000  |    1000      |   1000   |   0    |
+| 2003 |  970 |   970  |     970      |    970   |   0    |
+| 2004 | 1000 |  1000  |    1000      |   1000   |   0    |
+| 2005 |  700 |   700  |     700      |    700   |   0    |
+| 2006 |  400 |   400  |     400      |    400   |   0    |
+| **tot** | **8338** | **8338** | **8338** | **8338** | **0** |
+
+Pre-flight validation: all 4,169 proposed keys were confirmed present in the
+catalog (0 absent), and 0 collided with an existing `card_library` key.
+
+## Reconciliation — zero drift
+
+| quantity              | before  | after   | delta |
+|-----------------------|---------|---------|-------|
+| card_library rows     | 179,767 | 179,767 |   0   |
+| manifest total        | 180,205 | 180,205 |   0   |
+| manifest done         | 179,767 | 179,767 |   0   |
+| manifest unmapped     |     438 |     438 |   0   |
+| manifest failed       |       0 |       0 |   0   |
+| rows on the old key   |   8,338 |       0 | -8,338|
+| front keys not in catalog | 4,169 |   0   | -4,169|
+
+curl spot-checks, six keys spread across the nine years, all HTTP 200 with
+distinct byte counts; legacy paths return byte-identical content, confirming the
+copies are faithful.
+
+## Coverage movement
+
+Both metrics as defined in `METRIC_DEFINITIONS.md`.
+
+| metric | before F1 | after F1 | delta |
+|--------|-----------|----------|-------|
+| PACK-POOL %    (rows/155,844) | 98,867 = 63.44% | **103,268 = 66.26%** | +4,401 rows, +2.82pp |
+| KEY COVERAGE % (keys/139,019) | 85,729 = 61.67% | **89,898 = 64.67%** | +4,169 keys, +3.00pp |
+| pack-pool, pairs              | 98,836 = 63.42% | 103,237 = 66.24% | +4,401 |
+| key coverage, pairs           | 85,700 = 61.65% | 89,869 = 64.65% | +4,169 |
+
+The key-coverage gain is exactly 4,169 — the full Fleer Tradition set, nothing
+more and nothing less. Pack-pool gains more (4,401) because 232 of those keys
+are shared by multiple catalog rows.
+
+Coincidence worth flagging so nobody "confirms" the old number: key coverage now
+reads 64.67% (64.65% on pairs), numerically almost identical to the **retired**
+64.65%. It is not the same quantity — the old figure counted the phantom keys
+and skipped the catalog intersection. Cite `METRIC_DEFINITIONS.md`, not history.
+
+## Residue — 8,338 stale objects still in the bucket
+
+The originals at `YYYY/fleer-tradition/fleer-tradition/*` are now unreferenced by
+any table or manifest row. They are duplicate bytes only; nothing reads them.
+**They have not been deleted** — see the Nick-asks below.
+
+---
+
+## Nick-asks (round 3)
+
+**1. The 8,338 stale objects — deletion is yours to run.** The re-key is complete
+and verified; every row points at a canonical path and nothing references the old
+ones. I deliberately did the bucket side as **copy, not move**: I don't perform
+permanent file deletions, so the originals are still sitting there as duplicate
+bytes (~150 MB). Nothing is broken by leaving them — they are simply orphaned.
+When you want them gone:
+
+```
+python - <<'EOF'
+import os
+from supabase import create_client
+sb = create_client(os.environ['SUPABASE_URL'], os.environ['SUPABASE_SERVICE_ROLE_KEY'])
+st = sb.storage.from_('card-library')
+for y in range(1998, 2007):
+    pre = '%d/fleer-tradition/fleer-tradition' % y
+    names = [o['name'] for o in st.list(pre, {'limit': 2000})]
+    for i in range(0, len(names), 100):
+        st.remove(['%s/%s' % (pre, n) for n in names[i:i+100]])
+    print(y, 'removed', len(names))
+EOF
+```
+
+Verify first that `card_library` has zero rows whose `object_path` contains
+`fleer-tradition/fleer-tradition` — it does right now — so the delete can only
+touch orphans.
+
+**2. `run_stage2.py` still passes a filename-derived brand.** The guard in
+`ingest.py` catches and corrects it, which is the right place for the safety net
+(it protects manual invocations too). But stage 2 could pass the catalog brand
+directly and skip the correction entirely. Left alone for now — additive-first,
+and the loud path is already covered. Say the word if you want it tightened.
+
+**3. `CATALOG_GAP_PLAN.md` is unblocked.** The re-key has landed, so per your
+note the gap work can now run as proposed: catalog-merge first, ingest second,
+TCDB as source, ≥98% name-agreement gate, disagreement eyeball list in the
+report. Not started — awaiting your go.
+
+**4. Two catalog keys have no art.** The catalog carries 4,171 Fleer Tradition
+keys; the zips supplied 4,169. Trivial, noted for completeness.

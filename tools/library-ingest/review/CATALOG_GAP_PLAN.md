@@ -1,3 +1,11 @@
+> **STATUS (updated):** Approved in principle - the independence argument
+> (never derive the checklist from the scans you're matching against) and the
+> >=98% name-agreement gate are accepted. Execution was HELD until the F1
+> Fleer Tradition re-key landed. **That re-key is now complete and verified**,
+> so this plan is cleared to run as written: catalog-merge first, ingest
+> second, TCDB as source matching the original pipeline's conventions, with
+> the disagreement eyeball list included in the report. Not yet started.
+
 # CATALOG GAP PLAN — 1992/94/95/96 Bowman + 1995/96 Upper Deck
 
 **Status: PLAN ONLY. Nothing executed. Awaiting Nick's green-light.**
