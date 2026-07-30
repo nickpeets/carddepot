@@ -292,6 +292,36 @@ body.v2-body {
 }
 .v2-nav .v2-pill { font-size: 16px; padding: 10px 20px; }
 
+/* Task C -- nav row = page title + mode pills + the green add-a-card action.
+   One header language on binder / shop / play ball / lineup. */
+.v2-nav-title {
+  font-family: var(--v2-font-body);
+  font-weight: 800;
+  font-size: 26px;
+  line-height: 1;
+  color: var(--v2-white);
+  margin-right: 4px;
+  white-space: nowrap;
+  text-shadow:
+    -2px -2px 0 var(--v2-navy), 2px -2px 0 var(--v2-navy),
+    -2px 2px 0 var(--v2-navy), 2px 2px 0 var(--v2-navy),
+    0 4px 0 var(--v2-shadow);
+}
+/* the shell marks the live tab with aria-current; give it the v2 gold state */
+.v2-nav .v2-pill[aria-current="true"] {
+  background: var(--v2-gold);
+  color: var(--v2-navy-ink);
+}
+.v2-nav .v2-nav-add { text-decoration: none; }
+/* the game page paints its chrome in the 8-bit font/navy; keep the page title
+   legible there without touching the in-game visuals. */
+html.depot-game .depot-nav .v2-nav-title {
+  font-family: var(--v2-font-body) !important;
+  font-size: 22px !important;
+  letter-spacing: 0 !important;
+  color: var(--v2-white) !important;
+}
+
 /* ------------------------------------------------------------
    8. CARD & BANNER PRIMITIVES (shell-reach only, Phase 1)
    ------------------------------------------------------------ */
@@ -414,6 +444,7 @@ body.v2-body {
   .v2-subtitle { font-size: 12px; }
   .v2-nav { padding: 6px 14px 12px; gap: 8px; }
   .v2-nav .v2-pill { font-size: 14px; padding: 9px 16px; }
+  .v2-nav-title { font-size: 20px; width: 100%; margin: 0 0 2px; }
   .v2-coin-pill { padding: 6px 14px; }
   .v2-coin-pill .v2-coin-amt { font-size: 22px; }
   .v2-identity .v2-record { font-size: 18px; }
@@ -765,4 +796,11 @@ body.v2-body {
      .v2-header .v2-identity.v2-plate-10a { flex-wrap: nowrap; }
      .v2-plate-10a .dc-wl { font-size: 19px; }
      .v2-plate-10a .v2-coin-amt, .v2-plate-10a .dw-amt { font-size: 22px; }
+}
+
+/* Task C -- the game page turns .depot-nav into a fixed bottom tab bar under
+   600px; the title and the add-card action would crowd it out. */
+@media (max-width: 600px) {
+  html.depot-game .depot-nav .v2-nav-title,
+  html.depot-game .depot-nav .v2-nav-add { display: none; }
 }

@@ -112,7 +112,7 @@
       var link = document.createElement('link');
       link.id = 'depot-v2-css';
       link.rel = 'stylesheet';
-      link.href = '../depot-v2.css';
+      link.href = '../depot-v2.css' + (window.DEPOT_BUILD ? ('?v=' + window.DEPOT_BUILD) : '');  /* Task C: the runtime-injected sheets carried no cache-bust */
       (document.head || html()).appendChild(link);
       console.log('[depot] game-shell: depot-v2.css injected at runtime');
     } catch (e) { console.warn('[depot] game-shell: ensureV2Stylesheet threw: ' + e); }
@@ -129,7 +129,7 @@
       var link = document.createElement('link');
       link.id = 'depot-shell-css';
       link.rel = 'stylesheet';
-      link.href = '../css/depot-style.css';
+      link.href = '../css/depot-style.css' + (window.DEPOT_BUILD ? ('?v=' + window.DEPOT_BUILD) : '');  /* Task C: the runtime-injected sheets carried no cache-bust */
       link.onerror = function () { console.warn('[depot] game-shell: failed to load ../css/depot-style.css; shell will be unstyled'); };
       (document.head || html()).appendChild(link);
     } catch (e) { console.warn('[depot] game-shell: ensureStylesheet threw: ' + e); }

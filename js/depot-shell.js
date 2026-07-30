@@ -37,6 +37,11 @@
     { mode: 'game',   label: 'PLAY BALL',  href: 'game/index.html' }
   ];
 
+  // Task C: the nav row carries the page title, the mode pills and the green
+  // add-a-card action -- one header language on every surface.
+  var TITLES = { binder: 'The Binder', shop: 'Pack Shop', game: 'Play Ball', builder: 'Lineup' };
+  function titleFor(mode){ return TITLES[mode] || 'The Depot'; }
+
   var _root = null;   // the .depot-shell element we manage
   var _mounted = false;
 
@@ -70,8 +75,12 @@
             '<span class="email" data-depot-email></span>' +
           '</div>' +
         '</header>' +
-        '<nav class="depot-nav v2-nav" data-depot-nav>' + tabsHtml(opts.active) +
-          '<span class="spacer"></span>' +
+        '<nav class="depot-nav v2-nav" data-depot-nav>' +
+        '<span class="v2-nav-title" data-depot-navtitle>' + esc(titleFor(opts.active)) + '</span>' +
+        tabsHtml(opts.active) +
+        '<span class="spacer"></span>' +
+        '<a class="v2-nav-add v2-pill v2-pill--green v2-pill--sm depot-add-card" data-depot-addcard' +
+        ' href="' + navBase() + 'index.html#add">+ Add a card</a>' +
         '</nav>' +
         '<main class="depot-stage" data-depot-stage></main>' +
       '</div>';
@@ -82,6 +91,9 @@
   function setActive(mode){
     if (!_root){ console.warn('[depot] shell.setActive: shell not mounted; ignoring'); return; }
     _root.setAttribute('data-depot-active', (mode || 'binder'));
+    var _t = _root.querySelector('[data-depot-navtitle]');
+    if (_t){ _t.textContent = titleFor(mode || 'binder'); }
+    else { console.warn('[depot] shell.setActive: no [data-depot-navtitle]; title not repainted'); }
     var tabs = _root.querySelectorAll('.depot-tab');
     for (var i = 0; i < tabs.length; i++){
       var on = (tabs[i].getAttribute('data-mode') === mode);
