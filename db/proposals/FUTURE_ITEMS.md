@@ -317,3 +317,27 @@ older than the art gate it plays a ceremony for cards the collector never
 owned. Cheap fix: feed REPLAY the ledger rows when they exist and keep the
 re-roll only for seedless local receipts. Not done here to keep the branch to
 one concern.
+
+## 14. Admin testing wallets + admin spend out of economy analytics
+
+Raised 2026-07-30 while funding Nick's wallet for live paid-pack testing.
+
+- The grant was made the app's own way: one owner-scoped `wallet_transactions`
+  row (`reason 'admin_grant'`, `amount 100000`, meta flagging it as an admin
+  testing grant) followed by `depot_apply_payout`, the same ledger-then-apply
+  pair `writePayout()` in `js/depot-wallet.js` uses. Worth knowing before the
+  next one: `franchises.balance` is a STORED column, not a view over the
+  ledger, and no trigger mirrors inserts into it -- a ledger row alone does not
+  move the wallet chip. Ledger sum and balance agreed before (0 / 0) and agree
+  after (100000 / 100000).
+- When the roles table lands, admin accounts should get a testing wallet as
+  part of that work: a documented grant path (or a seeded balance for accounts
+  flagged admin) instead of a hand-run credit per session.
+- Admin grants and admin spend must be flagged OUT of economy analytics. The
+  `reason = 'admin_grant'` value and the `meta.exclude_from_economy_analytics`
+  flag are the hooks; any sink/faucet or pack-price tuning query should exclude
+  admin-flagged rows and the spend they funded, or the section 12 numbers get
+  quietly poisoned by test purchases.
+- Open, same pass: nothing enforces `balance = sum(amount)`, so the column and
+  the ledger can drift. A reconciliation check (or a derived balance) belongs
+  with the roles work. Schema change -- needs sign-off.
