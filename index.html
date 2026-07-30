@@ -1,18 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <script src="js/version.js?v=f432f84"></script>
-  <script src="js/depot-core.js?v=f432f84"></script>
+  <script src="js/version.js?v=60e1077"></script>
+  <script src="js/depot-core.js?v=60e1077"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>The Depot</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gshtatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Spectral:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/depot-style.css?v=f432f84">
-  <link rel="stylesheet" href="css/season.css?v=f432f84">
-    <script src="js/depot-shell.js?v=f432f84"></script>
-  <script src="js/depot-season-shell.js?v=f432f84"></script>
+  <link rel="stylesheet" href="css/depot-style.css?v=60e1077">
+  <link rel="stylesheet" href="css/season.css?v=60e1077">
+    <script src="js/depot-shell.js?v=60e1077"></script>
+  <script src="js/depot-season-shell.js?v=60e1077"></script>
   <style>
     /* binder tile portrait redesign v2 (additive, contract-safe) */
     :root{--binder-cols:3}
@@ -1031,9 +1031,9 @@ body{
 </style>
 <!-- /PHASE5-SHARE-CSS -->
 
-  <link rel="stylesheet" href="css/depot-shop-view.css?v=f432f84">
-  <link rel="stylesheet" href="css/pack-shop-v2.css?v=f432f84">
-    <link rel="stylesheet" href="depot-v2.css?v=f432f84">
+  <link rel="stylesheet" href="css/depot-shop-view.css?v=60e1077">
+  <link rel="stylesheet" href="css/pack-shop-v2.css?v=60e1077">
+    <link rel="stylesheet" href="depot-v2.css?v=60e1077">
 </head>
 <body class="v2-body">
   <div id="sharedUnavailable"><div class="su-card"><div class="su-title">Not available</div><div class="su-sub">This collection isn&rsquo;t available.</div></div></div>
@@ -1852,19 +1852,31 @@ function openSpot(idx){
   spotIdx=idx;const c=COLLECTION[idx];
   const skin=ERAS[c.era].skin;
   const cphoto=frontPhoto(c), cback=backPhoto(c);
+  /* Task B follow-up: a CATALOG-ONLY row (pack pull or catalog add -- no photo
+     path) used to get a zero-width div as its paint layer, so the library
+     enhancer's isLaidOut() guard correctly refused to paint and the face fell
+     back to the era skin with zoom disabled. Give both faces a REAL, laid-out
+     <img> target instead. It ships with NO src: the enhancer probes the library
+     URL first and only then assigns src, so a probe miss paints nothing and the
+     skin (and the "no back scan yet" placeholder) stay exactly as before.
+     Personal scans are untouched -- they still take the branch above. */
+  const _libArt = (typeof window.depotLibraryArtURL === 'function') ? window.depotLibraryArtURL : null;
+  const libFront = (!cphoto && _libArt) ? (_libArt(c,'front')||'') : '';
+  const libBack  = (!cback  && _libArt) ? (_libArt(c,'back')||'')  : '';
   const hasScan = !!cphoto; // paint truth is settled by the probe after .open, never by resolver tier
   const photoStyle=cphoto?`background-image:url("${cssUrl(cphoto)}")`:`background-color:${placeholderBg(idx)}`;
   document.getElementById('spotFront').className=`spot-face ${skin}`;
   document.getElementById('spotFront').innerHTML=`<div class="frame" style="position:absolute;inset:0;display:flex;flex-direction:column">
     ${c.rare?'<span class="rare-pin" style="width:24px;height:24px;font-size:.85rem;top:10px;right:10px">★</span>':''}
-    ${cphoto ? `<img class="photo loaded-img" src="${escAttr(cphoto)}" alt="" style="flex:1;width:100%;min-height:0;object-fit:cover;object-position:center top;display:block" onload="imgOk(this)" onerror="imgFail(this)">` : `<div class="photo" style="flex:1;${photoStyle};background-size:cover;background-position:center top"></div>`}
+    ${cphoto ? `<img class="photo loaded-img" src="${escAttr(cphoto)}" alt="" style="flex:1;width:100%;min-height:0;object-fit:cover;object-position:center top;display:block" onload="imgOk(this)" onerror="imgFail(this)">` : (libFront ? `<img class="dc-lib-pending" alt="" style="flex:1;width:100%;height:100%;min-height:0;object-fit:cover;object-position:center top;display:block" onload="imgOk(this)" onerror="imgFail(this)">` : `<div class="photo" style="flex:1;${photoStyle};background-size:cover;background-position:center top"></div>`)}
     
   </div>`;
   const isP=cardType(c)==='pitcher';
+  document.getElementById('spotBack').className='spot-face spot-back'; // per-card orientation/has-art are re-derived below; never inherit the last card's
   document.getElementById('spotBack').innerHTML=`
         <!-- Task B #3: the back face is the SCAN. Name / set / number
              already live in the meta panel, so no text overlay here. -->
-        ${cback?`<div class="spot-back-img"><img src="${escAttr(cback)}" alt="card back" onload="imgOk(this)" onerror="imgFail(this)"></div>`:''}
+        ${cback?`<div class="spot-back-img"><img src="${escAttr(cback)}" alt="card back" onload="imgOk(this)" onerror="imgFail(this)"></div>`:(libBack?`<div class="spot-back-img"><img class="dc-lib-pending" alt="card back" onload="imgOk(this)" onerror="imgFail(this)"></div>`:'')}
     <div class="spot-back-scroll">
     ${statTable(c)}
     ${c.bio?`<div class="bio">${c.bio}</div>`:''}
@@ -1877,6 +1889,10 @@ function openSpot(idx){
   // Paint library art AFTER the overlay is laid out (.open -> display:flex).
   // The enhancer's own isLaidOut/applyBg guards reject 0x0 nodes, so we defer to a frame.
   if (window.depotEnhanceSpotlightArt) {
+    // rAF is throttled in background tabs, so a short timer backs it up.
+    // probeImg is idempotent (probe cache + empty-img guard), so a second
+    // call can never double-paint or overwrite a personal scan.
+    setTimeout(function(){ if (spotIdx !== idx) return; try { window.depotEnhanceSpotlightArt(COLLECTION[idx]); } catch(e){ console.debug('[depot] library spotlight retry: '+(e&&e.message)); } }, 140);
     requestAnimationFrame(function(){
       requestAnimationFrame(function(){
         try { window.depotEnhanceSpotlightArt(COLLECTION[idx]); }
@@ -3254,21 +3270,21 @@ setAuthUI(false);
   });
 })();
 </script>
-<script src="game/season.js?v=f432f84" defer></script>
-<script src="js/depot-index-shell.js?v=f432f84"></script>
-<script src="js/depot-prestige.js?v=f432f84"></script>
-<script src="js/depot-wallet.js?v=f432f84"></script>
-  <script src="js/depot-pack-engine.js?v=f432f84"></script>
-  <script src="js/depot-pixel-card.js?v=f432f84"></script>
-  <script src="js/depot-library-index.js?v=f432f84"></script>
-  <script src="js/depot-shop.js?v=f432f84"></script>
-  <script src="js/depot-shop-view.js?v=f432f84"></script>
-  <script src="js/depot-binder-shop.js?v=f432f84"></script>
-  <script src="js/depot-library-art.js?v=f432f84"></script>
-  <script src="js/depot-add-card-search.js?v=f432f84"></script>
-    <script src="js/depot-position.js?v=f432f84"></script>
-  <script src="js/depot-card-detail-2b.js?v=f432f84"></script>
-  <script src="js/depot-card-detail-polish.js?v=f432f84"></script>
+<script src="game/season.js?v=60e1077" defer></script>
+<script src="js/depot-index-shell.js?v=60e1077"></script>
+<script src="js/depot-prestige.js?v=60e1077"></script>
+<script src="js/depot-wallet.js?v=60e1077"></script>
+  <script src="js/depot-pack-engine.js?v=60e1077"></script>
+  <script src="js/depot-pixel-card.js?v=60e1077"></script>
+  <script src="js/depot-library-index.js?v=60e1077"></script>
+  <script src="js/depot-shop.js?v=60e1077"></script>
+  <script src="js/depot-shop-view.js?v=60e1077"></script>
+  <script src="js/depot-binder-shop.js?v=60e1077"></script>
+  <script src="js/depot-library-art.js?v=60e1077"></script>
+  <script src="js/depot-add-card-search.js?v=60e1077"></script>
+    <script src="js/depot-position.js?v=60e1077"></script>
+  <script src="js/depot-card-detail-2b.js?v=60e1077"></script>
+  <script src="js/depot-card-detail-polish.js?v=60e1077"></script>
 <script>
 /* Franchise Economy Slice A: arm wallet chip + payout hook. Additive, fail-loud, graceful until DDL. */
 (function(){
