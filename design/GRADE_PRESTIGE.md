@@ -1,12 +1,45 @@
 # GRADE & PRESTIGE — what a card does, what it is worth, and what a grade multiplies
 
-**Status: DESIGN — proposed, not implemented.** This is a docs-only file on `docs/design-specs`, cut from `main` at `36c6b30`. It touches no code, no schema, no shells, and no §6 cache-bust tags. Per AGENTS.md §2 nothing described as PROPOSED here may be built or merged into a working path without Nick's sign-off; the items marked **DRAFT** are numbers awaiting his call, not decisions.
+**Status: DESIGN — revision 2.** Docs-only file on `docs/design-updates`, cut from `main` at `0bd86d5` (the merge of #201, which landed revision 1). No code, no schema, no shells, no §6 cache-bust tags. Per AGENTS.md §2 nothing marked PROPOSED here may be built or merged into a working path without Nick's sign-off; items marked **DRAFT** are numbers still awaiting his call.
 
-Companion doc: `design/GAME_MODES.md` (salary-cap / era / stakes modes), which consumes the definitions below.
+Companion docs: `design/GAME_MODES.md` (salary-cap / era / stakes modes) and `design/STARTER_BOX.md` (the 25-card onboarding grant).
+
+## Decisions landed since revision 1
+
+| # | Decision | Lands in |
+|---|---|---|
+| 1 | The Depot is a **collection game first**, tracker within. Cards enter **PULLED** or **SCANNED**. | §0 (new) |
+| 2 | **Add-a-Card is scan-required** for standard users; library art assists identification but no longer auto-feeds an add. Per-user, server-enforced **admin bypass**; Nick is founding admin. Ships after the redesign phases. | §7.3, §7.4 |
+| 3 | The **free pack cadence widens to two claims per 24h** alongside the gate. | §8.1 |
+| 4 | **Caps count raw prestige** (former OQ-B). | `GAME_MODES.md` §8 + propagated |
+| 5 | **The challenge model is the Dugout pill flow** as specced (former OQ-1). Evidence standards stay open sub-questions. | §7.6 |
+| 6 | **Admin testing wallets**: ledger-credited balances, admin spend excluded from economy analytics. | §8.2 |
+
+Still open and carried forward as boxes in §9: pack band weight, prestige→coin exchange rate, and one new question — the **scan premium**.
 
 ---
 
-## 0. The three-axis rule
+## 0. Identity — the Depot is a collection game first
+
+**The Depot is a collection game with a tracker inside it, not a tracker with a game bolted on.** That ordering decides every ambiguous call below. The binder still has to be a genuinely good place to keep a real collection — but when the two goals disagree, the game wins, with one hard constraint: **the game may never make honest cataloguing worse.** Any design where scanning your real cards is the punished path is wrong by construction.
+
+Cards enter the Depot through exactly two doors.
+
+| | **PULLED** | **SCANNED** |
+|---|---|---|
+| Origin | packs, the starter box, trades, wagers, the marketplace | a physical card you photographed in |
+| Art | library art — born art-backed | your own scan |
+| Verification | **born verified** — the server minted the grant, there is nothing to dispute | **earned** — the card has to prove itself (§7.5) |
+| Grade | whatever the grant says; in practice ungraded | self-reported, and therefore challengeable |
+| Character | **liquid** | **prestigious** |
+
+**Pulled is liquid.** It came from the game's own economy, its provenance is a ledger row, and it can move again — traded, wagered, sold — without anyone having to trust anybody. **Scanned is prestigious.** It is a claim about the physical world, which is exactly why it is worth more socially and exactly why it can be challenged.
+
+Three things fall out of this and are load-bearing for the rest of the document. Verification is a *scanned-card problem by construction* — a pulled card has nothing to verify, because the server minted it (§7.2). Liquidity defaults differ between the two doors, which is why `GAME_MODES.md` §6 can make pulled cards wager-eligible by default and scanned cards opt-in. And the same card can now exist both ways in two different binders, which is precisely why the **scan premium** (OQ-C) is a real question with real numbers attached.
+
+---
+
+## 1. The three-axis rule
 
 Card Depot has three separate systems and they must never bleed into each other.
 
@@ -16,29 +49,25 @@ Card Depot has three separate systems and they must never bleed into each other.
 
 **GRADE MULTIPLIES WORTH, and only worth.** A grade never touches the sim, never changes a rate, never adds or removes a point in the prestige sum. It scales the worth number that prestige produces.
 
-This extends the sacred rule already written into `ECONOMY_DESIGN.md`: prestige and money never touch how a card plays. Grade joins that list. A GEM 10 Griffey and a beat-up raw Griffey play *identically*, because they are the same 1989 player. What differs is what they are worth to you, and what they cost you under a cap.
+This extends the sacred rule already written into `ECONOMY_DESIGN.md`: prestige and money never touch how a card plays. Grade joins that list, and so does provenance — a pulled Griffey and a scanned Griffey play identically, because they are the same 1989 player.
 
 ---
 
-## 1. STATS — how a card plays (exists in code today)
+## 2. STATS — how a card plays (exists in code today)
 
-What is live on `main` right now:
+`game/builder.html` resolves every card in the lineup to a rate profile and holds it in `RESOLVED` (`cardId -> {status:'api'|'card'|'bad'|'pending', team, rates, avg, hr, rbi, tendency, pos, note}`). When only a sparse line is known it falls back to `avgToRates(avg, hr, rbi)`.
 
-`game/builder.html` resolves every card in the lineup to a rate profile and holds it in `RESOLVED` (`cardId -> {status:'api'|'card'|'bad'|'pending', team, rates, avg, hr, rbi, tendency, pos, note}`). When only a sparse line is known it falls back to `avgToRates(avg, hr, rbi)`, which maps a batting average onto a plausible league-baseline shape.
-
-`game/sim.js` builds each hitter with `batter(name, avg, hr, rbi, rates, tendency)`. The sim reads the stat line and nothing else — there is no prestige argument, no money argument, and no grade argument anywhere in the signature.
+`game/sim.js` builds each hitter with `batter(name, avg, hr, rbi, rates, tendency)`. The sim reads the stat line and nothing else — no prestige argument, no money argument, no grade argument, no provenance argument anywhere in the signature.
 
 `game/season.js` carries its own `avgToRates(avg, rnd)` for AI opponents, with the comment that those constants are "the difficulty dials."
 
-Stat quality has been hardened over the last several PRs: provenance is persisted on every write and a season is never mislabelled (#181), a span-guarded re-pull sweep backfills provenance-less lines (#182), the stale-identity latch was removed and identity is validated before any stats write (#183), and every add now gets its season line or a logged reason (#199).
-
-**Design consequence:** any future proposal that would let worth, money, grade or pack luck alter a rate is out of scope by construction. The sim stays untouched.
+Stat quality has been hardened across #181 (provenance persisted on every write, never mislabel a season), #182 (span-guarded re-pull sweep), #183 (stale-identity latch removed, identity validated before any stats write) and #199 (every add gets its season line or a logged reason).
 
 ---
 
-## 2. PRESTIGE — what a card is worth (exists in code today)
+## 3. PRESTIGE — what a card is worth (exists in code today)
 
-The engine is `js/depot-prestige.js`; the authoritative spec is `ECONOMY_DESIGN.md` §1 as amended by §1.5. The component sum:
+Engine: `js/depot-prestige.js`. Spec: `ECONOMY_DESIGN.md` §1 as amended by §1.5.
 
 ```
 prestige = STAR_tier + ROOKIE + ERA(U-curve) + TRANSCENDENCE + GEM + ERROR + SET_TIER   (floored at 5)
@@ -49,54 +78,50 @@ prestige = STAR_tier + ROOKIE + ERA(U-curve) + TRANSCENDENCE + GEM + ERROR + SET
 | Player tier | `data/player_tiers.json` | HOF 40 · SUPERSTAR 30 · STAR 20 · REGULAR 8 · COMMON 0 |
 | Rookie | card year == MLB debut year, cached on the row | +30 |
 | Era (U-curve) | card year | Vintage ≤1985 +20 · Junk Wax 1986–1993 +0 · Modern ≥1994 +6 |
-| Transcendence | rookie AND (SUPERSTAR or HOF) | +30, and the junk-wax era line renders +0 rather than a penalty |
+| Transcendence | rookie AND (SUPERSTAR or HOF) | +30, junk-wax era line renders +0 rather than a penalty |
 | Gem / Error | manual flags | +15 / +25 |
 | Set tier | `data/set_tiers.json` | ICONIC +20 · PREMIUM +12 · NOTABLE +6 |
 
-Bands (fixed, and the pack engine depends on them — never rename them): **GOLD ≥ 60 · SILVER 30–59 · BRONZE 10–29 · plain < 10.**
+Bands (fixed — `js/depot-pack-engine.js` `BAND_RANK` depends on them and they are never renamed): **GOLD ≥ 60 · SILVER 30–59 · BRONZE 10–29 · plain < 10.**
 
-`ECONOMY_DESIGN.md` §1.5E explicitly ruled condition and grading **out of scope** for prestige, on the grounds that prestige rates the *card identity* rather than the individual copy, and that a scan cannot establish condition. That ruling stands. This document does not reopen it: grade does not enter the point sum. It lands one layer out, as a multiplier on the result — which is exactly the "individual copy" axis prestige deliberately refuses to model.
-
-Legibility (§1.5F) also stands: every component renders, including informative zero lines. A multiplier must render as its own line for the same reason.
+`ECONOMY_DESIGN.md` §1.5E ruled condition and grading out of scope for prestige, because prestige rates the *card identity* rather than the individual copy. That still stands, and §0 sharpens it: **identity does not enter the point sum either.** Whether a card was pulled or scanned changes nothing about what it is. The two proposals that touch this — the band bump (§6) and the scan premium (OQ-C) — are both deliberately framed as small, separable layers rather than new terms in the identity sum.
 
 ---
 
-## 3. GRADE — what exists in code today
+## 4. GRADE — what exists in code today
 
-Grade is already a real, stored, self-entered field:
+The ladder ships in `js/depot-card-detail-2b.js` as `GRADES = ["", "1" … "10", "GEM 10", "AUTH"]`, empty string meaning ungraded, with the file's own note that "saved data + prestige reads are unchanged (mechanics frozen)."
 
-The ladder ships in `js/depot-card-detail-2b.js` as `GRADES = ["", "1" … "10", "GEM 10", "AUTH"]`, with the empty string meaning ungraded. The same file notes that "saved data + prestige reads are unchanged (mechanics frozen)" — i.e. grade is deliberately inert today.
+The column arrived with REDESIGN_V2 decision **D4** (grade, star flag, condition notes — nullable, additive). `index.html` persists it through `d4SetGrade`; `rowToCard` maps it onto the card object. It renders as a chip on card detail and a pill in the binder grid, and the Add-a-Card form has a GRADE select.
 
-The column arrived with REDESIGN_V2 decision **D4** (card schema gains grade, star flag, condition notes — nullable, additive). `index.html` persists it through `d4SetGrade`, and `rowToCard` maps it onto the card object.
-
-The redesign spec renders it in two places: a stat chip on card detail ("GRADE PSA 8", `design/redesign-v2/README.md` §2) and a navy pill in the binder grid (§3). The Add-a-Card form has a GRADE select (§4).
-
-**So today grade is display-only.** It is captured, stored, shown, and consumed by nothing. Everything in §4 onward is proposed.
+**Grade is display-only today.** Everything from §5 onward is proposed.
 
 ---
 
-## 4. PROPOSED — the grade multiplier
+## 5. PROPOSED — the grade multiplier
 
 ```
 worth = prestige × grade_multiplier
 ```
 
-Applied at the worth boundary, never inside the prestige sum. The card spotlight renders it as its own line, so the arithmetic stays visible end to end:
+Applied at the worth boundary, never inside the prestige sum, and always rendered as its own line:
 
 ```
 1989 UD Griffey   HOF 40 + ROOKIE 30 + TRANSCENDENCE 30 + JUNK WAX +0  =  100 PRESTIGE
 GRADE  GEM 10  ×3.0                                                    =  300 WORTH
 ```
 
-### 4.1 Invariants (not draft)
+### 5.1 Invariants (not draft)
 
-Monotonic: a higher grade is never worth less than a lower one. Ungraded is the **1.00× baseline**, never a penalty — most of a real binder is raw, and the game must not punish the default state of collecting. AUTH is not a point on the numeric ladder; it is a separate premium. The multiplier is legible: it always renders as its own labelled line beside the prestige breakdown. And it is worth-only: no code path may pass a grade multiplier into the builder's rate resolution or into `sim.js`.
+Monotonic: a higher grade is never worth less than a lower one. Ungraded is the **1.00× baseline**, never a penalty. AUTH is not a rung on the numeric ladder; it is a separate premium. The multiplier always renders as its own labelled line. And it is worth-only: no code path may pass it into the builder's rate resolution or into `sim.js`.
 
-### 4.2 The curve — **DRAFT, pending Nick**
+One consequence of §0 worth stating plainly: **pulled cards are ungraded by default, so they sit at 1.00×.** The grade multiplier is, in practice, a scanned-card axis — which is a large part of what makes the scanned door prestigious, and part of why OQ-C has to be answered carefully rather than stacked on top.
+
+### 5.2 The curve — **DRAFT, pending Nick**
 
 | Grade | Multiplier | Note |
 |---|---|---|
-| (blank / raw) | **1.00×** | baseline — the default state of the binder |
+| (blank / raw) | **1.00×** | baseline — the default state of the binder, and of every pulled card |
 | 1 | 0.70× | below baseline: a known-bad copy is worth less than an unknown one |
 | 2 | 0.75× | |
 | 3 | 0.80× | |
@@ -108,23 +133,23 @@ Monotonic: a higher grade is never worth less than a lower one. Ungraded is the 
 | 9 | 2.10× | |
 | 10 | 2.60× | |
 | GEM 10 | **3.00×** | ceiling |
-| AUTH | ×1.40× premium, applied to the raw baseline | authenticated but ungradable (altered, trimmed, autographed) — a distinct thing, not a low grade |
+| AUTH | ×1.40 premium on the raw baseline | authenticated but ungradable — a distinct thing, not a low grade |
 
-Open shape questions folded into OQ-1: whether the sub-baseline band (1–5) should exist at all, or whether the floor should simply be 1.00× everywhere so that grading can only ever help; and whether AUTH should be a flat multiplier or a flat additive premium.
+Open shape questions: whether the sub-baseline band (1–5) should exist at all, or whether the floor should simply be 1.00× everywhere so grading can only help; and whether AUTH is a multiplier or a flat additive premium.
 
-Ceiling check: at ×3.0 a GEM 10 Griffey is worth 300 against a raw commons-bin card at 5. That is a 60:1 spread inside one binder, which is roughly the real hobby's shape but is aggressive for a salary cap (see `GAME_MODES.md` §2 — a single GEM 10 marquee card would consume most of a mid-tier cap on its own). If the caps feel unplayable in testing, the ceiling comes down before the caps go up.
+Ceiling check, now easier since decision 4: because **caps count raw prestige**, a ×3.0 GEM 10 no longer distorts lineup legality at all — it only moves payouts and wager stakes. That removes the sharpest objection to the ×3.0 ceiling that revision 1 raised in this section.
 
 ---
 
-## 5. PROPOSED — pack band feeds prestige a small bump
+## 6. PROPOSED — pack band feeds prestige a small bump
 
-### 5.1 What exists
+### 6.1 What exists
 
-Bands are already load-bearing in the pack engine. The free daily pack draws band-first at published rates (plain ~90% · bronze ~8% · silver ~1.5% · gold ~0.5%, the literal `FREE_BAND_ODDS` in `js/depot-pack-engine.js`, returned verbatim by `estimateOdds('free')`). The paid tiers (Bronze 150 / Silver 400 / Gold 900 DD) re-roll their 5th "hit" slot until it meets that tier's band floor. Provenance is durable: `cards.source` distinguishes `'pack'` from `'scan'`, and the `pack_grants` ledger holds one row per pack with tier and seed.
+Bands are load-bearing in the pack engine. The free daily pack draws band-first at published rates (plain ~90% · bronze ~8% · silver ~1.5% · gold ~0.5% — the literal `FREE_BAND_ODDS`, returned verbatim by `estimateOdds('free')`). Paid tiers (Bronze 150 / Silver 400 / Gold 900 DD) re-roll the 5th "hit" slot to a band floor, bounded at 40 tries with a best-so-far fallback, which is why `rollPack` returns `floorMet`. Provenance: `cards.source` separates `'pack'` from `'scan'`, and `pack_grants` holds one row per pack with tier and seed.
 
-### 5.2 The proposal
+Two known provenance gaps, both already logged in `db/proposals/FUTURE_ITEMS.md`: free-pull cards land with empty `notes` and no marker (§1), and free packs write no `pack_grants` row and leave `pack_seed` NULL (§13a). **Any band bump depends on knowing which band a card came from, so those gaps are a prerequisite, not a detail.**
 
-The band a card was **pulled from** grants a small additive prestige bump on top of the normal sum — the "I pulled this out of a gold pack" story, made durable.
+### 6.2 The proposal
 
 | Pull band | Bump — **DRAFT** |
 |---|---|
@@ -132,62 +157,132 @@ The band a card was **pulled from** grants a small additive prestige bump on top
 | silver | +3 |
 | bronze | +1 |
 | plain | 0 |
-| scanned (source = scan) | 0 |
+| scanned (`source = 'scan'`) | 0 |
 
-**Small on purpose.** Pack rolls are already weighted by the prestige system's own tiers, so band correlates with prestige before any bump is applied. A large bump double-counts that correlation, inflates lineup prestige, and — because the win purse scales with lineup prestige — quietly inflates payouts on the exact cards the shop sells. Keep it flavour-sized: visible on the breakdown line, never enough to move a card across a band boundary on its own. Suggested hard rule, also DRAFT: the bump may never promote a card into a higher band than its base sum earns.
+Small on purpose: pack rolls are already weighted by the prestige system's own tiers, so band correlates with prestige before any bump. A large bump double-counts that and inflates payouts on exactly the cards the shop sells. Suggested hard rule, also DRAFT: the bump may never promote a card into a higher band than its base sum earns.
 
-Weight is OQ-2.
+**Starter-box interaction (new).** `STARTER_BOX.md` grants 25 cards at once, mostly plain with one bronze-or-better hit. Under the draft weights that is a one-time bump of roughly +1 to +6 total, which is harmless — but it is worth deciding explicitly whether the starter box counts as a "pull band" at all. Proposed: **it does not.** The starter box is onboarding, not a pack, and excluding it keeps the bump meaning "you got lucky in the shop."
+
+Weight is OQ-A.
 
 ---
 
-## 6. PROPOSED — verification: self-reported now, community challenge later
+## 7. Provenance and verification
 
-### 6.1 Today
+### 7.1 Today
 
-Grade is whatever the owner picks from the select. There is no evidence requirement and no check. In single-player that is entirely fine — the same reasoning `ECONOMY_DESIGN.md` §7.4 applies to client-rolled packs: forging cards into your own binder only cheats yourself.
+Grade is whatever the owner picks from the select. No evidence requirement, no check. Fine single-player — the same reasoning `ECONOMY_DESIGN.md` §7.4 applies to client-rolled packs. It stops being fine the moment grade multiplies worth *and* worth is compared between players.
 
-It stops being fine the moment grade multiplies worth *and* worth is compared between players — league standings, VS payouts, and prestige-denominated wagers (`GAME_MODES.md` §6). §7.4's documented hardening item is the precedent: the roll moves server-side before league mode. Same class of problem, same answer.
+### 7.2 Pulled cards are born verified
 
-### 6.2 The path
+A pulled card's provenance is a server row, not a claim. `depot_claim_free_pack` inserts server-side; paid packs debit through `depot_purchase_pack` and record a `pack_grants` row; the starter box adds a third grant type (`STARTER_BOX.md` §4). Nothing about a pulled card needs to be believed, so nothing about it can be challenged. Its art is library art, which is already curated and gated (`card_library`, and the art-backed roll gate from #194).
+
+### 7.3 The Add-a-Card scan gate — **DECIDED**
+
+**Standard users must attach a scan to add a card.** Library art may be shown to help identify and confirm what you are adding, but selecting a library image no longer completes an add on its own.
+
+This is the rule that makes §0 true. If library art can fill a card, then "scanned" stops meaning "I hold this card," the verified axis collapses, and anyone can mint prestigious cards straight out of the catalog without owning cardboard. The gate is the entire reason the scanned door means anything.
+
+What already exists to build on: the add flow ships the HYBRID decision (`FUTURE_ITEMS.md` §3) — a personal scan writes to the private `card-images/{user}/{collection}/{cardId}_{side}.jpg` path with zero DDL, and painting resolves personal → library → placeholder. So the private-scan path is live machinery; the gate is a requirement change on top of it, not new plumbing.
+
+**Sequencing: ships after the redesign phases.** The Add-a-Card surface is redesign option 3b and has already moved three times (#186 reskin, #189 v2.1 four-step funnel, #191 simplify). Gating before the skin settles means building the gate twice.
+
+Open sub-questions, none blocking: front-only or front+back (the back drives the stats lookup per the redesign spec §4)? And what happens to rows already added without a scan — proposed: **grandfathered, never retroactively invalidated**, but they read as unverified rather than silently passing.
+
+### 7.4 Admin bypass — **DECIDED** (shape proposed)
+
+A per-user, **server-enforced** flag. Not a client boolean: a bypass that mints library-art cards is a mint, so it has to be checked where RLS is checked, not in JavaScript that anyone can edit.
+
+There is no roles table today. `FUTURE_ITEMS.md` §14 already anticipates one ("when the roles table lands") for the testing wallets in §8.2, and `SHARED_LIBRARY_DESIGN.md` §9 has carried "admin model" as an open question since Phase 0, with `LIBRARY_PHASE0.md` noting that replace/remove is admin-only via the service role. **Three separate documents are pointing at the same missing table.** It should land once, on its own branch, with its own review — per AGENTS.md §1, one concern per branch.
+
+Proposed DDL sketch (for Nick to run; nothing executed here):
+
+```sql
+create table public.user_roles (
+  user_id    uuid primary key references auth.users on delete cascade,
+  role       text not null check (role in ('admin','user')) default 'user',
+  created_at timestamptz not null default now()
+);
+-- read your own row; never write it from the client
+alter table public.user_roles enable row level security;
+create policy user_roles_self_read on public.user_roles
+  for select to authenticated using (user_id = auth.uid());
+
+create or replace function public.depot_is_admin() returns boolean
+language sql security definer set search_path = public as $$
+  select exists (select 1 from public.user_roles
+                 where user_id = auth.uid() and role = 'admin');
+$$;
+```
+
+Nick is the founding admin row. Bypassed users keep library-auto-feed — an admin can add a card from library art alone, which is what makes curation and live testing possible at all.
+
+Sub-question worth settling early: does an admin-added, library-fed card read as PULLED or as SCANNED-unverified? **Proposed: neither — a third provenance value, `'admin'`.** Honest by construction, and trivially excluded from analytics the same way `admin_grant` ledger rows are (§8.2).
+
+### 7.5 Scanned cards earn verification
 
 **SELF-REPORTED → EVIDENCE → CHALLENGED → VERIFIED (or DOWNGRADED).**
 
-A card starts self-reported (today's behaviour, no friction, no gate). The owner may attach evidence — the existing front/back scan slots, ideally a raking-light shot, which is precisely what the mockup copy already asks for. Any player may then challenge the claim from the card's Dugout thread. Resolution produces a verified badge on the grade chip, or a downgrade to the community-agreed grade. Unresolved claims simply stay self-reported; nothing is ever deleted.
+A scanned card starts self-reported. The owner may attach evidence — the existing front/back scan slots, ideally a raking-light shot. Any player may challenge from the card's Dugout thread. Resolution produces a verified badge, or a downgrade to the community-agreed grade. Unresolved claims simply stay self-reported; nothing is ever deleted.
 
-### 6.3 Reuse the Dugout challenge flow — it is already designed
+### 7.6 The challenge model — **DECIDED**
 
-`design/redesign-v2/README.md` §2 (option 2b, marked *Final*) already ships the mechanism: every Dugout comment carries an orange **"⚔ Challenge USERNAME"** pill, and "challenges from the Dugout drop into your schedule as exhibition games" — they surface in the Play Ball hub (§5) as a pending exhibition match.
+**The Dugout pill flow is the model.** `design/redesign-v2/README.md` §2 (option 2b, marked *Final*) already ships it: every Dugout comment carries an orange **"⚔ Challenge USERNAME"** pill, and "challenges from the Dugout drop into your schedule as exhibition games," surfacing in the Play Ball hub (§5) as a pending match. The mockup's own sample copy is the user story — MULLET_82 disputes a PSA 8, says the corners look like a 7, and asks for a raking-light scan; WAXPACK_WES answers a card claim with "Play Ball mode, best of 3."
 
-The mockup's own sample copy is this feature's user story, near enough verbatim: MULLET_82 disputes a PSA 8, says the corners look like a 7, and asks for a raking-light scan. WAXPACK_WES answers a card claim with "Play Ball mode, best of 3." The design canvas also carries a parked exploration note about adding a grade-vote poll to 2b.
+So a grade challenge is not a new surface. It is the existing pill with a grade claim attached, and it resolves through the match the pill already creates.
 
-So the grade challenge is not a new surface. It is the existing challenge pill with a grade claim attached to it, and it can resolve one of two ways — by community vote, or by playing the match the challenge already creates. Which one is OQ-1.
+Sub-questions that stay open (they are evidence-standard details, not model choices): what counts as sufficient evidence — is a raking-light front-and-back required, or is any second scan enough? Is there a cost to challenging (a DD ante) to stop nuisance challenges? Can a verified grade be re-challenged on new evidence? And does a downgrade retroactively change worth already banked in past payouts — **proposed answer: no, never retroactive.**
 
-**Dependency, unavoidable:** The Dugout is REDESIGN_V2 decision **D5** — deferred to the final phase (Phase 6), and its plan "MUST include OAuth/social sign-in and a rollout sequence." There is no community verification before there is a community. Until then, self-reported is the only state that exists.
+**Dependency, unchanged:** the Dugout is REDESIGN_V2 decision **D5**, deferred to Phase 6, and its plan "MUST include OAuth/social sign-in and a rollout sequence." There is no community verification before there is a community.
 
-### 6.4 Interim safety rule
+### 7.7 Interim safety rule
 
-Until verification ships, any mode that compares worth between players (league, VS, wagers) reads **unverified grades at 1.00×**. Solo play, the binder, and the spotlight show the full multiplier. This keeps the feature shippable single-player without creating a payout exploit the day multiplayer lands.
-
----
-
-## 7. OPEN QUESTIONS — Nick's calls
-
-> ### OQ-1 · Challenge model
-> How does a contested grade actually resolve? **(a)** community vote from the Dugout thread (needs a quorum rule, a tie rule, and an anti-brigading rule); **(b)** the challenge match the pill already creates — winner's claim stands (fun, thematic, but it settles a factual question with a baseball game); **(c)** evidence-only — a raking-light scan plus N upvotes promotes to verified, with no adversarial step; **(d)** owner-final, with challenges recorded as visible dissent and no forced change.
-> Sub-questions: what does a successful challenge *do* — downgrade, or just strip the verified badge? Is there a cost to challenging (a DD ante) to stop nuisance challenges? Can a verified grade be re-challenged after new evidence? Does a downgrade retroactively change worth already banked in past payouts (proposed answer: no — never retroactive)?
-> Blocked behind D5 / OAuth either way.
-
-> ### OQ-2 · Pack band weight
-> Are the §5.2 draft bumps (gold +6 / silver +3 / bronze +1) the right size, or should the band bump be zero? The case for zero: band already correlates with prestige by construction, so the bump is partly double-counting, and it means two identical cards can carry different prestige based on how they entered the binder — which cuts against "prestige rates the card identity" (§1.5E).
-> The case for keeping it: it makes a gold-pack pull *matter* permanently, and it gives the shop a reason to exist beyond raw card acquisition.
-> If kept: does a scanned card ever earn a band bump (proposed: no)? Does the free pack's gold band count the same as the paid Gold tier's guaranteed hit (proposed: yes — a gold is a gold)?
-
-> ### OQ-3 · Prestige → coin exchange rate
-> Today the only conversion is the win purse: `WIN = 100 + round(lineup_prestige × 1.8)` (`ECONOMY_DESIGN.md` §2). With a grade multiplier and a band bump in play, that 1.8 is now multiplying a *larger and more variable* number, and the salary-cap modes in `GAME_MODES.md` invert the incentive entirely (an underdog bonus pays *more* for *less* prestige).
-> The call: does 1.8 stay as-is, does it drop to compensate for grade-inflated worth, or does the payout switch from raw prestige to cap-relative prestige? And separately — is there ever a *direct* prestige→DD conversion (sell/trade-in a card for coins at some rate), or does prestige only ever convert through winning games? Proposed default: prestige never sells directly; the only exchange rate is the purse. Nick to confirm.
+Until verification ships, any mode that compares worth between players (league, VS, wagers) reads **unverified grades at 1.00×**. Solo play, the binder and the spotlight show the full multiplier.
 
 ---
 
-## 8. What this document does not do
+## 8. Economy notes
 
-It changes no code, no schema, no odds, and no shipped behaviour. The sim is untouched. `js/depot-prestige.js` is untouched. Grade remains display-only until Nick signs off on §4, and community verification remains blocked behind D5/OAuth. No §6 cache-bust stamping applies to this branch: it ships no assets and moves no build.
+### 8.1 Free cadence widens to two claims per 24h — **DECIDED** (rhythm TBD)
+
+Today: one claim per 24h, server-enforced, with the clock being the most recent `wallet_transactions` row where `reason = 'free_pack'` (`ECONOMY_DESIGN.md` §7.1). Widening to two is a rhythm change, not a mechanism change — the same ledger clock works if the refusal branch **counts rows in the trailing 24h** instead of reading only the latest one.
+
+Two shapes to choose between: two independent claims on a rolling window (count-based, generous, drifts earlier each day), or two fixed slots per day (predictable, more ritual, harsher if you miss one). Exact rhythm lands with economy tuning, because it interacts with the art filter's measured value bump (`FUTURE_ITEMS.md` §12a: bronze gold-hit moved from ~1 in 25 to ~1 in 18 on the filtered pool) and with the retune Nick deferred in §12c.
+
+**Why it moves with the gate:** the scan gate raises friction on the scanned door, so the pulled door widens to compensate. A new player without a scanner in front of them is not stuck at zero cards.
+
+### 8.2 Admin testing wallets — **DECIDED**
+
+`FUTURE_ITEMS.md` §14 already records the mechanism, from funding Nick's wallet live: one owner-scoped `wallet_transactions` row (`reason 'admin_grant'`, meta flagging it as a testing grant) followed by `depot_apply_payout` — the same ledger-then-apply pair `writePayout()` uses — because `franchises.balance` is a **STORED column with no trigger mirroring the ledger**, so a ledger row alone does not move the wallet chip.
+
+Decision: this becomes part of the roles work in §7.4 rather than a hand-run credit per session. Admin accounts get a documented testing balance when their role row lands.
+
+Two requirements carried over verbatim, because they are the part that silently breaks things: **admin grants and the spend they fund must be excluded from every economy analytic** (`reason = 'admin_grant'` and `meta.exclude_from_economy_analytics` are the hooks) or the sink/faucet and pack-price numbers get poisoned by test purchases; and nothing enforces `balance = sum(amount)`, so a reconciliation check (or a derived balance) belongs in the same pass.
+
+---
+
+## 9. OPEN QUESTIONS
+
+Resolved since revision 1: the challenge model (§7.6) and the cap-counting question (`GAME_MODES.md` §8). The three below remain.
+
+> ### OQ-A · Pack band weight *(carried forward)*
+> Are the §6.2 draft bumps (gold +6 / silver +3 / bronze +1) the right size, or should the band bump be zero? The case for zero: band already correlates with prestige by construction, so the bump partly double-counts, and it means two identical cards can carry different prestige based on how they entered the binder — which cuts against "prestige rates the card identity" (§1.5E) and against §0's rule that identity stays out of the point sum.
+> The case for keeping it: it makes a gold-pack pull matter permanently.
+> Sub-questions: does the starter box count as a pull band (**proposed: no**, §6.2)? Does a scanned card ever earn one (proposed: no)? Does the free pack's gold band count the same as the paid Gold tier's guaranteed hit (proposed: yes)?
+> **Prerequisite either way:** the free-pull provenance gaps in `FUTURE_ITEMS.md` §1 and §13a must close first, or the bump has no band to read.
+
+> ### OQ-B · Prestige → coin exchange rate *(carried forward)*
+> Today the only conversion is the win purse: `WIN = 100 + round(lineup_prestige × 1.8)`. With a grade multiplier, a band bump and now a starter box in play, that 1.8 multiplies a larger and more variable number, and the cap modes invert the incentive (an underdog pays *more* for *less*).
+> Does 1.8 stay, drop, or switch to cap-relative prestige? And is there ever a *direct* prestige→DD conversion — selling or trading in a card for coins? **Proposed default: prestige never sells directly; the only exchange rate is the purse.**
+> Note the new pressure from decision 1: a marketplace is now explicitly one of the PULLED doors (§0), and a marketplace needs a price. If cards can be listed for DD, this question stops being theoretical.
+
+> ### OQ-C · The scan premium — verified-physical vs pulled twin *(new)*
+> §0 says pulled is liquid and scanned is prestigious. Nothing yet makes that true in numbers. The same card can exist through both doors — a 1989 UD Griffey pulled from a Gold pack, and a 1989 UD Griffey scanned out of a shoebox and verified.
+> Options: **(a)** no premium — identical prestige, the difference is narrative and liquidity only; **(b)** a flat verified premium in prestige points; **(c)** a premium at the worth layer only, so caps stay identical and only payouts and wagers move — the option most consistent with decision 4 and with §3's rule that identity stays out of the point sum; **(d)** inverted — pulled cards carry a small discount instead, keeping the honest binder as the baseline.
+> Watch-outs: any premium is an incentive to claim cards you don't hold, so it must never exceed the cost of losing a challenge. It stacks with the grade multiplier, because a verified scan is also the only card that can carry a *challengeable* grade — (b) plus §5.2 could compound into a very large number on one card. And per §0's hard constraint, whatever the answer is, it must not make honest cataloguing feel like the worse deal.
+
+---
+
+## 10. What this document does not do
+
+It changes no code, no schema, no odds and no shipped behaviour. The sim is untouched. `js/depot-prestige.js` is untouched. Grade remains display-only, the scan gate and admin bypass ship after the redesign phases and behind a roles table that does not exist yet, and community verification remains blocked on D5 / OAuth. No §6 cache-bust stamping applies to this branch: it ships no assets and moves no build.
