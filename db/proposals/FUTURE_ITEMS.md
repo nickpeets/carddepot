@@ -137,3 +137,85 @@ branch (`isTop`) are the natural cue points, and `prefers-reduced-motion` alread
 in `prefers-reduced-transparency`/muted-by-default audio policy: browsers block autoplaying audio
 until a user gesture, and the rip is entirely gesture-driven, so the cues would actually be
 allowed to play. Needs assets and a mute affordance before it is worth building.
+
+## 9. Static art-key manifest (kill the 89 round trips)
+
+`js/depot-library-index.js` reads the art-backed key set straight from
+`card_library` because PostgREST caps a page at 1000 rows: 89 requests, 8 lanes,
+~2.2s measured, ~3MB uncompressed, once per page load. Correct and always current,
+but wasteful for a set that changes only when the ingest pipeline runs.
+
+Follow-up: have the ingest pipeline emit `data/library-art-keys.json` (or one file
+per year, mirroring `data/cards-YYYY.json`) whenever it lands a set, and let
+`DepotLibraryIndex.load()` prefer the static file and fall back to the live query
+when the file is missing or older than the newest `card_library.created_at`. Same
+filter, zero round trips, and it stays honest because the fallback is still there.
+
+## 10. Library coverage gaps the art filter exposes (data work, not code)
+
+Measured against the full 155,844-row pack catalog on 2026-07-29: **84,272 rows
+(54.1%) have an active `side='front'` row in `card_library`.** `card_library` holds
+88,119 fronts, so 3,847 library keys belong to cards that are not in the pack
+catalog at all (subsets/variants).
+
+Worth a targeted ingest pass, biggest gaps first: 1988 Donruss (1,279 rows
+missing), 2006-2009 Upper Deck (~4,100 across four years), 1991/1992 Score
+(~1,785), 1993 Upper Deck (840), 1998 Fleer Tradition (832), 1989-1991 Upper Deck
+(~2,400). Year coverage swings hard: 2024 is 96%, 1986 is 85%, 1989 is 42%.
+
+Two specific oddities:
+* **1986 Topps is missing exactly the multiples of 11** - #11 Ojeda, #22 Walker,
+  #33 Lahti, #44 McCullers, #55 Lynn, #66 Forsch, #77 Leibrandt, #88 Nieto,
+  #99 Biancalana. Nine cards, one arithmetic pattern; that smells like an ingest
+  batching bug rather than nine bad scans. Everything else in the set (961 of 974)
+  has art.
+* **The catalog carries two junk rows**: `1986 Topps #51` and `#171` have the
+  player name `"Skipped | See #57 (b)"`. They were pullable from a pack before this
+  filter. The filter drops them (no art), but the checklist data should not have
+  them either.
+
+## 11. Server-side free roll + the card_library join (SQL, NOT shipped)
+
+Audited for Task D: **the free daily pack is NOT selected server-side.**
+`depot_claim_free_pack(p_card jsonb)` (see `free_daily_pack.sql` +
+`free_daily_pack_fix.sql`) enforces the 24h cadence, resolves the caller's
+collection, inserts the card **from the client payload** and stamps the ledger.
+`depot_purchase_pack(p_cost, p_tier)` only moves money. So the client-side art
+filter in `DepotShop.loadCatalog()` covers the paid path *and* the free path, and
+no SQL change is required to enforce Nick's rule today.
+
+The hardening already logged in `docs/free-daily-pack-design` (server-side roll
+before league mode) is where the art rule would need SQL, and it should carry the
+join when it happens:
+
+```sql
+-- sketch only; needs a server-side catalog table first (the roll pool lives in
+-- data/cards-YYYY.json today, which Postgres cannot see).
+select c.* from pack_catalog c
+join card_library l
+  on l.catalog_key = c.catalog_key and l.side = 'front' and l.status = 'active'
+where ...band/weight selection...
+```
+
+Two prerequisites, both real work: (1) the catalog has to exist in Postgres, and
+(2) the weighting/prestige model would have to be reimplemented server-side or
+frozen into a table. Until then the client filter is the enforcement point and the
+ledger remains the record of truth.
+
+## 12. The art filter moves the ECONOMY, not just the art
+
+Narrowing the roll pool to art-backed cards changes the band mix, because the
+library ingest went after notable sets and notable players first. Re-derived from
+`estimateOdds()` on the filtered pool, the shop's own copy moved:
+
+| tier | before (155,844 rows) | after (84,272 rows) |
+| --- | --- | --- |
+| Bronze | gold hit about 1 in 21 | gold hit about **1 in 16** |
+| Silver | gold hit about 1 in 9 | gold hit about **1 in 7** |
+| Gold | gold hit in about 97% of packs | unchanged |
+
+The copy re-derives itself (it always reads `estimateOdds`), so nothing is
+misreported. But pack VALUE went up at a fixed price, which is an
+`ECONOMY_DESIGN.md` question, not a rendering one: either accept the richer pull
+(and revisit prices/earn rate), or re-tune `cardWeight`/band rates against the
+filtered pool so the published odds hold steady. Nick's call.

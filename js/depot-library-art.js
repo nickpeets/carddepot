@@ -105,7 +105,28 @@
     return { tier: 'placeholder', url: null, key: key };
   }
 
-  var _probeCache = {};
+  // Bulk key builder for the pack-roll art filter (Task D). Same catalogParts
+// identity resolveCardArt uses, minus the URL build and minus the per-card
+// console.debug, with a slug memo so a 155,844-row catalog keys in well under a
+// second instead of the ~12s the full resolver takes.
+var _slugMemo = Object.create(null);
+function slugCached(v) {
+  var k = (v == null) ? '' : String(v);
+  var out = _slugMemo[k];
+  if (out === undefined) { out = slug(k); _slugMemo[k] = out; }
+  return out;
+}
+function catalogArtKey(card) {
+  if (!card) return '';
+  var year = yearOf(card);
+  var setSlug = slugCached(card.set != null ? card.set : card.brand);
+  var num = normNum(card.num != null ? card.num : card.number);
+  if (!year || !setSlug || !num) return '';
+  return year + '|' + setSlug + '|' + setSlug + '|' + num;
+}
+window.depotCatalogArtKey = catalogArtKey;
+
+var _probeCache = {};
   var _gen = 0; // bumped each enhanceTiles pass; stale probes are discarded
 
   // ---- Rendering helpers -------------------------------------------------
