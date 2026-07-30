@@ -1132,33 +1132,45 @@ body.logged-out #appFrame{display:none !important;}
         <div id="rolo-noimg-msg" class="rolo-noimg" style="display:none">We don’t have this card’s image yet — add your own scan below and it’ll paint.</div>
         <div id="rolo-upload-hint" class="rolo-uphint" style="display:none">Prefer your own scan? Attach one below — your image always wins.</div>
         </div>
-        <div class="fl-row">
-          <div class="fl-field" style="flex:2"><label>Player</label><input id="f-name" placeholder="Ken Griffey Jr." oninput="roloNameEdited()"></div>
-          <div class="fl-field" style="flex:1"><label>Pos</label><input id="f-pos" placeholder="CF"></div>
-        </div>
-        <div class="fl-row">
-          <div class="fl-field" style="flex:2"><label>Team</label><input id="f-team" placeholder="Mariners"></div>
-          <div class="fl-field" style="flex:1"><label>Year</label><input id="f-yr" type="number" placeholder="1989" oninput="onYearInput()" onchange="onYearInput()"></div>
-        </div>
-        <div class="fl-row">
-          <div class="fl-field" style="flex:2"><label>Set</label><select id="f-set"><option value="">&mdash; pick set &mdash;</option></select></div>
-          <div class="fl-field" style="flex:1"><label>Card #</label><input id="f-num" type="text" inputmode="text" placeholder="1"></div>
-        </div>
-        <div class="fl-row">
-          <div class="fl-field" style="flex:1"><label>Era</label>
-            <select id="f-era"><option value="vintage">Vintage (&le; 1985)</option><option value="junk">Junk Wax (1986&ndash;93)</option><option value="modern">Modern (1994+)</option></select>
+        <!-- Task A: the card's details are DERIVED and shown read-only. The real
+             inputs still exist (collapsed under "Edit details") so the manual-edit
+             path survives and every existing handler keeps writing the same ids. -->
+        <div class="ac-strip" id="acStrip">
+          <div class="ac-strip-grid">
+            <div class="ac-cell ac-span2"><span class="ac-k">Player</span><span class="ac-v" id="acsName">&mdash;</span></div>
+            <div class="ac-cell"><span class="ac-k">Pos</span><span class="ac-v" id="acsPos">&mdash;</span></div>
+            <div class="ac-cell ac-span2"><span class="ac-k">Team</span><span class="ac-v" id="acsTeam">&mdash;</span></div>
+            <div class="ac-cell"><span class="ac-k">Year</span><span class="ac-v" id="acsYr">&mdash;</span></div>
+            <div class="ac-cell ac-span4"><span class="ac-k">Set</span><span class="ac-v" id="acsSet">&mdash;</span></div>
+            <div class="ac-cell ac-span2"><span class="ac-k">Card #</span><span class="ac-v" id="acsNum">&mdash;</span></div>
+            <div class="ac-cell ac-full"><span class="ac-k">Season stat line <em>from MLB records</em></span><span class="ac-v ac-v--stats" id="acsStats">&mdash;</span></div>
           </div>
-          <div class="fl-field" style="flex:1"><label>Type</label>
-            <select id="f-type" onchange="updateStatHint()"></select>
+          <button type="button" class="ac-edit" id="acEditBtn" onclick="acToggleEdit()" aria-expanded="false" aria-controls="acEditFields">Edit details</button>
+        </div>
+        <div class="ac-edit-fields" id="acEditFields" hidden>
+          <div class="fl-row">
+            <div class="fl-field" style="flex:2"><label>Player</label><input id="f-name" placeholder="Ken Griffey Jr." oninput="roloNameEdited()"></div>
+            <div class="fl-field" style="flex:1"><label>Pos</label><input id="f-pos" placeholder="CF"></div>
           </div>
-          <div class="fl-field" style="flex:0 0 auto;justify-content:flex-end"><label style="opacity:0">x</label>
-            <label class="key-toggle"><input type="checkbox" id="f-rare"> Key &#9733;</label>
+          <div class="fl-row">
+            <div class="fl-field" style="flex:2"><label>Team</label><input id="f-team" placeholder="Mariners"></div>
+            <div class="fl-field" style="flex:1"><label>Year</label><input id="f-yr" type="number" placeholder="1989" oninput="onYearInput()" onchange="onYearInput()"></div>
+          </div>
+          <div class="fl-row">
+            <div class="fl-field" style="flex:2"><label>Set</label><select id="f-set"><option value="">&mdash; pick set &mdash;</option></select></div>
+            <div class="fl-field" style="flex:1"><label>Card #</label><input id="f-num" type="text" inputmode="text" placeholder="1"></div>
           </div>
         </div>
-        <div class="fl-field"><label>Season stat line <span class="hintmini" id="statHint">key:value, comma-separated</span></label>
-          <input id="f-stats" placeholder="AVG:.264, HR:16, RBI:61"></div>
-        <div class="fl-field"><label>Note <span class="hintmini">optional</span></label>
-          <textarea id="f-bio" rows="2" placeholder="Card #1 of the set that changed the hobby."></textarea></div>
+        <!-- Derived-only state holders: era comes from the year, type from the
+             resolved position, key defaults false, the stat line is auto-grabbed.
+             No user controls here by design (Task A #1, #2). -->
+        <div id="acDerived" hidden aria-hidden="true">
+          <select id="f-era"><option value="vintage">Vintage (&le; 1985)</option><option value="junk">Junk Wax (1986&ndash;93)</option><option value="modern">Modern (1994+)</option></select>
+          <select id="f-type" onchange="updateStatHint()"><option value="hitter">hitter</option><option value="pitcher">pitcher</option></select>
+          <input type="checkbox" id="f-rare">
+          <input id="f-stats" placeholder="AVG:.264, HR:16, RBI:61">
+          <span class="hintmini" id="statHint">key:value, comma-separated</span>
+        </div>
       </div>
 
       <div class="form-right">
@@ -1179,9 +1191,8 @@ body.logged-out #appFrame{display:none !important;}
         </div>
         <input type="hidden" id="f-photo">
         <input type="hidden" id="f-photo-back">
-        <div class="img-tabs">
-          <button class="img-tab disabled" id="find-card-btn" onclick="findCard()" aria-disabled="true" title="No card page link for this card">Find card</button>
-        </div>
+        <!-- Task A #7: the TCDB "Find card" button is out of the flow.
+             findCard() and setFindCardUrl() remain as contract handlers. -->
         <div class="img-pane" id="pane-up">
           <input type="file" id="f-file" accept="image/*" onchange="onFile(event)">
         </div>
@@ -2163,7 +2174,7 @@ async function ensurePlayerList(){
       hits.sort((a,b)=>{ const as=(a.cd||"").startsWith(q)?0:1, bs=(b.cd||"").startsWith(q)?0:1; return as-bs || a.d.localeCompare(b.d); });
       const _seen=new Map(); for(const it of hits){ const cn=cleanPlayerName(it.d); const prev=_seen.get(cn); if(!prev){ _seen.set(cn,it); } else { const pscore=(prev.d===cn?0:1)*1e6+prev.d.length, iscore=(it.d===cn?0:1)*1e6+it.d.length; if(iscore<pscore) _seen.set(cn,it); } } ROLO_SUGG=Array.from(_seen.values()).slice(0,8);
       if(!ROLO_SUGG.length){ box.style.display='none'; box.innerHTML=''; return; }
-      box.innerHTML=ROLO_SUGG.map((h,i)=>{ const _cnm=normName(cleanPlayerName(h.d)); const _yset=new Set(); for(const _k in idx){ if(normName(cleanPlayerName(idx[_k].display||_k))===_cnm){ (idx[_k].years||[]).forEach(_y=>{var _n=Number(_y); if(_n) _yset.add(_n);}); } } const yrs=[..._yset].sort((a,b)=>a-b); const span=yrs.length?(yrs[0]===yrs[yrs.length-1]?String(yrs[0]):yrs[0]+'-'+yrs[yrs.length-1]):''; const meta=yrs.length?(span+' \u00b7 '+yrs.length+' yr'+(yrs.length>1?'s':'')):'not in checklist'; return `<div class="rolo-player" onclick="roloPickName(${i})"><span>${cleanPlayerName(h.d)}</span><span class="meta" id="rolo-meta-${i}" data-cnm="${escAttr(_cnm)}">${[(ROLO_POS_CACHE[_cnm]||''),meta].filter(Boolean).join(' \u00b7 ')}</span></div>`; }).join('');
+      box.innerHTML=ROLO_SUGG.map((h,i)=>{ const _cnm=normName(cleanPlayerName(h.d)); const _yset=new Set(); for(const _k in idx){ if(normName(cleanPlayerName(idx[_k].display||_k))===_cnm){ (idx[_k].years||[]).forEach(_y=>{var _n=Number(_y); if(_n) _yset.add(_n);}); } } const yrs=[..._yset].sort((a,b)=>a-b); const span=yrs.length?(yrs[0]===yrs[yrs.length-1]?String(yrs[0]):yrs[0]+'-'+yrs[yrs.length-1]):''; const meta=yrs.length?('card years '+span):'no cards on file'; return `<div class="rolo-player" onclick="roloPickName(${i})"><span>${cleanPlayerName(h.d)}</span><span class="meta" id="rolo-meta-${i}" data-cnm="${escAttr(_cnm)}">${[(ROLO_POS_CACHE[_cnm]||''),meta].filter(Boolean).join(' \u00b7 ')}</span></div>`; }).join('');
       box.style.display='block';
       roloFillPositions(ROLO_SUGG, q);
     }
@@ -2370,7 +2381,7 @@ function roloBrandPick(){
   // Card # auto-fill + variation flag (Add-a-Card UX)
   if(nums.length===1){
     numIn.value=nums[0]; document.getElementById('f-num').value=nums[0];
-    note.innerHTML=''; note.appendChild(document.createTextNode('checklist #'+nums[0]));
+    note.innerHTML=''; note.appendChild(document.createTextNode('this set lists it as #'+nums[0]));
   } else if(nums.length>1){
     var bases=nums.filter(function(n){return /^[0-9]+$/.test(String(n).trim());});
     bases.sort(function(a,b){return parseInt(a,10)-parseInt(b,10);});
@@ -2524,8 +2535,10 @@ function openForm(){
   roloReset();
   imgSlot('front');
   imgTab('up');
+  acToggleEdit(false);
+  acStartStripSync();
   document.getElementById('formScrim').classList.add('open');
-  setTimeout(()=>document.getElementById('f-name').focus(),50);
+  setTimeout(()=>{var _r=document.getElementById('rolo-name'); if(_r) _r.focus();},50);
 }
 function updateStatHint(){
   const t=document.getElementById('f-type').value;
@@ -2539,8 +2552,57 @@ function updateStatHint(){
     stats.placeholder='AVG:.264, HR:16, RBI:61, OPS:.748';
   }
 }
+/* ---------- Task A: read-only card-details strip -------------------------
+ * The add flow presents player/pos/team/year/set/# and the auto-grabbed season
+ * stat line as READ-ONLY text. The underlying inputs are untouched and still
+ * live in #acEditFields (collapsed) so manual edits stay possible and every
+ * existing handler keeps writing the same element ids.
+ * ---------------------------------------------------------------------- */
+var AC_STRIP_TIMER=null;
+function acCell(id,val,fallback){
+  var el=document.getElementById(id); if(!el) return;
+  var v=(val==null?'':String(val)).trim();
+  el.textContent = v || (fallback||'\u2014');
+  el.classList.toggle('is-empty', !v);
+}
+function acSyncStrip(){
+  var g=function(id){ var e=document.getElementById(id); return e?e.value:''; };
+  acCell('acsName', g('f-name'));
+  var _p=(g('f-pos')||'').trim();
+  if(!_p && typeof ROLO_POS_CACHE!=='undefined' && typeof normName==='function'
+     && typeof cleanPlayerName==='function'){
+    try{ _p=ROLO_POS_CACHE[normName(cleanPlayerName(g('f-name')||''))]||''; }catch(_e){}
+  }
+  acCell('acsPos',  _p);
+  acCell('acsTeam', g('f-team'));
+  acCell('acsYr',   g('f-yr'));
+  acCell('acsSet',  g('f-set'));
+  var _n=(g('f-num')||'').trim();
+  acCell('acsNum',  _n?('#'+_n):'');
+  acCell('acsStats', g('f-stats'), 'pick a season above \u2014 the line fills itself');
+}
+function acStartStripSync(){
+  acSyncStrip();
+  if(AC_STRIP_TIMER) clearInterval(AC_STRIP_TIMER);
+  /* The rolodex writes these ids from a dozen places and a programmatic
+   * .value assignment fires no event, so mirror on a cheap tick while the
+   * modal is open rather than patching every write site. */
+  AC_STRIP_TIMER=setInterval(acSyncStrip,200);
+}
+function acStopStripSync(){ if(AC_STRIP_TIMER){ clearInterval(AC_STRIP_TIMER); AC_STRIP_TIMER=null; } }
+function acToggleEdit(force){
+  var wrap=document.getElementById('acEditFields');
+  var btn=document.getElementById('acEditBtn');
+  if(!wrap) return;
+  var open=(typeof force==='boolean')?force:wrap.hasAttribute('hidden');
+  if(open){ wrap.removeAttribute('hidden'); } else { wrap.setAttribute('hidden',''); }
+  if(btn){ btn.setAttribute('aria-expanded',open?'true':'false');
+           btn.textContent=open?'Done editing':'Edit details'; }
+  if(open){ var f=document.getElementById('f-name'); if(f) f.focus(); }
+  acSyncStrip();
+}
 function closeForm(e,force){
-  if(force||e.target.id==='formScrim'){document.getElementById('formScrim').classList.remove('open');}
+  if(force||e.target.id==='formScrim'){document.getElementById('formScrim').classList.remove('open');acStopStripSync();}
 }
 function imgTab(p){
   document.querySelectorAll('.img-tab').forEach(t=>t.classList.toggle('active',t.dataset.pane===p));
@@ -2681,7 +2743,7 @@ async function saveCard(){
     set:document.getElementById('f-set').value.trim()||"Unknown",
     num:(document.getElementById('f-num').value.trim()||""),
     numSort:parseInt(document.getElementById('f-num').value)||0,
-    era:document.getElementById('f-era').value,
+    era:(document.getElementById('f-era').value||eraFromYear(document.getElementById('f-yr').value)||'modern'),
     type:typeVal,
     rare:document.getElementById('f-rare').checked,
     photoFront:document.getElementById('f-photo').value||"",
@@ -2690,7 +2752,7 @@ async function saveCard(){
     statPersonId:(_prov?_prov.personId:null),
     statSeason:(_prov?_prov.statSeason:null),
     statTeam:(_prov?_prov.statTeam:null),
-    bio:document.getElementById('f-bio').value.trim()||""
+    bio:(function(){var _b=document.getElementById('f-bio');return _b?(_b.value.trim()||""):"";})() /* Task A #3: notes live in the card detail; add flow writes "" */
   };
   if(depotLoggedIn()){
     const _id = await depotInsertCard(card);
@@ -3764,6 +3826,79 @@ setAuthUI(false);
   #formScrim .spot-close{ width:34px !important; height:34px !important; }
 }
 </style>
+<style id="add-card-simplify">
+/* ============================================================
+   TASK A - ADD-A-CARD SIMPLIFICATION
+   Read-only details strip + collapsed manual editor. Last style
+   block in the document, so it wins on document order.
+   ============================================================ */
+#formScrim .ac-strip{ position:relative; display:grid; gap:10px;
+  background:var(--v-panel); border:3px solid var(--v-line);
+  border-radius:14px !important; padding:15px 14px 13px; }
+#formScrim .ac-strip::before{ content:"CARD DETAILS"; position:absolute;
+  top:-8px; left:13px; background:var(--v-cream); padding:0 7px;
+  font-family:var(--v-sans) !important; font-weight:800; font-size:11px;
+  letter-spacing:.14em; color:var(--v-label); }
+#formScrim .ac-strip-grid{ display:grid; grid-template-columns:repeat(6,1fr);
+  gap:9px 14px; }
+#formScrim .ac-cell{ display:grid; gap:2px; min-width:0; }
+#formScrim .ac-span2{ grid-column:span 2; }
+#formScrim .ac-span4{ grid-column:span 4; }
+#formScrim .ac-full{ grid-column:1 / -1; border-top:2px dashed var(--v-dash);
+  padding-top:9px; }
+#formScrim .ac-k{ font-family:var(--v-sans) !important; font-weight:800;
+  font-size:10px; letter-spacing:.12em; text-transform:uppercase;
+  color:var(--v-label); }
+#formScrim .ac-k em{ font-style:normal; font-weight:600; letter-spacing:0;
+  text-transform:none; color:var(--v-mute); }
+#formScrim .ac-v{ font-family:var(--v-title) !important; font-weight:700;
+  font-size:15px; line-height:1.2; color:var(--v-ink); min-width:0;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+#formScrim .ac-v.is-empty{ color:var(--v-empty); font-weight:600; }
+#formScrim .ac-v--stats{ font-family:var(--v-code) !important; font-weight:500;
+  font-size:12px; white-space:normal; line-height:1.5; }
+#formScrim .ac-edit{ justify-self:start; background:#fff; color:var(--v-link);
+  border:2px solid var(--v-line) !important; border-radius:999px !important;
+  padding:5px 14px; font-family:var(--v-sans) !important; font-weight:700;
+  font-size:12px; line-height:1.2; cursor:pointer; }
+#formScrim .ac-edit:hover{ background:var(--v-chip);
+  border-color:var(--v-dash) !important; }
+#formScrim .ac-edit:active{ transform:translateY(1px); }
+#formScrim .ac-edit-fields{ display:grid; gap:12px; }
+#formScrim .ac-edit-fields .fl-row{ border-top:0; padding-top:0; margin-top:0; }
+#formScrim .ac-edit-fields[hidden], #formScrim #acDerived{ display:none !important; }
+@media (max-width:760px){
+  #formScrim .form-left > .ac-strip{ order:2; }
+  #formScrim .form-left > .ac-edit-fields{ order:3; }
+  #formScrim .ac-strip-grid{ grid-template-columns:repeat(2,1fr); }
+  #formScrim .ac-span2, #formScrim .ac-span4{ grid-column:span 1; }
+  #formScrim .ac-edit{ min-height:40px; }
+}
+
+/* ---- height budget: Cancel / Add to depot must be reachable without a
+        scroll at desktop heights (Task A #4). ------------------------------ */
+#formScrim.open{ padding:14px 16px; }
+#formScrim .form-body{ padding:16px 24px 16px; gap:22px; }
+#formScrim .form-left{ gap:12px; }
+#formScrim .form-head{ padding:11px 20px 11px 24px; }
+#formScrim .form-head h2, #formScrim #formTitle{ font-size:26px; }
+#formScrim .form-foot{ padding:11px 24px; }
+#formScrim .ac-strip{ padding:12px 13px 11px; gap:8px; }
+#formScrim .ac-strip-grid{ gap:7px 14px; }
+#formScrim .ac-full{ padding-top:7px; }
+#formScrim .ac-v--stats{ line-height:1.4; }
+
+/* ---- the funnel can grow (12 season pills, brand row, card tiles), so cap
+        the sheet and scroll the BODY: the footer CTAs stay on screen at every
+        desktop height instead of being pushed under the fold. --------------- */
+@media (min-width:761px){
+  #formScrim .form-card{ display:flex; flex-direction:column; min-height:0;
+    max-height:calc(100vh - 118px); }
+  #formScrim .form-body{ flex:1 1 auto; min-height:0; overflow:auto;
+    scrollbar-width:thin; }
+}
+</style>
+
 <script>
 /* Route Group By = Set through the labeled-sections grid (renderGrouped) instead of the
    separate set carousel, and give 'set' a real grouping key (YEAR + SET). Additive + guarded. */
