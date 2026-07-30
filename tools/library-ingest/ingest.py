@@ -53,6 +53,7 @@ import zipfile
 from collections import Counter
 from pathlib import Path
 
+import recover
 from normalize import norm_number, norm_text, catalog_key
 from parsers import FAMILIES, family_for, detect_family
 
@@ -143,7 +144,7 @@ def size_distribution(zf, sample_names):
 
 
 # ------------------------------------------------------------------- match ---
-_VAR_NUM_RE = re.compile(r"^\\d+[a-z]$", re.IGNORECASE)
+_VAR_NUM_RE = re.compile(r"^\d+[a-z]$", re.IGNORECASE)
 
 def is_variant(pf):
     """Family-D letter-variant / (VAR) parallel. Base-gate rule (Nick):
@@ -156,7 +157,7 @@ def is_variant(pf):
     return bool(_VAR_NUM_RE.match(tok))
 
 
-def dry_run(records, catalog_numbers, year, brand, set_name):
+def dry_run(records, catalog_numbers, year, brand, set_name, titles=None):
     """Parse every record's number to catalog form, test membership, and split
     into matched / unmapped. Returns (matched, unmapped). Each unmapped row carries
     a reason so it can go straight into the review CSV (LIBRARY_PHASE0.md 4.4).
@@ -165,17 +166,43 @@ def dry_run(records, catalog_numbers, year, brand, set_name):
     token it cannot reduce to a single catalog number, so the combo case is just
     the 'norm is None' branch -- no special-casing needed here."""
     matched, unmapped = [], []
-    for pf in records:
-        raw = pf.number_token
-        norm = norm_number(raw)
-        if norm is None:
-            unmapped.append((pf, None, "combo/leader or unparseable number: '{}'".format(raw)))
+    claimed = {}
+    titles = titles or {}
+    pending = []
+
+    def take(pf, norm, note):
+        slot = (norm, pf.side)
+        if slot in claimed:
+            unmapped.append((pf, norm, "duplicate {} image for '{}' -- kept '{}'".format(pf.side, norm, claimed[slot])))
+            return
+        claimed[slot] = pf.source_file
+        if note:
+            log("recover", "{} : '{}' -> '{}' via {}".format(pf.source_file, pf.number_token, norm, note))
+        matched.append((pf, norm, catalog_key(year, brand, set_name, norm)))
+
+    # pass 1 -- a number that IS in the catalog owns its slot outright.
+    for pf in sorted(records, key=lambda r: r.source_file):
+        norm = norm_number(pf.number_token)
+        if norm is not None and norm in catalog_numbers:
+            take(pf, norm, None)
+        else:
+            pending.append((pf, norm))
+
+    # pass 2 -- guarded recovery, and only into slots pass 1 left empty, so a
+    # recovered file can never displace a card that resolved on its own.
+    for pf, norm in pending:
+        cand, rule = recover.recover_number(
+            pf.number_token, pf.source_file, catalog_numbers, titles)
+        if cand is None:
+            if norm is None:
+                unmapped.append((pf, None, "combo/leader or unparseable number: '{}'".format(pf.number_token)))
+            else:
+                unmapped.append((pf, norm, "number '{}' not in catalog set '{}'".format(norm, set_name)))
             continue
-        if norm not in catalog_numbers:
-            unmapped.append((pf, norm, "number '{}' not in catalog set '{}'".format(norm, set_name)))
+        if (cand, pf.side) in claimed:
+            unmapped.append((pf, cand, "'{}' recovers to '{}' ({}) but that slot is held by '{}'".format(pf.number_token, cand, rule, claimed[(cand, pf.side)])))
             continue
-        key = catalog_key(year, brand, set_name, norm)
-        matched.append((pf, norm, key))
+        take(pf, cand, rule)
     return matched, unmapped
 
 
@@ -302,7 +329,15 @@ def main(argv=None):
         log("depot", "catalog not found: {} -- abort".format(catalog_path))
         return 2
 
+    with open(catalog_path, encoding="utf-8") as _fh:
+        catalog_rows = json.load(_fh)
+    canon = recover.resolve_set_name(catalog_rows, args.set_name)
+    if canon and norm_text(canon) != norm_text(args.set_name):
+        log("depot", "set '{}' resolved to catalog set '{}' (separator-insensitive)".format(args.set_name, canon))
+        args.set_name = canon
+        args.brand = canon
     catalog_numbers = load_catalog_numbers(catalog_path, args.set_name)
+    titles_by_number = recover.catalog_titles(catalog_rows, args.set_name)
     log("depot", "catalog '{}' {}: {} normalized numbers".format(args.set_name, args.year, len(catalog_numbers)))
 
     zip_name = Path(args.zip).name
@@ -323,7 +358,7 @@ def main(argv=None):
         for d in dist:
             log("census", "sample {} {}x{} {}B".format(d["file"], d["w"], d["h"], d["bytes"]))
 
-        matched, unmapped = dry_run(records, catalog_numbers, args.year, args.brand, args.set_name)
+        matched, unmapped = dry_run(records, catalog_numbers, args.year, args.brand, args.set_name, titles_by_number)
         # Base-gate rule (Nick): variants (family-D letter-suffix / (VAR))
         # are non-blockers -- excluded from gate denominator, logged to CSV.
         unmapped_var = [u for u in unmapped if is_variant(u[0])]
