@@ -180,9 +180,21 @@ def dry_run(records, catalog_numbers, year, brand, set_name, titles=None):
             log("recover", "{} : '{}' -> '{}' via {}".format(pf.source_file, pf.number_token, norm, note))
         matched.append((pf, norm, catalog_key(year, brand, set_name, norm)))
 
+    # pass 0 - repair filenames whose LEADING token is a valid catalog number
+    # but is not this card's number (the 1993 '{n}_{sourceid}_' dialect). These
+    # look like clean direct hits, so the correction has to land before pass 1
+    # or the file claims someone else's slot and overwrites real art.
+    forced = {}
+    for pf in records:
+        fix = recover.override_number(pf.source_file, catalog_numbers, titles)
+        if fix is not None:
+            forced[pf.source_file] = fix
+            log("override", "{} : token '{}' -> '{}' via OV1".format(
+                pf.source_file, pf.number_token, fix))
+
     # pass 1 -- a number that IS in the catalog owns its slot outright.
     for pf in sorted(records, key=lambda r: r.source_file):
-        norm = norm_number(pf.number_token)
+        norm = forced.get(pf.source_file) or norm_number(pf.number_token)
         if norm is not None and norm in catalog_numbers:
             take(pf, norm, None)
         else:

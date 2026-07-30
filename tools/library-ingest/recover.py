@@ -22,6 +22,7 @@ Rules (all observed in the real corpus, see COVERAGE notes):
                                     text matches the filename exactly.
 """
 
+import os
 import re
 
 from normalize import norm_number, norm_text
@@ -121,3 +122,36 @@ def recover_number(raw_token, filename, numbers, titles):
     if len(hits) == 1:
         return hits[0], "R5-title-match"
     return None, None
+
+
+# ------------------------------------------------------- number-token override --
+# Some source zips (1993-Bowman, 1993-Donruss) name the multiples-of-11 cards
+#     {n}_{sourceid}_{Player}_{side}.jpg     e.g. 1_98761_Lou-Whitaker_front.jpg
+# where the REAL card number is n*11 (11, 22, ... 99) and {sourceid} is the
+# scanner's internal row id. The leading token is itself a valid catalog number,
+# so these files resolve as DIRECT hits onto #1..#9 and silently overwrite the
+# real #1..#9 art -- the same multiples-of-11 defect family as the '1-2_' dialect,
+# but it lands as a collision instead of an unmapped row. Because the file is
+# never unmapped, this cannot be a second-chance recovery: it has to run BEFORE
+# matching, hence a separate entry point from recover_number().
+#
+# Guarded three ways, all of which must hold:
+#   1. structural - basename is {1-9}_{4-or-more digits}_{name}_{side}
+#   2. existence  - n*11 is a real number in this set's catalog
+#   3. name       - the catalog title at n*11 agrees with the filename's player
+# If the name cannot be confirmed the file is left alone (the parsed token wins),
+# so a bad guess can never displace a real card.
+_OVERRIDE_RE = re.compile(r"^([1-9])_(\d{4,})_(.+?)_(front|back)\.jpe?g$", re.IGNORECASE)
+
+
+def override_number(filename, numbers, titles):
+    """Corrected number for a mis-tokenised filename, or None to leave it alone."""
+    m = _OVERRIDE_RE.match(os.path.basename(filename))
+    if not m:
+        return None
+    cand = str(int(m.group(1)) * 11)
+    if cand not in numbers:
+        return None
+    if not _title_agrees(titles.get(cand), m.group(3)):
+        return None
+    return cand
