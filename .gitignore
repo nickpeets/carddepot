@@ -1,0 +1,3 @@
+# Local-only design bundle for the master build (32 files, repo root).
+# Working artifact, not repo content: keep it out of `git status`.
+build_package/
