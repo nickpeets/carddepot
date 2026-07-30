@@ -1907,7 +1907,7 @@ function openSpot(idx){
         ${cback?`<div class="spot-back-img"><img src="${escAttr(cback)}" alt="card back" onload="imgOk(this)" onerror="imgFail(this)"></div>`:(libBack?`<div class="spot-back-img"><img class="dc-lib-pending" alt="card back" onload="imgOk(this)" onerror="imgFail(this)"></div>`:'')}
     <div class="spot-back-scroll">
     ${statTable(c)}
-    ${c.bio?`<div class="bio">${c.bio}</div>`:''}
+    ${(function(){ /* Task 4: the pack receipt is internal provenance, not a line about the player, so the spotlight back stops reading it out. The data stays in cards.notes exactly as written -- depot-position.js owns the display filter so every reader agrees on what is player-facing. */ var _b=(typeof window.depotBioForDisplay==='function')?window.depotBioForDisplay(c.bio):String(c.bio||'').replace(/packseed\s*:\s*\S+/gi,'').replace(/^[\s|;,]+|[\s|;,]+$/g,'').trim(); return _b?('<div class="bio">'+_b+'</div>'):''; })()}
         </div>`;
   document.getElementById('spotMeta').innerHTML=`${c.name?`<div class="spot-name">${c.name}</div>`:''}<span class="hint">click card to flip · esc to close</span>`
     + (hasScan?'':`<div id="spotNoArt" style="margin-top:.5rem;display:none"><button class="btn-google" style="width:auto;padding:.45rem 1rem;font-size:.72rem" onclick="findImageFor(${idx},event)">Find this card on Google Images ↗</button></div>`)
