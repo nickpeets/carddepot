@@ -270,3 +270,50 @@ would stop the flip. Not changed here -- that is a copy call, not a bug.
 Accept the richer pull for now. The economy retune -- prices, earn rate, or
 `cardWeight` / band rates -- lands alongside the Diamond-tier work in section 6,
 so the whole curve gets priced once instead of twice.
+
+## 13. Pack provenance view / "Group By Pack" (scoping)
+
+Shipped in `feat/pack-history-cards`: a Pack History row expands to the cards
+that pack produced, each linking to its binder spotlight. That closes the
+discoverability hole (Nick's July bronze pack looked "missing" for two weeks
+while all five cards sat in the binder) with the smallest possible surface.
+
+Still open, the fuller idea. Nick leans toward it living in the Pack Shop
+rather than the binder:
+
+- **Group By Pack** in the binder's existing group-by control: one shelf per
+  pack, unpacked cards grouped under their pack, singles/scans under "Added by
+  hand". Needs `pack_seed` on the client card shape (it is not in `rowToCard()`
+  today) and a grouping mode in `renderGrouped()`.
+- **Provenance chip in the spotlight**: "from a BRONZE pack, 13 Jul 2026" with a
+  link back to the pack row. Needs the same `pack_seed` plumbing plus a grant
+  lookup, or a denormalised tier/date on the card row.
+- **Pack detail page** in the Pack Shop: the pack as an object -- tier, date,
+  cost, the five cards with their prestige bands, the hit slot marked, and the
+  ceremony replay button. This is where a "what did I get" question naturally
+  goes, and it is the one Nick keeps describing.
+
+### 13a. Two data facts any of the above must respect
+
+1. **A seed is not a stable name for a pack.** `rollPack` is deterministic in
+   (seed, catalog, tier), and the catalog is not constant: the art gate (#194)
+   cut the pool 155,844 -> 84,272. Measured 2026-07-30: seed `1335568119`
+   re-rolled against the July pool returns Nick's exact five; against today's
+   pool it returns five entirely different cards (Hatteberg / Clark / Walker /
+   Jimenez / Pujols). Provenance therefore reads `cards.pack_seed` and
+   `pack_grants`, never a re-roll. REPLAY still re-rolls -- it is a ceremony,
+   not a record -- but it should say so on screen; logged below.
+2. **Free daily packs have no provenance at all.** `depot_claim_free_pack`
+   inserts the card with `source='pack'` but leaves `pack_seed` NULL and writes
+   no `pack_grants` row, so three free-pack cards (Mayne 16 Jul, Ledee 25 Jul,
+   Bass 29 Jul) cannot be traced to a pull server-side. The shelf works around
+   it by storing the granted `card_id` as the entry's "seed". A real fix stamps
+   a seed (or a grant row) inside the RPC -- schema work, needs sign-off.
+
+### 13b. REPLAY says "replay" but performs a re-roll
+
+`replayPack()` re-rolls from the seed against today's pool, so for any pack
+older than the art gate it plays a ceremony for cards the collector never
+owned. Cheap fix: feed REPLAY the ledger rows when they exist and keep the
+re-roll only for seedless local receipts. Not done here to keep the branch to
+one concern.

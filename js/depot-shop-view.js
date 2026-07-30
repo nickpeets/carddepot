@@ -498,7 +498,7 @@
     }
     // A shelf of packs: tier + date + count only. Contents hidden until REPLAY.
     function renderHistoryHtml(){
-      var list = loadHistory();
+      var list = historyList();
       var inner = '';
       if(!list.length){
         inner = '<div class="dpc-hist-empty">No packs opened yet. Rip one above \u2014 it lands here for replay.</div>';
@@ -508,22 +508,115 @@
           var e = list[i];
           var t = (e.tier||'bronze');
           var label = (t==='free'?'DAILY':t.toUpperCase())+' PACK';
-          inner += '<div class="dpc-hist-item dpc-hist-'+t+'" data-idx="'+i+'">' +
-                     '<div class="dpc-hist-spine"></div>' +
-                     '<div class="dpc-hist-meta">' +
-                       '<div class="dpc-hist-tier">'+label+'</div>' +
-                       '<div class="dpc-hist-when">'+fmtWhen(e.at)+DOT+(e.count||5)+' cards</div>' +
-                     '</div>' +
-                     '<button type="button" class="dpc-replaybtn" data-idx="'+i+'">REPLAY</button>' +
-                   '</div>';
+          inner += '<div class="dpc-hist-row" data-idx="'+i+'">' +
+            '<div class="dpc-hist-item dpc-hist-'+t+'" data-idx="'+i+'">' +
+              '<div class="dpc-hist-spine"></div>' +
+              '<div class="dpc-hist-meta">' +
+                '<div class="dpc-hist-tier">'+label+'</div>' +
+                '<div class="dpc-hist-when">'+fmtWhen(e.at)+DOT+(e.count||5)+' cards</div>' +
+              '</div>' +
+              '<button type="button" class="dpc-cardsbtn" data-idx="'+i+'" aria-expanded="false">CARDS</button>' +
+              '<button type="button" class="dpc-replaybtn" data-idx="'+i+'">REPLAY</button>' +
+            '</div>' +
+            '<div class="dpc-hist-cards" data-idx="'+i+'" hidden></div>' +
+          '</div>';
         }
         inner += '</div>';
       }
       return '<div class="dpc-history"><h3>Pack History</h3>'+inner+'</div>';
     }
-    function wireHistory(){
+    /* ---- pack contents (feat/pack-history-cards) -------------------------
+   * The shelf is localStorage + the pack_grants ledger, so a pack opened in
+   * another browser -- or before this shelf existed -- still shows up. Each row
+   * expands to the cards that pack actually produced, read from the binder rows
+   * that carry its seed, and each card opens its own spotlight.
+   * -------------------------------------------------------------------- */
+  var _shelf = null, _shelfHydrated = false;
+  function historyList(){ return _shelf || loadHistory(); }
+
+  function hydrateShelfOnce(){
+    if(_shelfHydrated) return;
+    _shelfHydrated = true;
+    var PH = window.DepotPackHistory;
+    if(!PH){ console.warn(TAG+" pack-history module absent; shelf stays local-only"); return; }
+    PH.shelf(loadHistory()).then(function(list){
+      _shelf = list;
+      var host = gridEl.querySelector(".dpc-history");
+      if(!host){ console.warn(TAG+" history shelf not on this surface; nothing to refresh"); return; }
+      var tmp = document.createElement("div");
+      tmp.innerHTML = renderHistoryHtml();
+      if(tmp.firstChild){ host.parentNode.replaceChild(tmp.firstChild, host); wireHistory(); }
+    }).catch(function(e){ console.warn(TAG+" shelf hydrate failed: "+((e&&e.message)||e)); });
+  }
+
+  function cardsPanelHtml(res){
+    if(!res || !res.cards || !res.cards.length){
+      return '<div class="dpc-hist-none">Could not read this pack\u2019s cards. Sign in on the binder and try again.</div>';
+    }
+    var h = '';
+    if(res.source === 'reroll'){
+      h += '<div class="dpc-hist-note">No binder rows carry this seed, so this is a re-roll of TODAY\u2019s pool \u2014 indicative, not the pack itself.</div>';
+    }
+    h += '<ul class="dpc-hist-cardlist">';
+    for(var i=0;i<res.cards.length;i++){
+      var c = res.cards[i];
+      var meta = esc(String(c.year||'')) + ' ' + esc(c.set||'') + (c.number!=null && c.number!=='' ? ' #' + esc(String(c.number)) : '');
+      h += '<li class="dpc-hist-card' + (c.id ? ' is-linked" data-card="' + esc(String(c.id)) + '" role="button" tabindex="0" title="Open in the binder' : '') + '">' +
+             '<span class="dpc-hist-cardname">' + esc(c.player||'(unnamed)') + '</span>' +
+             '<span class="dpc-hist-cardmeta">' + meta + '</span>' +
+             (c.id ? '<span class="dpc-hist-go">VIEW</span>' : '') +
+           '</li>';
+    }
+    return h + '</ul>';
+  }
+
+  function wireCardLinks(panel){
+    var items = panel.querySelectorAll('.dpc-hist-card.is-linked');
+    for(var i=0;i<items.length;i++){ (function(el){
+      function go(){
+        var id = el.getAttribute('data-card');
+        var PH = window.DepotPackHistory;
+        if(!PH){ console.warn(TAG+' cannot open card '+id+': pack-history module absent'); return; }
+        PH.openCard(id);
+      }
+      el.addEventListener('click', go);
+      el.addEventListener('keydown', function(ev){
+        if(ev.key === 'Enter' || ev.key === ' '){ ev.preventDefault(); go(); }
+      });
+    })(items[i]); }
+  }
+
+  function wireHistoryCards(){
+    var btns = gridEl.querySelectorAll('.dpc-cardsbtn');
+    var list = historyList();
+    for(var i=0;i<btns.length;i++){ (function(btn){
+      btn.addEventListener('click', function(){
+        var idx = parseInt(btn.getAttribute('data-idx'),10);
+        var entry = list[idx];
+        if(!entry){ console.warn(TAG+' history: no shelf entry at row '+idx); return; }
+        var panel = gridEl.querySelector('.dpc-hist-cards[data-idx="'+idx+'"]');
+        if(!panel){ console.warn(TAG+' history: no cards panel for row '+idx); return; }
+        if(!panel.hasAttribute('hidden')){ panel.setAttribute('hidden',''); btn.setAttribute('aria-expanded','false'); return; }
+        panel.removeAttribute('hidden'); btn.setAttribute('aria-expanded','true');
+        if(panel.getAttribute('data-loaded') === '1') return;
+        panel.innerHTML = '<div class="dpc-hist-note">Reading the ledger\u2026</div>';
+        var PH = window.DepotPackHistory;
+        if(!PH){ panel.innerHTML = '<div class="dpc-hist-none">Pack-history module missing.</div>'; console.warn(TAG+' DepotPackHistory missing'); return; }
+        PH.contents(entry, _catalogRef || []).then(function(res){
+          panel.setAttribute('data-loaded','1');
+          panel.innerHTML = cardsPanelHtml(res);
+          wireCardLinks(panel);
+          console.log(TAG+' history: row '+idx+' -> '+res.cards.length+' card(s) from '+res.source);
+        });
+      });
+    })(btns[i]); }
+  }
+
+  function wireHistory(){
+    wireHistoryCards();
+    hydrateShelfOnce();
       var btns = gridEl.querySelectorAll('.dpc-replaybtn');
-      var list = loadHistory();
+      var list = historyList();
       for(var i=0;i<btns.length;i++){ (function(btn){
         btn.addEventListener('click', function(){
           var idx = parseInt(btn.getAttribute('data-idx'),10);
@@ -752,7 +845,7 @@
   // -- never the contents. Contents are re-rolled from the seed at REPLAY time.
   function recordPackHistory(entry){
     if(!entry || (entry.seed==null)) return;
-    var list = loadHistory();
+    var list = historyList();
     var key = entry.tier+":"+entry.seed;
     for(var i=0;i<list.length;i++){ if((list[i].tier+":"+list[i].seed)===key) return; } // already shelved
     list.unshift({ tier: entry.tier||"bronze", seed: entry.seed,
