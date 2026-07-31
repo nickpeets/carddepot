@@ -536,3 +536,34 @@
   #formScrim.rd-addcard .btn-ghost{ min-height:48px; flex:1 1 100%; }
   #formScrim.rd-addcard .fl-field{ min-width:100%; }
 }
+
+/* ---- 8. TAKING THE VOICE BACK ----------------------------------------- */
+/* Five rules outside this sheet still shout !important INTO the modal, and
+   they were measured, not guessed (matched live against every node under
+   #formScrim): the retro block forces "Press Start 2P" on .form-head h2 /
+   .rolodex-head / .ph-text and a border on .rolo-row button / .btn-ghost, and
+   css/depot-spotlight-legacy.css forces .spot-close's border because the close
+   button is a borrowed spotlight part. The legacy transcription answered with a
+   blanket #formScrim * rule; this does the same thing, scoped, then hands the
+   two display families back to the parts that own them. */
+#formScrim.rd-addcard,
+#formScrim.rd-addcard *,
+#formScrim.rd-addcard *::before,
+#formScrim.rd-addcard *::after{ font-family:var(--rd-ui) !important; }
+
+#formScrim.rd-addcard .rolodex-head,
+#formScrim.rd-addcard .ac-k,
+#formScrim.rd-addcard .fl-field label,
+#formScrim.rd-addcard .form-right > label,
+#formScrim.rd-addcard .rolo-row::before,
+#formScrim.rd-addcard .rolo-years::before,
+#formScrim.rd-addcard .rolo-brand::before,
+#formScrim.rd-addcard .form-right > label::before{ font-family:var(--rd-micro) !important; }
+
+#formScrim.rd-addcard .rolo-card-row .rcr-num,
+#formScrim.rd-addcard .ac-v--stats{ font-family:var(--rd-num) !important; }
+
+#formScrim.rd-addcard .rolo-row button{ border:var(--rd-bd-sub) solid var(--rd-navy) !important; }
+#formScrim.rd-addcard .btn-ghost{ border:var(--rd-bd-sub) solid var(--rd-tint-line) !important; }
+#formScrim.rd-addcard .btn-ghost:hover{ border-color:var(--rd-navy) !important; }
+#formScrim.rd-addcard .form-head .spot-close{ border:var(--rd-bd-sub) solid var(--rd-navy) !important; }
