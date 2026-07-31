@@ -429,3 +429,105 @@ report. Not started — awaiting your go.
 
 **4. Two catalog keys have no art.** The catalog carries 4,171 Fleer Tradition
 keys; the zips supplied 4,169. Trivial, noted for completeness.
+
+---
+
+## QC1 — 2000 Topps Chrome / Chrome Refractors no-art triage (Jimmy Haynes)
+
+**Verdict: class (a), honest corpus gap.** Not the Fleer-Tradition class. No re-key is
+proposed and no AGENTS.md §2 sign-off is needed — there is nothing in the bucket to move.
+
+### Evidence
+
+| Probe | Result |
+|---|---|
+| `zips/` on disk, `grep -iE 'chrome\|refract\|parallel\|finest'` | **0 of 197** zips match |
+| 2000-era zips actually on disk | `2000-Bowman`, `2000-Fleer-Tradition`, `2000-Topps`, `2000-Upper-Deck` — flagship only |
+| Google Drive, `rclone lsf gdrive: -R --files-only` (5,532 files, 228 zips) | **0** chrome/refractor matches |
+| `card_library.catalog_key ILIKE '%chrome%'` / `'%refract%'` | 0 / 0 |
+| `card_library.object_path ILIKE '%chrome%'` / `'%refract%'` | 0 / 0 |
+| `card_library_manifest` — same four probes | 0 / 0 / 0 / 0 |
+| **Total chrome-flavoured rows anywhere in bucket or tables** | **0** |
+
+Curl on the canonically-derived paths (before-state, for the record):
+
+| path | HTTP |
+|---|---|
+| `2000/topps/topps-chrome/376_front.jpg` | 400 |
+| `2000/topps/topps-chrome-refractors/376_front.jpg` | 400 |
+| `2004/topps/topps-chrome/1_front.jpg` | 400 |
+| `1993/topps/topps-finest-refractors/1_front.jpg` | 400 |
+| `2000/topps/topps/376_front.jpg` (base Haynes, control) | **200** |
+
+### Why Nick sees it
+
+The catalog carries Chrome as its own `set` value under `brand='Topps'`, and Chrome mirrors
+base numbering — Jimmy Haynes is #376 in all three 2000 Topps sets. So the resolver derives
+three distinct keys off the SET field:
+
+- `2000|topps|topps|376` → art present (control above returns 200)
+- `2000|topps|topps chrome|376` → nothing was ever ingested
+- `2000|topps|topps chrome refractors|376` → nothing was ever ingested
+
+The catalog rows are real and correct; the scans simply do not exist in our corpus.
+
+### The chrome/refractor family in the catalog (all zero-presence)
+
+| year | brand | set | catalog rows |
+|---|---|---|---|
+| 2000 | Topps | Topps Chrome | 479 |
+| 2000 | Topps | Topps Chrome Refractors | 479 |
+| 2004 | Topps | Topps Chrome | 466 |
+| 1993 | Topps | Topps Finest Refractors | 199 |
+| | | **total** | **1,623** |
+
+### Corpus-wide zero-presence sweep (the scan-session shopping list)
+
+Every catalog `(year, brand, set)` group intersected against the 89,898 distinct active
+`catalog_key`s in `card_library`. **274 groups / 45,726 catalog rows have zero library
+presence** — 29.3% of the 155,844-row pack pool. Split: **21,820 rows** parallel/variant
+flavoured, **23,906 rows** base flavoured.
+
+Largest zero-presence groups, collapsed across years:
+
+| kind | brand | set | rows | years |
+|---|---|---|---|---|
+| base | Score | Score | 5,950 | 1988–1998 (9yr) |
+| base | Fleer | Fleer | 3,955 | 1998–2006 (8yr) |
+| PAR | Topps | Topps Tiffany | 3,934 | 1984–1990 (5yr) |
+| PAR | Fleer | Fleer Glossy | 1,320 | 1987–1988 (2yr) |
+| base | Topps | Topps Series 1 | 1,026 | 2004–2010 (3yr) |
+| PAR | Bowman | Bowman Tiffany | 1,012 | 1989–1990 (2yr) |
+| PAR | Topps | **Topps Chrome** | 945 | 2000–2004 (2yr) |
+| PAR | Upper Deck | Upper Deck Gold Parallel | 799 | 2008 |
+| base | Topps | Topps Series 2 | 696 | 2004–2009 (2yr) |
+| PAR | Topps | Topps Update | 663 | 2008–2012 (2yr) |
+| PAR | Score | Score Gold Rush | 660 | 1994 |
+| PAR | Fleer | Fleer "Printed in Canada" | 660 | 1990 |
+| PAR | Score | Score Glossy | 660 | 1988 |
+| PAR | Upper Deck | Upper Deck Factory | 590 | 2004 |
+| base | Topps | Topps Stickers | 588 | 1981–1989 (2yr) |
+| base | Topps | Topps Major League Debut | 517 | 1989–1991 (3yr) |
+| PAR | Topps | Topps Chrome Refractors | 479 | 2000 |
+| PAR | Topps | Topps Finest Refractors | 199 | 1993 |
+
+Full 274-group list is reproducible with the probe in this session; the "PAR/base" split is a
+keyword heuristic on the set label (tiffany, glossy, chrome, refractor, finest, parallel,
+gold, rush, factory, printed in canada, update, traded, collector), not a catalog field.
+
+### Recommendation
+
+Add to the scan-session shopping list, in this order of value-per-scan:
+
+1. **Score base 1988–1998 (5,950 rows)** — largest single hole, and it is a base flagship, so
+   it feeds packs and Add-a-Card, not just parallels.
+2. **Fleer base 1998–2006 (3,955 rows)** — note this is the `set='Fleer'` line that sits
+   *alongside* `set='Fleer Tradition'` in those same years; the Tradition re-key did not touch it.
+3. **Topps Tiffany 1984–1990 (3,934) + Bowman Tiffany 1989–1990 (1,012)** — visually near-identical
+   to base, so lowest scan priority despite the row count.
+4. **Topps Chrome 2000/2004 + Chrome Refractors 2000 + Finest Refractors 1993 (1,623)** — Nick's
+   actual complaint. Small, self-contained, and would close the reported bug.
+
+No pipeline change is warranted: the stage-2 brand guard added in the F1 pass already validates
+brand against the catalog, and it would have passed these cleanly (brand `Topps` is a real 2000
+brand) — the guard's job is unreachable keys, and there are none here.
