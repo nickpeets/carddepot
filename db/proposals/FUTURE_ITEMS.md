@@ -472,3 +472,66 @@ of every account that has not entered Season Mode.
   row was seeded as "Tim's Club" by hand and he cannot change it in the app.
   A rename belongs with the same onboarding pass (franchise settings, or the
   account panel), and it is a one-column UPDATE -- no schema change.
+
+## 18. Free daily receipts are localStorage-only (no `pack_grants` row)
+
+Raised 2026-07-31 on `fix/pack-history-refresh`, after driving the free 1-card
+variant end to end on both surfaces. The refresh fix makes the just-claimed free
+pack appear immediately; it does not make it durable, because there is nothing
+server-side to re-read.
+
+- Pack History has two sources and the free path only writes one of them.
+  `ledgerShelf()` in `js/depot-pack-history.js` reads `pack_grants`;
+  `loadHistory()` reads this browser's `localStorage['depot.packHistory']`;
+  `mergeShelf()` unions them on a `tier:seed` key, ledger first, keeping local
+  receipts the ledger does not know rather than dropping them. The PAID path
+  writes both halves -- `js/depot-shop.js:345` inserts the `pack_grants` row
+  inside `redeemPending`. The FREE path writes only the local half.
+- `depot_claim_free_pack` (`db/proposals/free_daily_pack_fix.sql`) makes exactly
+  two server-side writes: the `cards` insert (`source='pack'`, `pack_seed` left
+  NULL) and a 0-amount `wallet_transactions` cooldown stamp (`reason
+  'free_pack'`, meta `{tier, card_id, player}`). It never touches `pack_grants`.
+  So the only durable trace of a free pull is a rate-limiting stamp, and the
+  shelf entry representing it is written client-side by `recordPackHistory()`
+  with the granted `card_id` standing in for a seed.
+- Measured live 2026-07-31 on Nick's account: FIVE free claims exist server-side
+  (`wallet_transactions` where `reason='free_pack'` -- 12, 16, 25, 29, 30 Jul)
+  against EIGHT `pack_grants` rows, all of them paid. This browser's
+  `depot.packHistory` holds ONE free receipt (Kevin Bass, 29 Jul). Four of the
+  five free pulls are therefore already invisible in Pack History on this
+  machine; on a second device, a different browser, or after a cache clear, all
+  five are, along with their CARDS expansion. The cards themselves are safe --
+  they are in the binder and always were -- they just cannot be traced to a pull.
+
+Scoping the fix, cheapest first:
+
+1. **Interim, client-only, no SQL.** Have `ledgerShelf()` also read
+   `wallet_transactions` where `reason='free_pack'` and synthesize one shelf
+   entry per row: `tier:'free'`, `seed: meta.card_id`, `count: 1`,
+   `at: created_at`. The rows are already there, already owner-scoped by RLS,
+   and already carry the card id, and `mergeShelf`'s `tier:seed` key is exactly
+   what a local free receipt already uses, so existing local rows dedupe against
+   the synthesized ones instead of doubling. That restores cross-device
+   visibility and lets CARDS resolve from the server. It is a workaround: it
+   mines the cooldown stamp for a receipt the stamp never promised to be, and it
+   would have to be re-pointed the day the RPC starts recording grants properly.
+2. **Durable, server-side, SQL and a sign-off.** Have the RPC record the grant
+   the way the paid path does -- a `pack_grants` row (`card_count 1`, the tier it
+   already derives, a seed) plus `cards.pack_seed` stamped to match, inside the
+   same transaction as the card insert. Then both variants have ONE source of
+   truth, the free path inherits the double-tap protection the paid path gets
+   from the unique key on `(collection_id, pack_seed)`, and sections 1 and 13a.2
+   close with it.
+   One blocker found while scoping, so it is not discovered late: **`pack_grants.pack_seed` is `bigint`**
+   (probed 2026-07-31: filtering it by a non-numeric value returns
+   `22P02 invalid input syntax for type bigint`, and the live rows are integers
+   such as `2974096866`). The free path has a card UUID, not an integer, so the
+   card id CANNOT simply be written into that column. The RPC would need to roll
+   and store a real integer seed for the free pull, or the table needs a
+   nullable card reference alongside the seed and the unique key needs rethinking.
+   That is schema/RPC work under AGENTS.md section 2 -- its own branch, its own
+   review, its own migration, not a drive-by on a UI fix.
+
+Related: section 1 (free cards carry no provenance marker at all), section 13a.2
+(the same missing grant row, seen from the provenance side), section 13b (REPLAY
+re-rolls precisely because the record is this thin).
