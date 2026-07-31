@@ -865,7 +865,7 @@ body{
   <div class="auth-modal" role="dialog" aria-modal="true">
     <button class="auth-close" type="button" onclick="DepotAuth.closeModal()" aria-label="Close">&times;</button>
     <h2 id="authTitle">Log in</h2>
-    <p class="sub" id="authSub">Sign in to sync your collection (coming soon).</p>
+    <p class="sub" id="authSub">Sign in to sync your collection across devices.</p>
     <label for="authEmailInput">Email</label>
     <input type="email" id="authEmailInput" autocomplete="email" placeholder="you@example.com">
     <label for="authPassInput">Password</label>
@@ -903,7 +903,7 @@ body{
   function reflectMode(){
     var login = mode==='login';
     $('authTitle').textContent = login ? 'Log in' : 'Sign up';
-    $('authSub').textContent = login ? 'Sign in to sync your collection (coming soon).' : 'Create an account to sync your collection (coming soon).';
+    $('authSub').textContent = login ? 'Sign in to sync your collection across devices.' : 'Create an account to sync your collection across devices.';
     $('authSubmitBtn').textContent = login ? 'Log in' : 'Sign up';
     $('authToggleText').textContent = login ? 'No account?' : 'Have an account?';
     $('authToggleLink').textContent = login ? 'Sign up' : 'Log in';
