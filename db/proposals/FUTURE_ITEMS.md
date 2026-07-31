@@ -342,6 +342,14 @@ Raised 2026-07-30 while funding Nick's wallet for live paid-pack testing.
   the ledger can drift. A reconciliation check (or a derived balance) belongs
   with the roles work. Schema change -- needs sign-off.
 
+- Second grant, 2026-07-31, same pair, for the second tester
+  (`timwstout@gmail.com`, `9861ce0d-...-041dfed6cf34`): ledger row then
+  `depot_apply_payout`, 0 / 0 before, 100000 / 100000 after, and Nick's own
+  95450 / 95450 untouched. That grant could not be made as written, though:
+  the account had NO `franchises` row, and the balance column lives there, so
+  there was nothing for the apply step to move. See section 17 -- the missing
+  row is not a wallet problem, it is an onboarding one.
+
 ## 15. Does the pack pool need a stat-resolvability filter? (measured, NOT built)
 
 Raised 2026-07-30 on `fix/subset-name-stats`, after Nick's pack-pulled
@@ -434,3 +442,33 @@ whose derived object is not in the bucket. The probe-gate means the UI is
 unharmed (that row just keeps its "no image yet" tile), but the table/bucket
 drift is the same one the row-click gate already works around, and it deserves
 a reconciliation pass with the section 14 balance-drift check.
+
+## 17. Franchise creation has exactly one path, and it is a `window.prompt`
+
+Raised 2026-07-31 while funding the second testing wallet. The account had no
+`franchises` row at all, which is not an edge case -- it is the default state
+of every account that has not entered Season Mode.
+
+- `ensureFranchise()` in `game/season.js` is the ONLY code in the repo that
+  inserts into `franchises`. It runs from `startOrResumeSeason()`, and it asks
+  for the team name with `window.prompt`, so the row is created as a side
+  effect of starting a season and cannot be created any other way. Nothing on
+  sign-up, nothing on first shop visit, nothing on first binder load. At the
+  time of writing the whole table held one row (Nick's "MY CLUB") against five
+  auth users.
+- The consequence is a silently broken wallet for everyone else. `getBalance()`
+  in `js/depot-wallet.js` reads `franchises.balance` with `.maybeSingle()`, so
+  no row is not an error -- it returns null and the chip renders 0. A payout
+  then half-lands: the `wallet_transactions` row inserts fine (it is keyed on
+  `owner_id`, not on a franchise), and the apply step has no row to move, so
+  the ledger and the chip disagree from that user's very first credit. Nothing
+  fails loudly at any point.
+- The roles/onboarding work should own creation properly -- an on-signup or
+  on-first-shop-visit ensure, server-side if the roles table lands with it --
+  and THE STARTER BOX needs it doubly, because a starter grant on day one has
+  to have somewhere to land before the new collector has ever seen Season Mode.
+- While in there: there is no rename affordance anywhere. The team name is
+  captured once, in that prompt, and never editable again. The second tester's
+  row was seeded as "Tim's Club" by hand and he cannot change it in the app.
+  A rename belongs with the same onboarding pass (franchise settings, or the
+  account panel), and it is a one-column UPDATE -- no schema change.
