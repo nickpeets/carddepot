@@ -1,0 +1,375 @@
+/* =============================================================================
+   css/depot-redesign-binder.css - CHAPTERS 03 (The Binder) + 04 (Card spotlight)
+   Phase 2. Depends on css/depot-redesign.css for the tokens and the four parts.
+
+   PROVENANCE: seeded from 55815c4 on the superseded feat/rd-binder branch (PR
+   #211, closed as blocked on a scope call). That sheet was written but never
+   wired into a shell, so it had never been measured against a live render.
+   This branch wires it, and every place the wiring proved it wrong is marked
+   ADAPTED below with the reason. It also REPLACES css/depot-redesign-deinline.css,
+   the transcription sheet, which existed for exactly one commit so the
+   de-inline could prove zero computed-style deltas before anything moved.
+
+   THE TWO VISUAL DIFFS the transcription preserved landed first, on their own
+   commits, against the deinline sheet: the scan stripe became the chapter-00
+   token, and the Stars pill went gold. Both are carried forward here.
+
+   Targets: exports/desktop/03a-binder.png, 03b-binder-controls.png,
+            04a-spotlight.png, 04b-stat-variants.png
+            exports/mobile-390/binder.png, spotlight.png
+
+   Same scoping rule as the foundation: every selector is rd-scoped.
+   ========================================================================== */
+
+/* ---- CHAPTER 03: the binder ---------------------------------------------- */
+/* the page column the binder sits in, and the control strip above the panel */
+.rd-binderwrap{width:760px;max-width:100%}
+.rd-binder__controls{display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+.rd-binder__era{font-family:var(--rd-ui);font-weight:700;font-size:13px;color:var(--rd-muted)}
+
+.rd-binderhead{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:0 0 14px}
+.rd-binderhead__title{
+  font-family:var(--rd-ui);font-weight:800;font-size:27px;color:#fff;
+  text-shadow:0 3px 0 var(--rd-navy);margin-right:auto;
+}
+.rd-binderhead .rd-logo{width:44px;height:44px;font-size:15px}
+
+/* the search field: a white pill, 3px navy, with the lens inside */
+.rd-search{
+  display:flex;align-items:center;gap:9px;flex:1;min-width:200px;
+  background:#fff;border:3px solid var(--rd-navy);border-radius:var(--rd-r-pill);
+  padding:8px 16px;
+}
+.rd-search__lens{font-size:14px;line-height:1;opacity:.75}
+.rd-search input,.rd-search__input{
+  flex:1;min-width:0;border:0;outline:0;background:transparent;
+  font-family:var(--rd-ui);font-weight:600;font-size:13px;color:var(--rd-navy);
+}
+.rd-search input::placeholder{color:var(--rd-muted-2)}
+
+/* era / filter pills. Inactive = white on navy border; active = navy fill;
+   the Stars pill is gold. Live count rides on All. */
+.rd-pill{
+  display:inline-flex;align-items:center;gap:.35em;
+  font-family:var(--rd-ui);font-weight:700;font-size:12px;color:var(--rd-navy);
+  background:#fff;border:2px solid var(--rd-navy);border-radius:var(--rd-r-pill);
+  padding:7px 15px;cursor:pointer;white-space:nowrap;
+  transition:transform .12s ease,box-shadow .12s ease;
+}
+.rd-pill:hover{transform:translateY(1px)}
+.rd-pill.is-active{background:var(--rd-navy);color:#fff}
+/* ADAPTED from 55815c4: that draft kept Stars gold in BOTH states, which puts
+   two selected-looking pills in the row whenever Stars is off but drawn gold
+   next to the navy active pill. Gold is the INACTIVE Stars treatment (03b
+   draws it that way, beside an active All); selected, Stars takes the same
+   navy .is-active every other pill takes, so the row has exactly one
+   selected treatment. Matches the commit that landed visual diff #2. */
+.rd-pill--stars:not(.is-active){
+  color:var(--rd-ink-gold);
+  background:var(--rd-gloss),var(--rd-gold);
+  border-color:var(--rd-navy);
+}
+.rd-pill__n{font-family:var(--rd-num);font-size:15px;line-height:1;opacity:.85}
+.rd-pillrow{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+
+/* the binder page itself */
+.rd-binder{
+  background:#fff;border:var(--rd-bd) solid var(--rd-navy);
+  border-radius:var(--rd-r);box-shadow:var(--rd-sh);padding:18px 20px 20px;
+}
+.rd-binder__bar{display:flex;align-items:center;gap:12px;margin-bottom:14px;flex-wrap:wrap}
+.rd-binder__page{font-family:var(--rd-ui);font-weight:800;font-size:17px;color:var(--rd-navy);margin-right:auto}
+.rd-pager{display:flex;gap:8px}
+.rd-pager button,.rd-pager .rd-pager__btn{
+  width:38px;height:38px;border-radius:11px;background:#fff;
+  border:3px solid var(--rd-navy);box-shadow:0 3px 0 var(--rd-navy);
+  display:flex;align-items:center;justify-content:center;cursor:pointer;
+  font-family:var(--rd-ui);font-weight:800;font-size:16px;color:var(--rd-navy);
+  transition:transform .12s ease,box-shadow .12s ease;
+}
+.rd-pager button:hover{transform:translateY(2px);box-shadow:0 1px 0 var(--rd-navy)}
+.rd-pager button[disabled]{opacity:.4;cursor:not-allowed;transform:none;box-shadow:0 3px 0 var(--rd-navy)}
+
+/* nine pockets: 3 across, 9 to a page */
+.rd-grid9{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+.rd-slot--empty{
+  border:3px dashed var(--rd-tint-line);border-radius:var(--rd-r-sub);
+  min-height:200px;display:flex;align-items:center;justify-content:center;
+  font-family:var(--rd-ui);font-weight:700;font-size:11px;color:var(--rd-muted-2);
+  background:var(--rd-tint);
+}
+
+/* grouped views: labelled sections, no pager, scroll by section */
+.rd-group{margin-bottom:20px}
+.rd-group__head{
+  display:flex;align-items:baseline;gap:10px;margin:0 0 10px;
+  font-family:var(--rd-ui);font-weight:800;font-size:17px;color:var(--rd-navy);
+}
+.rd-group__count{
+  font-family:var(--rd-ui);font-weight:700;font-size:11px;color:var(--rd-muted-2);
+  background:var(--rd-tint);border:2px solid var(--rd-tint-line);border-radius:var(--rd-r-pill);
+  padding:2px 9px;
+}
+.rd-group__grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+
+/* the six-slot Group By - Position and Team ship as SOON so they can be
+   switched on later without a relayout (chapter 03 spec, verbatim) */
+.rd-groupby{display:flex;align-items:center;gap:8px}
+.rd-groupby__k{font-family:var(--rd-micro);font-size:8px;color:var(--rd-navy)}
+.rd-groupby select{
+  font-family:var(--rd-ui);font-weight:700;font-size:12px;color:var(--rd-navy);
+  background:var(--rd-tint);border:2px solid var(--rd-navy);border-radius:var(--rd-r-pill);
+  padding:6px 12px;outline:none;cursor:pointer;
+}
+.rd-groupby select option[disabled]{color:var(--rd-muted-2)}
+
+/* ---- the binder tile, as chapter 03 draws it -----------------------------
+   ADAPTED from 55815c4. That draft corrected the two badges and left the rest
+   of the tile to the foundation's .rd-tile, which paints its art with
+   <img class="rd-tile__art">. Wiring proved that wrong: js/depot-library-art.js
+   resolves library art by finding an EMPTY BACKGROUND-IMAGE LAYER inside
+   .dc-tile[data-idx] (emptyPhotoLayer scans div/section/figure) and calling
+   applyBg() on it, then tags the tile .has-art. An <img> is invisible to that
+   path, so a tile built on .rd-tile__art would silently lose every piece of
+   library art in the depot -- the fall-through would never even log, because
+   the enhancer would find no layer to paint.
+   So the binder tile keeps a DIV art layer and the shape parts describe it
+   here, once, instead of the markup describing it again in style="".
+
+   Anatomy, read off 03a-binder.png and exports/mobile-390/binder.png:
+     well   5:7, stripe + dashed border, the scan slot
+     photo  the resolved scan, contain-fit so no card is cropped
+     star   a plain ORANGE star at top-RIGHT of the well, no disc
+     name   Baloo 700, navy, under the well
+     foot   set on the left, a NAVY grade pill on the right                 */
+.rd-tile--binder{
+  display:flex;flex-direction:column;
+  background:var(--rd-tint);
+  border:var(--rd-bd-sub) solid var(--rd-navy);
+  border-radius:var(--rd-r-sub);
+  box-shadow:var(--rd-sh-sub);
+  padding:9px;cursor:pointer;
+  font-family:var(--rd-ui);
+}
+.rd-tile--binder:hover{transform:translateY(2px);box-shadow:var(--rd-sh-press)}
+.rd-tile__well{
+  position:relative;
+  aspect-ratio:5/7;width:100%;
+  border-radius:9px;overflow:hidden;
+  background:var(--rd-stripe);
+  border:2px dashed var(--rd-navy);
+  display:flex;align-items:center;justify-content:center;
+}
+/* the art layer. background-image stays INLINE: it is the card's own scan
+   URL, i.e. data, and it is also the empty layer the library enhancer looks
+   for. contain, not cover: a card is never cropped to fill a pocket. */
+.rd-tile__photo{
+  position:absolute;inset:0;
+  background-size:contain;background-repeat:no-repeat;background-position:center;
+}
+.rd-tile__scan{font:9px ui-monospace,monospace;color:rgba(16,69,107,.45)}
+.rd-tile--binder .rd-tile__star{
+  left:auto;right:6px;top:5px;z-index:2;
+  background:none;border:0;border-radius:0;width:auto;height:auto;
+  font-size:15px;line-height:1;color:var(--rd-orange);
+}
+.rd-tile--binder .rd-tile__name{
+  font-weight:700;font-size:13px;color:var(--rd-navy);
+  margin-top:7px;line-height:1.15;
+}
+.rd-tile__foot{display:flex;justify-content:space-between;align-items:baseline;gap:6px}
+.rd-tile__set{font-weight:600;font-size:11px;color:var(--rd-muted);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.rd-tile--binder .rd-tile__grade{
+  position:static;flex:none;
+  font-family:var(--rd-ui);font-weight:800;font-size:10px;line-height:1.2;
+  color:#fff;background:var(--rd-navy);border:0;border-radius:var(--rd-r-pill);
+  padding:2px 7px;
+}
+/* WITH ART the scan is the hero: the caption drops away and the grade pill
+   rides the corner of the art instead of a text row under it. This behaviour
+   already shipped -- it lived in five !important rules in index.html's <head>
+   fighting the inline styles underneath. Described once, here, no !important,
+   because there is nothing left to out-rank. */
+.rd-tile--binder.has-art .rd-tile__name{display:none}
+.rd-tile--binder.has-art .rd-tile__set{display:none}
+.rd-tile--binder.has-art .rd-tile__foot{
+  position:absolute;left:8px;bottom:8px;z-index:2;margin:0;
+}
+.rd-tile--binder.has-art .rd-tile__well{border-style:solid;border-color:var(--rd-navy)}
+
+/* ---- CHAPTER 04: the card spotlight -------------------------------------- */
+.rd-spot{
+  background:#fff;border:var(--rd-bd) solid var(--rd-navy);border-radius:var(--rd-r);
+  box-shadow:var(--rd-sh);overflow:hidden;font-family:var(--rd-ui);
+  width:min(1000px,96vw);
+}
+.rd-spot__bar{
+  background:var(--rd-bar);padding:14px 20px;
+  display:flex;align-items:flex-start;justify-content:space-between;gap:14px;
+}
+.rd-spot__id{display:flex;flex-direction:column;gap:3px;min-width:0}
+.rd-spot__name{font-weight:800;font-size:26px;color:#fff;line-height:1.1;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.rd-spot__sub{font-weight:600;font-size:13px;color:var(--rd-muted-2)}
+.rd-starchip{
+  font-family:var(--rd-ui);font-weight:800;font-size:11px;color:var(--rd-navy);
+  background:var(--rd-gloss),var(--rd-gold);border:2px solid var(--rd-navy-deep);
+  border-radius:var(--rd-r-pill);padding:3px 10px;white-space:nowrap;
+}
+.rd-spot__x{
+  flex:none;width:36px;height:36px;border-radius:10px;background:#fff;
+  border:3px solid var(--rd-navy-deep);box-shadow:0 3px 0 var(--rd-navy-deep);
+  display:flex;align-items:center;justify-content:center;cursor:pointer;
+  font-weight:800;font-size:16px;color:var(--rd-navy);
+}
+/* two columns, no scroll: flip card + prestige left, stats + controls right */
+.rd-spot__cols{display:grid;grid-template-columns:340px 1fr;gap:22px;padding:20px}
+.rd-spot__left{display:flex;flex-direction:column;gap:12px}
+.rd-spot__face{
+  aspect-ratio:5/7;border-radius:var(--rd-r-sub);overflow:hidden;
+  border:3px dashed var(--rd-navy);background:var(--rd-stripe);
+  display:flex;align-items:center;justify-content:center;cursor:pointer;position:relative;
+}
+.rd-spot__face.has-art{border-style:solid;background:var(--rd-navy-deep)}
+.rd-spot__face img{width:100%;height:100%;object-fit:cover;display:block}
+/* landscape backs LETTERBOX inside the frame instead of cropping - the
+   orientation is stored per face by the aspect probe, never guessed */
+.rd-spot__face.is-landscape img,.rd-spot__face[data-orient="landscape"] img{object-fit:contain;background:var(--rd-navy-deep)}
+.rd-hint{font-family:var(--rd-ui);font-weight:600;font-size:11.5px;color:var(--rd-muted);text-align:center}
+
+/* prestige panel - deep navy, VT323 total, one row per component */
+.rd-prestige{
+  background:var(--rd-bar);border-radius:var(--rd-r-sub);padding:12px 14px;
+  display:flex;flex-direction:column;gap:8px;
+}
+.rd-prestige__head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+.rd-prestige__k{font-family:var(--rd-ui);font-weight:800;font-size:13px;color:#fff}
+.rd-prestige__n{font-family:var(--rd-num);font-size:34px;line-height:1;color:var(--rd-gold)}
+.rd-prestige__row{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+  background:var(--rd-navy);border-radius:9px;padding:7px 11px;
+  font-weight:700;font-size:12.5px;color:#fff;
+}
+.rd-prestige__row b{font-family:var(--rd-num);font-size:17px;font-weight:400;color:var(--rd-green)}
+
+.rd-spot__right{display:flex;flex-direction:column;gap:14px;min-width:0}
+.rd-statline__cap{font-family:var(--rd-ui);font-weight:800;font-size:15px;color:var(--rd-navy)}
+.rd-statline{display:flex;flex-wrap:wrap;gap:7px}
+/* two-way: the pitching line is its OWN labelled section. The two column sets
+   collide on G/H/BB/SO, so one merged bag cannot represent both. */
+.rd-substat{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.rd-substat__k{font-family:var(--rd-micro);font-size:8px;color:var(--rd-orange)}
+.rd-nostats{
+  background:var(--rd-tint);border:3px dashed var(--rd-tint-line);border-radius:14px;
+  padding:16px;text-align:center;
+}
+.rd-nostats__t{font-weight:800;font-size:14px;color:var(--rd-navy)}
+.rd-nostats__s{font-weight:600;font-size:11.5px;line-height:1.4;color:var(--rd-muted-2);margin-top:4px}
+
+/* "Your copy" - the owner controls, on cream */
+.rd-copy{
+  background:var(--rd-cream);border:3px solid var(--rd-gold);border-radius:16px;
+  padding:14px 16px;display:flex;flex-direction:column;gap:12px;
+}
+.rd-copy__h{font-family:var(--rd-ui);font-weight:800;font-size:14px;color:var(--rd-ink-gold)}
+.rd-copy__row{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.rd-copy__k{font-family:var(--rd-micro);font-size:8px;color:var(--rd-ink-gold);min-width:52px}
+/* grade stepper: 1-10 / GEM 10 / AUTH. MECHANICS ARE FROZEN - this is the
+   control as drawn and it invents no scoring. */
+.rd-stepper{
+  display:inline-flex;align-items:stretch;background:#fff;
+  border:3px solid var(--rd-navy);border-radius:var(--rd-r-pill);
+  box-shadow:0 4px 0 var(--rd-navy);overflow:hidden;
+}
+.rd-stepper button{
+  width:40px;border:0;background:transparent;cursor:pointer;
+  font-family:var(--rd-ui);font-weight:800;font-size:17px;color:var(--rd-navy);
+}
+.rd-stepper button:hover{background:var(--rd-tint)}
+.rd-stepper__v{
+  min-width:88px;padding:8px 12px;text-align:center;
+  border-left:3px solid var(--rd-navy);border-right:3px solid var(--rd-navy);
+  font-family:var(--rd-ui);font-weight:800;font-size:14px;color:var(--rd-navy);
+  display:flex;align-items:center;justify-content:center;
+}
+.rd-stepper__v.is-blank{color:var(--rd-muted-2)}
+.rd-startoggle{
+  margin-left:auto;font-family:var(--rd-ui);font-weight:800;font-size:14px;color:var(--rd-navy);
+  background:#fff;border:3px solid var(--rd-navy);border-radius:var(--rd-r-pill);
+  box-shadow:0 4px 0 var(--rd-navy);padding:9px 18px;cursor:pointer;
+}
+.rd-startoggle.is-on{background:var(--rd-gloss),var(--rd-gold)}
+.rd-notes{
+  width:100%;min-height:78px;resize:vertical;
+  font-family:var(--rd-ui);font-weight:600;font-size:13px;color:var(--rd-navy);
+  background:#fff;border:3px solid var(--rd-navy);border-radius:12px;padding:10px 12px;outline:none;
+}
+.rd-spot__acts{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap}
+/* Save turns GOLD when there are unsaved edits (chapter 04 states) */
+.rd-btn--save.is-dirty{background:var(--rd-gloss),var(--rd-gold)}
+.rd-btn--remove{color:var(--rd-red);background:#fff;border-color:var(--rd-red);box-shadow:0 4px 0 var(--rd-red)}
+.rd-btn--remove:hover{box-shadow:0 2px 0 var(--rd-red)}
+
+/* zoom: magnify at true resolution and pan. Not a CSS scale of a thumbnail. */
+.rd-zoom{
+  position:fixed;inset:0;z-index:9500;background:rgba(7,44,71,.86);
+  display:flex;align-items:center;justify-content:center;overflow:hidden;cursor:grab;
+}
+.rd-zoom.is-panning{cursor:grabbing}
+.rd-zoom img{max-width:none;max-height:none;image-rendering:auto;transform-origin:0 0}
+.rd-zoom__hint{
+  position:absolute;left:50%;bottom:18px;transform:translateX(-50%);
+  font-family:var(--rd-ui);font-weight:700;font-size:12px;color:#fff;
+  background:rgba(7,44,71,.7);border:2px solid var(--rd-gold);border-radius:var(--rd-r-pill);padding:6px 14px;
+}
+
+
+/* ---- CHAPTER 04: what the spotlight still needs from the transcription ----
+   These nine rules came out of css/depot-redesign-deinline.css, which this
+   sheet replaces. They were transcribed verbatim out of openSpot's style=""
+   attributes so the de-inline could prove zero computed-style deltas, and
+   they are carried across UNCHANGED except for the namespace, because the
+   chapter-04 re-dress against 04a/04b is NOT in this commit. Deleting the
+   transcription sheet without carrying them would have quietly un-styled the
+   spotlight -- a regression with no error attached to it.
+   The chapter-04 parts (.rd-spot, .rd-prestige, .rd-copy, .rd-stepper,
+   .rd-statline) are already written above and are still UNWIRED. See the PR.
+
+   Two of these keep !important. An inline style beats every non-important
+   author rule, so for most of the transcription a plain class reproduced it;
+   these two had competitors that outrank a bare class and silently won once
+   the inline value went away -- caught by tools/cssom_probe.js, not by eye.
+   They come off when openSpot is rebuilt from the parts. */
+.rd-spot__frame{position:absolute;inset:0;display:flex;flex-direction:column}
+.rd-spot__pin{width:24px;height:24px;font-size:.85rem;top:10px;right:10px}
+.rd-spot__img{flex:1;width:100%;min-height:0;object-fit:cover;object-position:center top;display:block}
+.rd-spot__img--lib{height:100%}
+/* background-image / background-color stay inline: the resolved scan or the
+   per-index placeholder colour, i.e. data. */
+.rd-spot__bg{flex:1;background-size:cover;background-position:center top}
+/* display:none stays INLINE. The reveal path does nb.style.display='' after
+   the art probe fails, and that only clears an inline value. */
+.rd-spot__noart{margin-top:.5rem}
+.rd-spot__gbtn{width:auto;padding:.45rem 1rem;font-size:.72rem}
+.rd-spot__gradesel{width:auto !important}
+.rd-spot__d4row--top{align-items:flex-start !important}
+.rd-star-off{filter:grayscale(1);opacity:.5}
+
+/* ---- 390 (chapter 11: binder 2-across / 4 per page; spotlight stacks) ----- */
+@media (max-width:640px){
+  .rd-binderhead__title{font-size:21px}
+  .rd-binder{padding:12px 12px 14px;border-radius:16px}
+  .rd-grid9,.rd-group__grid{grid-template-columns:1fr 1fr;gap:10px}
+  .rd-binder__page{font-size:14px;flex-basis:100%;margin-right:0}
+  .rd-pager button{width:44px;height:44px}
+  .rd-pillrow{flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px}
+  .rd-pill{min-height:44px}
+  .rd-spot__cols{grid-template-columns:1fr;gap:14px;padding:14px}
+  .rd-spot__name{font-size:20px}
+  .rd-spot__face{max-width:320px;margin:0 auto;width:100%}
+  .rd-spotactions{display:flex;gap:8px}
+  .rd-spotactions .rd-btn{flex:1;min-height:44px}
+  .rd-stepper button{width:44px}
+  .rd-copy__k{min-width:0;flex-basis:100%}
+  .rd-startoggle{margin-left:0;min-height:44px}
+  .rd-spot__acts .rd-btn{flex:1}
+}
