@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Redesign foundation - parts, chapter 01/02, the state library</title>
+<!-- Static, non-shipping verification page (AGENTS.md 3: mockups/ is never a
+     working path). It exists so the foundation can be compared side by side
+     with build_package/exports/desktop/{01-nav-header,02-login,12-states}.png
+     at design width and at true 390 without needing a session. -->
+<link rel="stylesheet" href="../../css/depot-redesign.css">
+<style>
+  body{margin:0;background:#2eb2e6;font-family:'Baloo 2',sans-serif}
+  .wrap{max-width:1120px;margin:0 auto;padding:22px}
+  .cap{font:800 11px 'Baloo 2',sans-serif;color:#fff;text-transform:uppercase;letter-spacing:.06em;margin:26px 0 8px;opacity:.9}
+  .frame{border-radius:14px;overflow:hidden}
+  .row{display:flex;gap:12px;flex-wrap:wrap;align-items:flex-start}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="cap">Chapter 01 - nav &amp; header (signed in)</div>
+  <div class="frame">
+    <div class="rd-header rd-on-dark">
+      <span class="rd-header__left">
+        <span class="rd-logo" aria-hidden="true">D</span>
+        <span class="rd-wordmark">THE <b>DEPOT</b></span>
+      </span>
+      <span class="rd-header__mid">
+        <div class="rd-plate">
+          <span class="rd-plate__id">
+            <span class="rd-plate__team">DEPOT DUCKS</span>
+            <span class="rd-plate__line">
+              <span class="rd-plate__rec">8-3</span>
+              <span class="rd-plate__season">SEASON 3</span>
+              <span class="rd-plate__streak">W3 &#128293;</span>
+            </span>
+          </span>
+          <span class="rd-plate__rule" aria-hidden="true"></span>
+          <span class="rd-wallet">
+            <span class="rd-coin" aria-hidden="true"><span class="rd-coin__spin rd-m-coinspin">
+              <div class="rd-coin__face"><div class="rd-coin__ring"><span class="rd-coin__mark">$</span></div><span class="rd-coin__px rd-coin__px--1"></span><span class="rd-coin__px rd-coin__px--2"></span></div>
+              <div class="rd-coin__face rd-coin__face--b"><div class="rd-coin__ring"><span class="rd-coin__mark">$</span></div><span class="rd-coin__px rd-coin__px--1"></span><span class="rd-coin__px rd-coin__px--2"></span></div>
+              <span class="rd-coin__glint rd-m-coinglint"></span>
+            </span></span>
+            <span class="rd-wallet__val"><span class="rd-wallet__amt">1,240</span><span class="rd-wallet__unit">coins</span></span>
+          </span>
+        </div>
+      </span>
+      <span class="rd-header__right">
+        <span class="rd-header__email">nick@thedepot.cards</span>
+        <a class="rd-btn rd-btn--ghost" href="#">Log out</a>
+        <a class="rd-btn rd-btn--primary" href="#">+ Add a card</a>
+      </span>
+    </div>
+    <div class="rd-nav">
+      <span class="rd-pagetitle">The Binder</span>
+      <a class="rd-navpill" aria-current="true" href="#">THE BINDER</a>
+      <a class="rd-navpill" href="#">PACK SHOP</a>
+      <a class="rd-navpill" href="#">PLAY BALL</a>
+    </div>
+  </div>
+
+  <div class="cap">Chapter 01 - signed out (plate hides, wallet reads em-dash, one Log in pill)</div>
+  <div class="frame">
+    <div class="rd-header rd-on-dark is-signed-out">
+      <span class="rd-header__left">
+        <span class="rd-logo" aria-hidden="true">D</span>
+        <span class="rd-wordmark">THE <b>DEPOT</b></span>
+      </span>
+      <span class="rd-header__mid"></span>
+      <span class="rd-header__right">
+        <span class="rd-chip-anon">&#129433; &mdash;</span>
+        <a class="rd-btn rd-btn--gold" href="#">Log in</a>
+      </span>
+    </div>
+  </div>
+
+  <div class="cap">The four shape parts</div>
+  <div class="row">
+    <div class="rd-panel rd-panel--pad">
+      <div class="rd-panel__h">PART 1 - BUTTON</div>
+      <div class="row">
+        <button class="rd-btn rd-btn--primary">Primary</button>
+        <button class="rd-btn rd-btn--hot">Hot</button>
+        <button class="rd-btn rd-btn--gold">Gold</button>
+        <button class="rd-btn rd-btn--ghost">Ghost</button>
+        <button class="rd-btn rd-btn--danger">Danger</button>
+      </div>
+      <div class="rd-state--locked-with-reason" style="margin-top:10px">
+        <button class="rd-btn is-locked rd-btn--block">Add to the Depot &#10022;</button>
+        <div class="rd-reason"><span>Needs a confirmed front image. Pick library art or upload your scan.</span></div>
+      </div>
+    </div>
+    <div class="rd-panel rd-panel--pad">
+      <div class="rd-panel__h">PART 2 - PANEL</div>
+      <div class="rd-panel rd-panel--sub">sub-card, 3px / radius 13 / 0 4px 0</div>
+      <div class="rd-panel rd-panel--tint" style="margin-top:8px">tint panel</div>
+      <div class="rd-panel rd-panel--caution" style="margin-top:8px">caution</div>
+      <div class="rd-panel rd-panel--error" style="margin-top:8px">error</div>
+    </div>
+    <div class="rd-panel rd-panel--pad">
+      <div class="rd-panel__h">PART 3 - CARD TILE</div>
+      <div class="row">
+        <div class="rd-tile" style="width:132px">
+          <div class="rd-tile__ph"><span class="rd-tile__ph-year">1989</span><span class="rd-tile__ph-name">SANDBERG</span>no scan</div>
+          <span class="rd-tile__star">&#9733;</span><span class="rd-tile__grade">PSA 8</span>
+          <div class="rd-tile__body"><span class="rd-tile__name">R. Sandberg</span><span class="rd-tile__meta">'89 Fleer</span></div>
+        </div>
+        <div class="rd-scan-slot" style="width:132px;height:184px">scan slot</div>
+      </div>
+    </div>
+    <div class="rd-panel rd-panel--pad">
+      <div class="rd-panel__h">PART 4 - STAT CELL</div>
+      <div class="rd-statrow">
+        <span class="rd-stat"><span class="rd-stat__k">AVG</span><span class="rd-stat__v">.303</span></span>
+        <span class="rd-stat"><span class="rd-stat__k">HR</span><span class="rd-stat__v">9</span></span>
+        <span class="rd-stat"><span class="rd-stat__k">RBI</span><span class="rd-stat__v">53</span></span>
+        <span class="rd-stat rd-stat--good"><span class="rd-stat__k">SB</span><span class="rd-stat__v">100</span></span>
+      </div>
+    </div>
+  </div>
+
+  <div class="cap">Chapter 02 - log in &amp; locked collection</div>
+  <div class="row">
+    <div class="rd-modal">
+      <div class="rd-modal__bar">
+        <div class="rd-modal__id"><span class="rd-modal__logo" aria-hidden="true">D</span><span class="rd-modal__title">Log in</span></div>
+        <div class="rd-modal__x">&times;</div>
+      </div>
+      <div class="rd-modal__body">
+        <div class="rd-modal__lede">Sign in to sync your collection across devices.</div>
+        <label class="rd-field"><span class="rd-field__k">EMAIL</span><input class="rd-input" placeholder="you@ballpark.com"></label>
+        <label class="rd-field"><span class="rd-field__k">PASSWORD</span><input class="rd-input" type="password" placeholder="........"></label>
+        <button class="rd-btn rd-btn--primary rd-btn--block rd-btn--lg">Log in &#9918;</button>
+        <div class="rd-modal__foot">No account? <a class="rd-link-hot">Sign up free</a></div>
+      </div>
+    </div>
+    <div>
+      <div class="rd-locked-card">
+        <div class="rd-locked-card__k">DUGOUT'S LOCKED</div>
+        <div class="rd-locked-card__t">This collection isn't public. Ask the owner for a share link, or start your own Depot.</div>
+      </div>
+      <div class="rd-modal" style="margin-top:16px">
+        <div class="rd-modal__bar"><div class="rd-modal__id"><span class="rd-modal__logo">D</span><span class="rd-modal__title">Log in</span></div><div class="rd-modal__x">&times;</div></div>
+        <div class="rd-modal__body">
+          <div class="rd-errorbar"><span>That password doesn't match. Nothing was changed - try again.</span></div>
+          <label class="rd-field"><span class="rd-field__k">EMAIL</span><input class="rd-input" value="nick@thedepot.cards"></label>
+          <button class="rd-btn rd-btn--primary rd-btn--block rd-btn--lg is-busy"><span class="rd-spinner rd-m-spin"></span> Signing you in&hellip;</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="cap">Chapter 12 - the nine states</div>
+  <div class="rd-stategrid">
+    <div class="rd-panel">
+      <div class="rd-panel__h">LOCKED - REASON VISIBLE</div>
+      <div class="rd-state--locked-with-reason">
+        <div class="rd-btn is-locked rd-btn--block">Add to the Depot &#10022;</div>
+        <div class="rd-reason"><span>Needs a confirmed front image. Pick library art or upload your scan.</span></div>
+      </div>
+      <div class="rd-panel__note">A disabled control always carries its reason next to it - never a dead grey button on its own.</div>
+    </div>
+    <div class="rd-panel">
+      <div class="rd-panel__h">LOADING / CHECKING</div>
+      <div class="rd-state--checking"><span class="rd-spinner rd-m-spin"></span><span>Checking the catalog&hellip;</span></div>
+      <div class="rd-shimrow" style="margin-top:9px"><div class="rd-shim rd-m-shimmer"></div><div class="rd-shim rd-m-shimmer"></div><div class="rd-shim rd-m-shimmer"></div></div>
+      <div class="rd-panel__note">Card grids shimmer at tile shape. Text transients say what is being checked.</div>
+    </div>
+    <div class="rd-panel">
+      <div class="rd-panel__h">EMPTY BINDER</div>
+      <div class="rd-state--empty">
+        <div class="rd-state__icon">&#128212;</div>
+        <div class="rd-state__t">No cards filed yet</div>
+        <div class="rd-state__s">Add one from the catalog, or rip your free daily pack.</div>
+        <button class="rd-btn rd-btn--primary rd-btn--sm">+ Add your first card</button>
+      </div>
+      <div class="rd-panel__note">Empty states always offer the next action, never just a sentence.</div>
+    </div>
+    <div class="rd-panel">
+      <div class="rd-panel__h">NO SEARCH RESULTS</div>
+      <div class="rd-state--no-results">
+        <div class="rd-state__t">Nothing matches &ldquo;gwyn 1974&rdquo;</div>
+        <div class="rd-state__s">The catalog starts at 1980. Try a later year, or clear the filters.</div>
+        <button class="rd-btn rd-btn--ghost rd-btn--sm">Clear filters</button>
+      </div>
+      <div class="rd-panel__note">Say why, not just that. Filter-caused emptiness offers a reset.</div>
+    </div>
+    <div class="rd-panel">
+      <div class="rd-panel__h">ZERO-ART SET</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:7px">
+        <div class="rd-ph"><span class="rd-ph__year">1991</span><span class="rd-ph__name">STUDIO</span></div>
+        <div class="rd-ph"><span class="rd-ph__year">1991</span><span class="rd-ph__name">STUDIO</span></div>
+        <div class="rd-ph"><span class="rd-ph__year">1991</span><span class="rd-ph__name">STUDIO</span></div>
+      </div>
+      <div class="rd-panel__note">Placeholder keeps the band, year and name - a designed state, never a broken image icon.</div>
+    </div>
+    <div class="rd-panel">
+      <div class="rd-panel__h">ERROR</div>
+      <div class="rd-state--error">
+        <div class="rd-state__t">&#9888; Could not reach the catalog</div>
+        <div class="rd-state__s">Your card was not added. Nothing was charged.</div>
+        <div class="rd-state__acts"><button class="rd-btn rd-btn--danger rd-btn--sm">Try again</button><button class="rd-btn rd-btn--quiet rd-btn--sm">Back</button></div>
+      </div>
+      <div class="rd-panel__note">Errors state the consequence - what did or did not happen - then offer retry.</div>
+    </div>
+    <div class="rd-panel">
+      <div class="rd-panel__h">SIGNED OUT</div>
+      <div class="rd-state--signed-out">
+        <div class="rd-state__browsable">browsable content still renders</div>
+        <div class="rd-state__acts" style="display:flex;gap:7px"><button class="rd-btn rd-btn--gold rd-btn--sm" style="flex:1">Log in to rip</button><span class="rd-chip-anon">&#129433; &mdash;</span></div>
+      </div>
+      <div class="rd-panel__note">Every surface has a signed-out variant: content browsable, the one committing action swapped for a log-in pill.</div>
+    </div>
+    <div class="rd-panel">
+      <div class="rd-panel__h">COOLDOWN</div>
+      <div class="rd-state--cooldown">
+        <div class="rd-cool__head"><span class="rd-cool__t">Free daily</span><span class="rd-cool__clock">08h 41m</span></div>
+        <div class="rd-bar"><div class="rd-bar__fill" style="width:62%"></div></div>
+      </div>
+      <div class="rd-panel__note">Countdown ticks live and the bar fills - the wait is legible at a glance, no bare disabled button.</div>
+    </div>
+    <div class="rd-panel">
+      <div class="rd-panel__h">REDUCED MOTION</div>
+      <div class="rd-state--reduced">
+        <div class="rd-panel rd-panel--tint" style="flex:1;text-align:center"><b>Default</b><div class="rd-panel__note" style="margin-top:3px">tear, pop-in, rays, confetti, coin spin</div></div>
+        <div class="rd-panel rd-panel--tint" style="flex:1;text-align:center;background:#e8fbe4;border-color:#7be36b"><b>Reduced</b><div class="rd-panel__note" style="margin-top:3px">cross-fades only, bands and stamps still land</div></div>
+      </div>
+      <div class="rd-panel__note">prefers-reduced-motion keeps every reveal and reward legible - nothing is only communicated by movement.</div>
+    </div>
+  </div>
+
+</div>
+</body>
+</html>

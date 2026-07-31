@@ -135,7 +135,33 @@
     } catch (e) { console.warn('[depot] game-shell: ensureStylesheet threw: ' + e); }
   }
 
-  function gameReady() {
+  // REDESIGN (phase 1). AGENTS.md 9: this page's runtime bundle strips static
+// <link> and <script> tags, so the shipped tags in game/index.html do not
+// survive. Inject BOTH the redesign sheet and the redesign runtime here, the
+// same way ensureStylesheet()/ensureV2Stylesheet() already do for the shell.
+// Idempotent by id; fail-loud on load error rather than rendering half-dressed.
+function ensureRedesignAssets() {
+  try {
+    var v = window.DEPOT_BUILD ? ('?v=' + window.DEPOT_BUILD) : '';
+    if (!document.getElementById('depot-rd-css')) {
+      var link = document.createElement('link');
+      link.id = 'depot-rd-css';
+      link.rel = 'stylesheet';
+      link.href = '../css/depot-redesign.css' + v;
+      link.onerror = function () { console.warn('[depot] game-shell: failed to load ../css/depot-redesign.css; the redesigned chrome will be unstyled'); };
+      (document.head || html()).appendChild(link);
+    }
+    if (!document.getElementById('depot-rd-js') && !window.DepotRD) {
+      var sc = document.createElement('script');
+      sc.id = 'depot-rd-js';
+      sc.src = '../js/depot-redesign.js' + v;
+      sc.onerror = function () { console.warn('[depot] game-shell: failed to load ../js/depot-redesign.js; chapter 01 chrome will not be applied on the game page'); };
+      (document.head || html()).appendChild(sc);
+    }
+  } catch (e) { console.warn('[depot] game-shell: ensureRedesignAssets threw: ' + e); }
+}
+
+function gameReady() {
     return !!document.getElementById('sim-controls') &&
       (!!document.getElementById('stage') || !!document.getElementById('dc-root'));
   }
@@ -296,7 +322,7 @@
 
   function mountShell() {
     html().classList.add('depot-game'); html().classList.add('v2-body');
-    ensureStylesheet(); ensureV2Stylesheet();
+    ensureStylesheet(); ensureV2Stylesheet(); ensureRedesignAssets();
     if (mounted && document.querySelector('.depot-shell')) {
       assertScope();
       return;
@@ -373,7 +399,7 @@
   }
 
   function boot() {
-    ensureStylesheet(); ensureV2Stylesheet();
+    ensureStylesheet(); ensureV2Stylesheet(); ensureRedesignAssets();
     if (gameReady()) { mountShell(); }
     obs = new MutationObserver(function () { tick(); if (mounted) { watchdog(); } });
     obs.observe(document.body || html(), { childList: true, subtree: true });
