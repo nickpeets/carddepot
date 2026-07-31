@@ -1080,7 +1080,7 @@ body.logged-out #appFrame{display:none !important;}
 
 </div><!-- /appFrame -->
 <!-- ADD CARD FORM -->
-<div class="form-scrim" id="formScrim" onclick="closeForm(event)">
+<div class="form-scrim rd-addcard" id="formScrim" onclick="closeForm(event)">
   <div class="form-card" onclick="event.stopPropagation()">
     <div class="form-head">
       <h2 id="formTitle">Add a card</h2>
@@ -1179,6 +1179,7 @@ body.logged-out #appFrame{display:none !important;}
     <div class="form-foot">
       <button class="btn-ghost" onclick="closeForm(event,true)">Cancel</button>
       <button class="btn-solid" data-role="add-card-save" onclick="saveCard()">Add to depot</button>
+      <span class="rd-reason rd-addcard__reason" aria-live="polite">Add a front image first &mdash; pick a card with library art, or attach your own scan.</span>
     </div>
   </div>
 </div>
@@ -3402,12 +3403,7 @@ setAuthUI(false);
   .group-grid{ display:grid !important; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)) !important; gap:12px !important; }
   .group-grid .slot{ aspect-ratio:auto !important; min-height:0 !important; }
 </style>
-<style id="depot-addbtn-disabled">
-  /* Add-card gate: make the locked state visible. The button stays clickable on purpose,
-     so the click still reaches saveCard() and the gate can toast WHY it is locked. */
-  .btn-solid.disabled{ opacity:.45; cursor:not-allowed; }
-</style>
-<link rel="stylesheet" href="css/depot-addcard-legacy.css?v=c098ce0">
+<link rel="stylesheet" href="css/depot-redesign-addcard.css?v=c098ce0">
 
 <script>
 /* Route Group By = Set through the labeled-sections grid (renderGrouped) instead of the

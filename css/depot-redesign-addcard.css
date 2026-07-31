@@ -1,0 +1,538 @@
+/* =============================================================================
+   css/depot-redesign-addcard.css - CHAPTER 05 (Add a card): THE DRESS.
+
+   Targets: build_package/exports/desktop/05a-add-four-gates.png
+            build_package/exports/desktop/05b-add-modal.png
+            build_package/exports/mobile-390/add-a-card.png
+   Measured from #ch05 of "Depot - Complete Design.dc.html" (both .pg-screen
+   trees, every inline value) - see docs/RD_CH05_ADDCARD_SCOPE.md.
+
+   This sheet REPLACES css/depot-addcard-legacy.css (the verbatim transcription
+   dissolved out of index.html in PR #219). Legacy is deleted in the same
+   commit: dissolve-and-replace, never layered over.
+
+   SCOPING: #formScrim wears the class .rd-addcard, so every selector below
+   carries 'rd-' and this sheet cannot reach a surface that has not been
+   redesigned yet (rd_check enforces it). Hard shadows only, never a blur.
+
+   THE GROUND IS PRESERVED, NOT RESTRUCTURED:
+   #formScrim > .form-card + .form-foot are SIBLINGS and the scrim is a flex
+   COLUMN that seams them into one panel. That quirk stays. The dress only
+   moves the seam: .form-body is the panel's top, .form-foot is the lip that
+   closes it, so the actions read as inside the panel exactly as 05b draws.
+
+   HOOKS: not one is touched. [data-role="add-card-save"] keeps its class
+   markers (.disabled + aria-disabled) and stays CLICKABLE while locked so the
+   click still reaches saveCard() and the gate can toast why (README rule 6 -
+   the reason is also shown in the foot, next to the button).
+   ========================================================================== */
+
+/* ---- 1. THE GROUND: scrim, the seam, the head -------------------------- */
+
+#formScrim.rd-addcard{ display:none; font-family:var(--rd-ui); }
+
+#formScrim.rd-addcard.open{
+  position:fixed; inset:0; z-index:9000;
+  display:flex; flex-direction:column; align-items:center; justify-content:flex-start;
+  padding:22px 16px 26px; overflow:auto;
+  background:rgba(46,178,230,.93);
+}
+
+/* the ch02 sky wash: a 135deg white stripe over the sky, never a blur */
+#formScrim.rd-addcard.open::before{
+  content:""; position:fixed; inset:0; pointer-events:none;
+  background:repeating-linear-gradient(135deg,rgba(255,255,255,.06) 0 22px,transparent 22px 44px);
+}
+
+/* the card is a transparent column wrapper: head on the sky, body = panel */
+#formScrim.rd-addcard .form-card{
+  position:relative; z-index:1;
+  width:min(640px,100%); margin-top:auto;
+  background:none; border:0; border-radius:0; box-shadow:none; overflow:visible;
+  flex:0 0 auto;
+}
+#formScrim.rd-addcard .form-foot{ flex:0 0 auto; }
+
+/* the head sits on the sky: white 24px title + the lede, exactly as 05b */
+#formScrim.rd-addcard .form-head{
+  display:flex; align-items:center; justify-content:space-between; gap:12px;
+  background:none; border:0; padding:0 4px 10px;
+}
+#formScrim.rd-addcard .form-head h2,
+#formScrim.rd-addcard #formTitle{
+  font-family:var(--rd-ui); font-weight:800; font-size:24px; line-height:1.15;
+  color:#fff; text-shadow:0 3px 0 var(--rd-navy); margin:0;
+}
+#formScrim.rd-addcard #formTitle::after{
+  content:"Stats pull straight from MLB records";
+  display:block; margin-top:-2px;
+  font-weight:600; font-size:12px; color:#c8ecfb; text-shadow:none;
+}
+#formScrim.rd-addcard .form-head .spot-close{
+  width:32px; height:32px; flex:none; border-radius:10px;
+  background:#fff; border:var(--rd-bd-sub) solid var(--rd-navy);
+  box-shadow:0 3px 0 var(--rd-navy);
+  display:flex; align-items:center; justify-content:center;
+  font-family:var(--rd-ui); font-weight:800; font-size:15px; color:var(--rd-navy);
+  cursor:pointer; transition:transform .08s, box-shadow .08s;
+}
+#formScrim.rd-addcard .form-head .spot-close:active{
+  transform:translateY(2px); box-shadow:var(--rd-sh-press);
+}
+
+/* the panel: body is its top, foot is the lip that closes it (the seam) */
+#formScrim.rd-addcard .form-body{
+  display:grid; grid-template-columns:1fr; gap:14px;
+  background:#fff; border:var(--rd-bd) solid var(--rd-navy); border-bottom:0;
+  border-radius:var(--rd-r) var(--rd-r) 0 0;
+  padding:16px; align-items:start;
+  max-height:calc(100vh - 250px); overflow:auto; scrollbar-width:thin;
+}
+#formScrim.rd-addcard .form-foot{
+  width:min(640px,100%); margin-bottom:auto;
+  display:flex; align-items:center; gap:9px; flex-wrap:wrap;
+  background:#fff; border:var(--rd-bd) solid var(--rd-navy); border-top:0;
+  border-radius:0 0 var(--rd-r) var(--rd-r);
+  box-shadow:var(--rd-sh); padding:14px 16px;
+}
+
+/* one column, in the order 05b draws: funnel, scans, details, edit fields */
+#formScrim.rd-addcard .form-left{ display:contents; }
+#formScrim.rd-addcard .form-left > .rolodex{ order:1; }
+#formScrim.rd-addcard .form-right{ order:2; display:grid; align-content:start; gap:9px; min-width:0; }
+#formScrim.rd-addcard .form-left > .ac-strip{ order:3; }
+#formScrim.rd-addcard .form-left > .ac-edit-fields{ order:4; }
+
+/* ---- 2. GATES 1-3: the cream AUTO-FILL tray ---------------------------- */
+
+#formScrim.rd-addcard .rolodex{
+  background:var(--rd-cream); border:var(--rd-bd-sub) solid var(--rd-gold);
+  border-radius:14px; padding:12px; display:grid; gap:10px;
+}
+#formScrim.rd-addcard .rolodex-head{
+  display:flex; align-items:center; gap:8px; flex-wrap:wrap;
+  font-family:var(--rd-micro); font-size:8px; line-height:1.6;
+  color:var(--rd-ink-gold); margin:0;
+}
+#formScrim.rd-addcard .rolodex-head .ti-search{ display:none; }
+#formScrim.rd-addcard .rolodex-tag{
+  font-family:var(--rd-ui); font-weight:800; font-size:9px;
+  color:var(--rd-ink-gold); background:var(--rd-gold);
+  border:2px solid var(--rd-navy); border-radius:var(--rd-r-pill);
+  padding:2px 8px;
+}
+
+/* gate chips: the four-gates diagram is law, so each gate wears its number */
+#formScrim.rd-addcard .rolo-row::before,
+#formScrim.rd-addcard .rolo-years::before,
+#formScrim.rd-addcard .rolo-brand::before,
+#formScrim.rd-addcard .form-right > label::before{
+  font-family:var(--rd-micro); font-size:8px; color:#fff;
+  background:var(--rd-navy); border-radius:5px; padding:4px 6px;
+  flex:none; align-self:center;
+}
+#formScrim.rd-addcard .rolo-row::before{ content:"1"; }
+#formScrim.rd-addcard .rolo-years::before{ content:"2"; }
+#formScrim.rd-addcard .rolo-brand::before{ content:"3"; }
+#formScrim.rd-addcard .form-right > label::before{ content:"4"; margin-right:7px; }
+
+/* gate 1 - find the player */
+#formScrim.rd-addcard .rolo-row{ display:flex; align-items:center; gap:8px; }
+#formScrim.rd-addcard #rolo-name{
+  flex:1; min-width:0; box-sizing:border-box;
+  font-family:var(--rd-ui); font-weight:600; font-size:13px; color:var(--rd-navy);
+  background:#fff; border:var(--rd-bd-sub) solid var(--rd-navy);
+  border-radius:var(--rd-r-pill); padding:9px 14px; box-shadow:0 3px 0 var(--rd-navy);
+}
+#formScrim.rd-addcard #rolo-name::placeholder{ color:var(--rd-muted-2); }
+#formScrim.rd-addcard #rolo-name:focus{ outline:3px solid var(--rd-orange); outline-offset:2px; }
+#formScrim.rd-addcard .rolo-row button{
+  flex:none; font-family:var(--rd-ui); font-weight:800; font-size:13px;
+  color:var(--rd-navy); background:var(--rd-gloss),var(--rd-gold);
+  border:var(--rd-bd-sub) solid var(--rd-navy); border-radius:var(--rd-r-pill);
+  box-shadow:0 3px 0 var(--rd-navy); padding:9px 20px; cursor:pointer;
+  white-space:nowrap; transition:transform .08s, box-shadow .08s;
+}
+#formScrim.rd-addcard .rolo-row button:active{ transform:translateY(2px); box-shadow:var(--rd-sh-press); }
+
+/* the suggestion list: first row is the cream lead, the rest sit on white */
+#formScrim.rd-addcard .rolo-list{
+  background:#fff; border:var(--rd-bd-sub) solid var(--rd-tint-line);
+  border-radius:12px; overflow:hidden; max-height:196px; overflow-y:auto;
+}
+#formScrim.rd-addcard .rolo-player{
+  padding:7px 10px; border-bottom:1px solid var(--rd-tint-deep); cursor:pointer;
+  font-family:var(--rd-ui); font-weight:800; font-size:12.5px; color:var(--rd-navy);
+}
+#formScrim.rd-addcard .rolo-player:last-child{ border-bottom:0; }
+#formScrim.rd-addcard .rolo-player:first-child{ background:var(--rd-cream); }
+#formScrim.rd-addcard .rolo-player:hover,
+#formScrim.rd-addcard .rolo-player:focus-visible{ background:var(--rd-cream); outline:none; }
+#formScrim.rd-addcard .rolo-player .meta{
+  display:block; font-weight:700; font-size:10.5px; color:var(--rd-muted-2);
+}
+#formScrim.rd-addcard .rolo-player:first-child .meta,
+#formScrim.rd-addcard .rolo-player:hover .meta{ color:var(--rd-ink-gold); }
+
+/* gate 2 - pick the season. .sel is gold, .nocard is the quiet opt-out */
+#formScrim.rd-addcard .rolo-years{
+  display:flex; align-items:center; gap:6px; flex-wrap:wrap;
+}
+#formScrim.rd-addcard .rolo-years > span:first-child{
+  font-family:var(--rd-ui); font-weight:800; font-size:14px; color:var(--rd-navy);
+  margin-right:2px;
+}
+#formScrim.rd-addcard .rolo-yr{
+  font-family:var(--rd-ui); font-weight:800; font-size:12px; color:var(--rd-navy);
+  background:var(--rd-tint-deep); border:2px solid var(--rd-tint-line);
+  border-radius:var(--rd-r-pill); padding:5px 11px; cursor:pointer;
+  transition:transform .08s;
+}
+#formScrim.rd-addcard .rolo-yr:hover{ border-color:var(--rd-navy); }
+#formScrim.rd-addcard .rolo-yr.sel{
+  color:var(--rd-ink-gold); background:var(--rd-gloss),var(--rd-gold);
+  border:2px solid var(--rd-navy);
+}
+#formScrim.rd-addcard .rolo-yr.nocard{ color:var(--rd-muted-2); opacity:.72; }
+
+/* gate 3 - brand, then the card */
+#formScrim.rd-addcard .rolo-brand{
+  display:flex; align-items:center; gap:7px; flex-wrap:wrap;
+}
+#formScrim.rd-addcard .rolo-brand-label{
+  font-family:var(--rd-ui); font-weight:800; font-size:14px; color:var(--rd-navy);
+}
+#formScrim.rd-addcard .rolo-brand select,
+#formScrim.rd-addcard #rolo-num,
+#formScrim.rd-addcard #rolo-brand-custom{
+  font-family:var(--rd-ui); font-weight:700; font-size:13px; color:var(--rd-navy);
+  background:var(--rd-tint); border:var(--rd-bd-sub) solid var(--rd-tint-line);
+  border-radius:10px; padding:7px 10px; box-shadow:none;
+}
+#formScrim.rd-addcard #rolo-num{ width:92px; }
+#formScrim.rd-addcard .rolo-brand select:focus,
+#formScrim.rd-addcard #rolo-num:focus,
+#formScrim.rd-addcard #rolo-brand-custom:focus{ outline:3px solid var(--rd-orange); outline-offset:2px; }
+#formScrim.rd-addcard .rolo-brand select:disabled{ color:var(--rd-muted-2); opacity:1; }
+#formScrim.rd-addcard .rolo-num-list{
+  font-family:var(--rd-ui); font-weight:600; font-size:10.5px; color:var(--rd-muted);
+}
+
+/* the status line: ok / err use the state library's message recipe, and the
+   'checking the catalog' transient is state 2 of chapter 12 verbatim. */
+#formScrim.rd-addcard .rolo-status{
+  display:none; font-family:var(--rd-ui); font-weight:700; font-size:12px;
+  line-height:1.4; border-radius:12px; padding:9px 11px;
+}
+#formScrim.rd-addcard .rolo-status.ok,
+#formScrim.rd-addcard .rolo-status.err{ display:block; }
+#formScrim.rd-addcard .rolo-status.ok{
+  color:var(--rd-ink-green); background:#e8fbe4; border:var(--rd-bd-sub) solid var(--rd-green);
+}
+#formScrim.rd-addcard .rolo-status.err{
+  color:var(--rd-ink-red); background:#fdecea; border:var(--rd-bd-sub) solid var(--rd-red);
+}
+#formScrim.rd-addcard .rolo-status.checking{
+  display:flex; gap:8px; align-items:center;
+  color:var(--rd-muted); background:var(--rd-tint);
+  border:var(--rd-bd-sub) solid var(--rd-tint-line);
+}
+#formScrim.rd-addcard .rolo-status.checking::before{
+  content:""; width:16px; height:16px; flex:none; border-radius:50%;
+  border:3px solid var(--rd-tint-line); border-top-color:var(--rd-navy);
+  animation:rd-spin .7s linear infinite;
+}
+
+/* the card list: rows carry art badges, the thumb leads (PR #206) */
+#formScrim.rd-addcard #rolo-card-list{
+  display:flex; flex-direction:column; gap:7px; max-height:250px; overflow-y:auto;
+}
+#formScrim.rd-addcard .rolo-card-row{
+  display:flex; align-items:center; gap:8px; width:100%; text-align:left;
+  background:var(--rd-tint); border:var(--rd-bd-sub) solid var(--rd-tint-line);
+  border-radius:11px; padding:7px 9px; cursor:pointer;
+  font-family:var(--rd-ui); color:var(--rd-navy);
+}
+#formScrim.rd-addcard .rolo-card-row:hover{ border-color:var(--rd-navy); }
+#formScrim.rd-addcard .rolo-card-row:focus-visible{ outline:3px solid var(--rd-orange); outline-offset:2px; }
+#formScrim.rd-addcard .rolo-card-row.sel{
+  background:var(--rd-cream); border-color:var(--rd-gold);
+}
+/* a row with no art on file steps back but stays reachable */
+#formScrim.rd-addcard .rolo-card-row:has(.rcr-none){ opacity:.7; }
+#formScrim.rd-addcard .rolo-card-row:has(.rcr-none) .rcr-set{ color:var(--rd-muted); }
+#formScrim.rd-addcard .rolo-card-row .rcr-set{
+  font-weight:800; font-size:12.5px; color:var(--rd-navy); flex:1; min-width:0;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+#formScrim.rd-addcard .rolo-card-row .rcr-num{
+  font-family:var(--rd-num); font-size:17px; line-height:1; color:var(--rd-navy); flex:none;
+}
+#formScrim.rd-addcard .rolo-card-row .rcr-thumb{
+  width:32px; height:44px; flex:none; border-radius:6px;
+  background-color:var(--rd-tint-deep); background-size:cover; background-position:center;
+  border:2px solid var(--rd-tint-line);
+}
+#formScrim.rd-addcard .rolo-card-row.sel .rcr-thumb{ border-color:var(--rd-navy); }
+
+/* art badges, in the drawn colours: front+back green, front-only cream,
+   no-image tint, and the checking transient pulses so it never reads as rest */
+#formScrim.rd-addcard .rolo-card-row .rcr-badge{
+  flex:none; font-family:var(--rd-ui); font-weight:800; font-size:9px;
+  border-radius:var(--rd-r-pill); padding:2px 7px; white-space:nowrap;
+  color:var(--rd-ink-green); background:#e8fbe4; border:2px solid var(--rd-green);
+}
+#formScrim.rd-addcard .rolo-card-row .rcr-badge.rcr-front{
+  color:var(--rd-ink-gold); background:var(--rd-cream); border-color:var(--rd-gold);
+}
+#formScrim.rd-addcard .rolo-card-row .rcr-badge.rcr-none{
+  color:var(--rd-muted-2); background:var(--rd-tint-deep); border-color:var(--rd-tint-line);
+}
+#formScrim.rd-addcard .rolo-card-row .rcr-badge.rcr-unknown{
+  color:var(--rd-muted); background:var(--rd-tint-deep); border-color:var(--rd-tint-line);
+  animation:rd-ac-checking 1.1s ease-in-out infinite;
+}
+@keyframes rd-ac-checking{ 0%,100%{ opacity:1 } 50%{ opacity:.5 } }
+#formScrim.rd-addcard .rolo-card-row .rcr-same{
+  flex:none; font-family:var(--rd-ui); font-weight:700; font-size:9px;
+  color:var(--rd-muted); background:#fff; border:2px dashed var(--rd-tint-line);
+  border-radius:var(--rd-r-pill); padding:2px 7px;
+}
+
+/* the two funnel notes: the cream caution and the quiet upload hint */
+#formScrim.rd-addcard .rolo-noimg{
+  margin:0; font-family:var(--rd-ui); font-weight:600; font-size:11.5px;
+  line-height:1.4; color:var(--rd-ink-gold);
+}
+#formScrim.rd-addcard .rolo-uphint{
+  margin:0; font-family:var(--rd-ui); font-weight:600; font-size:10.5px;
+  line-height:1.4; color:var(--rd-muted);
+}
+
+/* the designed 'missing images' opt-in pill. The behaviour does not exist in
+   the app yet (logged to FUTURE_ITEMS 19); the part is here so the day it
+   ships it is already dressed, and nothing paints until it does. */
+#formScrim.rd-addcard .rolo-showall{
+  display:block; width:100%; font-family:var(--rd-ui); font-weight:800;
+  font-size:11.5px; color:var(--rd-navy); background:#fff;
+  border:var(--rd-bd-sub) solid var(--rd-navy); border-radius:var(--rd-r-pill);
+  box-shadow:0 3px 0 var(--rd-navy); padding:7px 0; text-align:center; cursor:pointer;
+}
+
+/* ---- 3. THE READ-ONLY DETAILS STRIP ------------------------------------ */
+#formScrim.rd-addcard .ac-strip{ display:grid; gap:9px; }
+#formScrim.rd-addcard .ac-strip-grid{
+  display:grid; grid-template-columns:repeat(6,1fr); gap:9px;
+}
+#formScrim.rd-addcard .ac-cell{ grid-column:span 2; min-width:0; }
+#formScrim.rd-addcard .ac-span2{ grid-column:span 2; }
+#formScrim.rd-addcard .ac-span4{ grid-column:span 4; }
+#formScrim.rd-addcard .ac-full{ grid-column:1 / -1; }
+#formScrim.rd-addcard .ac-k{
+  display:block; font-family:var(--rd-micro); font-size:7px; line-height:1.6;
+  color:var(--rd-navy); margin-bottom:5px;
+}
+#formScrim.rd-addcard .ac-k em{ font-style:normal; color:var(--rd-muted); }
+#formScrim.rd-addcard .ac-v{
+  display:block; font-family:var(--rd-ui); font-weight:700; font-size:13px;
+  color:var(--rd-navy); background:var(--rd-tint);
+  border:var(--rd-bd-sub) solid var(--rd-tint-line); border-radius:10px;
+  padding:7px 10px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+}
+#formScrim.rd-addcard .ac-v.is-empty{ color:var(--rd-muted-2); }
+
+/* the stat line is the scoreboard: navy panel, gold caption, VT323 numerals */
+#formScrim.rd-addcard .ac-full .ac-k{
+  font-size:7.5px; color:var(--rd-gold); background:var(--rd-navy);
+  border-radius:14px 14px 0 0; padding:9px 13px 7px; margin:0;
+}
+#formScrim.rd-addcard .ac-v--stats{
+  font-family:var(--rd-num); font-size:18px; line-height:1.25;
+  color:var(--rd-green); background:var(--rd-navy);
+  border:0; border-radius:0 0 14px 14px; padding:0 13px 11px;
+  white-space:normal; word-break:break-word;
+}
+#formScrim.rd-addcard .ac-v--stats.is-empty{ color:var(--rd-muted-2); }
+
+/* 'Edit details' stays a quiet ghost - the strip is read-only by design */
+#formScrim.rd-addcard .ac-edit{
+  justify-self:start; font-family:var(--rd-ui); font-weight:700; font-size:12px;
+  color:var(--rd-muted); background:#fff;
+  border:var(--rd-bd-sub) solid var(--rd-tint-line); border-radius:var(--rd-r-pill);
+  padding:7px 15px; cursor:pointer;
+}
+#formScrim.rd-addcard .ac-edit:hover{ color:var(--rd-navy); border-color:var(--rd-navy); }
+#formScrim.rd-addcard .ac-edit:active{ transform:translateY(2px); }
+#formScrim.rd-addcard .ac-edit-fields{ display:grid; gap:9px; }
+#formScrim.rd-addcard .ac-edit-fields[hidden],
+#formScrim.rd-addcard #acDerived{ display:none; }
+#formScrim.rd-addcard .fl-row{ display:flex; gap:9px; flex-wrap:wrap; }
+#formScrim.rd-addcard .fl-field{ flex:1; min-width:120px; display:grid; gap:5px; }
+#formScrim.rd-addcard .fl-field label,
+#formScrim.rd-addcard .form-right > label{
+  font-family:var(--rd-micro); font-size:7px; line-height:1.6; color:var(--rd-navy);
+}
+#formScrim.rd-addcard .form-right > label{
+  display:flex; align-items:center; font-size:8px;
+}
+#formScrim.rd-addcard .fl-field input,
+#formScrim.rd-addcard .fl-field select{
+  width:100%; box-sizing:border-box;
+  font-family:var(--rd-ui); font-weight:700; font-size:13px; color:var(--rd-navy);
+  background:var(--rd-tint); border:var(--rd-bd-sub) solid var(--rd-tint-line);
+  border-radius:10px; padding:7px 10px;
+}
+#formScrim.rd-addcard .fl-field input:focus,
+#formScrim.rd-addcard .fl-field select:focus{ outline:3px solid var(--rd-orange); outline-offset:2px; }
+#formScrim.rd-addcard .hintmini{
+  font-family:var(--rd-ui); font-weight:600; font-size:10.5px; color:var(--rd-muted);
+}
+
+/* ---- 4. GATE 4: CONFIRM THE IMAGE -------------------------------------- */
+#formScrim.rd-addcard .slot-tabs{ display:flex; gap:7px; }
+#formScrim.rd-addcard .slot-tab{
+  flex:1; min-height:38px; font-family:var(--rd-ui); font-weight:800; font-size:12px;
+  color:var(--rd-navy); background:#fff;
+  border:var(--rd-bd-sub) solid var(--rd-tint-line); border-radius:var(--rd-r-pill);
+  padding:8px 0; cursor:pointer;
+}
+#formScrim.rd-addcard .slot-tab:hover{ border-color:var(--rd-navy); }
+#formScrim.rd-addcard .slot-tab.active{
+  background:var(--rd-gloss),var(--rd-gold); border-color:var(--rd-navy);
+  color:var(--rd-ink-gold); box-shadow:0 3px 0 var(--rd-navy);
+}
+#formScrim.rd-addcard .slot-tab.disabled{ color:var(--rd-muted-2); opacity:1; }
+
+#formScrim.rd-addcard .preview-row{ display:grid; grid-template-columns:1fr 1fr; gap:10px; }
+#formScrim.rd-addcard .preview-slot{ display:grid; gap:5px; min-width:0; }
+#formScrim.rd-addcard .slot-cap{
+  font-family:var(--rd-ui); font-weight:800; font-size:12px; color:var(--rd-navy);
+  text-align:center;
+}
+#formScrim.rd-addcard .preview-slot.active-slot .slot-cap{ color:var(--rd-ink-gold); }
+/* the scan slot IS the affordance: drop, browse or paste, all three live */
+#formScrim.rd-addcard .preview{
+  height:120px; display:flex; flex-direction:column; align-items:center;
+  justify-content:center; gap:5px; text-align:center; cursor:pointer;
+  background:var(--rd-tint); border:var(--rd-bd-sub) dashed var(--rd-sky);
+  border-radius:14px; background-size:cover; background-position:center;
+  overflow:hidden;
+}
+#formScrim.rd-addcard .preview-slot.active-slot .preview{ border-color:var(--rd-navy); }
+#formScrim.rd-addcard .preview.has-img{
+  border-style:solid; border-color:var(--rd-navy); background-color:#fff;
+  box-shadow:0 3px 0 var(--rd-navy);
+}
+#formScrim.rd-addcard .preview img{ width:100%; height:100%; object-fit:cover; display:block; }
+#formScrim.rd-addcard .ph-text{
+  font-family:var(--rd-ui); font-weight:700; font-size:10.5px; line-height:1.35;
+  color:var(--rd-muted-2); padding:0 8px;
+}
+#formScrim.rd-addcard .ph-text.err{ color:var(--rd-ink-red); font-weight:800; }
+#formScrim.rd-addcard .preview.has-img .ph-text{ display:none; }
+/* the live drag target: the dashed slot goes hot, orange, no blur */
+#formScrim.rd-addcard .preview.drop-hot{
+  border-color:var(--rd-orange); border-style:dashed; background:#fff6ef;
+  outline:3px solid var(--rd-orange); outline-offset:-6px; box-shadow:none;
+}
+/* the file input is the third affordance and says so */
+#formScrim.rd-addcard .img-pane{
+  display:grid; gap:6px; background:var(--rd-tint);
+  border:var(--rd-bd-sub) dashed var(--rd-sky); border-radius:11px; padding:9px 10px;
+}
+#formScrim.rd-addcard .img-pane::before{
+  content:"drop \00B7 browse \00B7 paste your own";
+  font-family:var(--rd-ui); font-weight:700; font-size:10.5px;
+  color:var(--rd-muted); text-align:center;
+}
+#formScrim.rd-addcard .img-pane input[type="file"]{
+  font-family:var(--rd-ui); font-weight:600; font-size:11px; color:var(--rd-navy);
+  max-width:100%;
+}
+
+/* ---- 5. THE FOOT: the last gate --------------------------------------- */
+#formScrim.rd-addcard .btn-solid{
+  order:0; flex:1 1 220px; min-height:46px;
+  font-family:var(--rd-ui); font-weight:800; font-size:15px; color:var(--rd-navy);
+  background:var(--rd-gloss),var(--rd-green);
+  border:var(--rd-bd-sub) solid var(--rd-navy); border-radius:var(--rd-r-pill);
+  box-shadow:var(--rd-sh-sub); padding:11px 18px; cursor:pointer;
+  transition:transform .08s, box-shadow .08s;
+}
+#formScrim.rd-addcard .btn-solid:active{ transform:translateY(2px); box-shadow:var(--rd-sh-press); }
+#formScrim.rd-addcard .btn-ghost{
+  order:1; flex:0 0 auto; min-height:46px;
+  font-family:var(--rd-ui); font-weight:700; font-size:13px; color:var(--rd-muted);
+  background:#fff; border:var(--rd-bd-sub) solid var(--rd-tint-line);
+  border-radius:var(--rd-r-pill); padding:11px 20px; cursor:pointer;
+}
+#formScrim.rd-addcard .btn-ghost:hover{ color:var(--rd-navy); border-color:var(--rd-navy); }
+#formScrim.rd-addcard .btn-ghost:active{ transform:translateY(2px); }
+
+/* LOCKED: greyed, but never pointer-events:none and never [disabled] - the
+   click must still reach saveCard() so the gate can toast WHY (README 6). */
+#formScrim.rd-addcard .btn-solid.disabled,
+#formScrim.rd-addcard .btn-solid[aria-disabled="true"]{
+  color:var(--rd-muted-2); background:var(--rd-tint);
+  border-color:var(--rd-tint-line); box-shadow:none; opacity:1;
+  cursor:pointer; pointer-events:auto;
+}
+#formScrim.rd-addcard .btn-solid.disabled:active{ transform:translateY(2px); }
+/* and the reason sits next to it, always, whenever the gate is shut */
+#formScrim.rd-addcard .rd-addcard__reason{ display:none; }
+#formScrim.rd-addcard .form-foot:has(.btn-solid.disabled) .rd-addcard__reason,
+#formScrim.rd-addcard .form-foot:has(.btn-solid[aria-disabled="true"]) .rd-addcard__reason{
+  display:flex; order:2; flex:1 1 100%;
+}
+
+/* ---- 6. MOTION -------------------------------------------------------- */
+@keyframes rd-ac-slide{ from{ transform:translateY(14px) } to{ transform:translateY(0) } }
+#formScrim.rd-addcard.open .form-card,
+#formScrim.rd-addcard.open .form-foot{ animation:rd-ac-slide .16s ease-out both; }
+@media(prefers-reduced-motion:reduce){
+  #formScrim.rd-addcard *,
+  #formScrim.rd-addcard *::before,
+  #formScrim.rd-addcard *::after{ animation:none !important; transition:none !important; }
+}
+
+/* ---- 7. TRUE 390: first-class, 44px targets --------------------------- */
+/* Verified against build_package/exports/mobile-390/add-a-card.png with the
+   viewport pinned in an iframe (a window resize floors at 500). This block
+   also carries the add-card rules dissolved out of style#responsive-fixes:
+   the scrim column, the single-column body and the thumb-reachable foot. */
+@media(max-width:640px){
+  #formScrim.rd-addcard.open{ padding:10px 10px 14px; }
+  #formScrim.rd-addcard .form-card{ width:100%; }
+  #formScrim.rd-addcard .form-head{ padding:0 2px 8px; }
+  #formScrim.rd-addcard .form-head h2,
+  #formScrim.rd-addcard #formTitle{ font-size:21px; }
+  #formScrim.rd-addcard #formTitle::after{ font-size:11.5px; }
+  #formScrim.rd-addcard .form-body{
+    padding:13px; gap:12px; border-radius:18px 18px 0 0;
+    max-height:calc(100vh - 214px);
+  }
+  #formScrim.rd-addcard .form-foot{
+    width:100%; position:sticky; bottom:0; z-index:3;
+    padding:12px 13px; border-radius:0 0 18px 18px;
+  }
+  #formScrim.rd-addcard .rolodex{ padding:11px; gap:9px; }
+  #formScrim.rd-addcard .rolo-row{ flex-wrap:wrap; }
+  #formScrim.rd-addcard #rolo-name{ flex:1 1 100%; min-height:44px; }
+  #formScrim.rd-addcard .rolo-row button{ flex:1 1 auto; min-height:44px; }
+  #formScrim.rd-addcard .rolo-yr{ min-height:34px; padding:6px 12px; }
+  #formScrim.rd-addcard .rolo-brand select,
+  #formScrim.rd-addcard #rolo-num,
+  #formScrim.rd-addcard #rolo-brand-custom{ min-height:44px; flex:1 1 46%; }
+  #formScrim.rd-addcard .rolo-card-row{ min-height:56px; }
+  #formScrim.rd-addcard .ac-strip-grid{ grid-template-columns:repeat(2,1fr); }
+  #formScrim.rd-addcard .ac-cell,
+  #formScrim.rd-addcard .ac-span2,
+  #formScrim.rd-addcard .ac-span4{ grid-column:span 1; }
+  #formScrim.rd-addcard .ac-span4,
+  #formScrim.rd-addcard .ac-full{ grid-column:1 / -1; }
+  #formScrim.rd-addcard .slot-tab{ min-height:44px; }
+  #formScrim.rd-addcard .preview{ height:112px; }
+  #formScrim.rd-addcard .btn-solid,
+  #formScrim.rd-addcard .btn-ghost{ min-height:48px; flex:1 1 100%; }
+  #formScrim.rd-addcard .fl-field{ min-width:100%; }
+}
