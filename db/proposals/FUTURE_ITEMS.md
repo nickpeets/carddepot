@@ -402,3 +402,35 @@ Also worth deciding before any filter: it would have to run at CATALOG BUILD
 time, not at rip time. Resolution is a network call per card; gating a live
 pack rip on statsapi puts the money path behind a third party, which the
 section 7 money-safety rules forbid.
+
+## 16. A real thumbnail pipeline for the library (measured, NOT built)
+
+Raised 2026-07-30 building the Add-a-Card list thumbnails (feat/card-list-thumbs).
+
+The list thumbs reuse the SAME object the CARD IMAGES panel shows -- the
+full-size library front -- rendered into an ~80x112 tile. That is wasteful in
+principle, so it was measured before deciding:
+
+- 40 library fronts sampled across the bucket: p50 20,050 bytes, max 22,611,
+  mean 18,894. Not the 50-200KB the feature brief assumed; the ingest already
+  writes modest JPEGs.
+- A player-season-brand list is 1-10 rows. The worst live case found (Carlton
+  Fisk, 1991, Topps) is 7 rows / 5 distinct images = ~118KB, and the panel
+  would have fetched one of those anyway. Mobile 390 shows 4 per row.
+- The thumbs are lazy (IntersectionObserver, 200px margin) and capped at 4
+  concurrent loads, and they are plain public URLs, so the browser cache and
+  the CDN absorb repeats. Selecting a row costs no second fetch.
+
+Conclusion: resized derivatives in the bucket are NOT worth building at this
+scale. Revisit if either of these changes: a list surface starts showing
+hundreds of rows at once (a set browser, a full-checklist view), or the ingest
+starts writing high-resolution scans. The shape it would take: a `thumb` side
+alongside `front`/`back` in card_library, written at ingest, with
+depotLibraryArtURL growing a size argument -- so no caller changes.
+
+Also seen while sampling: one of the 40 sampled catalog_key rows returned an
+88-byte error body instead of a JPEG, i.e. the card_library table lists a key
+whose derived object is not in the bucket. The probe-gate means the UI is
+unharmed (that row just keeps its "no image yet" tile), but the table/bucket
+drift is the same one the row-click gate already works around, and it deserves
+a reconciliation pass with the section 14 balance-drift check.
