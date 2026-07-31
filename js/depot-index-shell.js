@@ -53,7 +53,11 @@
       // Node moves preserve listeners, so Log in / Log out keep working.
       var acct = frame.querySelector('.depot-account');
          if (acct) {
-                 ['authLoginBtn', 'authLogoutBtn'].forEach(function (id) {
+                 // Log out is now shell-owned markup (one 8-bit treatment on all four
+                 // surfaces), so only the Log in affordance is relocated. #authLogoutBtn stays
+                 // in the retired topbar -- hidden, listeners intact -- and the shell button
+                 // delegates its click to it, so DepotAuth.logout() is still the only handler.
+                 ['authLoginBtn'].forEach(function (id) {
                            var b = document.getElementById(id);
                            if (b) { acct.appendChild(b); }
                            else { console.warn('[depot] index-shell: #' + id + ' not found to relocate'); }

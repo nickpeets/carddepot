@@ -341,3 +341,64 @@ Raised 2026-07-30 while funding Nick's wallet for live paid-pack testing.
 - Open, same pass: nothing enforces `balance = sum(amount)`, so the column and
   the ledger can drift. A reconciliation check (or a derived balance) belongs
   with the roles work. Schema change -- needs sign-off.
+
+## 15. Does the pack pool need a stat-resolvability filter? (measured, NOT built)
+
+Raised 2026-07-30 on `fix/subset-name-stats`, after Nick's pack-pulled
+"Darin Erstad GG" landed with no season line. Nick's standard is "don't deal
+cards we can't get stats for", so the question is whether the art-backed pack
+pool should ALSO filter on "this name resolves to an MLB person whose career
+covers the card year". Deliberately not built on that branch: it moves the
+economy (see section 12) and it needs a number first. Here is the number.
+
+**Measurement.** 500 cards sampled (seeded, reproducible) from the live
+art-backed pool -- `DepotShop.loadCatalog()` filtered by
+`DepotLibraryIndex.load()`, 84,452 cards of the 155,802 catalog rows -- run
+through the NEW resolution on game/shop.html, counting a card as resolvable
+only when it reaches an MLB person whose `mlbDebutDate`/`lastPlayedDate` span
+covers the card year (the same gate `repullOne()` applies before it writes):
+
+- **438 / 500 (87.6%) resolve span-valid.**
+- **62 / 500 (12.4%) do not.** That residual splits in two:
+  - **27 (5.4%) resolve to nobody.** 16 of those are not players at all --
+    checklists, team cards, league leaders, multi-player subsets ("Rangers
+    Leaders / Checklist (Buddy Bell / Rick Honeycutt) TL, CL", "Cleveland
+    Indians TC", "Super Siblings (Roberto Alomar / Sandy Alomar, Jr.) SSS").
+    The other 11 are individuals: minor leaguers who never reached MLB
+    (Ronnie Walden, Mark Mangum, Chris O'Riordan) plus a **nickname gap** --
+    the card front's short form is not among the official spellings MLB
+    publishes. "Mike LaValliere" (MLB: Michael LaValliere, firstName AND
+    useName "Michael") and "Bobby Ojeda" (MLB: Bob Ojeda) both refuse,
+    correctly, under exact-match discipline.
+  - **35 (7.0%) resolve to the right person, wrong year.** Prospect and draft
+    cards printed before the debut (Miguel Cabrera 2002, Sean Burroughs 1999,
+    Shane Andrews 1991 FRDP RC), retired-legend inserts (Brooks Robinson 2020
+    SP, Tony Lazzeri 2026, Darryl Strawberry R86 2020), and post-career or
+    lost seasons (Tom Henke 1996, Josh Hamilton 2016). These are honest
+    no-data rows, exactly like Nick's Jeter '93 and Beltre '97.
+- Of the 79 sampled names carrying trailing subset codes, 62 (78.5%) now
+  resolve span-valid; the 17 that do not are mostly the non-player subsets
+  above ("Athletics Leaders TL", "Angels vs. Mariners UWS, FOIL").
+
+**The open question.** A stat-resolvability gate on the pool would remove
+roughly one card in eight, but the three residual classes want different
+answers and a single filter would treat them the same:
+
+- The 16 non-player cards (checklists, team cards, leaders) arguably should
+  never have been in a pack pool at all -- that is a POOL-QUALITY fix, and it
+  is the one piece of this that looks unambiguously right.
+- The 35 wrong-year cards are real players on real cards. Filtering them out
+  would delete every prospect RC and every legend insert from the pool, which
+  is a large slice of what makes packs fun. The alternative is showing a
+  CAREER line (or the nearest season) instead of a blank, with provenance
+  saying which -- a display decision, not a pool decision.
+- The nickname gap is a resolution question, not a pool question, and it must
+  not be answered by loosening the matcher. If it is worth closing, close it
+  with an explicit, auditable alias table (card-front form -> MLB personId),
+  never with substring or fuzzy matching. The whole Jeter/Thomas lesson is
+  that a guessed line is worse than a blank one.
+
+Also worth deciding before any filter: it would have to run at CATALOG BUILD
+time, not at rip time. Resolution is a network call per card; gating a live
+pack rip on statsapi puts the money path behind a third party, which the
+section 7 money-safety rules forbid.

@@ -121,6 +121,95 @@
     return out.join(' ').replace(/\s+/g, ' ').trim() || raw.replace(/\s+/g, ' ').trim();
   }
 
+  /* ---- subset / decoration vocabulary (resolution only) -----------------
+   * A catalog player string describes a CARD FRONT, not a person. Audited all
+   * 47 files of data/cards-*.json (155,802 player strings, 2,882 of them
+   * multi-player): 11,889 strings end in one or more trailing subset codes,
+   * drawn from a vocabulary of 118 distinct tokens. The head of the
+   * distribution: RC 5027, RR 796, TC 683, DK 632, MGR 589, AS 459, ASR 392,
+   * FS 376, SP 373, ROO 361, RP 360, LL 281, DP 261, CL 241, UER 225, DPK 213,
+   * PROS 165, TL 154, SH 145, MLD 108, FY 107, WS 100, VAR 83, R86 75, RB 73,
+   * GG 67 (Gold Glove -- Nick's stat-less "Darin Erstad GG"), AW 63, HL 57.
+   * The shape is uniform: 1-5 characters, ALL CAPS, digits allowed (R86,
+   * SN500), frequently comma-separated ("Joel Skinner RR, RC").
+   *
+   * These codes are DISPLAY text and stay on the card everywhere. Resolution
+   * simply must not be asked to find a person called "Darin Erstad GG".
+   *
+   * The fix is NOT looser matching. It is a second, equally strict question:
+   * try the FULL name first, then the same name with its trailing decorations
+   * removed. Every candidate is matched by exact accent-folded equality and
+   * gated by spanCovers(). No substring matching, no fuzzy matching, ever. */
+  var DECOR_TOK = /^[A-Z][A-Z0-9]{0,4}$/;
+  /* Lowercase-initial surname particles are real name tokens: deGrom, de la
+   * Cruz, van Slyke. isNameTok() requires an initial capital, which is right
+   * for OCR trimming but wrong for resolution. */
+  var NAME_PARTICLE = /^(?:de|del|de[A-Z][a-z]|della|di|du|da|das|dos|la|le|van|von|ten|ter|st|mac|mc|o)$/;
+
+  function isResTok(w) {
+  if (isNameTok(w)) return true;
+  if (NAME_PARTICLE.test(w)) return true;
+  /* deGrom / deJesus: lowercase particle fused to a capitalised stem. */
+  return /^[a-z]{1,3}[A-Z][A-Za-z\u00C0-\u024F'\u2019.\-]*$/.test(w);
+  }
+
+  /* The whole leading run of person-or-decoration tokens, punctuation trimmed.
+   * Unlike cleanName() this does NOT stop after two core tokens, so real
+   * three-token names survive ("Andy Van Slyke", "Chan Ho Park", "Paul Lo
+   * Duca") instead of being truncated to their first two. */
+  function resSpan(raw) {
+  var s = String(raw == null ? '' : raw).split(/[:\/|]/)[0];
+  var toks = s.trim().split(/\s+/), out = [], i, w;
+  for (i = 0; i < toks.length; i++) {
+  w = toks[i].replace(/^[ ,;()]+|[ ,;()]+$/g, '');
+  if (!w) continue;
+  if (!isResTok(w) && !DECOR_TOK.test(w)) break;
+  out.push(w);
+  }
+  return out;
+  }
+
+  /* Drop trailing decoration tokens. Never strips below two tokens (a person
+   * needs a first and a last name) and never strips a generational suffix. */
+  function stripDecor(toks) {
+  var out = toks.slice();
+  while (out.length > 2) {
+  var w = out[out.length - 1];
+  if (NAME_SUF[w] || !DECOR_TOK.test(w)) break;
+  out.pop();
+  }
+  return out;
+  }
+
+  /* Ordered resolution candidates: the full name, then the decoration-stripped
+   * name. One entry when there is nothing to strip. Display never sees these. */
+  function nameCandidates(raw) {
+  var toks = resSpan(raw), out = [];
+  var full = toks.join(' ').trim();
+  if (!full) { full = cleanName(raw); }
+  if (full) out.push(full);
+  var stripped = stripDecor(toks).join(' ').trim();
+  if (stripped && stripped !== full) out.push(stripped);
+  return out;
+  }
+
+  /* Comparison key for resolution. Accent-folded, lossy by design, never stored. */
+  function resName(x) { return normName(resSpan(x).join(' ') || String(x == null ? '' : x)); }
+
+  /* Strip the internal pack receipt out of a bio for DISPLAY. The receipt
+   * ("packseed:<seed>") is provenance the collector wrote for us, not a line
+   * about the player, so the card detail must not read it out. The data stays
+   * in cards.notes exactly as written -- this only filters the rendered text,
+   * and a genuine note sharing the line ("All-Star Card") survives. */
+  function bioForDisplay(bio) {
+  var s = String(bio == null ? '' : bio);
+  if (!s) return '';
+  s = s.replace(/packseed\s*:\s*\S+/gi, '');
+  s = s.replace(/\s*\|\s*\|\s*/g, ' | ');
+  s = s.replace(/^[\s|;,\u00b7\u2013\u2014-]+/, '').replace(/[\s|;,\u00b7\u2013\u2014-]+$/, '');
+  return s.replace(/\s+/g, ' ').trim();
+  }
+
   /* Does this person's MLB career plausibly cover the given card year?
    * Returns TRUE when we have no span data at all -- absence of evidence must
    * not be treated as evidence of a bad match. */
@@ -141,7 +230,7 @@
    * the person's OWN variants is still an exact match, not a fuzzy one. */
   function nameVariants(p) {
     var out = [];
-    function push(v) { var c = cleanName(v || ''); if (c) out.push(normName(c)); }
+    function push(v) { var c = resName(v || ''); if (c && c.indexOf(' ') > 0) out.push(c); }
     if (!p) return out;
     push(p.fullName); push(p.nameFirstLast); push(p.firstLastName);
     if (p.lastName) { push((p.firstName || '') + ' ' + p.lastName); push((p.useName || '') + ' ' + p.lastName); }
@@ -156,7 +245,7 @@
    * ?q= search is deliberately not used for this: asked for "Bob Abreu" it
    * returns Freddie Freeman, Andrew McCutchen and Manny Machado. */
   function surnameRetry(name, year) {
-    var nm = cleanName(name), key = normName(nm);
+    var nm = String(name == null ? '' : name).trim(), key = resName(nm);
     var toks = nm.split(/\s+/);
     var last = toks.length > 1 ? toks[toks.length - 1] : '';
     if (!last) return Promise.resolve(null);
@@ -177,9 +266,10 @@
     }).catch(function (e) { console.warn(TAG + ' surname retry failed for "' + nm + '": ' + ((e && e.message) || e)); return null; });
   }
 
-  function searchPerson(name, year) {
-    var nm = cleanName(name);
-    if (!nm) return Promise.resolve(null);
+  /* Ask MLB about ONE candidate spelling. Returns the exact accent-folded match
+   * (against any official spelling MLB publishes for that person) plus the raw
+   * people list, so the caller can decide what to do when there is no exact hit. */
+  function searchOne(nm, year) {
     var byNames = MLB + '/people/search?names=' + encodeURIComponent(nm);
     var byQ = MLB + '/people/search?q=' + encodeURIComponent(nm);
     return fetch(byNames).then(function (r) {
@@ -191,31 +281,99 @@
         return r2.ok ? r2.json() : { people: [] };
       }).then(function (j2) { return (j2 && j2.people) || []; });
     }).then(function (people) {
-      if (!people.length) return null;
-      /* Prefer an exact full-name match, accent-folded via the shared helper.
-       * An exact name match is trusted on its own: a 1993 Jeter card is still
-       * Derek Jeter even though he debuted in 1995. That is a stats-provenance
-       * problem, not an identity problem, and it is handled on the stats side. */
-      var key = normName(nm), exact = null, i;
+      var key = resName(nm), exact = null, i, vs;
+      /* A single-token key can only ever be a surname, and a surname is not an
+       * identity: never let one match a variant. Two tokens or nothing. */
+      var multi = key.indexOf(' ') > 0;
+      var hits = [];
       for (i = 0; i < people.length; i++) {
-        if (normName(cleanName(people[i].fullName)) === key) { exact = people[i]; break; }
+        vs = multi ? nameVariants(people[i]) : [];
+        if (vs.indexOf(key) >= 0) hits.push(people[i]);
       }
-      if (exact) return exact;
-      /* No exact fullName match. Before falling back to a positional guess, ask
-       * MLB by surname and require an exact match on one of ITS OWN spellings. */
-      return surnameRetry(nm, year).then(function (alt) {
-        if (alt) return alt;
-      /* No exact match, so people[0] is only a guess. Accept it ONLY if the
-       * career span can cover this card year; otherwise return null and let the
-       * caller report "unresolved" honestly. This is what stops a plain
-       * "Dante Bichette" card resolving to Dante Bichette Jr. at index [0]. */
-      return (people[0] && spanCovers(people[0], year)) ? people[0] : null;
+      /* Several people can carry one exact name -- the two Frank Thomases, the two
+       * Ken Griffeys. The name cannot tell them apart, so the career span does; the
+       * same rule surnameRetry already applies. This is still an exact-name match,
+       * just a disambiguated one, and it is why a 1992 Frank Thomas card stops
+       * resolving to the 1951-66 Frank Thomas and coming back blank. */
+      if (hits.length === 1) { exact = hits[0]; }
+      else if (hits.length > 1) {
+        /* Several people can carry one exact name: the two Frank Thomases, Sandy
+         * Alomar and Sandy Alomar Jr., Dante Bichette and Dante Bichette Jr. The
+         * name has said all it can, so the CAREER SPAN disambiguates -- the same
+         * rule surnameRetry already applies, and still an exact-name match.
+         * Ranked, best first:
+         *   1. known span covering the card year AND fullName-exact
+         *   2. known span covering the card year
+         *   3. fullName-exact (identity is right even when the span is not: a
+         *      1993 Jeter card is still Derek Jeter; the stats side refuses it)
+         *   4. anything spanCovers() will accept
+         * "Known" matters: a player with NO debut/lastPlayed dates passes
+         * spanCovers() by design (absence of evidence is not evidence), so an
+         * undated Dante Bichette Jr. must never outrank a dated Dante Bichette
+         * whose career actually contains 1993. */
+        var known = function (p) { return !!(p && (p.mlbDebutDate || p.lastPlayedDate)); };
+        var isFull = function (p) { return !!(p && resName(p.fullName) === key); };
+        var tiers = [
+          function (p) { return known(p) && spanCovers(p, year) && isFull(p); },
+          function (p) { return known(p) && spanCovers(p, year); },
+          function (p) { return isFull(p); },
+          function (p) { return spanCovers(p, year); }
+        ];
+        var tier, k;
+        for (tier = 0; tier < tiers.length && !exact; tier++) {
+          for (k = 0; k < hits.length; k++) { if (tiers[tier](hits[k])) { exact = hits[k]; break; } }
+        }
+        if (!exact) { exact = hits[0]; tier = 0; }
+        console.log(TAG + ' "' + nm + '" matched ' + hits.length + ' people exactly; took ' + exact.fullName + ' #' + exact.id + ' at tier ' + tier + ' for ' + year);
+      }
+      return { people: people, exact: exact };
+    }).catch(function () { return { people: [], exact: null }; });
+  }
+
+  /* Resolution, in strict order -- every step is an EXACT accent-folded match,
+   * never a substring or fuzzy one:
+   *   1. the FULL catalog name as written ("Andy Van Slyke", "Jacob deGrom");
+   *   2. the same name with its trailing subset codes stripped ("Darin Erstad
+   *      GG" -> "Darin Erstad"), matched by the SAME exact rule;
+   *   3. the surname retry, which demands an exact variant match AND a covering
+   *      career span, and refuses outright on ambiguity;
+   *   4. a span-gated positional guess from the last candidate's result list.
+   * Step 1 is what makes step 2 safe: the stripped retry only ever runs when the
+   * name as written matched nobody, so a real player whose surname happens to
+   * look like a subset code can never be truncated out from under us.
+   * An exact name match is trusted on its own: a 1993 Jeter card is still Derek
+   * Jeter even though he debuted in 1995. That is a stats-provenance question,
+   * not an identity one, and it is answered on the stats side. */
+  function searchPerson(name, year) {
+    var cands = nameCandidates(name);
+    if (!cands.length) { console.warn(TAG + ' no resolvable name in "' + String(name) + '"'); return Promise.resolve(null); }
+    var lastPeople = [];
+    return cands.reduce(function (chain, nm, i) {
+      return chain.then(function (hit) {
+        if (hit) return hit;
+        return searchOne(nm, year).then(function (r) {
+          lastPeople = r.people || [];
+          if (r.exact && i > 0) {
+            console.log(TAG + ' "' + name + '" resolved as "' + nm + '" after stripping trailing subset code(s) -> ' + r.exact.fullName + ' #' + r.exact.id);
+          }
+          return r.exact || null;
+        });
       });
-    }).catch(function () { return null; });
+    }, Promise.resolve(null)).then(function (exact) {
+      if (exact) return exact;
+      return surnameRetry(cands[cands.length - 1], year).then(function (alt) {
+        if (alt) return alt;
+        /* No exact match anywhere, so lastPeople[0] is only a guess. Accept it
+         * ONLY if the career span can cover this card year; otherwise return null
+         * and let the caller report "unresolved" honestly. This is what stops a
+         * plain "Dante Bichette" card resolving to Dante Bichette Jr. at [0]. */
+        return (lastPeople[0] && spanCovers(lastPeople[0], year)) ? lastPeople[0] : null;
+      });
+    });
   }
 
   function resolvePerson(name, year) {
-    var nm = cleanName(name).toLowerCase();
+    var nm = nameCandidates(name).join('~').toLowerCase();
     if (!nm) return Promise.resolve(null);
     /* Cache key includes the year: the same name can resolve differently for
        different card years now that the fallback is span-guarded. */
@@ -266,14 +424,41 @@
     return has('AB') || has('AVG') || has('OBP') || has('SLG') || has('OPS');
   }
 
-  /* Map an MLB season split onto the depot's stat labels. STAT_MAP_PIT and
-   * STAT_MAP_HIT are bare globals declared by index.html -- read with typeof,
-   * never through window (they are not window properties). */
+  /* Depot stat labels. index.html declares STAT_MAP_HIT / STAT_MAP_PIT as bare
+   * globals for its own renderer -- but this module is ALSO loaded by
+   * game/shop.html, game/index.html and game/builder.html, where that inline
+   * script does not exist. statMap() used to read the bare globals and nothing
+   * else, so on every non-binder surface it returned null and seasonStatsProv()
+   * answered {stats:null} for EVERY card, whatever the name resolved to.
+   *
+   * That is why Nick's paid pack rips landed "No stats recorded yet": the packs
+   * are ripped on game/shop.html, so the post-grant enrichment could never write
+   * a line, while the identical card enriched from the binder filled in fine.
+   * Verified live 2026-07-30, same module, same card: typeof STAT_MAP_HIT is
+   * 'undefined' on game/shop.html and 'object' on index.html; seasonStatsProv
+   * (Darin Erstad #113889, 2005, hitting) returned {stats:null} on the shop and
+   * the full 15-cell Angels line on the binder.
+   *
+   * The module now carries its own copy and defers to the page global whenever
+   * the page has one. Bare globals are NOT window properties in this repo, so
+   * they are read with typeof and never through window. */
+  var DEF_MAP_HIT = { gamesPlayed: 'G', atBats: 'AB', runs: 'R', hits: 'H', doubles: '2B', triples: '3B', homeRuns: 'HR', rbi: 'RBI', stolenBases: 'SB', baseOnBalls: 'BB', strikeOuts: 'SO', avg: 'AVG', obp: 'OBP', slg: 'SLG', ops: 'OPS' };
+  var DEF_MAP_PIT = { wins: 'W', losses: 'L', era: 'ERA', gamesPlayed: 'G', gamesStarted: 'GS', completeGames: 'CG', shutouts: 'SHO', saves: 'SV', inningsPitched: 'IP', hits: 'H', baseOnBalls: 'BB', strikeOuts: 'SO', whip: 'WHIP' };
+  var _mapWarned = {};
+
   function statMap(group) {
+    var g = null;
     try {
-      if (group === 'pitching') return (typeof STAT_MAP_PIT !== 'undefined') ? STAT_MAP_PIT : null;
-      return (typeof STAT_MAP_HIT !== 'undefined') ? STAT_MAP_HIT : null;
-    } catch (e) { return null; }
+      if (group === 'pitching') { g = (typeof STAT_MAP_PIT !== 'undefined') ? STAT_MAP_PIT : null; }
+      else { g = (typeof STAT_MAP_HIT !== 'undefined') ? STAT_MAP_HIT : null; }
+    } catch (e) { g = null; }
+    if (g) return g;
+    var which = (group === 'pitching') ? 'PIT' : 'HIT';
+    if (!_mapWarned[which]) {
+      _mapWarned[which] = 1;
+      console.warn(TAG + ' page global STAT_MAP_' + which + ' is absent on this surface; using the module default label map (this is the pack-shop case)');
+    }
+    return (group === 'pitching') ? DEF_MAP_PIT : DEF_MAP_HIT;
   }
 
   /* Same pull as seasonStats(), but it also reports the team the chosen split belongs
@@ -575,6 +760,8 @@
   window.depotNotesUnpack = unpackNotes;
   window.depotCleanName = cleanName;
   window.depotNormName = normName;
+  window.depotNameCandidates = nameCandidates;
+  window.depotBioForDisplay = bioForDisplay;
   window.depotEnrichPositions = enrichRows;
   window.depotBackfillPositions = backfill;
   window.depotRepullStats = repull;

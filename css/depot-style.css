@@ -107,6 +107,41 @@ a{color:inherit;text-decoration:none}
 .depot-bell{position:relative;color:var(--depot-gold)}
 .depot-bell .dot{position:absolute;top:-6px;right:-8px;background:var(--depot-red);color:#fff;font-size:7px;padding:2px 4px;border:2px solid #000}
 
+/* ---- account cluster: ONE 8-bit treatment on every surface -----------------
+ * The email micro-label and the Log out control are shell-owned markup
+ * (js/depot-shell.js) and must read identically on all four surfaces: the
+ * binder, the Pack Shop, the Lineup Builder and Play Ball.
+ *
+ * The binder only ever got this look by accident -- index.html sets the whole
+ * <body> in 'Press Start 2P', so its relocated .auth-btn and the shell's email
+ * span inherited the pixel font, while game/shop.html (body font 'Baloo 2')
+ * rendered the same markup as plain text and showed no Log out at all. Stating
+ * it once here is what makes the four surfaces agree. Values are the binder's
+ * measured live treatment: pixel font, 11px gold pill, 2px border, 3px radius,
+ * 4px/10px padding, black label. Font-size on the email is deliberately left
+ * to .depot-account's --fs-micro so nothing about the binder moves. */
+.depot-account .email{
+  font-family:'Press Start 2P','Oswald',monospace;
+  font-weight:700;
+  line-height:1.6;
+}
+.depot-account .auth-btn{
+  font-family:'Press Start 2P','Oswald',monospace;
+  font-size:11px;
+  font-weight:600;
+  line-height:1.4;
+  color:#000;
+  background:var(--depot-gold,#f8d000);
+  border:2px solid var(--depot-gold,#f8d000);
+  border-radius:3px;
+  padding:4px 10px;
+  cursor:pointer;
+}
+.depot-account .auth-btn:hover{
+  background:var(--depot-navy,#0d2d5c);
+  color:var(--depot-gold,#f8d000);
+}
+
 /* ---- mode nav (Depot / Builder / Season / Play Ball) ----------------------- */
 .depot-nav{
   display:flex;gap:var(--sp2);flex-wrap:wrap;align-items:center;
