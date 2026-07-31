@@ -28,10 +28,18 @@
 
 /* ---- chapter 03: the binder tile (from dcTileHTML) ---------------------- */
 
-/* DEVIATION FROM THE TOKENS, PRESERVED ON PURPOSE: chapter 00 specifies the
-   scan stripe as rgba(16,69,107,.09) 0 9px / transparent 9px 18px. The tile
-   was written with .08 / 8px / 16px. Transcribed as-found; the parts branch is
-   where it becomes the token. */
+/* VISUAL DIFF #1 OF 2, TAKEN ON THIS BRANCH (was: a preserved deviation).
+   The transcription carried the tile's as-found stripe -- rgba(16,69,107,.08)
+   0 8px / transparent 8px 16px -- because correcting it inside a zero-delta
+   refactor would have hidden a visual change inside a proof that nothing
+   moved. This is that change, made where it is reviewable: the stripe is now
+   the chapter-00 token itself, var(--rd-stripe) =
+   repeating-linear-gradient(45deg,rgba(16,69,107,.09) 0 9px,transparent 9px 18px).
+   Referencing the token rather than retyping .09/9px/18px is the point: the
+   value now has exactly one definition, in css/depot-redesign.css :root, and
+   the tile can no longer drift away from it again.
+   EXPECTED CSSOM DELTA: .rd-btile__well background-image only, on every tile.
+   Nothing else in this file moves. */
 .rd-btile{
   background:#f2f9fd;
   border:3px solid #10456b;
@@ -43,7 +51,7 @@
 .rd-btile__well{
   height:96px;
   border-radius:8px;
-  background:repeating-linear-gradient(45deg,rgba(16,69,107,.08) 0 8px,transparent 8px 16px);
+  background:var(--rd-stripe);
   display:flex;
   align-items:center;
   justify-content:center;
