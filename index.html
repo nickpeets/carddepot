@@ -1,22 +1,28 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <script src="js/version.js?v=2c5315c"></script>
-  <script src="js/depot-core.js?v=2c5315c"></script>
+  <script src="js/version.js?v=09dc9ca"></script>
+  <script src="js/depot-core.js?v=09dc9ca"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>The Depot</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gshtatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Spectral:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/depot-style.css?v=2c5315c">
-  <link rel="stylesheet" href="css/season.css?v=2c5315c">
-  <link rel="stylesheet" href="css/depot-redesign.css?v=2c5315c">
-<link rel="stylesheet" href="css/depot-redesign-binder.css?v=2c5315c">
-    <script src="js/depot-shell.js?v=2c5315c"></script>
-  <script src="js/depot-redesign.js?v=2c5315c"></script>
-  <script src="js/depot-season-shell.js?v=2c5315c"></script>
+  <link rel="stylesheet" href="css/depot-style.css?v=09dc9ca">
+  <link rel="stylesheet" href="css/season.css?v=09dc9ca">
+  <link rel="stylesheet" href="css/depot-redesign.css?v=09dc9ca">
+<link rel="stylesheet" href="css/depot-redesign-binder.css?v=09dc9ca">
+    <script src="js/depot-shell.js?v=09dc9ca"></script>
+  <script src="js/depot-redesign.js?v=09dc9ca"></script>
+  <script src="js/depot-season-shell.js?v=09dc9ca"></script>
   <style>
+/* The spotlight skin that used to live in this block - four interleaved
+   layers, from the original leather/paper rules through the Phase-2 2b demo
+   skin - now lives in css/depot-spotlight-legacy.css, linked immediately
+   after this block so every rule keeps its exact cascade position. Moved
+   byte-for-byte in the same commit that stopped relying on it. */
+
     /* The eight !important rules that used to live here - the 5:7 well, the
    contain-fit photo, the has-art caption drop and the #binderGrid column
    count - are gone. They existed to out-rank the tile's own inline styles.
@@ -203,48 +209,33 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--brass);out
 .reel-arrow:hover{background:var(--brass);color:var(--leather-dark)}
 
 /* ---------- spotlight ---------- */
-.spotlight{
-  position:fixed;inset:0;background:rgba(20,8,4,.82);backdrop-filter:blur(6px);
-  display:none;align-items:center;justify-content:center;z-index:50;padding:2rem;
-}
-.spotlight.open{display:flex}
-.spot-card{
-  position:relative;perspective:1600px;width:min(340px,80vw);aspect-ratio:5/7;cursor:pointer;
-}
-.spot-inner{position:relative;width:100%;height:100%;transition:transform .7s;transform-style:preserve-3d}
-.spot-card.flipped .spot-inner{transform:rotateY(180deg)}
-.spot-face{
-  position:absolute;inset:0;backface-visibility:hidden;border-radius:12px;overflow:hidden;
-  box-shadow:0 0 0 1px rgba(199,154,59,.5),0 30px 70px rgba(0,0,0,.6),0 0 60px rgba(199,154,59,.15);
-}
-.spot-back{transform:rotateY(180deg);background:var(--paper);padding:1.1rem 1.1rem .9rem;display:flex;flex-direction:column;overflow-y:auto}
-.back-head{display:flex;align-items:baseline;justify-content:space-between;gap:.5rem;border-bottom:2px solid var(--leather);padding-bottom:.4rem;margin-bottom:.35rem}
-.back-head h3{font-family:'Oswald',sans-serif;text-transform:uppercase;font-size:1.05rem;color:var(--ink);line-height:1}
-.back-badge{font-family:'JetBrains Mono',monospace;font-size:.56rem;letter-spacing:.04em;color:var(--cream);background:var(--leather);padding:.2rem .4rem;border-radius:3px;white-space:nowrap}
-.back-sub{font-family:'JetBrains Mono',monospace;font-size:.66rem;color:var(--brass);margin-bottom:.7rem}
-.statgrid-wrap{overflow-x:auto;margin:0 -.2rem .6rem;scrollbar-width:thin;scrollbar-color:var(--brass) transparent}
-.statgrid-wrap::-webkit-scrollbar{height:5px}
-.statgrid-wrap::-webkit-scrollbar-thumb{background:var(--brass);border-radius:3px}
-.statgrid{border-collapse:collapse;font-family:'JetBrains Mono',monospace;width:100%}
-.statgrid caption{caption-side:top;text-align:left;font-family:'Spectral',serif;font-style:italic;font-size:.7rem;color:var(--ink-soft);margin-bottom:.3rem}
-.statgrid th{font-size:.56rem;letter-spacing:.02em;color:var(--cream);background:var(--leather-light);padding:.28rem .4rem;text-align:center;font-weight:500;border:1px solid var(--leather)}
-.statgrid td{font-size:.72rem;color:var(--ink);padding:.32rem .4rem;text-align:center;border:1px solid rgba(0,0,0,.12);background:#fff}
-.no-stats{font-family:'Spectral',serif;font-style:italic;font-size:.78rem;color:var(--ink-soft);padding:.5rem 0}
-.spot-back .bio{font-style:italic;font-size:.78rem;color:var(--ink-soft);line-height:1.4;margin-bottom:.5rem}
-.back-foot{margin-top:auto;padding-top:.4rem}
-.btn-bref{width:100%;font-family:'Oswald',sans-serif;text-transform:uppercase;letter-spacing:.04em;font-size:.68rem;padding:.5rem;background:#fff;color:var(--leather);border:1px solid var(--leather);border-radius:5px}
-.btn-bref:hover{background:var(--leather);color:var(--cream)}
-.spot-meta{
-  position:absolute;bottom:-3.2rem;left:0;right:0;text-align:center;
-  font-family:'JetBrains Mono',monospace;font-size:.72rem;color:var(--cream-dim);
-}
-.spot-meta .hint{color:var(--brass);opacity:.8}
-.spot-close{
-  position:absolute;top:8px;right:8px;z-index:6;width:36px;height:36px;border-radius:50%;
-  border:1px solid rgba(199,154,59,.4);color:var(--cream);font-size:1.3rem;
-  display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,.3);
-}
-.spot-close:hover{background:var(--brass);color:var(--leather-dark)}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 /* ---------- add-card form: RETIRED (chore/retro-css-retire) ----------
    The modal-only rules that used to live here -- and in the RBI-reskin
@@ -265,11 +256,11 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--brass);out
                                               and prefers-reduced-motion
    -------------------------------------------------------------------- */
 .ph-text{font-family:'JetBrains Mono',monospace;font-size:.72rem;color:rgba(0,0,0,.3)}
-.spot-back-img{flex:none;width:100%;aspect-ratio:5/7;border-radius:6px;overflow:hidden;margin-bottom:.6rem;background:#e9e0cc center top/cover no-repeat;box-shadow:0 0 0 1px rgba(0,0,0,.12)}
-.spot-back-img img{width:100%;height:100%;object-fit:cover;object-position:center top;display:block}
-.spot-back-scroll{flex:none;overflow:visible;scrollbar-width:thin;scrollbar-color:var(--brass) transparent}
-.spot-back-scroll::-webkit-scrollbar{width:5px}
-.spot-back-scroll::-webkit-scrollbar-thumb{background:var(--brass);border-radius:3px}
+
+
+
+
+
 .btn-google{width:100%;font-family:'Oswald',sans-serif;text-transform:uppercase;letter-spacing:.04em;font-size:.8rem;padding:.6rem;background:var(--leather);color:var(--cream);border-radius:5px;font-weight:500}
 .btn-google:hover{background:var(--leather-light)}
 .btn-ghost{font-family:'Oswald',sans-serif;text-transform:uppercase;letter-spacing:.05em;font-size:.82rem;color:var(--ink-soft);padding:.55rem 1.1rem;border:1px solid rgba(0,0,0,.2);border-radius:5px}
@@ -277,25 +268,24 @@ button:focus-visible,[tabindex]:focus-visible{outline:2px solid var(--brass);out
 .toast.show{opacity:1}
 
 @media (max-width:640px){
-  .form-body{flex-direction:column}
-  .stage{flex-direction:column;padding:1rem}
-  .rail{flex-direction:row;flex-wrap:wrap;position:static;width:100%;margin-bottom:1rem}
-  .rail-label{width:100%}
-  .era-tab{flex:1;min-width:120px}
-  .grid{margin-left:0}
-  .page::before{display:none}
-  .grid{gap:.5rem}
-  .brand{font-size:1.4rem}
+.form-body{flex-direction:column}
+.stage{flex-direction:column;padding:1rem}
+.rail{flex-direction:row;flex-wrap:wrap;position:static;width:100%;margin-bottom:1rem}
+.rail-label{width:100%}
+.era-tab{flex:1;min-width:120px}
+.grid{margin-left:0}
+.page::before{display:none}
+.grid{gap:.5rem}
+.brand{font-size:1.4rem}
 }
 @media (prefers-reduced-motion:reduce){
-  *{transition:none!important;scroll-behavior:auto}
-  .spot-inner{transition:transform .01s!important}
+*{transition:none!important;scroll-behavior:auto}
 }
 /* ---- card-accurate rolodex + grafted image-error + remove button ---- */
 .img-missing{display:flex;align-items:center;justify-content:center;text-align:center;background:#e9e0cc!important}
 .ph-text.err{color:#9a3b1f;line-height:1.35;font-size:.7rem;padding:.4rem}
-.spot-remove{margin-top:.55rem}
-.spot-meta .btn-ghost{display:inline-block;width:auto;padding:.4rem 1rem;font-size:.68rem;cursor:pointer}
+
+
 .drop-hot{outline:3px dashed var(--brass,#c79a3b);outline-offset:-6px;box-shadow:0 0 0 9999px rgba(199,154,59,.08) inset;transition:outline-color .1s}
 
 
@@ -497,36 +487,26 @@ button:focus-visible,[tabindex]:focus-visible{outline:3px solid var(--brass);out
   background:var(--sb-blue);color:var(--brass);box-shadow:3px 3px 0 #000;font-family:'Press Start 2P',monospace;font-size:.7rem;transition:none;
 }
 .reel-arrow:hover{background:var(--brass);color:#000}
-.spotlight{background:rgba(13,45,92,.88);backdrop-filter:none}
-.spot-face{border:4px solid #000 !important;box-shadow:6px 6px 0 #000;background:var(--cream)}
-.spot-close{
-  font-family:'Press Start 2P',monospace !important;font-size:.7rem;
-  background:var(--brass);color:#000;border:3px solid #000 !important;box-shadow:3px 3px 0 #000;
-  width:auto;height:auto;padding:.5rem .6rem;border-radius:0 !important;
-}
-.spot-close:hover{background:#fff}
-.spot-back{background:var(--cream);padding:1.1rem}
-.back-head{border-bottom:3px solid #000;align-items:center}
-.back-head h3{font-family:'Press Start 2P',monospace !important;font-size:.7rem;line-height:1.5;color:var(--sb-blue);letter-spacing:0}
-.back-badge{font-family:'Press Start 2P',monospace !important;font-size:.42rem;background:var(--brass);color:#000;border:2px solid #000;padding:.25rem .4rem}
-.back-sub{font-family:'Oswald',sans-serif;color:var(--ink-soft);font-size:.85rem}
-.statgrid{font-family:'JetBrains Mono','Courier New',monospace !important;border:3px solid #000}
-.statgrid caption{font-family:'Oswald',sans-serif !important;font-style:normal;font-size:.78rem;color:var(--ink-soft);font-weight:600}
-.statgrid th{
-  font-family:'JetBrains Mono',monospace !important;font-size:.6rem;letter-spacing:0;
-  background:var(--sb-blue) !important;color:#fff !important;border:1px solid #000 !important;padding:.3rem .42rem;
-}
-.statgrid td{font-family:'JetBrains Mono',monospace !important;font-size:.74rem;color:var(--ink);border:1px solid #000 !important;background:#fff;padding:.32rem .42rem}
-.no-stats{font-family:'Oswald',sans-serif !important;font-style:normal;color:var(--ink-soft)}
-.spot-back .bio{font-family:'Oswald',sans-serif;color:var(--ink-soft);font-size:.86rem}
-.statgrid-wrap::-webkit-scrollbar-thumb,.spot-back-scroll::-webkit-scrollbar-thumb{background:var(--brass);border:1px solid #000}
-.btn-bref{
-  font-family:'Press Start 2P',monospace !important;font-size:.42rem;line-height:1.6;
-  color:#fff;background:var(--sb-blue);border:3px solid #000 !important;box-shadow:2px 2px 0 #000;padding:.5rem .6rem;
-}
-.btn-bref:hover{background:var(--sb-blue-lite);color:var(--brass)}
-.spot-meta{font-family:'Press Start 2P',monospace !important;font-size:.42rem;color:#fff}
-.spot-meta .hint{color:#cfe0ff}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 /* add-card modal rules RETIRED here too (chore/retro-css-retire) -- they now
    live in style#add-card-v2-skin. Kept below because their selectors are not
    modal-only: .ph-text, .ph-text.err/.rolo-status.err, the .rolo-row button
@@ -544,29 +524,26 @@ button:focus-visible,[tabindex]:focus-visible{outline:3px solid var(--brass);out
 }
 .btn-ghost:hover{background:var(--cream-dim)}
 .btn-solid:active,.btn-ghost:active,.mode-btn:active{transform:translate(3px,3px);box-shadow:0 0 0 #000}
-.spot-remove{margin-top:1.1rem;text-align:center;background:none !important;border:none !important;box-shadow:none !important;padding:0}.spot-remove .btn-ghost{font-family:'Oswald',sans-serif !important;text-transform:none !important;letter-spacing:normal !important;font-size:.72rem !important;color:#9a4b52 !important;background:none !important;border:none !important;box-shadow:none !important;padding:.2rem .3rem !important;width:auto !important;text-decoration:underline;cursor:pointer;opacity:.75}.spot-remove .btn-ghost:hover{color:#c1121f !important;opacity:1}
+
 .toast{
   font-family:'Press Start 2P',monospace !important;font-size:.5rem;line-height:1.6;
   background:var(--sb-blue);color:#fff;border:3px solid #000 !important;box-shadow:4px 4px 0 #000;
 }
 @media (max-width:640px){
-  .brand{font-size:.85rem}
-  .modes{padding:.9rem 1rem}
-  .mode-btn{font-size:.5rem;padding:.6rem .6rem}
-  .era-tab{font-size:.5rem}
-  .era-title{font-size:.7rem}
-  .page{padding:1rem;box-shadow:4px 4px 0 #000}
-  .card .nameplate{font-size:.4rem}
-  .card .pos{font-size:.34rem}
-  .form-head h2{font-size:.65rem}
-  .back-head h3{font-size:.6rem}
-  .group-by select,.group-by label{font-size:.45rem}
-  .statgrid th{font-size:.55rem}
-  .statgrid td{font-size:.68rem}
+.brand{font-size:.85rem}
+.modes{padding:.9rem 1rem}
+.mode-btn{font-size:.5rem;padding:.6rem .6rem}
+.era-tab{font-size:.5rem}
+.era-title{font-size:.7rem}
+.page{padding:1rem;box-shadow:4px 4px 0 #000}
+.card .nameplate{font-size:.4rem}
+.card .pos{font-size:.34rem}
+.form-head h2{font-size:.65rem}
+.group-by select,.group-by label{font-size:.45rem}
 }
 @media (prefers-reduced-motion:reduce){
-  .card,.card:hover,.mode-btn:active,.btn-solid:active,.btn-ghost:active{transition:none !important;transform:none !important}
-  *{scroll-behavior:auto !important}
+.card,.card:hover,.mode-btn:active,.btn-solid:active,.btn-ghost:active{transition:none !important;transform:none !important}
+*{scroll-behavior:auto !important}
 }
 /* ===== END RBI RESKIN ===== */
 
@@ -672,15 +649,15 @@ body{
 /* Add-card and spotlight remain full-screen overlays above the frame (unchanged behavior) */
 /* ===== Mobile: frame goes full-width, cards reflow to fewer columns ===== */
 @media (max-width:760px){
-  body{padding:0 !important;}
-  #appFrame{max-width:100%;border-left:none;border-right:none;box-shadow:0 6px 0 #000;}
-  #binderStage.stage{padding:1rem .7rem 1.3rem !important;}
-  .page{padding:1rem !important;}
-  .grid{grid-template-columns:repeat(2,1fr) !important;gap:.7rem !important;}
+body{padding:0 !important;}
+#appFrame{max-width:100%;border-left:none;border-right:none;box-shadow:0 6px 0 #000;}
+#binderStage.stage{padding:1rem .7rem 1.3rem !important;}
+.page{padding:1rem !important;}
+.grid{grid-template-columns:repeat(2,1fr) !important;gap:.7rem !important;}
 }
 @media (max-width:460px){
-  .grid{grid-template-columns:1fr !important;}
-  /* (removed) #eraTabs column-stack + full-width era-tab: replaced by the
+.grid{grid-template-columns:1fr !important;}
+/* (removed) #eraTabs column-stack + full-width era-tab: replaced by the
      wrapping-row mobile layout in the (max-width:600px) block below. */
 }
 
@@ -695,140 +672,109 @@ body{
        child of .dc-binder; content area = second child) + stable inner ids.
        ====================================================================== */
     @media (max-width:600px){
-      /* Search row: stack vertically -> search full-width, pills wrap below it */
-      #appFrame > .dc-binder > div:first-child{
+/* Search row: stack vertically -> search full-width, pills wrap below it */
+#appFrame > .dc-binder > div:first-child{
         flex-direction:column !important;
         align-items:stretch !important;
         gap:10px !important;
         padding:14px 16px 0 !important;
       }
-      #binderSearch{ width:100% !important; box-sizing:border-box !important; }
-      /* Filter pills: a horizontal WRAPPING row (undo the old vertical stack) */
-      #eraTabs{
+#binderSearch{ width:100% !important; box-sizing:border-box !important; }
+/* Filter pills: a horizontal WRAPPING row (undo the old vertical stack) */
+#eraTabs{
         flex-direction:row !important;
         flex-wrap:wrap !important;
         justify-content:flex-start !important;
         gap:8px !important;
         width:100% !important;
       }
-      #eraTabs .dc-fpill, #eraTabs .era-tab{ width:auto !important; flex:0 0 auto !important; }
-      /* Content area: tighter phone padding */
-      #appFrame > .dc-binder > div:nth-child(2){ padding:12px 16px 18px !important; }
-      /* Toolbar (Page N / prev-next / Group by / +Add a card): let it wrap cleanly */
-      #appFrame > .dc-binder > div:nth-child(2) > div:first-child{
+#eraTabs .dc-fpill, #eraTabs .era-tab{ width:auto !important; flex:0 0 auto !important; }
+/* Content area: tighter phone padding */
+#appFrame > .dc-binder > div:nth-child(2){ padding:12px 16px 18px !important; }
+/* Toolbar (Page N / prev-next / Group by / +Add a card): let it wrap cleanly */
+#appFrame > .dc-binder > div:nth-child(2) > div:first-child{
         flex-wrap:wrap !important;
         justify-content:flex-start !important;
         gap:10px !important;
       }
-      /* Group By + Add-a-card ride ABOVE the Page/prev-next row on phones.
+/* Group By + Add-a-card ride ABOVE the Page/prev-next row on phones.
          The toolbar row already wraps (rule directly above), so giving the bar
          order:-1 and a full line pushes Page/arrows down to the second line.
          CSS-only: no markup moved, no JS touched. */
-      #groupByBar{ margin-left:0 !important; flex-wrap:wrap !important; gap:8px !important; order:-1 !important; width:100% !important; justify-content:flex-start !important; }
-      /* +Add a card: keep the pill shape, never wrap into an oval */
-      .depot-add-card{
+#groupByBar{ margin-left:0 !important; flex-wrap:wrap !important; gap:8px !important; order:-1 !important; width:100% !important; justify-content:flex-start !important; }
+/* +Add a card: keep the pill shape, never wrap into an oval */
+.depot-add-card{
         white-space:nowrap !important;
         flex:0 0 auto !important;
         width:auto !important;
         height:auto !important;
       }
-      /* Cards: 2-up with sensible proportions (was a cramped 3-up) */
-      #binderGrid{ grid-template-columns:repeat(2,1fr) !important; gap:12px !important; }
-    }
+/* Cards: 2-up with sensible proportions (was a cramped 3-up) */
+#binderGrid{ grid-template-columns:repeat(2,1fr) !important; gap:12px !important; }
+}
 
 @media (prefers-reduced-motion:reduce){
-  #appFrame, .page, .card{transition:none !important;animation:none !important;}
+#appFrame, .page, .card{transition:none !important;animation:none !important;}
 }
 
 
 /* ===== SPOTLIGHT VERTICAL STACK — full image, name/team + hint below, remove underneath ===== */
-.spot-card{
-  aspect-ratio:auto !important;
-  display:flex;flex-direction:column;align-items:stretch;
-  width:min(360px,86vw);max-height:92vh;
-}
-.spot-inner{
-  position:relative;width:100%;aspect-ratio:2.5/3.5;flex:none;
-}
-.spot-face{position:absolute;inset:0;}
-.spot-face .frame{position:absolute;inset:0;display:flex;}
-.spot-face .photo{
-  flex:1;background-size:contain !important;background-repeat:no-repeat !important;
-  background-position:center center !important;background-color:#0d2d5c;
-}
-.spot-back .spot-back-img{
-  aspect-ratio:auto !important;width:100%;max-height:60vh;
-  background:#0d2d5c !important;display:flex;align-items:center;justify-content:center;
-}
-.spot-back .spot-back-img img{
-  width:100%;height:auto;max-height:60vh;object-fit:contain !important;
-  object-position:center center !important;
-}
-.spot-meta{
-  position:static !important;bottom:auto !important;left:auto !important;right:auto !important;
-  margin-top:.9rem;width:100%;display:flex;flex-direction:column;align-items:stretch;gap:.55rem;
-}
-.spot-meta .spot-name{
-  font-family:'Press Start 2P',monospace;font-size:.6rem;line-height:1.6;color:var(--brass);
-  text-shadow:2px 2px 0 #000;text-align:center;text-transform:uppercase;
-}
-.spot-meta .spot-name .spot-name-sub{
-  display:block;color:#fff;font-size:.45rem;margin-top:.4rem;text-shadow:2px 2px 0 #000;
-}
-.spot-meta .hint{display:block;text-align:center;}
-.spot-meta .spot-remove{margin-top:0 !important;width:auto !important;}
-.spot-meta .spot-remove .btn-ghost{width:100% !important;display:block;}
-@media (max-width:640px){
-  .spot-card{width:90vw;}
-  .spot-back .spot-back-img,.spot-back .spot-back-img img{max-height:48vh;}
-}
-@media (prefers-reduced-motion:reduce){
-  .spot-inner{transition:none !important;}
-}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 /* ===== STAT GRID — old table look, two rows, no horizontal scroll ===== */
-.statgrid-wrap{overflow-x:visible !important;overflow:visible !important;margin:0 0 .6rem !important;}
-.statgrid{display:table !important;border-collapse:collapse !important;width:100%;table-layout:fixed;background:transparent;border:0 !important;}
-.statgrid caption{font-family:'Oswald',sans-serif !important;font-style:normal;font-size:.78rem;color:var(--ink-soft);font-weight:600;text-align:left;caption-side:top;margin-bottom:.35rem;}
-.statgrid th{font-family:'JetBrains Mono','Courier New',monospace !important;font-size:.58rem;letter-spacing:0;background:var(--sb-blue) !important;color:#fff !important;border:1px solid #000 !important;padding:.3rem .2rem;text-align:center;font-weight:500;}
-.statgrid td{font-family:'JetBrains Mono','Courier New',monospace !important;font-size:.74rem;color:var(--ink);border:1px solid #000 !important;background:#fff;padding:.32rem .2rem;text-align:center;word-break:break-word;}
-.statgrid tbody+thead th{border-top:2px solid #000 !important;}
-@media (max-width:640px){
-  .statgrid th{font-size:.5rem;}
-  .statgrid td{font-size:.62rem;}
-}
+
+
+
+
+
+
+
 
 .rolo-var-flag{display:inline-block;margin:0 6px 4px 0;padding:2px 8px;border-radius:4px;background:#7a2e00;color:#ffd9b3;font-weight:600;font-size:.8rem;border:1px solid #ff8c2e;}
 .rolo-var-chip{display:inline-block;margin:0 4px 4px 0;padding:2px 9px;border-radius:12px;background:#1e2a38;color:#cfe2ff;border:1px solid #3a5a80;font-size:.8rem;cursor:pointer;font-family:inherit;}
 .rolo-var-chip:hover{background:#27405c;border-color:#5a8ac0;}
 .rolo-var-chip.sel{background:#2e7d32;color:#fff;border-color:#7bd17f;font-weight:700;}
 
-.depot-prestige-breakdown{margin-top:14px;padding:12px;border:3px solid var(--brass,#c79a3b);border-radius:8px;background:rgba(10,10,20,.05);font-family:'JetBrains Mono',monospace}
-.depot-prestige-breakdown .dp-head{font-weight:700;margin-bottom:8px;font-size:.95rem}
-.depot-prestige-breakdown .dp-head .dp-total{font-size:1.25rem}
-.depot-prestige-breakdown.is-gold .dp-head{color:#b58a00}
-.depot-prestige-breakdown .dp-row{display:flex;justify-content:space-between;padding:3px 0;border-bottom:1px dotted rgba(0,0,0,.2);font-size:.85rem}
-.depot-prestige-breakdown .dp-total-row{font-weight:700;border-bottom:none;border-top:2px solid rgba(0,0,0,.3);margin-top:4px;padding-top:6px}
-.depot-prestige-breakdown .dp-note{margin-top:8px;font-size:.72rem;opacity:.75;font-style:italic}
+
+
+
+
+
+
+
 
 
 /* ==== Phase 2 cutover: card-detail (2b) demo skin — appended override, openSpot JS untouched ==== */
-.spotlight{ background:rgba(16,69,107,.55); }
-.spot-card{ background:#2eb2e6; border:3px solid #10456b; border-radius:16px; box-shadow:0 18px 40px rgba(16,69,107,.35); font-family:'Baloo 2',sans-serif; color:#10456b; }
-.spot-inner{ gap:18px; }
-.spot-face{ background:repeating-linear-gradient(45deg,rgba(16,69,107,.08) 0 8px,transparent 8px 16px); border:2px dashed rgba(16,69,107,.3); border-radius:12px; }
-.spot-face img{ border-radius:10px; }
-.spot-back{ background:repeating-linear-gradient(45deg,rgba(16,69,107,.08) 0 8px,transparent 8px 16px); }
-.spot-meta{ background:#fff7df; border:2px solid #10456b; border-radius:14px; color:#10456b; font-family:'Baloo 2',sans-serif; }
-.spot-name{ color:#10456b; font-family:'Baloo 2',sans-serif; font-size:18px; font-weight:800; }
-.spot-name-sub{ color:#10456b; font-family:'Baloo 2',sans-serif; }
-.spot-close{ background:#fff; border:3px solid #10456b; color:#10456b; border-radius:999px; font-weight:700; }
+
+
+
+
+
+
+
+
+
+
 /* D4 editable controls kept fully functional; give them the demo chip look */
-#d4GradeSel, #d4CondInput{ border:2px solid #10456b; border-radius:10px; font-family:'Baloo 2',sans-serif; color:#10456b; background:#dff1fb; }
-#d4GradeVal{ background:#10456b; color:#fff; border-radius:999px; font-family:'Baloo 2',sans-serif; font-weight:700; padding:3px 10px; }
-#d4StarBtn{ border-radius:999px; font-family:'Baloo 2',sans-serif; }
-#d4Status{ color:#1d6b2a; font-family:'Baloo 2',sans-serif; }
+
+
+
+
 
 /* add-card-search: catalog row list with art badges */
 .rolo-card-list{display:flex;flex-direction:column;gap:.25rem;margin-top:.4rem;max-height:220px;overflow:auto}
@@ -852,6 +798,7 @@ body{
 .rolo-noimg{margin-top:.4rem;font-size:.72rem;color:#7a5a00}
 .rolo-uphint{margin-top:.2rem;font-size:.68rem;opacity:.75}
 </style>
+<link rel="stylesheet" href="css/depot-spotlight-legacy.css?v=09dc9ca">
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 <!-- ===== DEPOT AUTH (Phase 1): Supabase client + auth UI styles ===== -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -1036,9 +983,9 @@ body{
 </style>
 <!-- /PHASE5-SHARE-CSS -->
 
-  <link rel="stylesheet" href="css/depot-shop-view.css?v=2c5315c">
-  <link rel="stylesheet" href="css/pack-shop-v2.css?v=2c5315c">
-    <link rel="stylesheet" href="depot-v2.css?v=2c5315c">
+  <link rel="stylesheet" href="css/depot-shop-view.css?v=09dc9ca">
+  <link rel="stylesheet" href="css/pack-shop-v2.css?v=09dc9ca">
+    <link rel="stylesheet" href="depot-v2.css?v=09dc9ca">
 </head>
 <body class="v2-body">
   <div id="sharedUnavailable"><div class="su-card"><div class="su-title">Not available</div><div class="su-sub">This collection isn&rsquo;t available.</div></div></div>
@@ -3387,22 +3334,22 @@ setAuthUI(false);
   });
 })();
 </script>
-<script src="game/season.js?v=2c5315c" defer></script>
-<script src="js/depot-index-shell.js?v=2c5315c"></script>
-<script src="js/depot-prestige.js?v=2c5315c"></script>
-<script src="js/depot-wallet.js?v=2c5315c"></script>
-  <script src="js/depot-pack-engine.js?v=2c5315c"></script>
-  <script src="js/depot-pixel-card.js?v=2c5315c"></script>
-  <script src="js/depot-library-index.js?v=2c5315c"></script>
-  <script src="js/depot-shop.js?v=2c5315c"></script>
-  <script src="js/depot-shop-view.js?v=2c5315c"></script>
-  <script src="js/depot-pack-history.js?v=2c5315c"></script>
-  <script src="js/depot-binder-shop.js?v=2c5315c"></script>
-  <script src="js/depot-library-art.js?v=2c5315c"></script>
-  <script src="js/depot-add-card-search.js?v=2c5315c"></script>
-    <script src="js/depot-position.js?v=2c5315c"></script>
-  <script src="js/depot-card-detail-2b.js?v=2c5315c"></script>
-  <script src="js/depot-card-detail-polish.js?v=2c5315c"></script>
+<script src="game/season.js?v=09dc9ca" defer></script>
+<script src="js/depot-index-shell.js?v=09dc9ca"></script>
+<script src="js/depot-prestige.js?v=09dc9ca"></script>
+<script src="js/depot-wallet.js?v=09dc9ca"></script>
+  <script src="js/depot-pack-engine.js?v=09dc9ca"></script>
+  <script src="js/depot-pixel-card.js?v=09dc9ca"></script>
+  <script src="js/depot-library-index.js?v=09dc9ca"></script>
+  <script src="js/depot-shop.js?v=09dc9ca"></script>
+  <script src="js/depot-shop-view.js?v=09dc9ca"></script>
+  <script src="js/depot-pack-history.js?v=09dc9ca"></script>
+  <script src="js/depot-binder-shop.js?v=09dc9ca"></script>
+  <script src="js/depot-library-art.js?v=09dc9ca"></script>
+  <script src="js/depot-add-card-search.js?v=09dc9ca"></script>
+    <script src="js/depot-position.js?v=09dc9ca"></script>
+  <script src="js/depot-card-detail-2b.js?v=09dc9ca"></script>
+  <script src="js/depot-card-detail-polish.js?v=09dc9ca"></script>
 <script>
 /* Franchise Economy Slice A: arm wallet chip + payout hook. Additive, fail-loud, graceful until DDL. */
 (function(){
