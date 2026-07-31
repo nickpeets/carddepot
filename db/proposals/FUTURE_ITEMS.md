@@ -535,3 +535,53 @@ Scoping the fix, cheapest first:
 Related: section 1 (free cards carry no provenance marker at all), section 13a.2
 (the same missing grant row, seen from the provenance side), section 13b (REPLAY
 re-rolls precisely because the record is this thin).
+
+## 19. Dead render code the redesign walked past, and the two placeholders it could not finish
+
+Found while wiring chapters 03/04 to the shared parts (feat/rd-binder-parts).
+None of it is broken, so none of it was fixed in a phase branch: a removal has
+no visual proof attached to it and does not belong inside a reskin diff. This
+is the removal PR Nick owes, listed so it is one branch instead of four.
+
+**19a. `dcBinderHTML()` in index.html is dead, and it is 11 inline styles long.**
+It builds a whole second binder -- search field, five filter pills, panel,
+pager, grid -- with every value written into `style=""`, and nothing calls it.
+It was the extraction scaffold from the first Phase 2 pass. It still carries
+`dcFILTERS`, which is where the Stars pill's gold lived as dead data for a
+month before 03b was read closely enough to notice (see the commit that landed
+visual diff #2). While it exists, a future session can reasonably believe it is
+the binder. Delete `dcBinderHTML` and `dcFILTERS` together.
+
+**19b. `preview-phase2.html` has a third tile copy.** The tile is now described
+once, in `css/depot-redesign-binder.css`, as `.rd-tile--binder`. The Phase-1
+preview (`preview.html`) uses the shared sheet. `preview-phase2.html` does not:
+it carries its own sample-data transcription of the same tile, so it will drift
+silently the first time the real tile changes and then be cited as the target.
+Either repoint it at the shared sheet or delete it -- it was a gate for a
+preview that has already been signed off.
+
+**19c. The `#eraTabs` inline writer.** `index.html` still carries CSS written
+for the pre-redesign era tabs -- `#eraTabs`, `#eraTabs .era-tab`,
+`#eraTabs .era-tab small`, and a mobile rule that forces `width:auto !important`
+and `flex:0 0 auto !important` onto `#eraTabs .dc-fpill, #eraTabs .era-tab`.
+Neither `.era-tab` nor `.dc-fpill` is emitted any more; `renderEraTabs` writes
+`.rd-pill` into a `.rd-pillrow`. The rules are unreachable, and the two
+`!important`s would out-rank the shared parts if anything ever put those class
+names back.
+
+**19d. The designed no-scan placeholder is specified but not reachable.**
+Override rule 4 says a card with no art shows a designed band -- year, name,
+"no scan" -- and 03b/`mobile-390/binder.png` both draw it. It is not shipped,
+and the CSS for it was deliberately deleted rather than left dead, because a
+tile cannot know a card has no art at render time. Resolution is
+personal scan -> library art -> placeholder, and the library step is async in
+`js/depot-library-art.js`, which today has a hit path (`applyBg` + `has-art`)
+and a `console.debug('library-miss')` but **no miss callback into the tile**.
+Shipping the placeholder needs that callback first. That is a render-path
+change, not a skin change, which is why it is here and not in a phase branch.
+
+**19e. 4-per-page at 390.** `exports/mobile-390/binder.png` is captioned
+"2-across at 390 - 4 per page". The 2-across landed (CSS). The 4-per-page did
+not: `PER_PAGE` is a module constant read by `turnPage`, `renderBinder` and the
+page label, so making it viewport-aware changes pagination arithmetic and the
+label, and it wants a resize listener. Small, but it is behaviour, not layout.
