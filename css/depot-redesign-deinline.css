@@ -1,0 +1,198 @@
+/* css/depot-redesign-deinline.css
+ *
+ * THIS FILE IS A TRANSCRIPTION, NOT A DESIGN.
+ *
+ * Chapters 03 (binder) and 04 (spotlight) were built by writing the design
+ * straight into style="" attributes inside index.html's template strings. That
+ * left one tile described in two places -- once in the shared shape parts and
+ * again, character by character, in the markup -- which is exactly the failure
+ * mode the four-parts rule exists to prevent, and it compounds with every
+ * chapter that reuses the tile.
+ *
+ * So: every declaration below was copied VERBATIM out of an inline style
+ * attribute. Nothing was corrected, normalised or improved on the way across,
+ * including the places where the transcribed value disagrees with the chapter
+ * 00 tokens (see the two notes below). The acceptance criterion for this file
+ * is ZERO computed-style deltas, measured with tools/cssom_probe.js on the
+ * binder, the grouped views, the era pills and the spotlight, at 1440 and at
+ * true 390.
+ *
+ * The NEXT branch replaces these rules with the shared parts. That is where
+ * the visual diff belongs, and now it is reviewable in one file instead of
+ * being spread across 21 style attributes.
+ *
+ * Namespace note: rd-b* ("binder"), deliberately NOT .rd-tile. .rd-tile is the
+ * shared part and carries the TARGET values; these carry TODAY'S values. Two
+ * names, on purpose, for exactly one commit.
+ */
+
+/* ---- chapter 03: the binder tile (from dcTileHTML) ---------------------- */
+
+/* DEVIATION FROM THE TOKENS, PRESERVED ON PURPOSE: chapter 00 specifies the
+   scan stripe as rgba(16,69,107,.09) 0 9px / transparent 9px 18px. The tile
+   was written with .08 / 8px / 16px. Transcribed as-found; the parts branch is
+   where it becomes the token. */
+.rd-btile{
+  background:#f2f9fd;
+  border:3px solid #10456b;
+  border-radius:14px;
+  box-shadow:0 4px 0 #10456b;
+  padding:9px;
+  cursor:pointer;
+}
+.rd-btile__well{
+  height:96px;
+  border-radius:8px;
+  background:repeating-linear-gradient(45deg,rgba(16,69,107,.08) 0 8px,transparent 8px 16px);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  position:relative;
+}
+/* background-image stays inline: it is the card's own scan URL, i.e. data. */
+.rd-btile__photo{
+  position:absolute;
+  inset:0;
+  border-radius:8px;
+  background-size:cover;
+  background-position:center;
+}
+.rd-btile__scan{
+  font:9px ui-monospace,monospace;
+  color:rgba(16,69,107,.45);
+}
+.rd-btile__star{
+  position:absolute;
+  top:4px;
+  right:6px;
+  font-size:14px;
+  color:#f4823c;
+}
+.rd-btile__name{
+  font-family:'Baloo 2',sans-serif;
+  font-weight:700;
+  font-size:13px;
+  color:#10456b;
+  margin-top:7px;
+  line-height:1.15;
+}
+.rd-btile__foot{
+  display:flex;
+  justify-content:space-between;
+  align-items:baseline;
+}
+.rd-btile__set{
+  font-family:'Baloo 2',sans-serif;
+  font-weight:600;
+  font-size:11px;
+  color:#5b7f97;
+}
+.rd-btile__grade{
+  font-family:'Baloo 2',sans-serif;
+  font-weight:800;
+  font-size:10px;
+  color:#fff;
+  background:#10456b;
+  border-radius:999px;
+  padding:2px 7px;
+}
+
+/* ---- chapter 03: the era pills (from renderEraTabs) --------------------- */
+
+/* DEVIATION FROM 03b, PRESERVED ON PURPOSE: the PILLS table in renderEraTabs
+   carried a gold "base" style for the Stars pill, but the render only ever
+   chose between ACTIVE_STYLE and INACTIVE_STYLE, so that gold was dead data
+   and an inactive Stars pill has always painted white. Transcribed as it
+   RENDERS, not as the table intended. Making it gold is a visual change and
+   belongs on the parts branch against 03b-binder-controls.png. */
+.rd-bpillrow{
+  display:flex;
+  gap:8px;
+  flex-wrap:wrap;
+  justify-content:center;
+}
+.rd-bpill{
+  font-family:'Baloo 2',sans-serif;
+  font-weight:700;
+  font-size:12px;
+  color:#10456b;
+  background:#fff;
+  border:2px solid #10456b;
+  border-radius:999px;
+  padding:5px 13px;
+  cursor:pointer;
+}
+.rd-bpill.is-active{
+  color:#fff;
+  background:#10456b;
+}
+
+/* ---- chapter 04: the spotlight (from openSpot) -------------------------- */
+.rd-bspot__frame{
+  position:absolute;
+  inset:0;
+  display:flex;
+  flex-direction:column;
+}
+.rd-bspot__pin{
+  width:24px;
+  height:24px;
+  font-size:.85rem;
+  top:10px;
+  right:10px;
+}
+.rd-bspot__img{
+  flex:1;
+  width:100%;
+  min-height:0;
+  object-fit:cover;
+  object-position:center top;
+  display:block;
+}
+/* the library-art target shipped with height:100% as well as flex:1 */
+.rd-bspot__img--lib{
+  height:100%;
+}
+/* background-image / background-color stay inline: the resolved scan or the
+   per-index placeholder colour, i.e. data. */
+.rd-bspot__bg{
+  flex:1;
+  background-size:cover;
+  background-position:center top;
+}
+/* display:none stays INLINE. The reveal path does nb.style.display='' after
+   the art probe fails, and that only clears an inline value -- move the
+   display into this class and the Google-Images escape hatch never appears. */
+.rd-bspot__noart{
+  margin-top:.5rem;
+}
+.rd-bspot__gbtn{
+  width:auto;
+  padding:.45rem 1rem;
+  font-size:.72rem;
+}
+
+/* !important on exactly two declarations, and only these two.
+   An inline style beats every non-important author rule, so for most of this
+   file a plain class reproduces it. These two had competitors that outrank a
+   bare class and therefore silently won once the inline value was removed --
+   caught by tools/cssom_probe.js, not by eye:
+     align-items  <- :is(.v2-body #spotMeta, .v2-body .v2-card-detail) .v2-d4-row
+                     (specificity 1,2,0) and .dc2b .v2-d4-row (0,2,0)
+     width        <- the same :is(...) select.v2-grade-sel chain
+   Reproducing "inline wins" exactly is what this branch is for; raising these
+   to !important is the transcription, not a new opinion. Both disappear on the
+   parts branch when the spotlight is rebuilt from the shared parts.
+   (Note for that branch: depot-card-detail-2b.js already ships
+   `.dc2b .v2-d4-row.notes{align-items:flex-start}` -- the modifier class this
+   row should have been using all along, instead of an inline style.) */
+.rd-bspot__gradesel{
+  width:auto !important;
+}
+.rd-bstar-off{
+  filter:grayscale(1);
+  opacity:.5;
+}
+.rd-bd4row--top{
+  align-items:flex-start !important;
+}
