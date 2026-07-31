@@ -12,6 +12,7 @@
   <link rel="stylesheet" href="css/depot-style.css?v=49fbaff">
   <link rel="stylesheet" href="css/season.css?v=49fbaff">
   <link rel="stylesheet" href="css/depot-redesign.css?v=49fbaff">
+<link rel="stylesheet" href="css/depot-redesign-deinline.css?v=0000000">
     <script src="js/depot-shell.js?v=49fbaff"></script>
   <script src="js/depot-redesign.js?v=49fbaff"></script>
   <script src="js/depot-season-shell.js?v=49fbaff"></script>
@@ -20,11 +21,11 @@
     :root{--binder-cols:3}
     #binderGrid{grid-template-columns:repeat(var(--binder-cols,3),1fr) !important}
     .dc-tile{position:relative}
-    .dc-tile > div:first-child{aspect-ratio:5/7 !important;height:auto !important;width:100% !important}
-    .dc-tile > div:first-child > div{background-size:contain !important;background-repeat:no-repeat;background-position:center}
-    .dc-tile.has-art > div:nth-child(2){display:none !important}
-    .dc-tile.has-art > div:nth-child(3){position:absolute;left:6px;bottom:6px;margin:0 !important}
-    .dc-tile.has-art > div:nth-child(3) > span:first-child{display:none !important}
+    .rd-btile__well{aspect-ratio:5/7 !important;height:auto !important;width:100% !important}
+    .rd-btile__photo{background-size:contain !important;background-repeat:no-repeat;background-position:center}
+    .rd-btile.has-art > .rd-btile__name{display:none !important}
+    .rd-btile.has-art > .rd-btile__foot{position:absolute;left:6px;bottom:6px;margin:0 !important}
+    .rd-btile.has-art > .rd-btile__foot > .rd-btile__set{display:none !important}
     /* end v2 */
 :root{
   --leather:#5a2118;
@@ -1613,18 +1614,18 @@ const dcEsc = function(s){ return String(s==null?'':s).replace(/[&<>"]/g,functio
 function dcStatChips(c){ return [['YEAR',String(c.yr)],['ERA',dcERA_TITLE[eraFromYear(c.yr)]],['GRADE',c.grade||'\u2014'],['POS','CF']]; }
 function dcTileHTML(c){
   var photo = c.photo
-    ? '<div style="position:absolute;inset:0;border-radius:8px;background-image:url(\"'+dcEsc(c.photo)+'\");background-size:cover;background-position:center"></div>'
-    : '<span style="font:9px ui-monospace,monospace;color:rgba(16,69,107,.45)">scan</span>';
-  var starBadge = c.star ? '<span style="position:absolute;top:4px;right:6px;font-size:14px;color:#f4823c">\u2605</span>' : '';
-  var gradeChip = c.grade ? '<span style="font-family:\'Baloo 2\',sans-serif;font-weight:800;font-size:10px;color:#fff;background:#10456b;border-radius:999px;padding:2px 7px">'+dcEsc(c.grade)+'</span>' : '';
+    ? '<div class="rd-btile__photo" style="background-image:url(\"'+dcEsc(c.photo)+'\")"></div>'
+    : '<span class="rd-btile__scan">scan</span>';
+  var starBadge = c.star ? '<span class="rd-btile__star">\u2605</span>' : '';
+  var gradeChip = c.grade ? '<span class="rd-btile__grade">'+dcEsc(c.grade)+'</span>' : '';
   return ''+
-  '<div class="dc-tile" style="background:#f2f9fd;border:3px solid #10456b;border-radius:14px;box-shadow:0 4px 0 #10456b;padding:9px;cursor:pointer">'+
-    '<div style="height:96px;border-radius:8px;background:repeating-linear-gradient(45deg,rgba(16,69,107,.08) 0 8px,transparent 8px 16px);display:flex;align-items:center;justify-content:center;position:relative">'+
+  '<div class="dc-tile rd-btile">'+
+    '<div class="rd-btile__well">'+
       photo + starBadge +
     '</div>'+
-    '<div style="font-family:\'Baloo 2\',sans-serif;font-weight:700;font-size:13px;color:#10456b;margin-top:7px;line-height:1.15">'+dcEsc(c.name)+'</div>'+
-    '<div style="display:flex;justify-content:space-between;align-items:baseline">'+
-      '<span style="font-family:\'Baloo 2\',sans-serif;font-weight:600;font-size:11px;color:#5b7f97">'+dcEsc(c.set)+'</span>'+
+    '<div class="rd-btile__name">'+dcEsc(c.name)+'</div>'+
+    '<div class="rd-btile__foot">'+
+      '<span class="rd-btile__set">'+dcEsc(c.set)+'</span>'+
       gradeChip +
     '</div>'+
   '</div>';
@@ -1656,7 +1657,13 @@ function cardHTML(card, idx, skin){
   var c = Object.assign({}, card, { photo: resolved || '' });
   var html = dcTileHTML(c);
   // inject click-through to the live spotlight/card-detail
-  html = html.replace(/^(\s*<div\s+class=("|')dc-tile\2)/, '$1 onclick="openSpot('+idx+')" data-idx="'+idx+'"');
+  /* The tile root now carries a second class (rd-btile), so this has to accept
+     a class LIST. Anchored on /dc-tile\2/ it would silently stop matching, and
+     a tile with no onclick and no data-idx is a tile that cannot open the
+     spotlight and that refreshSpotTile cannot find. */
+  var _preInject = html;
+  html = html.replace(/^(\s*<div\s+class=("|')dc-tile[^"']*\2)/, '$1 onclick="openSpot('+idx+')" data-idx="'+idx+'"');
+  if (html === _preInject){ console.warn('[depot] cardHTML: click-through + data-idx NOT injected for idx '+idx+'; the .dc-tile root markup changed shape.'); }
   // make it feel clickable
   html = html.replace(/(class=("|')dc-tile\2)/, '$1');
   return html;
@@ -1680,16 +1687,13 @@ function eraCards(era){
 function renderEraTabs(){
   var host = document.getElementById('eraTabs');
   if(!host) return;
-  var PILLS = [{"era":"all","label":"All","base":"font-family:'Baloo 2',sans-serif;font-weight:700;font-size:12px;color:#fff;background:#10456b;border:2px solid #10456b;border-radius:999px;padding:5px 13px;cursor:pointer"},{"era":"vintage","label":"Vintage","base":"font-family:'Baloo 2',sans-serif;font-weight:700;font-size:12px;color:#10456b;background:#fff;border:2px solid #10456b;border-radius:999px;padding:5px 13px;cursor:pointer"},{"era":"junk","label":"Junk Wax","base":"font-family:'Baloo 2',sans-serif;font-weight:700;font-size:12px;color:#10456b;background:#fff;border:2px solid #10456b;border-radius:999px;padding:5px 13px;cursor:pointer"},{"era":"modern","label":"Modern","base":"font-family:'Baloo 2',sans-serif;font-weight:700;font-size:12px;color:#10456b;background:#fff;border:2px solid #10456b;border-radius:999px;padding:5px 13px;cursor:pointer"},{"era":"stars","label":"★ Stars","base":"font-family:'Baloo 2',sans-serif;font-weight:700;font-size:12px;color:#7a5b00;background:#ffd23e;border:2px solid #10456b;border-radius:999px;padding:5px 13px;cursor:pointer"}];
-  var ACTIVE_STYLE = "font-family:'Baloo 2',sans-serif;font-weight:700;font-size:12px;color:#fff;background:#10456b;border:2px solid #10456b;border-radius:999px;padding:5px 13px;cursor:pointer";
+  var PILLS = [{"era":"all","label":"All"},{"era":"vintage","label":"Vintage"},{"era":"junk","label":"Junk Wax"},{"era":"modern","label":"Modern"},{"era":"stars","label":"★ Stars"}];
   var cur = (typeof curEra!=='undefined' && curEra) ? curEra : 'all';
   var html = PILLS.map(function(p){
     var isActive = (p.era===cur);
-    var INACTIVE_STYLE = "font-family:'Baloo 2',sans-serif;font-weight:700;font-size:12px;color:#10456b;background:#fff;border:2px solid #10456b;border-radius:999px;padding:5px 13px;cursor:pointer";
-    var style = isActive ? ACTIVE_STYLE : INACTIVE_STYLE;
-    return '<div class="dc-fpill" style="'+style+'" onclick="selectEra(\''+p.era+'\')">'+p.label+'</div>';
+    return '<div class="dc-fpill rd-bpill'+(isActive?' is-active':'')+'" onclick="selectEra(\''+p.era+'\')">'+p.label+'</div>';
   }).join('');
-  host.setAttribute('style', "display:flex;gap:8px;flex-wrap:wrap;justify-content:center");
+  host.classList.add('rd-bpillrow');
   host.innerHTML = html;
 }
 function selectEra(k){curEra=k;curPage=0;renderBinder()}
@@ -1902,9 +1906,9 @@ function openSpot(idx){
   const hasScan = !!cphoto; // paint truth is settled by the probe after .open, never by resolver tier
   const photoStyle=cphoto?`background-image:url("${cssUrl(cphoto)}")`:`background-color:${placeholderBg(idx)}`;
   document.getElementById('spotFront').className=`spot-face ${skin}`;
-  document.getElementById('spotFront').innerHTML=`<div class="frame" style="position:absolute;inset:0;display:flex;flex-direction:column">
-    ${c.rare?'<span class="rare-pin" style="width:24px;height:24px;font-size:.85rem;top:10px;right:10px">★</span>':''}
-    ${cphoto ? `<img class="photo loaded-img" src="${escAttr(cphoto)}" alt="" style="flex:1;width:100%;min-height:0;object-fit:cover;object-position:center top;display:block" onload="imgOk(this)" onerror="imgFail(this)">` : (libFront ? `<img class="dc-lib-pending" alt="" style="flex:1;width:100%;height:100%;min-height:0;object-fit:cover;object-position:center top;display:block" onload="imgOk(this)" onerror="imgFail(this)">` : `<div class="photo" style="flex:1;${photoStyle};background-size:cover;background-position:center top"></div>`)}
+  document.getElementById('spotFront').innerHTML=`<div class="frame rd-bspot__frame">
+    ${c.rare?'<span class="rare-pin rd-bspot__pin">★</span>':''}
+    ${cphoto ? `<img class="photo loaded-img rd-bspot__img" src="${escAttr(cphoto)}" alt="" onload="imgOk(this)" onerror="imgFail(this)">` : (libFront ? `<img class="dc-lib-pending rd-bspot__img rd-bspot__img--lib" alt="" onload="imgOk(this)" onerror="imgFail(this)">` : `<div class="photo rd-bspot__bg" style="${photoStyle}"></div>`)}
     
   </div>`;
   const isP=cardType(c)==='pitcher';
@@ -1918,8 +1922,8 @@ function openSpot(idx){
     ${(function(){ /* Task 4: the pack receipt is internal provenance, not a line about the player, so the spotlight back stops reading it out. The data stays in cards.notes exactly as written -- depot-position.js owns the display filter so every reader agrees on what is player-facing. */ var _b=(typeof window.depotBioForDisplay==='function')?window.depotBioForDisplay(c.bio):String(c.bio||'').replace(/packseed\s*:\s*\S+/gi,'').replace(/^[\s|;,]+|[\s|;,]+$/g,'').trim(); return _b?('<div class="bio">'+_b+'</div>'):''; })()}
         </div>`;
   document.getElementById('spotMeta').innerHTML=`${c.name?`<div class="spot-name">${c.name}</div>`:''}<span class="hint">click card to flip · esc to close</span>`
-    + (hasScan?'':`<div id="spotNoArt" style="margin-top:.5rem;display:none"><button class="btn-google" style="width:auto;padding:.45rem 1rem;font-size:.72rem" onclick="findImageFor(${idx},event)">Find this card on Google Images ↗</button></div>`)
-        + `<div class="v2-d4"><div class="v2-d4-row"><span class="v2-d4-lab">Grade</span><span class="v2-grade-val ${c.grade?'':'is-blank'}" id="d4GradeVal">${c.grade?escAttr(c.grade):'—'}</span><select class="v2-grade-sel" id="d4GradeSel" style="width:auto" onchange="d4SetGrade(this.value)">${['','1','2','3','4','5','6','7','8','9','10','GEM 10','AUTH'].map(function(g){return '<option value="'+g+'"'+(String(c.grade||'')===g?' selected':'')+'>'+(g===''?'— none —':g)+'</option>';}).join('')}</select></div><div class="v2-d4-row"><span class="v2-d4-lab">Star</span><button type="button" class="v2-star-toggle" id="d4StarBtn" aria-pressed="${c.star?'true':'false'}" onclick="d4ToggleStar()"><span class="v2-star-badge--inline v2-anim-twinkle" style="${c.star?'':'filter:grayscale(1);opacity:.5'}">★</span> ${c.star?'Starred':'Mark star'}</button></div><div class="v2-d4-row" style="align-items:flex-start"><span class="v2-d4-lab">Notes</span><textarea class="v2-cond-input" id="d4CondInput" placeholder="Condition notes (corners, centering, flaws…)" onchange="d4SetCond(this.value)">${c.condNotes?escAttr(c.condNotes):''}</textarea></div><div class="v2-d4-status" id="d4Status"></div></div>` + `<div class="spot-remove"><button class="btn-ghost" onclick="if(confirm('Remove this card from your depot?'))removeFromDepot(${idx},event)">Remove from depot</button></div>`;
+    + (hasScan?'':`<div id="spotNoArt" class="rd-bspot__noart" style="display:none"><button class="btn-google rd-bspot__gbtn" onclick="findImageFor(${idx},event)">Find this card on Google Images ↗</button></div>`)
+        + `<div class="v2-d4"><div class="v2-d4-row"><span class="v2-d4-lab">Grade</span><span class="v2-grade-val ${c.grade?'':'is-blank'}" id="d4GradeVal">${c.grade?escAttr(c.grade):'—'}</span><select class="v2-grade-sel rd-bspot__gradesel" id="d4GradeSel" onchange="d4SetGrade(this.value)">${['','1','2','3','4','5','6','7','8','9','10','GEM 10','AUTH'].map(function(g){return '<option value="'+g+'"'+(String(c.grade||'')===g?' selected':'')+'>'+(g===''?'— none —':g)+'</option>';}).join('')}</select></div><div class="v2-d4-row"><span class="v2-d4-lab">Star</span><button type="button" class="v2-star-toggle" id="d4StarBtn" aria-pressed="${c.star?'true':'false'}" onclick="d4ToggleStar()"><span class="v2-star-badge--inline v2-anim-twinkle${c.star?'':' rd-bstar-off'}">★</span> ${c.star?'Starred':'Mark star'}</button></div><div class="v2-d4-row rd-bd4row--top"><span class="v2-d4-lab">Notes</span><textarea class="v2-cond-input" id="d4CondInput" placeholder="Condition notes (corners, centering, flaws…)" onchange="d4SetCond(this.value)">${c.condNotes?escAttr(c.condNotes):''}</textarea></div><div class="v2-d4-status" id="d4Status"></div></div>` + `<div class="spot-remove"><button class="btn-ghost" onclick="if(confirm('Remove this card from your depot?'))removeFromDepot(${idx},event)">Remove from depot</button></div>`;
   document.getElementById('spotCard').classList.remove('flipped');
   document.getElementById('spotlight').classList.add('open');
   // Paint library art AFTER the overlay is laid out (.open -> display:flex).
