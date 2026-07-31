@@ -513,7 +513,7 @@
               '<div class="dpc-hist-spine"></div>' +
               '<div class="dpc-hist-meta">' +
                 '<div class="dpc-hist-tier">'+label+'</div>' +
-                '<div class="dpc-hist-when">'+fmtWhen(e.at)+DOT+(e.count||5)+' cards</div>' +
+                '<div class="dpc-hist-when">'+fmtWhen(e.at)+DOT+(e.count||5)+' card'+(((e.count||5)===1)?'':'s')+'</div>' +
               '</div>' +
               '<button type="button" class="dpc-cardsbtn" data-idx="'+i+'" aria-expanded="false">CARDS</button>' +
               '<button type="button" class="dpc-replaybtn" data-idx="'+i+'">REPLAY</button>' +
@@ -531,23 +531,45 @@
    * expands to the cards that pack actually produced, read from the binder rows
    * that carry its seed, and each card opens its own spotlight.
    * -------------------------------------------------------------------- */
-  var _shelf = null, _shelfHydrated = false;
-  function historyList(){ return _shelf || loadHistory(); }
+  /* The shelf itself is MODULE state now (see _shelf / historyList below):
+       a pack the ceremony records has to be visible to every mounted surface,
+       and recordPackHistory() lives at module scope. Only "has THIS mount
+       hydrated from the ledger yet" is per-mount. */
+    var _shelfHydrated = false;
 
-  function hydrateShelfOnce(){
-    if(_shelfHydrated) return;
-    _shelfHydrated = true;
-    var PH = window.DepotPackHistory;
-    if(!PH){ console.warn(TAG+" pack-history module absent; shelf stays local-only"); return; }
-    PH.shelf(loadHistory()).then(function(list){
-      _shelf = list;
+    /* Repaint just the Pack History block, leaving the rest of the shop alone
+       (a full render() during a rip would yank the surface out from under the
+       ceremony). Returns false when this surface has no shelf to repaint. */
+    function paintHistoryInPlace(){
       var host = gridEl.querySelector(".dpc-history");
-      if(!host){ console.warn(TAG+" history shelf not on this surface; nothing to refresh"); return; }
+      if(!host){ console.warn(TAG+" history shelf not on this surface; nothing to repaint"); return false; }
       var tmp = document.createElement("div");
       tmp.innerHTML = renderHistoryHtml();
-      if(tmp.firstChild){ host.parentNode.replaceChild(tmp.firstChild, host); wireHistory(); }
-    }).catch(function(e){ console.warn(TAG+" shelf hydrate failed: "+((e&&e.message)||e)); });
-  }
+      if(!tmp.firstChild){ console.warn(TAG+" history markup came back empty; leaving the shelf alone"); return false; }
+      host.parentNode.replaceChild(tmp.firstChild, host);
+      wireHistory();
+      return true;
+    }
+
+    /* force=true re-reads the pack_grants ledger and drops the contents memo:
+       the collect path uses it so the row that just landed answers CARDS from
+       real binder rows instead of the re-roll fallback. */
+    function hydrateShelf(force){
+      if(_shelfHydrated && !force) return Promise.resolve(false);
+      _shelfHydrated = true;
+      var PH = window.DepotPackHistory;
+      if(!PH){ console.warn(TAG+" pack-history module absent; shelf stays local-only"); return Promise.resolve(false); }
+      if(force && typeof PH.reset === "function") PH.reset();
+      return PH.shelf(loadHistory()).then(function(list){
+        _shelf = list;
+        return paintHistoryInPlace();
+      }).catch(function(e){ console.warn(TAG+" shelf hydrate failed: "+((e&&e.message)||e)); return false; });
+    }
+
+    registerHistorySink(gridEl, function(opts){
+      if(opts && opts.rehydrate) hydrateShelf(true); // async: repaints again when the ledger answers
+      return paintHistoryInPlace();                  // immediate, from the shelf we already hold
+    });
 
   function cardsPanelHtml(res){
     if(!res || !res.cards || !res.cards.length){
@@ -614,7 +636,7 @@
 
   function wireHistory(){
     wireHistoryCards();
-    hydrateShelfOnce();
+    hydrateShelf(false);
       var btns = gridEl.querySelectorAll('.dpc-replaybtn');
       var list = historyList();
       for(var i=0;i<btns.length;i++){ (function(btn){
@@ -833,6 +855,36 @@
   var HISTORY_KEY = "depot.packHistory";
   var TIER_CARDS  = { bronze: 5, silver: 5, gold: 5, free: 1 };
 
+  /* ---- the shelf is MODULE state, and it has to be able to repaint -------
+   * PR #200 moved _shelf/historyList() inside mount() but left
+   * recordPackHistory() out here at module scope, so every call to it threw
+   * "historyList is not defined" -- silently, because both call sites wrap it
+   * in try/catch. Nothing was ever shelved locally; a just-ripped pack only
+   * appeared after a reload re-read the pack_grants ledger (and a free daily,
+   * which the ledger does not carry, never appeared at all).
+   * The shelf lives here now, and each mounted surface registers a repaint
+   * sink so the completion/collect path can re-render Pack History in place.
+   */
+  var _shelf = null;    // merged ledger+local shelf, shared by every mount
+  var _histSinks = [];  // [{ el: gridEl, paint: function(opts) -> bool }]
+  function historyList(){ return _shelf || loadHistory(); }
+  function registerHistorySink(el, paint){
+    for (var i = 0; i < _histSinks.length; i++){
+      if (_histSinks[i].el === el){ _histSinks[i].paint = paint; return; }
+    }
+    _histSinks.push({ el: el, paint: paint });
+  }
+  function refreshHistorySurfaces(opts){
+    opts = opts || {};
+    var painted = 0;
+    for (var i = 0; i < _histSinks.length; i++){
+      try { if (_histSinks[i].paint(opts) !== false) painted++; }
+      catch(e){ console.warn(TAG + " history refresh sink failed: " + ((e && e.message) || e)); }
+    }
+    console.log(TAG + " history refresh (" + (opts.reason || "?") + "): " + painted + "/" + _histSinks.length + " surface(s) repainted");
+    return painted;
+  }
+
   function loadHistory(){
     try { var raw = window.localStorage.getItem(HISTORY_KEY); var a = raw ? JSON.parse(raw) : []; return Array.isArray(a) ? a : []; }
     catch(e){ console.warn(TAG+" history read failed: "+(e&&e.message)); return []; }
@@ -845,14 +897,18 @@
   // -- never the contents. Contents are re-rolled from the seed at REPLAY time.
   function recordPackHistory(entry){
     if(!entry || (entry.seed==null)) return;
-    var list = historyList();
     var key = entry.tier+":"+entry.seed;
-    for(var i=0;i<list.length;i++){ if((list[i].tier+":"+list[i].seed)===key) return; } // already shelved
-    list.unshift({ tier: entry.tier||"bronze", seed: entry.seed,
-                   count: entry.count || TIER_CARDS[entry.tier] || 5,
-                   at: entry.at || new Date().toISOString() });
-    saveHistory(list);
-    console.log(TAG+" history: shelved "+key+" ("+list.length+" packs)");
+    var known = historyList();
+    for(var i=0;i<known.length;i++){ if((known[i].tier+":"+known[i].seed)===key) return; } // already shelved
+    var row = { tier: entry.tier||"bronze", seed: entry.seed,
+                count: entry.count || TIER_CARDS[entry.tier] || 5,
+                at: entry.at || new Date().toISOString() };
+    var local = loadHistory();                 // localStorage keeps LOCAL receipts only
+    local.unshift(row);
+    saveHistory(local);
+    if(_shelf) _shelf = [row].concat(_shelf);  // and the live shelf carries it immediately
+    console.log(TAG+" history: shelved "+key+" ("+local.length+" local receipt(s))");
+    refreshHistorySurfaces({ reason: "record" });
   }
 
 /* THE RIP -- four phases: held -> reveal xN -> all N -> added (README 4).
@@ -919,6 +975,11 @@ function playPackSession(cards, hitIndex, opts){
       bumpPhase();                            // any in-flight art probe is now stale
       root.classList.remove("prip-in");
       setTimeout(function(){ if (root.parentNode) root.parentNode.removeChild(root); }, 300);
+      // COLLECT / close: the cards are already granted and the pack is
+      // shelved, so Pack History repaints HERE, in place, on every mounted
+      // surface -- and re-reads the ledger so the new row's CARDS button is
+      // live immediately instead of after a manual refresh.
+      refreshHistorySurfaces({ reason: "collect", rehydrate: true });
       resolve({ revealed:true });
     }
     close.addEventListener("click", finish);
