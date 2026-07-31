@@ -585,3 +585,25 @@ change, not a skin change, which is why it is here and not in a phase branch.
 not: `PER_PAGE` is a module constant read by `turnPage`, `renderBinder` and the
 page label, so making it viewport-aware changes pagination arithmetic and the
 label, and it wants a resize listener. Small, but it is behaviour, not layout.
+
+**19d. The add-card rules stranded in `style#responsive-fixes`.** Chapter 05's
+dress (`css/depot-redesign-addcard.css`) now owns the modal at every width,
+including 390, so the seven add-card rules still sitting in index.html's
+`style#responsive-fixes` block - `.form-scrim`, `.form-card`, `.form-body`,
+`.form-left, .form-right`, `.rolo-brand select, .rolo-brand input#rolo-brand-custom`,
+`.form-foot`, `.form-foot .btn-ghost, .form-foot .btn-solid` - are dead weight.
+They were left in place deliberately: they are inert (verified live at 390 -
+every contested property resolves to the dress, `.form-left` computes
+`display:contents`, `.form-foot` computes the sticky seam), and `#responsive-fixes`
+also holds non-modal rules, so removing a sub-block belongs in the same cleanup
+branch as 19a-19c rather than inside a reskin diff. They are a landmine only if
+someone edits them believing they still paint.
+
+**19e. "n cards missing images - show anyway" is drawn but not built.** Chapter
+05's spec text and 05a both show a pill under the catalog list that hides no-art
+rows until the collector asks for them; the phrase appears nowhere in
+`index.html` or `js/`. Today every row is listed and the no-art ones are dimmed
+with a NO IMAGE badge. The part is already dressed as `.rolo-showall` in
+`css/depot-redesign-addcard.css`, so this is a JS-only item: filter the rows,
+add the toggle, and it arrives wearing the right clothes. A dress branch does
+not invent behaviour, which is why it is here and not in PR.
