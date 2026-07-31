@@ -17,7 +17,7 @@ Usage: python3 tools/rd_check.py [--css FILE ...] [--shell FILE ...]
 """
 import re, sys, os
 
-DEFAULT_CSS = ['css/depot-redesign.css']
+DEFAULT_CSS = ['css/depot-redesign.css', 'css/depot-redesign-deinline.css']
 DEFAULT_SHELLS = ['index.html', 'game/shop.html', 'game/index.html',
                   'game/builder.html', 'preview.html']
 

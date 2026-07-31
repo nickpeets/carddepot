@@ -639,3 +639,12 @@
   .rd-nav{padding:10px 12px;gap:6px}
   .rd-pagetitle{font-size:19px;flex-basis:100%}
 }
+
+/* ---- chapter 01: one wallet, not two --------------------------------------
+   depot-wallet.js mounts its legacy chip into whatever carries
+   [data-depot-franchise] -- which is now the redesigned plate -- and it
+   re-mounts asynchronously on every auth change, so a JS-time hide would race
+   it. The chip stays in the DOM (depot-wallet.js keeps writing to it, and its
+   own mount logging keeps working); it just stops painting a second balance
+   beside .rd-wallet, which is the drawn readout. */
+.rd-plate .depot-wallet-chip{display:none}

@@ -497,9 +497,77 @@
     if (window.requestAnimationFrame){ window.requestAnimationFrame(run); } else { setTimeout(run, 16); }
   }
 
-  function boot(){
+  /* ----------------------------------------------------------------------
+   The session settles AFTER the header dresses.
+
+   dressAll() samples the balance once, and the moment every phase-1 surface
+   is dressed the watchdog interval clears and the observer disconnects -- so
+   on a signed-in reload the balance was read while depotUserCached was still
+   empty, painted the em-dash, and was never read again. depot-wallet.js
+   solves this same race for its own chip by subscribing to auth; the
+   redesigned header has to do it too, or it quietly lies about the balance.
+
+   Read-only: this re-runs a SELECT. Nothing here moves a coin (RUNBOOK 4).
+---------------------------------------------------------------------- */
+var _rdAuthSubbed = false;
+
+function sbClient(){
+  try { return (typeof depotSB === 'function') ? depotSB() : (window.depotSB && window.depotSB()); }
+  catch (e){ return null; }
+}
+
+/* getBalance() reads window.depotUserCached, which depot-core fills on its own
+   schedule, so a SIGNED_IN that lands first can still resolve to null. Bounded
+   retry: 5 tries over ~1.6s, then it stays at the em-dash exactly as it would
+   have before. */
+function refreshBalanceSoon(tries){
+  tries = tries || 0;
+  return refreshBalance().then(function (bal){
+    if (bal == null && tries < 4){
+      setTimeout(function (){ refreshBalanceSoon(tries + 1); }, 400);
+    }
+    return bal;
+  });
+}
+
+function armAuthRefresh(){
+  if (_rdAuthSubbed){ return true; }
+  var client = sbClient();
+  if (!client || !client.auth || typeof client.auth.onAuthStateChange !== 'function'){ return false; }
+  try {
+    client.auth.onAuthStateChange(function (event, session){
+      setSignedOut(!session);
+      if (event === 'SIGNED_OUT'){ paintBalance(null); return; }
+      refreshBalanceSoon(0);
+    });
+    _rdAuthSubbed = true;
+    log('auth subscription armed - the wallet and the signed-out chrome follow the session');
+    return true;
+  } catch (e){
+    warn('armAuthRefresh: onAuthStateChange threw; the balance stays at its first paint:', e && e.message);
+    _rdAuthSubbed = true; /* do not spin on a client that throws */
+    return true;
+  }
+}
+
+/* The client is injected by depot-core, which may not have run yet. */
+function armAuthRefreshWhenReady(){
+  if (armAuthRefresh()){ return; }
+  var n = 0;
+  var ai = setInterval(function (){
+    n++;
+    if (armAuthRefresh()){ clearInterval(ai); return; }
+    if (n >= 40){
+      clearInterval(ai);
+      warn('armAuthRefresh: 20s elapsed with no supabase auth client; the wallet will not follow sign-in on this load. If this surface has no auth, that is expected.');
+    }
+  }, 500);
+}
+
+function boot(){
     if (!enabled()){ return; }
     document.documentElement.classList.add('depot-rd');
+  armAuthRefreshWhenReady();
     dressAll();
 
     var tries = 0;
@@ -531,6 +599,7 @@
     dressLoginGate: dressLoginGate, setSignedOut: setSignedOut,
     /* wallet (read-only in phase 1) */
     coinHTML: coinHTML, walletHTML: walletHTML, setBalance: paintBalance, refreshBalance: refreshBalance,
+  armAuthRefresh: armAuthRefresh,
     /* the state library */
     lock: lock, unlock: unlock, paint: paint,
     checkingHTML: checkingHTML, shimmerHTML: shimmerHTML, emptyHTML: emptyHTML,
