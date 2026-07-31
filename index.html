@@ -844,6 +844,12 @@ body{
 .rcr-none{background:#eee;color:#666}
 .rcr-unknown{background:#eef;color:#556}
 .rolo-card-row .rcr-same{font-size:.58rem;opacity:.6;font-style:italic}
+/* feat/card-list-thumbs: recognition thumbnail leading each catalog row. It
+   starts blank and only ever gets a background-image after the library front
+   has actually loaded, so a no-art row keeps its plain tile face and no broken
+   image can appear. 44px tall = touch minimum. */
+.rolo-card-row .rcr-thumb{flex:0 0 auto;width:32px;height:44px;border-radius:4px;border:1px solid var(--ink-soft,#8886);background:#f7f7f7 center/cover no-repeat}
+.rolo-card-row.sel .rcr-thumb{border-color:var(--ink,#333)}
 .rolo-noimg{margin-top:.4rem;font-size:.72rem;color:#7a5a00}
 .rolo-uphint{margin-top:.2rem;font-size:.68rem;opacity:.75}
 </style>
@@ -2257,6 +2263,8 @@ async function ensurePlayerList(){
   if(roloLoading) return;
   roloLoading=true;
   roloStatus("Searching MLB records\u2026");
+/* a new search invalidates the step-4 card list (and its thumbs) */
+if(typeof depotAddCardResetList==='function') depotAddCardResetList();
   document.getElementById('rolo-years').style.display='none';
   document.getElementById('rolo-brand').style.display='none';
   let people=[];
@@ -2382,7 +2390,7 @@ async function roloShowBrands(y){
   const name=(roloPlayer&&(roloPlayer.fullName||roloPlayer.nameFirstLast))||'';
   let cards=null;
   try{ cards=await cardsForPlayerYear(name,y); }catch(e){ cards=null; }
-  ROLO_YEAR_CARDS = Array.isArray(cards)?cards:[]; setFindCardUrl(""); populateSetOptions("");
+  ROLO_YEAR_CARDS = Array.isArray(cards)?cards:[]; setFindCardUrl(""); populateSetOptions(""); if(typeof depotAddCardResetList==='function') depotAddCardResetList();
   let list, accurate=false;
   if(cards===null){
     /* year file missing / offline -> manual fallback */
@@ -3627,6 +3635,24 @@ setAuthUI(false);
 #formScrim .rolo-card-row .rcr-same{ grid-area:4/1; margin-top:1px;
   font-family:var(--v-code) !important; font-weight:500; font-size:9px;
   color:var(--v-mono); }
+
+/* feat/card-list-thumbs -----------------------------------------------------
+   The thumb shares grid-area 1/1 with the tile face (::before) and carries the
+   same 2.5/3.5 box + 2px border, so with border-box it lands exactly inside the
+   tile's frame. Transparent until a confirmed load: rows with no art keep the
+   designed dashed "no image yet" face untouched. */
+#formScrim .rolo-card-row .rcr-thumb{ grid-area:1/1; display:block;
+  width:100%; height:auto; aspect-ratio:2.5/3.5; min-height:44px;
+  border:2px solid transparent; border-radius:8px;
+  background-color:transparent; background-position:center;
+  background-size:cover; background-repeat:no-repeat; pointer-events:none; }
+#formScrim .rolo-card-row.sel .rcr-thumb{ border-color:var(--v-ink); }
+/* Once art is behind it the centred badge would be unreadable, so it parks at
+   the foot of the tile on a legibility chip. Same words, same states. */
+#formScrim .rolo-card-row.has-thumb .rcr-badge{ align-self:end;
+  justify-self:center; margin-bottom:6px; padding:1px 7px;
+  border-radius:999px !important; background:rgba(255,255,255,.9);
+  color:var(--v-ink); }
 
 #formScrim .rolo-noimg{ padding:10px 12px; background:var(--v-panel);
   border:2px dashed var(--v-dash) !important; border-radius:12px !important;
