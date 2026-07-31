@@ -107,12 +107,25 @@
 
 /* ---- chapter 03: the era pills (from renderEraTabs) --------------------- */
 
-/* DEVIATION FROM 03b, PRESERVED ON PURPOSE: the PILLS table in renderEraTabs
-   carried a gold "base" style for the Stars pill, but the render only ever
-   chose between ACTIVE_STYLE and INACTIVE_STYLE, so that gold was dead data
-   and an inactive Stars pill has always painted white. Transcribed as it
-   RENDERS, not as the table intended. Making it gold is a visual change and
-   belongs on the parts branch against 03b-binder-controls.png. */
+/* VISUAL DIFF #2 OF 2, TAKEN ON THIS BRANCH (was: a preserved deviation).
+   The PILLS table in renderEraTabs carried a gold "base" style for the Stars
+   pill, but the render only ever chose between ACTIVE_STYLE and
+   INACTIVE_STYLE, so that gold was dead data and an inactive Stars pill has
+   always painted white. The de-inline transcribed it as it RENDERS. This is
+   the change the transcription deferred, made against
+   exports/desktop/03b-binder-controls.png, where the pill row reads:
+     All (active)  navy fill, white text
+     Vintage / Junk Wax / Modern   pale fill, navy text
+     * Stars                       GOLD fill, ink-gold text, navy border
+   Stars is drawn gold in its INACTIVE state -- it is the odd pill out on
+   purpose, because it filters on a flag rather than on an era. Selected, it
+   still takes the navy .is-active treatment every other pill takes, so the
+   row never shows two "selected-looking" pills at once.
+   The gloss is read off the export, not invented: the pill carries the
+   chapter-00 pill gloss (linear-gradient(#fff8,#fff0 45%)) over the gold, the
+   same wash every filled pill in the design wears.
+   EXPECTED CSSOM DELTA: background-image + background-color + color on the
+   Stars pill ONLY, and only while it is not the active pill. */
 .rd-bpillrow{
   display:flex;
   gap:8px;
@@ -133,6 +146,13 @@
 .rd-bpill.is-active{
   color:#fff;
   background:#10456b;
+}
+/* Stars, inactive: the one pill the design paints gold (03b). Placed AFTER
+   .is-active so the cascade is explicit, and re-stated inside :not() so a
+   selected Stars pill still goes navy rather than needing an override. */
+.rd-bpill--stars:not(.is-active){
+  color:#7a5b00;
+  background:linear-gradient(#fff8,#fff0 45%),#ffd23e;
 }
 
 /* ---- chapter 04: the spotlight (from openSpot) -------------------------- */

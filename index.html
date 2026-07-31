@@ -1691,7 +1691,11 @@ function renderEraTabs(){
   var cur = (typeof curEra!=='undefined' && curEra) ? curEra : 'all';
   var html = PILLS.map(function(p){
     var isActive = (p.era===cur);
-    return '<div class="dc-fpill rd-bpill'+(isActive?' is-active':'')+'" onclick="selectEra(\''+p.era+'\')">'+p.label+'</div>';
+    /* Stars is the one pill the design paints gold when it is NOT selected
+       (03b-binder-controls.png). It needs its own modifier because the gold
+       is a property of WHICH pill it is, not of its state. */
+    var mod = (p.era==='stars') ? ' rd-bpill--stars' : '';
+    return '<div class="dc-fpill rd-bpill'+mod+(isActive?' is-active':'')+'" onclick="selectEra(\''+p.era+'\')">'+p.label+'</div>';
   }).join('');
   host.classList.add('rd-bpillrow');
   host.innerHTML = html;
