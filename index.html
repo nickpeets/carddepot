@@ -1,32 +1,28 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <script src="js/version.js?v=ae769be"></script>
-  <script src="js/depot-core.js?v=ae769be"></script>
+  <script src="js/version.js?v=2c5315c"></script>
+  <script src="js/depot-core.js?v=2c5315c"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>The Depot</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gshtatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Spectral:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/depot-style.css?v=ae769be">
-  <link rel="stylesheet" href="css/season.css?v=ae769be">
-  <link rel="stylesheet" href="css/depot-redesign.css?v=ae769be">
-<link rel="stylesheet" href="css/depot-redesign-deinline.css?v=ae769be">
-    <script src="js/depot-shell.js?v=ae769be"></script>
-  <script src="js/depot-redesign.js?v=ae769be"></script>
-  <script src="js/depot-season-shell.js?v=ae769be"></script>
+  <link rel="stylesheet" href="css/depot-style.css?v=2c5315c">
+  <link rel="stylesheet" href="css/season.css?v=2c5315c">
+  <link rel="stylesheet" href="css/depot-redesign.css?v=2c5315c">
+<link rel="stylesheet" href="css/depot-redesign-binder.css?v=2c5315c">
+    <script src="js/depot-shell.js?v=2c5315c"></script>
+  <script src="js/depot-redesign.js?v=2c5315c"></script>
+  <script src="js/depot-season-shell.js?v=2c5315c"></script>
   <style>
-    /* binder tile portrait redesign v2 (additive, contract-safe) */
-    :root{--binder-cols:3}
-    #binderGrid{grid-template-columns:repeat(var(--binder-cols,3),1fr) !important}
-    .dc-tile{position:relative}
-    .rd-btile__well{aspect-ratio:5/7 !important;height:auto !important;width:100% !important}
-    .rd-btile__photo{background-size:contain !important;background-repeat:no-repeat;background-position:center}
-    .rd-btile.has-art > .rd-btile__name{display:none !important}
-    .rd-btile.has-art > .rd-btile__foot{position:absolute;left:6px;bottom:6px;margin:0 !important}
-    .rd-btile.has-art > .rd-btile__foot > .rd-btile__set{display:none !important}
-    /* end v2 */
+    /* The eight !important rules that used to live here - the 5:7 well, the
+   contain-fit photo, the has-art caption drop and the #binderGrid column
+   count - are gone. They existed to out-rank the tile's own inline styles.
+   The inline styles are gone too, so there is nothing left to out-rank: the
+   tile is described once, in css/depot-redesign-binder.css, as
+   .rd-tile--binder. */
 :root{
   --leather:#5a2118;
   --leather-dark:#3d160f;
@@ -865,7 +861,7 @@ body{
   <div class="auth-modal" role="dialog" aria-modal="true">
     <button class="auth-close" type="button" onclick="DepotAuth.closeModal()" aria-label="Close">&times;</button>
     <h2 id="authTitle">Log in</h2>
-    <p class="sub" id="authSub">Sign in to sync your collection (coming soon).</p>
+    <p class="sub" id="authSub">Sign in to sync your collection across devices.</p>
     <label for="authEmailInput">Email</label>
     <input type="email" id="authEmailInput" autocomplete="email" placeholder="you@example.com">
     <label for="authPassInput">Password</label>
@@ -903,7 +899,7 @@ body{
   function reflectMode(){
     var login = mode==='login';
     $('authTitle').textContent = login ? 'Log in' : 'Sign up';
-    $('authSub').textContent = login ? 'Sign in to sync your collection (coming soon).' : 'Create an account to sync your collection (coming soon).';
+    $('authSub').textContent = login ? 'Sign in to sync your collection across devices.' : 'Create an account to sync your collection across devices.';
     $('authSubmitBtn').textContent = login ? 'Log in' : 'Sign up';
     $('authToggleText').textContent = login ? 'No account?' : 'Have an account?';
     $('authToggleLink').textContent = login ? 'Sign up' : 'Log in';
@@ -1040,9 +1036,9 @@ body{
 </style>
 <!-- /PHASE5-SHARE-CSS -->
 
-  <link rel="stylesheet" href="css/depot-shop-view.css?v=ae769be">
-  <link rel="stylesheet" href="css/pack-shop-v2.css?v=ae769be">
-    <link rel="stylesheet" href="depot-v2.css?v=ae769be">
+  <link rel="stylesheet" href="css/depot-shop-view.css?v=2c5315c">
+  <link rel="stylesheet" href="css/pack-shop-v2.css?v=2c5315c">
+    <link rel="stylesheet" href="depot-v2.css?v=2c5315c">
 </head>
 <body class="v2-body">
   <div id="sharedUnavailable"><div class="su-card"><div class="su-title">Not available</div><div class="su-sub">This collection isn&rsquo;t available.</div></div></div>
@@ -1091,11 +1087,35 @@ body.logged-out #appFrame{display:none !important;}
 
 
 <!-- BINDER -->
-<div class="dc-binder" style="width:760px;max-width:100%;background:#ffffff;border-radius:16px;overflow:hidden;box-shadow:0 8px 28px rgba(13,45,92,.18)"><div style="display:flex;gap:8px;padding:14px 24px 0;flex-wrap:wrap;align-items:center"><input style="flex:1;min-width:180px;background:#fff;border:3px solid #10456b;border-radius:999px;padding:8px 16px;font-family:'Baloo 2',sans-serif;font-weight:600;font-size:13px;color:#10456b;outline:none" placeholder="🔍 Search players, sets, years…" id="binderSearch" oninput="curSearch=this.value; if(typeof curPage!==&#39;undefined&#39;){curPage=0;} renderBinder();"><div style="display:flex;gap:8px;flex-wrap:wrap" id="eraTabs"></div></div><div style="margin:6px 0 0;background:transparent;border:0;border-radius:0;box-shadow:none;padding:16px 24px 20px"><div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px"><div style="font-family:'Baloo 2',sans-serif;font-weight:800;font-size:16px;color:#10456b" id="pageDots">Page 1 of 1</div><span id="eraTitle" style="margin-left:8px;font-weight:700;color:#10456b"></span><span id="eraBlurb" style="display:none"></span><div style="display:flex;gap:6px"><div class="dc-pager" style="width:32px;height:32px;border-radius:10px;background:#dff1fb;border:2px solid #10456b;display:flex;align-items:center;justify-content:center;font-weight:800;color:#10456b;cursor:pointer" id="prevPage" onclick="turnPage(-1)" role="button">‹</div><div class="dc-pager" style="width:32px;height:32px;border-radius:10px;background:#dff1fb;border:2px solid #10456b;display:flex;align-items:center;justify-content:center;font-weight:800;color:#10456b;cursor:pointer" id="nextPage" onclick="turnPage(1)" role="button">›</div></div><div id="groupByBar" style="display:flex;align-items:center;gap:6px;margin-left:auto"><label style="font-family:'Baloo 2',sans-serif;color:#10456b;font-weight:700;font-size:12px">Group by</label><select style="font-family:'Baloo 2',sans-serif;border:2px solid #10456b;border-radius:999px;color:#10456b;background:#dff1fb;padding:4px 10px;font-weight:700;font-size:12px;outline:none;box-shadow:none;" id="groupBy" onchange="setGroupMode(this.value)">
-          <option value="era">None</option>
-            <option value="year">Year</option>
-          <option value="set">Set</option><option value="brand">Brand</option>
-          </select><!-- Task C: + Add a card now lives in the shell nav row --></div></div><div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px" id="binderGrid"></div></div></div>
+<div class="dc-binder rd-binderwrap">
+<div class="rd-binder__controls">
+<label class="rd-search"><span class="rd-search__lens" aria-hidden="true">&#128269;</span><input class="rd-search__input" id="binderSearch" type="search" placeholder="Search players, sets, years&#8230;" aria-label="Search your binder" oninput="curSearch=this.value; if(typeof curPage!==&#39;undefined&#39;){curPage=0;} renderBinder();"></label>
+<div class="rd-pillrow" id="eraTabs" role="group" aria-label="Filter by era"></div>
+</div>
+<div class="rd-binder">
+<div class="rd-binder__bar">
+<div class="rd-binder__page" id="pageDots" aria-live="polite">Page 1 of 1</div>
+<span class="rd-binder__era rd-hide" id="eraTitle"></span>
+<span class="rd-hide" id="eraBlurb"></span>
+<div class="rd-pager" id="binderPager">
+<button type="button" class="rd-pager__btn" id="prevPage" onclick="turnPage(-1)" aria-label="Previous page">&#8249;</button>
+<button type="button" class="rd-pager__btn" id="nextPage" onclick="turnPage(1)" aria-label="Next page">&#8250;</button>
+</div>
+<div class="rd-groupby" id="groupByBar">
+<label class="rd-groupby__k" for="groupBy">GROUP BY</label>
+<select id="groupBy" onchange="setGroupMode(this.value)">
+<option value="era">None</option>
+<option value="year">Year</option>
+<option value="set">Set</option>
+<option value="brand">Brand</option>
+<option value="position" disabled>Position &#8212; SOON</option>
+<option value="team" disabled>Team &#8212; SOON</option>
+</select>
+</div>
+</div>
+<div class="rd-grid9" id="binderGrid"></div>
+</div>
+</div>
 
 <!-- CAROUSEL -->
 <div class="carousel-stage" id="carouselStage">
@@ -1613,22 +1633,31 @@ const dcERA_TITLE = {"all":"All Eras","vintage":"Vintage","junk":"Junk Wax","mod
 const dcEsc = function(s){ return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); };
 function dcStatChips(c){ return [['YEAR',String(c.yr)],['ERA',dcERA_TITLE[eraFromYear(c.yr)]],['GRADE',c.grade||'\u2014'],['POS','CF']]; }
 function dcTileHTML(c){
+  /* CONTRACT, do not "simplify": the art layer is a DIV carrying an inline
+     background-image, and when there is no scan it is ABSENT rather than
+     empty. js/depot-library-art.js resolves library art by hunting a
+     paintable background layer inside .dc-tile[data-idx] and calling
+     applyBg() on it, then tagging the tile .has-art. An <img>, or an extra
+     empty div, changes which layer it picks, and library art then stops
+     appearing with no error logged anywhere. The class names moved to the
+     shared parts on this branch; the SHAPE of this markup deliberately did
+     not. */
   var photo = c.photo
-    ? '<div class="rd-btile__photo" style="background-image:url(\"'+dcEsc(c.photo)+'\")"></div>'
-    : '<span class="rd-btile__scan">scan</span>';
-  var starBadge = c.star ? '<span class="rd-btile__star">\u2605</span>' : '';
-  var gradeChip = c.grade ? '<span class="rd-btile__grade">'+dcEsc(c.grade)+'</span>' : '';
+    ? '<div class="rd-tile__photo" style="background-image:url(\"'+dcEsc(c.photo)+'\")"></div>'
+    : '<span class="rd-tile__scan">scan</span>';
+  var starBadge = c.star ? '<span class="rd-tile__star">\u2605</span>' : '';
+  var gradeChip = c.grade ? '<span class="rd-tile__grade">'+dcEsc(c.grade)+'</span>' : '';
   return ''+
-  '<div class="dc-tile rd-btile">'+
-    '<div class="rd-btile__well">'+
-      photo + starBadge +
-    '</div>'+
-    '<div class="rd-btile__name">'+dcEsc(c.name)+'</div>'+
-    '<div class="rd-btile__foot">'+
-      '<span class="rd-btile__set">'+dcEsc(c.set)+'</span>'+
-      gradeChip +
-    '</div>'+
-  '</div>';
+    '<div class="dc-tile rd-tile rd-tile--binder">'+
+      '<div class="rd-tile__well">'+
+        photo + starBadge +
+      '</div>'+
+      '<div class="rd-tile__name">'+dcEsc(c.name)+'</div>'+
+      '<div class="rd-tile__foot">'+
+        '<span class="rd-tile__set">'+dcEsc(c.set)+'</span>'+
+        gradeChip +
+      '</div>'+
+    '</div>';
 }
 function dcBinderHTML(id){
   var filterPills = dcFILTERS.map(function(f,i){
@@ -1657,7 +1686,8 @@ function cardHTML(card, idx, skin){
   var c = Object.assign({}, card, { photo: resolved || '' });
   var html = dcTileHTML(c);
   // inject click-through to the live spotlight/card-detail
-  /* The tile root now carries a second class (rd-btile), so this has to accept
+  /* The tile root now carries a class LIST (dc-tile rd-tile rd-tile--binder),
+     so this has to accept
      a class LIST. Anchored on /dc-tile\2/ it would silently stop matching, and
      a tile with no onclick and no data-idx is a tile that cannot open the
      spotlight and that refreshSpotTile cannot find. */
@@ -1687,13 +1717,26 @@ function eraCards(era){
 function renderEraTabs(){
   var host = document.getElementById('eraTabs');
   if(!host) return;
-  var PILLS = [{"era":"all","label":"All"},{"era":"vintage","label":"Vintage"},{"era":"junk","label":"Junk Wax"},{"era":"modern","label":"Modern"},{"era":"stars","label":"★ Stars"}];
+  var PILLS = [{"era":"all","label":"All"},{"era":"vintage","label":"Vintage"},{"era":"junk","label":"Junk Wax"},{"era":"modern","label":"Modern"},{"era":"stars","label":"\u2605 Stars"}];
   var cur = (typeof curEra!=='undefined' && curEra) ? curEra : 'all';
+  /* THE LIVE COUNT (03b draws it as "All . 31"). Counted through eraCards so
+     it follows the search box rather than the raw collection size: filter to
+     two matches and the pill reads 2. A hard-coded total here would be a
+     number that lies quietly, which is the whole reason the design puts it
+     on the pill in the first place. */
+  var total = eraCards('all').length;
   var html = PILLS.map(function(p){
     var isActive = (p.era===cur);
-    return '<div class="dc-fpill rd-bpill'+(isActive?' is-active':'')+'" onclick="selectEra(\''+p.era+'\')">'+p.label+'</div>';
+    /* Stars is the one pill the design paints gold when it is NOT selected
+       (03b-binder-controls.png). The modifier says WHICH pill it is; the
+       state class says whether it is on. */
+    var mod = (p.era==='stars') ? ' rd-pill--stars' : '';
+    var n = (p.era==='all') ? '<span class="rd-pill__n">\u00b7 '+total+'</span>' : '';
+    return '<button type="button" class="rd-pill'+mod+(isActive?' is-active':'')+'"'
+      + ' aria-pressed="'+(isActive?'true':'false')+'"'
+      + ' onclick="selectEra(\''+p.era+'\')">'+p.label+n+'</button>';
   }).join('');
-  host.classList.add('rd-bpillrow');
+  host.classList.add('rd-pillrow');
   host.innerHTML = html;
 }
 function selectEra(k){curEra=k;curPage=0;renderBinder()}
@@ -1720,12 +1763,12 @@ function renderBinder(){
       const globalIdx=COLLECTION.indexOf(slice[i]);
       html+=`<div class="slot">${cardHTML(slice[i],globalIdx,e.skin)}</div>`;
     } else {
-      html+=`<div class="slot empty">empty</div>`;
+      html+=`<div class="slot rd-slot--empty">empty pocket</div>`;
     }
   }
   document.getElementById('binderGrid').innerHTML=html;
     try { if (window.depotEnhanceCardArt) window.depotEnhanceCardArt(document.getElementById('binderGrid'), COLLECTION); } catch(e){ console.debug('[depot] library binder hook: '+(e&&e.message)); }
-  document.getElementById('pageDots').textContent=`Page ${curPage+1} of ${pages}`;
+  document.getElementById('pageDots').textContent=`Page ${curPage+1} of ${pages}` + (e && e.title ? ` \u00b7 ${e.title}` : '');
   document.getElementById('prevPage').disabled=curPage===0;
   document.getElementById('nextPage').disabled=curPage>=pages-1;
 }
@@ -1740,8 +1783,14 @@ function setGroupMode(m){
 }
 function showEraChrome(show){
   var rail = document.querySelector('#binderStage .rail'); if(rail) rail.style.display = show ? '' : 'none';
-  var nav = document.querySelector('#binderStage .page-nav'); if(nav) nav.style.display = show ? '' : 'none';
+  var nav  = document.querySelector('#binderStage .page-nav'); if(nav) nav.style.display = show ? '' : 'none';
+  /* 03b, verbatim: "Ungrouped stays 9 per page with the pager. Grouped views
+     drop the pager and scroll by section - the page label switches to a
+     section count." A pager that cannot page is a control that lies. */
+  var pager = document.getElementById('binderPager');
+  if(pager) pager.style.display = show ? '' : 'none';
 }
+
 function groupKeyFor(c, mode){
   if(mode === 'year'){
     return c.yr ? {key:'y'+c.yr, label:String(c.yr), sort:c.yr} : {key:'unknown', label:'Unknown', sort:Infinity};
@@ -1776,6 +1825,9 @@ function renderGrouped(){
   if(head) head.textContent = 'Grouped by ' + (labels[groupMode]||'Era');
   var blurb = document.getElementById('eraBlurb');
   if(blurb) blurb.textContent = eraCards(curEra).length + ' cards.';
+  /* the page label becomes a SECTION count in grouped views (03b). It is
+     written after the buckets are built, further down, because the number
+     of sections is not known until then. */
   var buckets = {};
   eraCards(curEra).forEach(function(c){
     var g = groupKeyFor(c, groupMode);
@@ -1795,8 +1847,8 @@ function renderGrouped(){
   keys.forEach(function(k){
     var b = buckets[k];
     b.cards.sort(function(x,y){ return (x.yr||0)-(y.yr||0) || ((x.numSort!=null?x.numSort:parseInt(x.num)||0)-(y.numSort!=null?y.numSort:parseInt(y.num)||0)); });
-    html += '<section class="group-section"><h3 class="group-head">'+escAttr(b.label)+' <span class="group-count">'+b.cards.length+'</span></h3>';
-    html += '<div class="grid group-grid">';
+    html += '<section class="group-section rd-group"><h3 class="group-head rd-group__head">'+escAttr(b.label)+' <span class="group-count rd-group__count">'+b.cards.length+(b.cards.length===1?' card':' cards')+'</span></h3>';
+    html += '<div class="grid group-grid rd-group__grid">';
     b.cards.forEach(function(c){
       var gi = COLLECTION.indexOf(c);
       var skin = (ERAS[c.era] && ERAS[c.era].skin) || '';
@@ -1804,8 +1856,11 @@ function renderGrouped(){
     });
     html += '</div></section>';
   });
-  if(!html) html = '<p class="group-empty">No cards to display.</p>';
+  if(!html) html = '<div class="rd-state--no-results"><div class="rd-state__t">Nothing in this group</div><div class="rd-state__s">The era filter and the search box are both still on. Clear one of them to see cards again.</div><button type="button" class="rd-btn rd-btn--ghost" onclick="document.getElementById(&#39;binderSearch&#39;).value=&#39;&#39;;curSearch=&#39;&#39;;selectEra(&#39;all&#39;)">Clear filters</button></div>';
   document.getElementById('binderGrid').innerHTML = html;
+  var dots = document.getElementById('pageDots');
+  if(dots){ var nSec = keys.length, nCards = eraCards(curEra).length;
+    dots.textContent = nSec + (nSec===1?' section':' sections') + ' \u00b7 ' + nCards + (nCards===1?' card':' cards'); }
   try { if (window.depotEnhanceCardArt) window.depotEnhanceCardArt(document.getElementById('binderGrid'), COLLECTION); } catch(e){ console.debug('[depot] library grouped hook: '+(e&&e.message)); }
 }
 
@@ -1906,9 +1961,9 @@ function openSpot(idx){
   const hasScan = !!cphoto; // paint truth is settled by the probe after .open, never by resolver tier
   const photoStyle=cphoto?`background-image:url("${cssUrl(cphoto)}")`:`background-color:${placeholderBg(idx)}`;
   document.getElementById('spotFront').className=`spot-face ${skin}`;
-  document.getElementById('spotFront').innerHTML=`<div class="frame rd-bspot__frame">
-    ${c.rare?'<span class="rare-pin rd-bspot__pin">★</span>':''}
-    ${cphoto ? `<img class="photo loaded-img rd-bspot__img" src="${escAttr(cphoto)}" alt="" onload="imgOk(this)" onerror="imgFail(this)">` : (libFront ? `<img class="dc-lib-pending rd-bspot__img rd-bspot__img--lib" alt="" onload="imgOk(this)" onerror="imgFail(this)">` : `<div class="photo rd-bspot__bg" style="${photoStyle}"></div>`)}
+  document.getElementById('spotFront').innerHTML=`<div class="frame rd-spot__frame">
+    ${c.rare?'<span class="rare-pin rd-spot__pin">★</span>':''}
+    ${cphoto ? `<img class="photo loaded-img rd-spot__img" src="${escAttr(cphoto)}" alt="" onload="imgOk(this)" onerror="imgFail(this)">` : (libFront ? `<img class="dc-lib-pending rd-spot__img rd-spot__img--lib" alt="" onload="imgOk(this)" onerror="imgFail(this)">` : `<div class="photo rd-spot__bg" style="${photoStyle}"></div>`)}
     
   </div>`;
   const isP=cardType(c)==='pitcher';
@@ -1922,8 +1977,8 @@ function openSpot(idx){
     ${(function(){ /* Task 4: the pack receipt is internal provenance, not a line about the player, so the spotlight back stops reading it out. The data stays in cards.notes exactly as written -- depot-position.js owns the display filter so every reader agrees on what is player-facing. */ var _b=(typeof window.depotBioForDisplay==='function')?window.depotBioForDisplay(c.bio):String(c.bio||'').replace(/packseed\s*:\s*\S+/gi,'').replace(/^[\s|;,]+|[\s|;,]+$/g,'').trim(); return _b?('<div class="bio">'+_b+'</div>'):''; })()}
         </div>`;
   document.getElementById('spotMeta').innerHTML=`${c.name?`<div class="spot-name">${c.name}</div>`:''}<span class="hint">click card to flip · esc to close</span>`
-    + (hasScan?'':`<div id="spotNoArt" class="rd-bspot__noart" style="display:none"><button class="btn-google rd-bspot__gbtn" onclick="findImageFor(${idx},event)">Find this card on Google Images ↗</button></div>`)
-        + `<div class="v2-d4"><div class="v2-d4-row"><span class="v2-d4-lab">Grade</span><span class="v2-grade-val ${c.grade?'':'is-blank'}" id="d4GradeVal">${c.grade?escAttr(c.grade):'—'}</span><select class="v2-grade-sel rd-bspot__gradesel" id="d4GradeSel" onchange="d4SetGrade(this.value)">${['','1','2','3','4','5','6','7','8','9','10','GEM 10','AUTH'].map(function(g){return '<option value="'+g+'"'+(String(c.grade||'')===g?' selected':'')+'>'+(g===''?'— none —':g)+'</option>';}).join('')}</select></div><div class="v2-d4-row"><span class="v2-d4-lab">Star</span><button type="button" class="v2-star-toggle" id="d4StarBtn" aria-pressed="${c.star?'true':'false'}" onclick="d4ToggleStar()"><span class="v2-star-badge--inline v2-anim-twinkle${c.star?'':' rd-bstar-off'}">★</span> ${c.star?'Starred':'Mark star'}</button></div><div class="v2-d4-row rd-bd4row--top"><span class="v2-d4-lab">Notes</span><textarea class="v2-cond-input" id="d4CondInput" placeholder="Condition notes (corners, centering, flaws…)" onchange="d4SetCond(this.value)">${c.condNotes?escAttr(c.condNotes):''}</textarea></div><div class="v2-d4-status" id="d4Status"></div></div>` + `<div class="spot-remove"><button class="btn-ghost" onclick="if(confirm('Remove this card from your depot?'))removeFromDepot(${idx},event)">Remove from depot</button></div>`;
+    + (hasScan?'':`<div id="spotNoArt" class="rd-spot__noart" style="display:none"><button class="btn-google rd-spot__gbtn" onclick="findImageFor(${idx},event)">Find this card on Google Images ↗</button></div>`)
+        + `<div class="v2-d4"><div class="v2-d4-row"><span class="v2-d4-lab">Grade</span><span class="v2-grade-val ${c.grade?'':'is-blank'}" id="d4GradeVal">${c.grade?escAttr(c.grade):'—'}</span><select class="v2-grade-sel rd-spot__gradesel" id="d4GradeSel" onchange="d4SetGrade(this.value)">${['','1','2','3','4','5','6','7','8','9','10','GEM 10','AUTH'].map(function(g){return '<option value="'+g+'"'+(String(c.grade||'')===g?' selected':'')+'>'+(g===''?'— none —':g)+'</option>';}).join('')}</select></div><div class="v2-d4-row"><span class="v2-d4-lab">Star</span><button type="button" class="v2-star-toggle" id="d4StarBtn" aria-pressed="${c.star?'true':'false'}" onclick="d4ToggleStar()"><span class="v2-star-badge--inline v2-anim-twinkle${c.star?'':' rd-star-off'}">★</span> ${c.star?'Starred':'Mark star'}</button></div><div class="v2-d4-row rd-spot__d4row--top"><span class="v2-d4-lab">Notes</span><textarea class="v2-cond-input" id="d4CondInput" placeholder="Condition notes (corners, centering, flaws…)" onchange="d4SetCond(this.value)">${c.condNotes?escAttr(c.condNotes):''}</textarea></div><div class="v2-d4-status" id="d4Status"></div></div>` + `<div class="spot-remove"><button class="btn-ghost" onclick="if(confirm('Remove this card from your depot?'))removeFromDepot(${idx},event)">Remove from depot</button></div>`;
   document.getElementById('spotCard').classList.remove('flipped');
   document.getElementById('spotlight').classList.add('open');
   // Paint library art AFTER the overlay is laid out (.open -> display:flex).
@@ -3332,22 +3387,22 @@ setAuthUI(false);
   });
 })();
 </script>
-<script src="game/season.js?v=ae769be" defer></script>
-<script src="js/depot-index-shell.js?v=ae769be"></script>
-<script src="js/depot-prestige.js?v=ae769be"></script>
-<script src="js/depot-wallet.js?v=ae769be"></script>
-  <script src="js/depot-pack-engine.js?v=ae769be"></script>
-  <script src="js/depot-pixel-card.js?v=ae769be"></script>
-  <script src="js/depot-library-index.js?v=ae769be"></script>
-  <script src="js/depot-shop.js?v=ae769be"></script>
-  <script src="js/depot-shop-view.js?v=ae769be"></script>
-  <script src="js/depot-pack-history.js?v=ae769be"></script>
-  <script src="js/depot-binder-shop.js?v=ae769be"></script>
-  <script src="js/depot-library-art.js?v=ae769be"></script>
-  <script src="js/depot-add-card-search.js?v=ae769be"></script>
-    <script src="js/depot-position.js?v=ae769be"></script>
-  <script src="js/depot-card-detail-2b.js?v=ae769be"></script>
-  <script src="js/depot-card-detail-polish.js?v=ae769be"></script>
+<script src="game/season.js?v=2c5315c" defer></script>
+<script src="js/depot-index-shell.js?v=2c5315c"></script>
+<script src="js/depot-prestige.js?v=2c5315c"></script>
+<script src="js/depot-wallet.js?v=2c5315c"></script>
+  <script src="js/depot-pack-engine.js?v=2c5315c"></script>
+  <script src="js/depot-pixel-card.js?v=2c5315c"></script>
+  <script src="js/depot-library-index.js?v=2c5315c"></script>
+  <script src="js/depot-shop.js?v=2c5315c"></script>
+  <script src="js/depot-shop-view.js?v=2c5315c"></script>
+  <script src="js/depot-pack-history.js?v=2c5315c"></script>
+  <script src="js/depot-binder-shop.js?v=2c5315c"></script>
+  <script src="js/depot-library-art.js?v=2c5315c"></script>
+  <script src="js/depot-add-card-search.js?v=2c5315c"></script>
+    <script src="js/depot-position.js?v=2c5315c"></script>
+  <script src="js/depot-card-detail-2b.js?v=2c5315c"></script>
+  <script src="js/depot-card-detail-polish.js?v=2c5315c"></script>
 <script>
 /* Franchise Economy Slice A: arm wallet chip + payout hook. Additive, fail-loud, graceful until DDL. */
 (function(){
