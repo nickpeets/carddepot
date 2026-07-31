@@ -567,3 +567,20 @@
 #formScrim.rd-addcard .btn-ghost{ border:var(--rd-bd-sub) solid var(--rd-tint-line) !important; }
 #formScrim.rd-addcard .btn-ghost:hover{ border-color:var(--rd-navy) !important; }
 #formScrim.rd-addcard .form-head .spot-close{ border:var(--rd-bd-sub) solid var(--rd-navy) !important; }
+
+/* ---- 9. WHAT THE LIVE WALK FOUND -------------------------------------- */
+/* Three fixes that only a real flow shows, all measured against 05a/05b. */
+
+/* 1. the picked season is a pill among pills in 05a, not a full-width bar. An
+   older rule outside this sheet stretches .rolo-yr.sel to width:100%; the
+   dress hands it back its pill shape and keeps it on the same row. */
+#formScrim.rd-addcard .rolo-yr.sel{ width:auto; flex:0 0 auto; }
+
+/* 2. the badges are drawn in caps (FRONT + BACK / FRONT ONLY / NO IMAGE) while
+   the app writes them lowercase. The letters are the dress's business. */
+#formScrim.rd-addcard .rolo-card-row .rcr-badge{ text-transform:uppercase; letter-spacing:.02em; }
+#formScrim.rd-addcard .rolo-card-row .rcr-same{ text-transform:lowercase; }
+
+/* 3. the season list is long (38 seasons for Henderson): cap it and let it
+   scroll inside the cream tray instead of pushing gate 4 off the panel. */
+#formScrim.rd-addcard .rolo-years{ max-height:168px; overflow-y:auto; }
