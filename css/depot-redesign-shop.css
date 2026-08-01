@@ -103,7 +103,7 @@ See docs/RD_CH0607_SHOP_SCOPE.md.
 .rd-shop .pks-btn:hover:not(:disabled){ transform:translateY(2px); box-shadow:var(--rd-sh-press); }
 .rd-shop .pks-btn:active:not(:disabled){ transform:translateY(4px); box-shadow:0 0 0 var(--rd-navy); }
 .rd-shop .pks-btn:focus-visible{ outline:3px solid var(--rd-orange); outline-offset:3px; }
-.rd-shop .pks-btn--green{ background:var(--rd-gloss),var(--rd-green); }
+.rd-shop .pks-btn--green,.rd-shop .pks-tier .pks-btn.buy{ background:var(--rd-gloss),var(--rd-green); }
 .rd-shop .tier-gold .pks-btn{ color:var(--rd-ink-gold); background:var(--rd-gloss),var(--rd-gold); }
 /* LOCKED SAYS WHY (README 6): greyed, reason in the label, never a mystery */
 .rd-shop .pks-btn:disabled,.rd-shop .pks-btn[aria-disabled="true"]{
@@ -222,7 +222,7 @@ See docs/RD_CH0607_SHOP_SCOPE.md.
    ===================================================================== */
 .rd-shop.prip{ position:fixed; inset:0; z-index:10000; display:flex; flex-direction:column;
   align-items:center; background:var(--rd-sky); opacity:0; transition:opacity .28s ease;
-  overflow:auto; padding:0; }
+  overflow-x:hidden; overflow-y:auto; padding:0; }
 .rd-shop.prip.prip-in{ opacity:1; }
 .rd-shop .prip-top{ flex:0 0 auto; width:100%; max-width:1180px; display:flex;
   align-items:center; gap:14px; padding:16px 20px; }
@@ -305,7 +305,7 @@ See docs/RD_CH0607_SHOP_SCOPE.md.
 /* the band IS the reward language: plain gets the plain navy strip */
 .rd-shop .pk-b-bronze .prip-band{ background:#a86a2e; }
 .rd-shop .pk-b-silver .prip-band{ background:#dfe6ee; color:var(--rd-navy); }
-.rd-shop .pk-b-gold .prip-band{ background:var(--rd-gold); color:var(--rd-ink-gold); }
+.rd-shop .pk-b-gold .prip-band{ background:var(--rd-gold); color:var(--rd-navy); }
 .rd-shop .prip-front.pk-b-gold{ border-color:var(--rd-gold-deep); }
 /* designed no-art placeholder: band + year + name still land (README 4) */
 .rd-shop .prip-well.is-noart{ background-color:var(--rd-tint-deep); background-image:none;
@@ -352,7 +352,8 @@ See docs/RD_CH0607_SHOP_SCOPE.md.
 .rd-shop .prip-slot.is-hitslot .q{ color:var(--rd-ink-gold); }
 .rd-shop .prip-slot-lab{ font-family:var(--rd-micro); font-size:6.5px; line-height:1.6;
   color:var(--rd-navy); }
-.rd-shop .prip-slot-name{ font:800 11px/1.2 var(--rd-ui); color:var(--rd-navy); }
+.rd-shop .prip-slot-name{ font:800 11px/1.2 var(--rd-ui); color:var(--rd-navy);
+  display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
 .rd-shop .prip-slot.is-open.pk-b-bronze{ border-color:#a86a2e; }
 .rd-shop .prip-slot.is-open.pk-b-silver{ border-color:#8a939e; }
 .rd-shop .prip-slot.is-open.pk-b-gold{ background:var(--rd-cream); border-color:var(--rd-gold-deep); }
@@ -361,10 +362,10 @@ See docs/RD_CH0607_SHOP_SCOPE.md.
 .rd-shop .prip-done-head{ font:800 26px/1.15 var(--rd-ui); color:#fff;
   text-shadow:0 3px 0 var(--rd-navy); margin:0 0 6px; }
 .rd-shop .prip-summary{ font:600 13px/1.45 var(--rd-ui); color:var(--rd-navy); margin:0 0 18px; }
-.rd-shop .prip-row{ display:flex; align-items:flex-start; justify-content:center; gap:11px;
+.rd-shop .prip-row{ display:flex; align-items:stretch; justify-content:center; gap:11px;
   flex-wrap:wrap; }
-.rd-shop .prip-mini{ width:124px; }
-.rd-shop .prip-mini .prip-front{ position:relative; inset:auto; height:174px; display:flex;
+.rd-shop .prip-mini{ width:124px; display:flex; }
+.rd-shop .prip-mini .prip-front{ position:relative; inset:auto; min-height:174px; width:100%; display:flex;
   border-width:var(--rd-bd-sub); box-shadow:var(--rd-sh-sub); }
 .rd-shop .prip-mini .prip-band-yr{ font-size:15px; }
 .rd-shop .prip-mini .prip-band-lab{ font-size:6.5px; }
