@@ -42,15 +42,15 @@ document.addEventListener('DOMContentLoaded', function () {
 </script>
 <main class="depot-stage rd-page__body" data-depot-stage>
 <section class="rd-panel">
-<h2 class="rd-soon__t">VS &mdash; challenge a friend</h2>
-<p class="rd-soon__s">Build a lineup, send the link, and the two real nines play each other from one seed.
-Stakes are <b>FRIENDLY</b>: the winner takes a fixed 100-coin purse, the loser takes the flat 15.
+<div class="rd-panel__h">VS &mdash; CHALLENGE A FRIEND</div>
+<p class="rd-panel__note">Build a lineup, send the link, and the two real nines play each other from one seed.
+Stakes are <b>FRIENDLY</b>: the winner takes a fixed <span data-vs-purse>&hellip;</span>-coin purse, the loser takes the flat <span data-vs-consolation>&hellip;</span>.
 No cards are ever wagered.</p>
 <p><a class="rd-btn rd-btn--gold rd-btn--sm" href="game/builder.html">Build a lineup &amp; create a challenge</a></p>
 </section>
 <section class="rd-panel">
-<h3 class="rd-soon__k">YOUR CHALLENGES</h3>
-<div id="vsList"><p class="rd-soon__s">Loading&hellip;</p></div>
+<div class="rd-panel__h">YOUR CHALLENGES</div>
+<div id="vsList"><p class="rd-panel__note">Loading&hellip;</p></div>
 </section>
 </main>
 <script>
@@ -68,15 +68,16 @@ No cards are ever wagered.</p>
     else if(m.status==='played'){ var s=m.result&&m.result.final;
       act='FINAL '+(s?(s.challenger+' - '+s.opponent):'?')+' <a class="rd-btn rd-btn--sm" href="game/index.html?match='+encodeURIComponent(m.id)+'">REPLAY</a><span data-settle="'+esc(m.id)+'"></span>'; }
     else { act=esc(m.status); }
-    return '<div class="rd-soon__item" style="display:block;margin-bottom:10px"><b>'+c+'</b> vs '+o+
+    return '<div class="rd-panel rd-panel--sub" style="margin-bottom:10px"><b>'+c+'</b> vs '+o+
       '<div style="margin-top:6px">'+act+'</div>'+
-      '<div class="rd-soon__s" style="margin-top:4px">Stakes: FRIENDLY &middot; purse '+st.purse+' / consolation '+st.consolation+'</div></div>';
+      '<div class="rd-micro rd-micro--orange" style="margin-top:6px">Stakes: FRIENDLY &middot; purse '+st.purse+' / consolation '+st.consolation+'</div></div>';
   }
   function paint(){
+    fillStakesCopy();
     var host=document.getElementById('vsList');
     if(!host){ console.warn(TAG,'no #vsList element; nothing rendered'); return; }
     window.DepotVs.listMine().then(function(rows){
-      if(!rows.length){ host.innerHTML='<p class="rd-soon__s">No challenges yet. Build a lineup and send someone the link.</p>'; return; }
+      if(!rows.length){ host.innerHTML='<p class="rd-panel__note">No challenges yet. Build a lineup and send someone the link.</p>'; return; }
       host.innerHTML=rows.map(rowHtml).join('');
       rows.forEach(function(m){
         if(m.status!=='played'){ return; }
@@ -90,6 +91,7 @@ No cards are ever wagered.</p>
       });
     });
   }
+  function fillStakesCopy(){ var pn=document.querySelector('[data-vs-purse]'), cn=document.querySelector('[data-vs-consolation]'); if(pn){ pn.textContent=String(window.DepotVs.PURSE); } else { console.warn(TAG,'no [data-vs-purse] node; purse copy not filled'); } if(cn){ cn.textContent=String(window.DepotVs.CONSOLATION); } else { console.warn(TAG,'no [data-vs-consolation] node; consolation copy not filled'); } }
   function boot(t){ t=t||0;
     if(window.DepotVs){ paint(); return; }
     if(t>40){ console.warn(TAG,'DepotVs never loaded; list not rendered'); return; }
