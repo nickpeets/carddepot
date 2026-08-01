@@ -1095,8 +1095,9 @@ body.logged-out #appFrame{display:none !important;}
 <option value="year">Year</option>
 <option value="set">Set</option>
 <option value="brand">Brand</option>
-<option value="position" disabled>Position &#8212; SOON</option>
-<option value="team" disabled>Team &#8212; SOON</option>
+<option value="position">Position</option>
+<option value="team">Team</option>
+<option value="band">Band</option>
 </select>
 </div>
 </div>
@@ -1822,7 +1823,7 @@ function groupKeyFor(c, mode){
 function renderGrouped(){
   showEraChrome(false);
   var head = document.getElementById('eraTitle');
-  var labels = {year:'Year', set:'Set', brand:'Brand', team:'Team', player:'Player', decade:'Decade'};
+  var labels = {year:'Year', set:'Set', brand:'Brand', team:'Team', player:'Player', decade:'Decade', position:'Position', band:'Band'};
   if(head) head.textContent = 'Grouped by ' + (labels[groupMode]||'Era');
   var blurb = document.getElementById('eraBlurb');
   if(blurb) blurb.textContent = eraCards(curEra).length + ' cards.';
@@ -3404,6 +3405,8 @@ setAuthUI(false);
     <script src="js/depot-position.js?v=b63c9e7"></script>
   <script src="js/depot-card-detail-2b.js?v=b63c9e7"></script>
   <script src="js/depot-card-detail-polish.js?v=b63c9e7"></script>
+<!-- browse: Group By Position / Team / Band on the proven renderGrouped path, plus mobile (<=500px) infinite scroll. Additive + guarded; desktop pagination untouched. -->
+<script src="js/depot-binder-browse.js?v=b63c9e7"></script>
 <script>
 /* Franchise Economy Slice A: arm wallet chip + payout hook. Additive, fail-loud, graceful until DDL. */
 (function(){
