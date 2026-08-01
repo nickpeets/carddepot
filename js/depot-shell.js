@@ -32,14 +32,17 @@
   function navBase(){ try { return /\/game\//.test(location.pathname) ? '../' : ''; } catch(e){ return ''; } }
 
   var TABS = [
-    { mode: 'binder', label: 'THE BINDER', href: 'index.html' },
-    { mode: 'shop',   label: 'PACK SHOP',  href: 'game/shop.html' },
-    { mode: 'game',   label: 'PLAY BALL',  href: 'game/index.html' }
-  ];
+  { mode: 'binder', label: 'Binder',      href: 'index.html' },
+  { mode: 'shop',   label: 'Pack Shop',   href: 'game/shop.html' },
+  { mode: 'game',   label: 'Play Ball',   href: 'game/index.html' },
+  /* Chapter 14 is roadmap. The label ships anyway - a nav that hides a surface
+     teaches nothing; marketplace.html answers with a DESIGNED coming-soon. */
+  { mode: 'market', label: 'Marketplace', href: 'marketplace.html' }
+];
 
   // Task C: the nav row carries the page title, the mode pills and the green
   // add-a-card action -- one header language on every surface.
-  var TITLES = { binder: 'The Binder', shop: 'Pack Shop', game: 'Play Ball', builder: 'Lineup' };
+  var TITLES = { binder: 'The Binder', shop: 'Pack Shop', game: 'Play Ball', builder: 'Lineup', market: 'Marketplace' };
   function titleFor(mode){ return TITLES[mode] || 'The Depot'; }
 
   var _root = null;   // the .depot-shell element we manage
@@ -118,7 +121,7 @@
     var _pfx = info.recordPrefix ? String(info.recordPrefix) : '';
 box.querySelector('.record').textContent = w + '-' + l;
         var _seasonEl = box.querySelector('[data-depot-season]');
-        if (_seasonEl){ var _sn = _pfx ? _pfx.replace(/[^0-9]/g, '') : ''; _seasonEl.textContent = _sn ? ('SEASON ' + _sn) : ''; }
+        if (_seasonEl){ var _sn = _pfx ? _pfx.replace(/[^0-9]/g, '') : ''; _seasonEl.textContent = _sn ? ('S' + _sn) : ''; /* ch01: the bar reads S1, not SEASON 1 */ }
         else { console.warn('[depot] shell.setFranchise: no [data-depot-season] in plate; season label skipped'); }
         var _streakEl = box.querySelector('[data-depot-streak]');
         if (_streakEl){

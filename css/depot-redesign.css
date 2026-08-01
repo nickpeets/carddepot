@@ -27,6 +27,10 @@
   --rd-navy:#10456b;         /* primary navy - ALL borders + hard shadows    */
   --rd-navy-deep:#072c47;    /* deep navy - scoreboard, on-dark borders      */
   --rd-bar:#0d2b4d;          /* the header bar fill (ch01 shot)              */
+  --rd-hairline:rgba(255,255,255,.14); /* the ONLY separator in the one-bar header */
+  --rd-dim:#5f89a8;      /* 8-bit LOG OUT / season chip on the bar */
+  --rd-bar-h:60px;       /* rule 7: one line, 60px */
+  --rd-step:20px;        /* rule 8: one spacing unit */
   --rd-cream:#fff7df;        /* trays, cautions                              */
   --rd-gold:#ffd23e;         /* coins, rewards                               */
   --rd-gold-deep:#e8a90f;    /* the cream caution card's hard shadow         */
@@ -313,93 +317,207 @@
 .rd-statrow{display:flex;flex-wrap:wrap;gap:6px}
 
 /* =============================================================================
-   CHAPTER 01 - NAV & HEADER
-   Target: exports/desktop/01-nav-header.png (1920x212 @2x = 960x106 CSS px) and
-   the 390 header in every mobile frame. Values are read off the chapter-01
-   markup in the design document, not eyeballed off the PNG.
-   Note the bar is #0d2b4d and everything ON it borders/shadows in DEEP navy
-   (#072c47), not the #10456b used on the sky.
+   CHAPTER 01 (REVISED) - ONE BAR
+   Target: exports/desktop/01a-header-one-bar.png +
+           exports/desktop/01b-header-signedout-and-390.png.
+   Values are read off the ch01 markup in the design document (lines 183-284),
+   not eyeballed off the PNG. See docs/RD_CH01_ONE_BAR_SCOPE.md for the table.
+
+   Rule 7: ONE 60px navy line carries D tile / THE DEPOT / nav / club status /
+   account / the single Add. No page title below it - the gold pill is the label.
+   Rule 8: 20px between the bar, the first control row and the content panel.
+
+   The bar is #10456b (primary navy) in the revised design - not the #0d2b4d the
+   two-row header used - and nothing on it carries a border or a hard shadow
+   except the one green Add button. Separation is hairline rules only.
    ========================================================================== */
 .rd-header{
-  display:flex;align-items:center;justify-content:space-between;gap:16px;
-  padding:16px 24px;background:var(--rd-bar);
-  font-family:var(--rd-ui);
+  box-sizing:border-box;display:flex;align-items:center;gap:18px;
+  width:100%;height:var(--rd-bar-h);padding:0 20px;
+  background:var(--rd-navy);font-family:var(--rd-ui);
 }
-.rd-header__left{display:flex;align-items:center;gap:14px;flex:none}
+.rd-header__left{display:flex;align-items:center;gap:10px;flex:none}
 .rd-logo{
-  width:48px;height:48px;border-radius:12px;background:var(--rd-gold);
-  border:3px solid var(--rd-navy-deep);box-shadow:var(--rd-sh-deep);
+  width:30px;height:30px;border-radius:8px;background:var(--rd-gold);
+  border:0;box-shadow:none;flex:none;
   display:flex;align-items:center;justify-content:center;
-  font-family:var(--rd-micro);font-size:16px;color:var(--rd-navy);
+  font-family:var(--rd-micro);font-size:11px;color:var(--rd-navy);
 }
-.rd-wordmark{font-weight:800;font-size:28px;color:#fff;letter-spacing:.5px;white-space:nowrap}
+.rd-wordmark{font-weight:800;font-size:19px;color:#fff;letter-spacing:.2px;white-space:nowrap}
 .rd-wordmark b,.rd-wordmark .rd-wordmark__hi{color:var(--rd-gold);font-weight:800}
 
-/* the centre plate: team name, W-L, season, streak, then the coin wallet */
+/* the only separators in the bar */
+.rd-hair{width:1px;height:24px;background:var(--rd-hairline);flex:none}
+.rd-hair--sm{height:18px;margin:0 3px}
+.rd-header__spacer{flex:1 1 auto;min-width:8px}
+
+/* NAV IS TEXT, NOT BUTTONS. Only the active surface wears a gold pill; four
+   outlined pills in a row is what made the old bar loud. */
+.rd-nav{display:flex;align-items:center;gap:2px;flex:0 1 auto;flex-wrap:nowrap;padding:0;margin:0;min-width:0}
+.rd-nav .spacer{display:none}
+.rd-pagetitle{display:none}
+.rd-navpill{
+  display:inline-flex;align-items:center;
+  font-family:var(--rd-ui);font-weight:700;font-size:13px;color:#c8ecfb;
+  background:transparent;border:0;box-shadow:none;
+  border-radius:var(--rd-r-pill);padding:7px 16px;white-space:nowrap;
+  text-decoration:none;cursor:pointer;
+  transition:background-color .12s ease,color .12s ease;
+}
+.rd-navpill:hover{color:#fff;background:rgba(255,255,255,.09);transform:none;box-shadow:none}
+.rd-navpill.is-active,.rd-navpill[aria-current="true"]{
+  font-weight:800;color:var(--rd-navy);background:var(--rd-gold);
+}
+.rd-navpill.is-active:hover,.rd-navpill[aria-current="true"]:hover{
+  color:var(--rd-navy);background:var(--rd-gold);
+}
+
+/* CLUB STATUS: bare numerals directly on the navy. No white card, no "MY CLUB"
+   heading, no boxed panel - hairlines separate the groups instead of borders. */
+.rd-header__mid{display:flex;align-items:center;gap:7px;flex:none;white-space:nowrap}
 .rd-plate{
-  background:#fff;border:3px solid var(--rd-navy-deep);border-radius:14px;
-  box-shadow:0 5px 0 var(--rd-navy-deep);
-  padding:10px 16px;display:flex;align-items:center;gap:16px;flex:none;white-space:nowrap;
+  background:transparent;border:0;box-shadow:none;padding:0;
+  display:flex;align-items:center;gap:7px;flex:none;white-space:nowrap;
 }
-.rd-plate__team{font-family:var(--rd-micro);font-size:10px;color:var(--rd-navy);margin-bottom:5px}
-.rd-plate__line{display:flex;gap:9px;align-items:baseline}
-.rd-plate__rec{font-family:var(--rd-num);font-size:22px;color:var(--rd-green-deep)}
-.rd-plate__season{font-weight:700;font-size:11px;color:var(--rd-muted-2)}
-.rd-plate__streak{font-weight:800;font-size:11px;color:var(--rd-orange)}
+.rd-plate__team{display:none}
+.rd-plate__id{display:flex;flex-direction:row;align-items:center}
+.rd-plate__line{display:flex;align-items:center;gap:7px}
+.rd-plate__rec{font-family:var(--rd-num);font-size:17px;line-height:1;color:var(--rd-green)}
+.rd-plate__season{font-family:var(--rd-micro);font-weight:400;font-size:7px;color:var(--rd-dim)}
+.rd-plate__streak{font-family:var(--rd-micro);font-weight:400;font-size:7px;color:var(--rd-orange)}
 .rd-plate__streak.is-empty{display:none}
-.rd-plate__rule{width:2px;align-self:stretch;background:var(--rd-tint-deep)}
+.rd-plate__rule{display:none}
 
-/* the coin wallet - mirrored by the shop's wallet chip in phase 4 */
-.rd-wallet{
-  display:flex;align-items:center;gap:9px;
-  background:var(--rd-gloss),var(--rd-gold);
-  border:3px solid var(--rd-navy-deep);border-radius:var(--rd-r-pill);
-  box-shadow:var(--rd-sh-deep);padding:6px 16px 6px 8px;
-}
-.rd-wallet__amt{font-family:var(--rd-num);font-size:26px;color:var(--rd-ink-gold);line-height:1}
-.rd-wallet__unit{font-weight:800;font-size:11px;color:var(--rd-ink-gold)}
-.rd-wallet.is-anon .rd-wallet__amt{font-size:22px}
-
-/* the coin itself: two backface-hidden faces, one full flip every 4.5s */
-.rd-coin{display:inline-block;perspective:200px;width:30px;height:30px;flex:none}
+/* the coin + balance. The coin keeps its 4.5s flip but drops to a plain rim at
+   19px - the detailed ring and the pixel highlights read as noise below 24px. */
+.rd-wallet{display:flex;align-items:center;gap:7px;background:none;border:0;box-shadow:none;padding:0}
+.rd-wallet__val{display:flex;align-items:baseline;gap:0}
+.rd-wallet__amt{font-family:var(--rd-num);font-size:19px;line-height:1;color:var(--rd-gold)}
+.rd-wallet__unit{display:none}
+.rd-wallet.is-anon .rd-wallet__amt{font-size:19px}
+.rd-coin{display:inline-block;perspective:200px;width:19px;height:19px;flex:none}
 .rd-coin__spin{display:block;position:relative;width:100%;height:100%;transform-style:preserve-3d}
 .rd-coin__face{
   position:absolute;inset:0;backface-visibility:hidden;-webkit-backface-visibility:hidden;
   border-radius:50%;
   background:radial-gradient(circle at 34% 30%,#ffe98a 0 22%,#ffd23e 40%,#f0b41c 62%,#cf8f0a 82%,#a86f06 100%);
-  border:2.5px solid #6b4a00;
-  box-shadow:inset 0 0 0 2px #ffe98a,inset 0 -3px 0 rgba(122,74,0,.35);
+  border:2px solid #6b4a00;box-shadow:inset 0 0 0 1.5px #ffe98a;
 }
 .rd-coin__face--b{transform:rotateY(180deg)}
-.rd-coin__ring{position:absolute;inset:5px;border-radius:50%;border:2px solid #b97e08;display:flex;align-items:center;justify-content:center}
-.rd-coin__mark{font-family:var(--rd-micro);font-size:11px;color:#8a5c00;text-shadow:1px 1px 0 #ffe98a}
-.rd-coin__px{position:absolute;background:#fff8dc}
-.rd-coin__px--1{top:4px;left:8px;width:4px;height:4px}
-.rd-coin__px--2{top:8px;left:5px;width:3px;height:3px}
-.rd-coin__glint{position:absolute;top:2px;right:3px;width:4px;height:4px;background:#fff;opacity:0;z-index:2}
+.rd-coin__ring,.rd-coin__px,.rd-coin__glint{display:none}
 
-.rd-header__right{display:flex;align-items:center;gap:10px;flex:none;white-space:nowrap}
-.rd-header__email{font-weight:600;font-size:13px;color:var(--rd-muted-2)}
+/* EMAIL AND LOG OUT ARE 8-BIT. The pixel type is what makes an email address
+   feel like part of the game instead of an account setting. */
+.rd-header__right{display:flex;align-items:center;gap:12px;flex:none;white-space:nowrap}
+.rd-header__email{
+  font-family:var(--rd-micro);font-weight:400;font-size:8px;line-height:1.5;
+  letter-spacing:-.3px;color:var(--rd-muted-2);
+}
+.rd-logout{
+  font-family:var(--rd-micro);font-weight:400;font-size:7px;line-height:1.5;
+  color:var(--rd-dim);background:none;border:0;box-shadow:none;padding:0;
+  text-transform:uppercase;cursor:pointer;transition:color .12s ease;
+}
+.rd-logout:hover{color:#fff;transform:none;box-shadow:none}
 
-/* mode pills (SPEC: active pill gold, the rest sit on #0c3556) */
-.rd-navpill{
-  display:inline-flex;align-items:center;gap:.4em;
-  font-family:var(--rd-ui);font-weight:800;font-size:13px;color:#fff;
-  background:#0c3556;border:3px solid var(--rd-navy-deep);border-radius:var(--rd-r-pill);
-  box-shadow:var(--rd-sh-deep);padding:6px 16px;text-decoration:none;cursor:pointer;
+/* "+ Add a card" is the ONLY filled button and the only green in the bar. */
+.rd-addbtn{
+  display:inline-flex;align-items:center;
+  font-family:var(--rd-ui);font-weight:800;font-size:13px;color:var(--rd-navy);
+  background:linear-gradient(#fff8,#fff0 45%),var(--rd-green);
+  border:2px solid var(--rd-navy-deep);border-radius:var(--rd-r-pill);
+  box-shadow:0 3px 0 var(--rd-navy-deep);padding:7px 15px;
+  white-space:nowrap;text-decoration:none;cursor:pointer;
   transition:transform .12s ease,box-shadow .12s ease;
 }
-.rd-navpill:hover{transform:translateY(2px);box-shadow:var(--rd-sh-deep-press)}
-.rd-navpill.is-active,.rd-navpill[aria-current="true"]{background:var(--rd-gloss),var(--rd-gold);color:var(--rd-navy)}
-.rd-navrow{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.rd-addbtn:hover{transform:translateY(2px);box-shadow:0 1px 0 var(--rd-navy-deep)}
 
-/* SIGNED OUT (chapter 01 states): plate hides, wallet reads em-dash, the whole
-   action cluster collapses to one Log in pill. */
-.rd-header.is-signed-out .rd-plate{background:transparent;border:0;box-shadow:none;padding:0;gap:0}
-.rd-header.is-signed-out .rd-plate__id,
-.rd-header.is-signed-out .rd-plate__rule{display:none}
+/* SIGNED OUT: record, coins, email and Add all drop; one gold LOG IN pill takes
+   their place. Nav stays - browsing is public. */
+.rd-loginpill{
+  display:none;align-items:center;
+  font-family:var(--rd-micro);font-weight:400;font-size:8px;line-height:1.5;
+  color:var(--rd-navy);background:var(--rd-gold);
+  border:0;box-shadow:none;border-radius:var(--rd-r-pill);padding:8px 14px;
+  white-space:nowrap;cursor:pointer;
+}
+.rd-header.is-signed-out .rd-loginpill{display:inline-flex}
+.rd-header.is-signed-out .rd-header__mid,
+.rd-header.is-signed-out .rd-hair--mid,
 .rd-header.is-signed-out .rd-header__email,
+.rd-header.is-signed-out .rd-addbtn,
 .rd-header.is-signed-out [data-rd-signedin-only]{display:none}
+
+/* RULE 8 - one spacing unit. The bar, then 20px, then the surface's own first
+   control row, then 20px, then the content panel. The shell wrapper owns the
+   first step so every surface inherits it from one place. */
+.rd-shell{display:block;margin:0 0 var(--rd-step)}
+.rd-shell .depot-stage:empty{display:none}
+.rd-rhythm > * + *{margin-top:var(--rd-step)}
+
+/* the 390 account sheet: on desktop these two are just inline members of the
+   right cluster (display:contents), on 390 the same nodes become the sheet. */
+.rd-header{position:relative}
+.rd-header__acct{display:contents}
+.rd-acct-toggle{display:none}
+
+/* MARKETPLACE - designed "coming soon", never a dead door (chapter 14 is
+   roadmap: browse and detail are drawn, listing creation is not designed). */
+.rd-page{background:var(--rd-sky);min-height:100vh}
+.rd-page__body{padding:0 var(--rd-step) var(--rd-step)}
+.rd-soon{max-width:680px;margin:0 auto;text-align:center}
+.rd-soon__k{
+  display:inline-block;font-family:var(--rd-micro);font-size:8px;line-height:1.6;
+  color:var(--rd-ink-gold);background:var(--rd-gold);border-radius:var(--rd-r-pill);padding:7px 13px;
+}
+.rd-soon__t{font-family:var(--rd-ui);font-weight:800;font-size:26px;color:var(--rd-navy);margin:14px 0 8px}
+.rd-soon__s{font-family:var(--rd-ui);font-weight:600;font-size:14px;line-height:1.5;color:var(--rd-muted)}
+.rd-soon__list{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-top:18px}
+.rd-soon__item{
+  font-family:var(--rd-ui);font-weight:700;font-size:12.5px;color:var(--rd-navy);
+  background:var(--rd-tint);border:2px solid var(--rd-tint-line);border-radius:var(--rd-r-sub);padding:8px 13px;
+}
+
+/* ---- 390: the same line, nav dropped to a strip beneath it ---------------- */
+@media (max-width:640px){
+  .rd-header{flex-wrap:wrap;height:auto;gap:10px;padding:0 12px;align-content:flex-start}
+  .rd-header__left{gap:10px;min-height:54px}
+  .rd-logo{width:28px;height:28px;border-radius:8px;font-size:10px}
+  .rd-wordmark{font-size:16px}
+  .rd-hair{display:none}
+  .rd-header__mid{gap:5px}
+  .rd-plate__id{display:none}
+  .rd-wallet{gap:5px}
+  .rd-wallet__amt{font-size:16px}
+  .rd-coin{width:16px;height:16px}
+  .rd-header__right{gap:8px}
+  .rd-header__email,.rd-logout{display:none}
+  .rd-acct-toggle{
+    display:inline-flex;align-items:center;justify-content:center;
+    width:44px;height:44px;flex:none;
+    font-family:var(--rd-micro);font-size:11px;color:var(--rd-muted-2);
+    background:none;border:0;box-shadow:none;padding:0;cursor:pointer;
+  }
+  .rd-addbtn{width:44px;height:44px;padding:0;justify-content:center;border-radius:10px;font-size:0}
+  .rd-addbtn::before{content:"+";font-family:var(--rd-ui);font-weight:800;font-size:19px;color:var(--rd-navy)}
+  .rd-header.is-acct-open .rd-header__acct{
+    display:flex;flex-direction:column;align-items:flex-end;gap:10px;
+    position:absolute;top:100%;right:12px;z-index:40;
+    background:#0c3556;padding:12px 14px;border-radius:0 0 var(--rd-r-sub) var(--rd-r-sub);
+  }
+  .rd-header.is-acct-open .rd-header__email,
+  .rd-header.is-acct-open .rd-logout{display:inline-flex}
+  .rd-header.is-acct-open .rd-logout{min-height:44px;align-items:center}
+  .rd-nav{
+    order:9;flex-basis:100%;width:auto;margin:0 -12px;padding:7px 12px;gap:3px;
+    background:#0c3556;overflow-x:auto;flex-wrap:nowrap;
+  }
+  .rd-navpill{min-height:44px;flex:0 0 auto}
+  .rd-loginpill{min-height:44px}
+  .rd-soon__t{font-size:21px}
+  .rd-page__body{padding:0 12px 20px}
+}
+.rd-navrow{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
 
 /* =============================================================================
    CHAPTER 02 - LOG IN & LOCKED COLLECTION
@@ -569,22 +687,11 @@
    Verified against exports/mobile-390/*.png.
    ========================================================================== */
 @media (max-width:640px){
-  .rd-header{flex-wrap:wrap;gap:10px;padding:10px 12px}
-  .rd-header__left{gap:10px}
-  .rd-logo{width:36px;height:36px;border-radius:9px;font-size:12px}
-  .rd-wordmark{font-size:19px}
-  .rd-plate{order:3;flex-basis:100%;justify-content:space-between;padding:8px 12px;gap:10px}
-  .rd-header__right{gap:8px}
-  .rd-header__email{display:none}          /* the 390 frames carry the burger, not the address */
-  .rd-wallet{padding:4px 12px 4px 6px;gap:7px}
-  .rd-wallet__amt{font-size:20px}
-  .rd-coin{width:24px;height:24px}
 
   /* 44px minimum touch targets - the rule, applied once, here */
-  .rd-btn,.rd-navpill,.rd-modal__x,.rd-chip-anon{min-height:44px}
+  .rd-btn,.rd-modal__x,.rd-chip-anon{min-height:44px}
   .rd-btn--sm{min-height:44px;padding:10px 16px}
   .rd-navrow{gap:6px;overflow-x:auto;flex-wrap:nowrap;padding-bottom:2px}
-  .rd-navpill{flex:1 0 auto;justify-content:center}
 
   .rd-panel{border-radius:16px;padding:12px}
   .rd-modal{width:100%;border-radius:18px}
@@ -607,21 +714,9 @@
    existing shell in place. Same scoping rule: .rd-* only.
    ========================================================================== */
 .rd-hide{display:none !important}
-.rd-header__mid{display:flex;align-items:center;flex:none}
-.rd-plate__id{display:flex;flex-direction:column}
 /* Signed out (chapter 01 states): the RECORD PLATE hides, but the wallet stays
    and reads an em-dash - "wallet reads --" is a state, not a disappearance.
    So the plate sheds its own chrome and keeps the coin chip. */
-.rd-plate.is-anon{background:transparent;border:0;box-shadow:none;padding:0;gap:0}
-.rd-plate.is-anon .rd-plate__id,
-.rd-plate.is-anon .rd-plate__rule{display:none}
-.rd-wallet__val{display:flex;gap:5px;align-items:baseline}
-.rd-nav{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:16px 24px}
-.rd-nav .spacer{margin-left:auto}
-.rd-pagetitle{
-  font-family:var(--rd-ui);font-weight:800;font-size:24px;color:#fff;
-  text-shadow:0 3px 0 var(--rd-navy);margin-right:8px;
-}
 /* the signed-out gate (#loginGate), dressed as the sky + one panel */
 .rd-gate__card{max-width:460px;width:100%;text-align:center;padding:26px 22px}
 .rd-gate__title{font-family:var(--rd-ui);font-weight:800;font-size:26px;color:var(--rd-navy);margin-bottom:8px}
@@ -636,8 +731,6 @@
 }
 .rd-modal__msg.ok{color:var(--rd-ink-green);background:#e8fbe4;border-color:var(--rd-green)}
 @media (max-width:640px){
-  .rd-nav{padding:10px 12px;gap:6px}
-  .rd-pagetitle{font-size:19px;flex-basis:100%}
 }
 
 /* ---- chapter 01: one wallet, not two --------------------------------------

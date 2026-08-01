@@ -132,66 +132,118 @@
            '</div>';
   }
 
-  function dressHeader(){
-    var host = document.querySelector('.depot-shell__header');
-    if (!host){ warn('dressHeader: no .depot-shell__header in the document; chapter 01 not applied'); return false; }
-    if (host.getAttribute('data-rd-dressed') === '1'){ return false; }  /* already dressed - no work done */
+  /* one hairline rule - the only separator the bar is allowed (Rule 7) */
+function hair(mod){
+  var n = ce('span', 'rd-hair' + (mod ? ' ' + mod : ''));
+  n.setAttribute('aria-hidden', 'true');
+  return n;
+}
 
-    var wordmark = host.querySelector('.depot-wordmark');
-    var tile     = host.querySelector('.v2-logo-tile');
-    var subtitle = host.querySelector('[data-depot-subtitle]');
-    var account  = host.querySelector('[data-depot-account]') || host.querySelector('.depot-account');
-    var email    = host.querySelector('[data-depot-email]');
-    var logout   = host.querySelector('[data-depot-logout]');
-    var bell     = host.querySelector('.depot-bell');
+/* The signed-out bar's single action. Every surface reaches log-in a different
+ * way, so try the page's own affordance first and only then fall back. */
+function rdLogin(){
+  if (window.DepotAuth && typeof window.DepotAuth.openModal === 'function'){ window.DepotAuth.openModal(); return; }
+  var gateBtn = document.querySelector('#loginGate .lg-btn');
+  if (gateBtn && typeof gateBtn.click === 'function'){ gateBtn.click(); return; }
+  warn('login pill: no DepotAuth.openModal and no #loginGate .lg-btn on this surface; sending the visitor to the binder');
+  location.href = (/\/game\//.test(location.pathname) ? '../' : '') + 'index.html';
+}
 
-    var left = ce('span', 'rd-header__left');
-    if (tile){ tile.className = 'rd-logo'; left.appendChild(tile); }
-    else { left.insertAdjacentHTML('beforeend', '<span class="rd-logo" aria-hidden="true">D</span>');
-           warn('dressHeader: no .v2-logo-tile to reuse; rendered a fresh logo tile'); }
-    if (wordmark){ wordmark.className = 'rd-wordmark'; left.appendChild(wordmark); }
-    else { left.insertAdjacentHTML('beforeend', '<span class="rd-wordmark">THE <b>DEPOT</b></span>');
-           warn('dressHeader: no .depot-wordmark to reuse; rendered a fresh wordmark'); }
+/* CHAPTER 01 (revised): ONE 60px line. The shell's own nodes are MOVED, never
+ * recreated, so [data-depot-email] / [data-depot-logout] / [data-depot-addcard]
+ * and the whole [data-depot-nav] element (which carries attachNavCarry's click
+ * delegation) keep working. Drawn order: brand | hairline | nav | spacer |
+ * club status | hairline | account + the one green Add. */
+function dressHeader(){
+  var host = document.querySelector('.depot-shell__header');
+  if (!host){ warn('dressHeader: no .depot-shell__header in the document; chapter 01 not applied'); return false; }
+  if (host.getAttribute('data-rd-dressed') === '1'){ return false; }
 
-    var plate = ce('span', 'rd-header__mid');
-    plate.innerHTML = plateHTML();
+  var wordmark = host.querySelector('.depot-wordmark');
+  var tile = host.querySelector('.v2-logo-tile');
+  var subtitle = host.querySelector('[data-depot-subtitle]');
+  var account = host.querySelector('[data-depot-account]') || host.querySelector('.depot-account');
+  var email = host.querySelector('[data-depot-email]');
+  var logout = host.querySelector('[data-depot-logout]');
+  var bell = host.querySelector('.depot-bell');
 
-    var right = ce('span', 'rd-header__right');
-    if (email){ email.classList.add('rd-header__email'); right.appendChild(email); }
-    else { warn('dressHeader: no [data-depot-email]; the address never renders on this surface'); }
-    if (logout){ logout.className = 'rd-btn rd-btn--ghost'; logout.setAttribute('data-rd-signedin-only',''); right.appendChild(logout); }
-    else { warn('dressHeader: no [data-depot-logout]; this surface has no Log out control'); }
+  var left = ce('span', 'rd-header__left');
+  if (tile){ tile.className = 'rd-logo'; left.appendChild(tile); }
+  else { left.insertAdjacentHTML('beforeend', '<span class="rd-logo" aria-hidden="true">D</span>');
+         warn('dressHeader: no .v2-logo-tile to reuse; rendered a fresh logo tile'); }
+  if (wordmark){ wordmark.className = 'rd-wordmark'; left.appendChild(wordmark); }
+  else { left.insertAdjacentHTML('beforeend', '<span class="rd-wordmark">THE <b>DEPOT</b></span>');
+         warn('dressHeader: no .depot-wordmark to reuse; rendered a fresh wordmark'); }
 
-    /* The + Add a card action is drawn in the BAR in 01-nav-header.png, not in
-       the mode row. Move the shell's own <a> so its href and depth-correct
-       navBase() survive - do not re-create it. */
-    var add = document.querySelector('[data-depot-addcard]');
-    if (add){ add.className = 'rd-btn rd-btn--primary depot-add-card'; right.appendChild(add); }
-    else { warn('dressHeader: no [data-depot-addcard] link to relocate; the bar has no add action'); }
+  /* club status: bare numerals, no box. plateHTML keeps the class names the
+     shell's setFranchise() paints into. */
+  var plate = ce('span', 'rd-header__mid');
+  plate.innerHTML = plateHTML();
 
-    /* Nodes we keep for the shell's sake but the design does not draw. */
-    /* Nodes we keep for the shell's sake but the design does not draw. The
-       v2 spacer in particular is flex:1 - leave it in the flow and it shoves
-       the whole redesigned cluster to the right edge of the bar. */
-    if (subtitle){ subtitle.classList.add('rd-hide'); }
-    if (bell){ bell.classList.add('rd-hide'); }
-    if (account){ account.classList.add('rd-hide'); }  /* emptied; kept so [data-depot-account] still resolves */
-    var leftovers = host.querySelectorAll('.v2-wordmark-wrap, .v2-spacer');
-    for (var li = 0; li < leftovers.length; li++){ leftovers[li].classList.add('rd-hide'); }
+  /* the account cluster. email + Log out live in .rd-header__acct, which is
+     display:contents on desktop and becomes the 390 account sheet. */
+  var right = ce('span', 'rd-header__right');
+  var acctBox = ce('span', 'rd-header__acct');
+  if (email){ email.classList.add('rd-header__email'); email.setAttribute('data-rd-signedin-only',''); acctBox.appendChild(email); }
+  else { warn('dressHeader: no [data-depot-email]; the address never renders on this surface'); }
+  if (logout){ logout.className = 'rd-logout'; logout.setAttribute('data-rd-signedin-only',''); acctBox.appendChild(logout); }
+  else { warn('dressHeader: no [data-depot-logout]; this surface has no Log out control'); }
+  right.appendChild(acctBox);
+  right.insertAdjacentHTML('beforeend',
+    '<button type="button" class="rd-acct-toggle" data-rd-acct aria-expanded="false" aria-label="Account">\u2630</button>');
 
-    host.classList.add('rd-header', 'rd-on-dark');
-    /* Insert in drawn order at the TOP of the bar rather than appending after
-       whatever the old shell left behind. */
-    host.insertBefore(right, host.firstChild);
-    host.insertBefore(plate, host.firstChild);
-    host.insertBefore(left,  host.firstChild);
-    host.setAttribute('data-rd-dressed', '1');
+  /* "+ Add a card" is the only filled button in the bar. Move the shell's own
+     <a> so its href and depth-correct navBase() survive - never re-create it. */
+  var add = document.querySelector('[data-depot-addcard]');
+  if (add){ add.className = 'rd-addbtn depot-add-card'; add.setAttribute('data-rd-signedin-only',''); right.appendChild(add); }
+  else { warn('dressHeader: no [data-depot-addcard] link to relocate; the bar has no add action'); }
+  right.insertAdjacentHTML('beforeend', '<button type="button" class="rd-loginpill" data-rd-login-pill>LOG IN</button>');
 
-    log('chapter 01 header dressed');
-    return true;
+  /* Nodes the shell still wants but the design does not draw. */
+  if (subtitle){ subtitle.classList.add('rd-hide'); }
+  if (bell){ bell.classList.add('rd-hide'); }
+  if (account){ account.classList.add('rd-hide'); }
+  var leftovers = host.querySelectorAll('.v2-wordmark-wrap, .v2-spacer');
+  for (var li = 0; li < leftovers.length; li++){ leftovers[li].classList.add('rd-hide'); }
+
+  host.classList.add('rd-header', 'rd-on-dark');
+  /* Dissolve, don't layer: index.html pins `.depot-shell__header.v2-header` and
+     `.depot-nav.v2-nav` to the binder's centered 760px column, and depot-v2.css
+     still draws the two-row bar on those classes. Shedding them retires both
+     rulesets outright instead of out-specifying them. Nothing queries them. */
+  host.classList.remove('v2-header');
+  var shellRoot = host.parentNode;
+  if (shellRoot && shellRoot.classList && shellRoot.classList.contains('depot-shell')){ shellRoot.classList.add('rd-shell'); }
+  else { warn('dressHeader: header has no .depot-shell parent; the 20px rhythm step is not applied here'); }
+
+  var frag = document.createDocumentFragment();
+  frag.appendChild(left);
+  frag.appendChild(hair());
+  var nav = document.querySelector('[data-depot-nav]');
+  if (nav){ nav.classList.remove('v2-nav'); frag.appendChild(nav); }  /* MOVES the element - carry delegation intact */
+  else { warn('dressHeader: no [data-depot-nav] to fold into the bar; this surface has no nav'); }
+  frag.appendChild(ce('span', 'rd-header__spacer'));
+  frag.appendChild(plate);
+  frag.appendChild(hair('rd-hair--mid'));
+  frag.appendChild(right);
+  host.insertBefore(frag, host.firstChild);
+
+  var pill = right.querySelector('[data-rd-login-pill]');
+  if (pill){ pill.addEventListener('click', rdLogin); }
+  var tog = right.querySelector('[data-rd-acct]');
+  if (tog){
+    tog.addEventListener('click', function (){
+      var open = host.classList.toggle('is-acct-open');
+      tog.setAttribute('aria-expanded', open ? 'true' : 'false');
+    });
   }
 
-  /* the mode row: pills on #0c3556, active one gold. The shell still owns
+  host.setAttribute('data-rd-dressed', '1');
+  log('chapter 01 header dressed (one bar)');
+  return true;
+}
+
+/* the mode row: pills on #0c3556, active one gold. The shell still owns
      setActive() and aria-current; the CSS keys off aria-current. */
   function dressNav(){
     var nav = document.querySelector('[data-depot-nav]');
@@ -469,6 +521,15 @@
       catch (e){ warn('post-dress refreshFranchise threw:', e && e.message); }
       refreshBalance();
     }
+  /* Chapter 01 states: the signed-out bar is a STATE, not an absence. Resolve it
+     once at dress time - onAuthStateChange only fires on a CHANGE. */
+  if (did){
+    try {
+      if (window.DepotShell && DepotShell.paintAccount){
+        DepotShell.paintAccount().then(function (u){ setSignedOut(!u); });
+      } else { warn('dressAll: no DepotShell.paintAccount; the signed-out bar waits for an auth event'); }
+    } catch (e){ warn('dressAll: initial signed-out resolve threw:', e && e.message); }
+  }
     return did;
   }
 
