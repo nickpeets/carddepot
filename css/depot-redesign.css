@@ -453,6 +453,10 @@
    first step so every surface inherits it from one place. */
 .rd-shell{display:block;width:auto;max-width:none;margin:0 0 var(--rd-step);padding-bottom:0}
 .rd-shell > .depot-stage:empty{display:none}
+.rd-shell > .depot-stage{margin-top:var(--rd-step)}
+/* stop the stage-s first child collapsing its own margin THROUGH the stage and
+   turning the one 20px step into 18 or 38. */
+.rd-shell > .depot-stage > :first-child{margin-top:0}
 .rd-binderwrap > .rd-binder__controls{margin:0 0 var(--rd-step)}
 .rd-shell .depot-stage:empty{display:none}
 .rd-rhythm > * + *{margin-top:var(--rd-step)}

@@ -45,6 +45,11 @@
   var TITLES = { binder: 'The Binder', shop: 'Pack Shop', game: 'Play Ball', builder: 'Lineup', market: 'Marketplace' };
   function titleFor(mode){ return TITLES[mode] || 'The Depot'; }
 
+/* Chapter 09 is reached THROUGH Play Ball, and rule 7 says the active gold pill
+   names the surface - so a mode with no pill of its own lights its parent-s. */
+var PILL_FOR = { builder: 'game' };
+function pillFor(mode){ return PILL_FOR[mode] || mode; }
+
   var _root = null;   // the .depot-shell element we manage
   var _mounted = false;
 
@@ -55,7 +60,7 @@
     var html = '';
     for (var i = 0; i < TABS.length; i++){
       var t = TABS[i];
-      var on = (t.mode === active);
+      var on = (t.mode === pillFor(active));
       html += '<a class="depot-tab v2-pill' + (t.mode === 'game' ? ' v2-pill--orange' : '') + '" data-mode="' + t.mode + '" href="' + navBase() + t.href + '"' +
               (on ? ' aria-current="true"' : '') + '>' + esc(t.label) + '</a>';
     }
@@ -100,7 +105,7 @@
     else { console.warn('[depot] shell.setActive: no [data-depot-navtitle]; title not repainted'); }
     var tabs = _root.querySelectorAll('.depot-tab');
     for (var i = 0; i < tabs.length; i++){
-      var on = (tabs[i].getAttribute('data-mode') === mode);
+      var on = (tabs[i].getAttribute('data-mode') === pillFor(mode));
       if (on){ tabs[i].setAttribute('aria-current', 'true'); }
       else { tabs[i].removeAttribute('aria-current'); }
     }
