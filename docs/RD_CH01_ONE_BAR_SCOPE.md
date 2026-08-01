@@ -171,3 +171,53 @@ logged in FUTURE_ITEMS. The README itself says the selection algorithm is undesi
 shape is specified (9 fielders / 5 SP / 5 RP / 5 bench + 1 guaranteed bronze-or-better in the
 last slot, all with library art, all born verified) but which players and what era weighting
 is not. Don't invent odds.
+
+## 7. Deviations from the PNGs, with reasons
+
+1. **The bar spans its container, not the viewport.** 01a draws the bar edge to
+   edge. On the binder the shell lives inside `#appFrame`, which is a centred
+   `max-width:1100px` cabinet, so the bar is 1100px there and full width on the
+   shop / builder / Play Ball / marketplace (which mount the shell on `<body>`).
+   Breaking out of the cabinet needs `width:100vw`, and `100vw` counts the
+   scrollbar - it puts a horizontal scroller on every long page. Nick-ask: retire
+   the 1100px cabinet on the binder and the bar goes edge to edge everywhere.
+2. **390 Add button is 44x44, drawn 38x38.** Override rule 5 sets a 44px minimum
+   touch target and it is one of the six acceptance criteria; the drawn 38 loses
+   to it. Same reason the 390 nav strip is 58px tall rather than the drawn ~45 -
+   `min-height:44px` on the pills.
+3. **390 keeps a hamburger the mock does not draw.** 01b's caption says "email
+   and Log out move into the account sheet" but the drawn 390 bar has no trigger
+   for it. Without one a signed-in collector cannot log out on a phone, so the
+   bar carries a bare Press Start 2P glyph and the same email + Log out nodes
+   become the sheet (`display:contents` on desktop). No new nodes; nothing moved
+   twice.
+4. **390 hides the record and the season chip.** That matches the drawn 01b bar
+   exactly - but the caption says they "move into Play Ball", and the Play Ball
+   hub is chapter 08, a TARGET surface that is not built. Logged as FUTURE_ITEMS
+   19j rather than invented.
+5. **The pack shop still draws its own COINS chip.** Chapter 06 draws it and
+   chapter 06 was not re-issued in the revised bundle, so the shop now shows the
+   balance twice - once in the bar, once on the surface. Logged as FUTURE_ITEMS
+   19k; it is a product call.
+6. **The lineup builder lights Play Ball.** Chapter 09 has no nav pill of its own
+   and rule 7 says the active gold pill names the surface. A mode with no pill
+   lights its parent rather than leaving the bar unlabelled.
+
+## 8. Gates
+
+- `tools/rd_check.py css/depot-redesign.css` - ALL CHECKS PASSED; 0 unscoped
+  selectors, 0 box-shadows with a blur radius, one distinct cache-bust hash
+  across six shells (marketplace.html joined the list).
+- `tools/cssom_probe` (structural CSSOM differ, 41 properties over `#binderGrid`
+  / `#spotlight` / `#formScrim`, `git archive origin/main` as the reference):
+  189 nodes vs 189, **0 changed / 0 added / 0 removed at 1280 AND at 390**.
+  Nothing below the header moved.
+- `node --check` on depot-redesign.js, depot-shell.js, depot-shop-view.js,
+  depot-index-shell.js, depot-wallet.js - clean.
+- HTML parse on index.html, marketplace.html, game/shop.html, game/builder.html -
+  clean. game/index.html's bundle blocks were not touched (cache-bust tags only).
+- Live: binder / pack shop / lineup builder / Play Ball / marketplace at 1280,
+  signed-in and signed-out, and the binder iframe-pinned at true 390. Bar height
+  60 exactly; bar -> controls -> panel measured 20 / 20; four pills with one gold;
+  no page title anywhere; no horizontal overflow at either width; the LOG IN pill
+  opens the auth modal; the 390 account sheet opens and its Log out is 44px.
