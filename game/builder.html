@@ -1160,7 +1160,7 @@
               if(ins.error) throw ins.error;
               var row=ins.data && ins.data[0];
               if(!row || !row.id){ showChallengeError('Match created but no id was returned.'); return; }
-              var link='https://nickpeets.github.io/carddepot/game/builder.html?match='+row.id;
+              var link=location.origin+location.pathname+'?match='+encodeURIComponent(row.id);
               var li=$('challengeLink'); if(li) li.value=link;
                   try{ clearDraft(); }catch(e){}
               var pnl=$('challengePanel'); if(pnl) pnl.style.display='block';
