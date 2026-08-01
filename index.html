@@ -702,13 +702,9 @@ body{padding:0 !important;}
          order:-1 and a full line pushes Page/arrows down to the second line.
          CSS-only: no markup moved, no JS touched. */
 #groupByBar{ margin-left:0 !important; flex-wrap:wrap !important; gap:8px !important; order:-1 !important; width:100% !important; justify-content:flex-start !important; }
-/* +Add a card: keep the pill shape, never wrap into an oval */
-.depot-add-card{
-        white-space:nowrap !important;
-        flex:0 0 auto !important;
-        width:auto !important;
-        height:auto !important;
-      }
+/* +Add a card: the 390 sizing now belongs to the one-bar header (rule 7), which
+   draws it as a 44px square. This block forced width/height:auto !important and
+   beat the redesign sheet outright. Retired with the two-row bar. */
 /* Cards: 2-up with sensible proportions (was a cramped 3-up) */
 #binderGrid{ grid-template-columns:repeat(2,1fr) !important; gap:12px !important; }
 }

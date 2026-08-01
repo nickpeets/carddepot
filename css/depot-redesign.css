@@ -422,7 +422,7 @@
 
 /* "+ Add a card" is the ONLY filled button and the only green in the bar. */
 .rd-addbtn{
-  display:inline-flex;align-items:center;
+  display:inline-flex;align-items:center;flex:none;
   font-family:var(--rd-ui);font-weight:800;font-size:13px;color:var(--rd-navy);
   background:linear-gradient(#fff8,#fff0 45%),var(--rd-green);
   border:2px solid var(--rd-navy-deep);border-radius:var(--rd-r-pill);
