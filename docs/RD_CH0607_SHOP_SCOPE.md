@@ -144,4 +144,17 @@ hook changes:
    the clock but no right-hand pill.
 3. `pack-shop.png` (390) is a **row** layout: art tile left, name + one-line
    description, full-width pill under each row -- not a squeezed 3-up grid.
-4. Anything else found by the live walk is appended here with its reason.
+4. **Closed by the dress:** the Diamond panel now renders (gated, no hooks);
+   the 390 layout is rows; the tier pills are green as drawn.
+5. **Kept as a deviation:** the design's right-hand "Come back tomorrow /
+   cooling down - 24h" pill is not drawn. The live countdown is the button's
+   own label and the ticker owns that string every second; splitting it in two
+   would mean two clocks. The bar, the `next rip in` label and the LED clock
+   all render, so the wait stays legible.
+6. **Kept as a deviation:** the design's per-tier emoji art (box / star /
+   trophy / gem) stays as the `.pk-wrap` wax wrapper the build already had --
+   a real pack front with crimped edges, a plate and a sheen. It is closer to
+   06b's "shop tiles" panel than an emoji would be, and it is the same object
+   the rip holds in its held phase.
+7. **Found by the walk, logged not fixed:** the binder PACK SHOP tab has no
+   entry point since the Phase-2 era rail landed (FUTURE_ITEMS 19g).
