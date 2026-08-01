@@ -375,6 +375,42 @@ Commit bodies in this repo carry full incident write-ups. They are citable and t
 
 ---
 
+### 6.6 The domain cutover to `thedepot.cards`
+
+| Where | What lives there |
+|---|---|
+| `CNAME` (repo root) | The custom domain of record. Pages reads this file and nothing else; there is no `.github/workflows`, so this is a deploy-from-a-branch site and `.nojekyll` keeps the tree verbatim |
+| `1fbf3e6` | The path audit and its single real finding, written up in the commit body |
+| `a30aa21` | The `CNAME`, and the merge-order gate written out in full |
+| `AGENTS.md` §5 | Deploy rules. Still true. "Enforce HTTPS" is a repo setting, not a file, so it is not in the diff and cannot be |
+| this section | The DNS records, the Supabase URL configuration, and the origin-bound consequences. These have no other home in the repo |
+
+**What the audit actually found.** The question was what breaks when the same tree is served from a ROOT origin instead of the `/carddepot/` SUBPATH. Counted at `f578c7e`, across every shell, `js/`, `css/`, and the service of `data/`:
+
+| Class | Hits | Verdict |
+|---|---|---|
+| Root-relative `href="/..."` / `src="/..."` | 0 | nothing to fix |
+| Root-relative `url(/...)` in CSS | 0 | the only `url()` calls are Google Fonts `@import`s |
+| Leading-slash string literals in JS | 0 | nothing to fix |
+| `<base>` tags | 0 | none, and none wanted |
+| Service worker / web manifest | 0 | neither exists |
+| Hardcoded `nickpeets.github.io/carddepot` in shipping code | 1 | `game/builder.html` challenge link — fixed in `1fbf3e6` |
+| Same string in docs and data | 3 | `README.md`, `design/redesign-v2/README.md`, `data/url_recovery_map.json` `_meta`. Prose and a data artifact. Left alone on purpose: they are history, not routing |
+
+**Why it was already this clean.** Two conventions did the work before anyone asked them to. `AGENTS.md` §3's data-path rule anchors every `data/` fetch to `document.currentScript.src` via `_dataURL`, so it is origin-agnostic and depth-agnostic by construction. And the depth helpers (`navBase()` in `js/depot-shell.js`, and the same shape in `depot-redesign.js`, `depot-shop-entry.js`, `depot-shop-view.js`, `depot-pack-history.js`) test `/game/` against `location.pathname` rather than matching a base prefix — they ask "how deep am I", never "what is my prefix". A rule written for one bug paid for a different one two years later.
+
+**Verified, not assumed.** The tree was served twice at once: once at a root mount and once under a `/carddepot/` mount, and every non-external `href`/`src` in all six shells was resolved and fetched against both, plus the four `data/` files the `_dataURL` path resolves and one `game/billboards/` page. 178 requests, 0 non-200, and the per-shell reference counts were identical at both mounts (29 / 1 / 9 / 14 / 18 / 13). Symmetry is the actual claim; a green count on one mount would have proved nothing.
+
+**The Porkbun records.** Apex `thedepot.cards` gets the four GitHub Pages A records: `185.199.108.153`, `185.199.109.153`, `185.199.110.153`, `185.199.111.153`. Porkbun also supports ALIAS at the apex, so `ALIAS @ -> nickpeets.github.io` is a valid alternative and follows GitHub if the IPs ever change. Optional `CNAME www -> nickpeets.github.io`. Porkbun ships new domains with parking records and URL forwarding on; those must be removed first or they will fight the new ones.
+
+**The Supabase URL configuration.** Authentication -> URL Configuration. Site URL becomes `https://thedepot.cards`; the redirect allow-list gains `https://thedepot.cards/**`, keeping the old entry through the transition. Worth being precise about why: this app authenticates with `signInWithPassword` and `signUp` only — no OAuth, no magic links, and `redirectTo` appears nowhere in the tree. So the redirect allow-list is not on the sign-in hot path today. The setting that actually bites is **Site URL**, because email confirmation is on (`index.html` tells the user "Account created. Check your email to confirm") and Supabase builds that confirmation link from Site URL. Leave it pointing at the old host and every new signup gets mailed a link to the wrong origin. Supabase does not keep a CORS origin allow-list for the data API, so there is nothing to change there.
+
+**Origin-bound state, which no setting fixes.** Sessions live in `localStorage`, and `localStorage` is per-origin (`RUNBOOK` §3.3 learned this the hard way on the forwarded port). Everyone is signed out on the new origin exactly once and has to log in again. Any cached wallet or pack state keyed in `localStorage` starts empty there too. This is not a bug and there is no migration for it; it is the cost of moving origin, and it is worth saying out loud before the first person reports it as one.
+
+**The gate, because it reads backwards.** The moment `CNAME` lands on `main`, Pages stops serving `nickpeets.github.io/carddepot/` and starts 301-redirecting it to `https://thedepot.cards/`. If DNS is not live yet, that target does not resolve and the app is down at both origins, not one. DNS first, confirm it resolves, then merge. "Enforce HTTPS" in Settings -> Pages only becomes tickable after the certificate is issued, which is minutes to a day after the DNS check goes green.
+
+---
+
 ## 7. VERIFICATION LOG FOR THIS DOCUMENT
 
 Per AGENTS.md §0, here is what was actually checked rather than assumed while writing this:
@@ -385,6 +421,21 @@ Per AGENTS.md §0, here is what was actually checked rather than assumed while w
 * The §2.3 count history was reconstructed from the actual `chore(cache-bust)` commits in `main`'s history in chronological order, including the 63 → 62 → 64 sequence and the branch tips those stamps were taken at.
 * Branch inventory: 260 branches, prefixes `fix` 87, `feat` 78, `chore` 42, `docs` 14+3, `library` 1, plus 28 unprefixed. Consistent with the never-delete rule.
 * Every **[repo]** claim above was read out of the cited file or commit at `main` during this pass.
+
+* For 6.6: `main` HEAD read live at `f578c7e`, the merge of PR #223. The path-audit
+  counts in 6.6 were produced by `git grep` over tracked files at that commit, not
+  recalled: 0 root-relative refs, 0 CSS `url(/)`, 0 leading-slash literals, 0 `<base>`,
+  no service worker, no manifest, 1 hardcoded origin in shipping code.
+* The dual-mount check in 6.6 was run, not reasoned about: two local servers, one at a
+  root mount and one under `/carddepot/`, 178 requests, 0 non-200, identical per-shell
+  reference counts on both.
+* `.nojekyll` and the absence of `.github/workflows` were both confirmed by listing, which
+  is what makes the claim "repo root is the published root" safe to write down.
+* Not verified this pass, and said so rather than implied: `tools/cssom_probe.js` needs a
+  browser on a served origin, and the Codespaces port forwarder was unreachable for the
+  whole session (three hostnames, two ports, Chrome network error rather than the 3.3 auth
+  wall). The diff makes that a small gap — it touches no CSS, no markup, no class names —
+  but a gap is a gap and 3.6 says to name it.
 
 ### 7.1 What in this document is chat-only
 
