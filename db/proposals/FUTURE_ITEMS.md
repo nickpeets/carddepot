@@ -652,3 +652,67 @@ Noted while inventorying chapter 06: the file exists (67 lines) and
 `game/shop.html` explains in a comment that its header entry link "was an
 unstyled self-link here and is unwired". No shell includes it. It is dead
 weight, not a dress problem -- delete it in the 19a-19c cleanup branch.
+
+### 19i. The one-bar header orphaned four rulesets
+
+`feat/rd-header-one-bar` retired the two-row bar. What it left behind, all now
+unreachable but still shipped: `depot-v2.css`'s `.v2-header` / `.v2-nav` /
+`.v2-nav-title` / `.v2-identity` blocks (the header sheds those classes at dress
+time, so nothing matches them any more); `css/depot-redesign.css`'s `.rd-pagetitle`
+block, kept only as `display:none` because `depot-shell.js` still writes a title
+into `[data-depot-navtitle]`; `.pks-h1` in `css/depot-redesign-shop.css`, whose
+element is gone; and `html.depot-game .depot-nav{position:fixed;bottom:0}` in
+`css/depot-style.css`, the Play Ball bottom tab bar the nav no longer needs.
+None of it can be reached; all of it is dead weight. Delete in a cleanup branch
+rather than mid-dress, so a bisect can still explain the header.
+
+### 19j. The 390 record has nowhere to go until the Play Ball hub exists
+
+Chapter 01's 390 caption says "record moves into Play Ball". The Play Ball hub
+(chapter 08) is a TARGET surface - it is not built. So at 390 the bar hides the
+record and the season chip (per the drawn 01b bar, which shows neither) and there
+is currently no other place a collector can read their W-L on a phone. When the
+hub lands, that is where the record belongs.
+
+### 19k. Two wallet readouts on the pack shop
+
+The one-bar header now carries the balance on every surface, and chapter 06 still
+draws the shop's own COINS chip at the top right of the shop. Both are correct to
+their own chapter and both are now on screen at once. Chapter 06 was not re-issued
+in the revised bundle, so this is a product call, not a dress call: either the
+shop chip goes and the bar is the single readout, or the chip stays as the
+"spend here" affordance.
+
+### 20. THE STARTER BOX (chapter 02b) - scoped, not built
+
+NEW in the revised design bundle and the next feature in the build order (the
+README puts it directly after binder + spotlight, because "a new account needs
+cards before anything else is testable"). NOT part of the one-bar pass, by
+instruction.
+
+Design truth: `build_package/exports/desktop/02b-1-starter-box.png`,
+`02b-2-wave-reveal.png`, `02b-3-full-tray.png`, `02b-4-binder-first-load.png`,
+`build_package/exports/mobile-390/starter-box.png`, and chapter 02b of
+`Depot - Complete Design.dc.html` (lines 333-799).
+
+Shape, as specified: 25 cards on a new account - 9 fielders / 5 SP / 5 RP / 5
+bench, plus one guaranteed bronze-or-better in the last slot. All with library
+art, all born verified. Revealed in waves, then a full tray, then the binder's
+first load.
+
+What it needs before any of it can be dressed:
+
+1. A POSITION-AWARE roll. The current engine rolls by rarity band, not by
+   position; nothing in `depot-pack-engine.js` can fill "9 fielders / 5 SP /
+   5 RP / 5 bench".
+2. A `starter_box` grant type on the money path - grants atomic, ledger-first,
+   exactly like `pack_grants`. It is a grant with no purchase, so it needs its
+   own idempotency key or a new account can claim it twice.
+3. The franchise-creation prerequisite already logged in this file: the box is
+   the first thing a new account sees, so it has to land after the franchise row
+   exists and before the binder's first paint.
+
+What is NOT designed, and must not be invented: the card-SELECTION algorithm.
+The README says so outright - which players from the catalog, and what era
+weighting, is undecided. The hit band is guaranteed; the rest are "mostly plain".
+Don't write odds into the design or the strings (override rule 3).

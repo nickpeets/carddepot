@@ -19,7 +19,7 @@ import re, sys, os
 
 DEFAULT_CSS = ['css/depot-redesign.css', 'css/depot-redesign-deinline.css']
 DEFAULT_SHELLS = ['index.html', 'game/shop.html', 'game/index.html',
-                  'game/builder.html', 'preview.html']
+                  'game/builder.html', 'preview.html', 'marketplace.html']
 
 AT_OK = ('@media', '@keyframes', '@import', '@supports', '@font-face', '@charset')
 

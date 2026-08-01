@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Card Depot &mdash; Marketplace</title>
+<script src="js/version.js?v=22ddb34"></script>
+<script src="js/depot-core.js?v=22ddb34"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+// depot-core Supabase config (additive; mirrors game/shop.html). Publishable key
+// only, same project as the main app. Without it depotSB() returns null and the
+// bar renders anonymous even for a signed-in collector.
+var SUPABASE_URL='https://nuymzokvbdntbvinsnda.supabase.co';
+var SUPABASE_KEY=['sb','publishable','IiTsIBqYgGTIEnwdvQEXPA','4rmQdYVo'].join('_');
+window.DEPOT_SUPABASE_CONFIG = window.DEPOT_SUPABASE_CONFIG || { url: SUPABASE_URL, key: SUPABASE_KEY };
+var sb=null;
+try{ if(window.supabase&&window.supabase.createClient){ sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY); } }catch(e){}
+try{ if(sb){ window.sb = sb; window.supabaseClient = sb; } }catch(e){}
+</script>
+<link rel="stylesheet" href="css/depot-style.css?v=22ddb34">
+<link rel="stylesheet" href="depot-v2.css?v=22ddb34">
+<link rel="stylesheet" href="css/depot-redesign.css?v=22ddb34">
+<script src="js/depot-wallet.js?v=22ddb34"></script>
+<script src="js/depot-shell.js?v=22ddb34" defer></script>
+<script src="js/depot-redesign.js?v=22ddb34" defer></script>
+</head>
+<body class="v2-body rd-page">
+<script>
+// Chapter 14 is ROADMAP: browse and detail are drawn, listing CREATION is not
+// designed, and nothing behind it is built. The nav label still ships (rule 7
+// puts Marketplace on the bar) so this surface answers with the DESIGNED
+// coming-soon rather than a dead door - the same rule the Play Ball hub tiles
+// follow. Nothing here reads or writes the money path.
+document.addEventListener('DOMContentLoaded', function () {
+  if (window.DepotShell && window.DepotShell.mount) {
+    window.DepotShell.mount({ active: 'market', wordmark: 'THE <b>DEPOT</b>' });
+  } else {
+    console.warn('[depot] marketplace: DepotShell.mount missing; this page has no header');
+  }
+});
+</script>
+
+<main class="depot-stage rd-page__body" data-depot-stage>
+  <section class="rd-panel rd-soon">
+    <span class="rd-soon__k">COMING SOON</span>
+    <h2 class="rd-soon__t">The Marketplace isn&rsquo;t open yet</h2>
+    <p class="rd-soon__s">Buying and selling cards between collectors is designed but not built.
+      Nothing you own changes while it&rsquo;s closed, and no listing can go live without a
+      confirmed front scan when it does.</p>
+    <div class="rd-soon__list">
+      <span class="rd-soon__item">Browse listings</span>
+      <span class="rd-soon__item">Card detail &amp; price history</span>
+      <span class="rd-soon__item">Pack provenance</span>
+    </div>
+    <p class="rd-soon__s" style="margin-top:18px">Until then, packs are the way in.
+      <a class="rd-btn rd-btn--gold rd-btn--sm" href="game/shop.html">Open the Pack Shop</a></p>
+  </section>
+</main>
+</body>
+</html>

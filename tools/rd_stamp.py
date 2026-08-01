@@ -19,9 +19,10 @@ Usage: python3 tools/rd_stamp.py <short-sha>
 import re, sys, os
 
 SHELLS = ['index.html', 'game/shop.html', 'game/index.html',
-          'game/builder.html', 'preview.html']
+          'game/builder.html', 'preview.html', 'marketplace.html']
 LABEL = {'index.html': 'index', 'game/shop.html': 'shop', 'game/index.html': 'game',
-         'game/builder.html': 'builder', 'preview.html': 'preview'}
+         'game/builder.html': 'builder', 'preview.html': 'preview',
+         'marketplace.html': 'market'}
 VERSION = 'js/version.js'
 TAG = re.compile(r'\?v=[0-9A-Za-z._-]*')
 

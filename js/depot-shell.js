@@ -32,15 +32,23 @@
   function navBase(){ try { return /\/game\//.test(location.pathname) ? '../' : ''; } catch(e){ return ''; } }
 
   var TABS = [
-    { mode: 'binder', label: 'THE BINDER', href: 'index.html' },
-    { mode: 'shop',   label: 'PACK SHOP',  href: 'game/shop.html' },
-    { mode: 'game',   label: 'PLAY BALL',  href: 'game/index.html' }
-  ];
+  { mode: 'binder', label: 'Binder',      short: 'Binder', href: 'index.html' },
+  { mode: 'shop',   label: 'Pack Shop',   short: 'Shop',   href: 'game/shop.html' },
+  { mode: 'game',   label: 'Play Ball',   short: 'Play',   href: 'game/index.html' },
+  /* Chapter 14 is roadmap. The label ships anyway - a nav that hides a surface
+     teaches nothing; marketplace.html answers with a DESIGNED coming-soon. */
+  { mode: 'market', label: 'Marketplace', short: 'Market', href: 'marketplace.html' }
+];
 
   // Task C: the nav row carries the page title, the mode pills and the green
   // add-a-card action -- one header language on every surface.
-  var TITLES = { binder: 'The Binder', shop: 'Pack Shop', game: 'Play Ball', builder: 'Lineup' };
+  var TITLES = { binder: 'The Binder', shop: 'Pack Shop', game: 'Play Ball', builder: 'Lineup', market: 'Marketplace' };
   function titleFor(mode){ return TITLES[mode] || 'The Depot'; }
+
+/* Chapter 09 is reached THROUGH Play Ball, and rule 7 says the active gold pill
+   names the surface - so a mode with no pill of its own lights its parent-s. */
+var PILL_FOR = { builder: 'game' };
+function pillFor(mode){ return PILL_FOR[mode] || mode; }
 
   var _root = null;   // the .depot-shell element we manage
   var _mounted = false;
@@ -52,9 +60,11 @@
     var html = '';
     for (var i = 0; i < TABS.length; i++){
       var t = TABS[i];
-      var on = (t.mode === active);
+      var on = (t.mode === pillFor(active));
       html += '<a class="depot-tab v2-pill' + (t.mode === 'game' ? ' v2-pill--orange' : '') + '" data-mode="' + t.mode + '" href="' + navBase() + t.href + '"' +
-              (on ? ' aria-current="true"' : '') + '>' + esc(t.label) + '</a>';
+              (on ? ' aria-current="true"' : '') +
+      /* 01b shortens the labels on the 390 strip so four fit without a scroller */
+      ' data-rd-short="' + esc(t.short || t.label) + '">' + esc(t.label) + '</a>';
     }
     return html;
   }
@@ -97,7 +107,7 @@
     else { console.warn('[depot] shell.setActive: no [data-depot-navtitle]; title not repainted'); }
     var tabs = _root.querySelectorAll('.depot-tab');
     for (var i = 0; i < tabs.length; i++){
-      var on = (tabs[i].getAttribute('data-mode') === mode);
+      var on = (tabs[i].getAttribute('data-mode') === pillFor(mode));
       if (on){ tabs[i].setAttribute('aria-current', 'true'); }
       else { tabs[i].removeAttribute('aria-current'); }
     }
@@ -118,7 +128,7 @@
     var _pfx = info.recordPrefix ? String(info.recordPrefix) : '';
 box.querySelector('.record').textContent = w + '-' + l;
         var _seasonEl = box.querySelector('[data-depot-season]');
-        if (_seasonEl){ var _sn = _pfx ? _pfx.replace(/[^0-9]/g, '') : ''; _seasonEl.textContent = _sn ? ('SEASON ' + _sn) : ''; }
+        if (_seasonEl){ var _sn = _pfx ? _pfx.replace(/[^0-9]/g, '') : ''; _seasonEl.textContent = _sn ? ('S' + _sn) : ''; /* ch01: the bar reads S1, not SEASON 1 */ }
         else { console.warn('[depot] shell.setFranchise: no [data-depot-season] in plate; season label skipped'); }
         var _streakEl = box.querySelector('[data-depot-streak]');
         if (_streakEl){
