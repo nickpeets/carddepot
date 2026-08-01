@@ -518,7 +518,11 @@
     order:9;flex-basis:100%;width:auto;margin:0 -12px;padding:7px 12px;gap:3px;
     background:#0c3556;overflow-x:auto;flex-wrap:nowrap;
   }
-  .rd-navpill{min-height:44px;flex:0 0 auto}
+  /* 01b: the strip shortens to Binder | Shop | Play | Market so four pills fit
+     at 390 without a horizontal scroller. */
+  .rd-navpill{min-height:44px;flex:0 0 auto;font-size:0}
+  .rd-navpill::before{content:attr(data-rd-short);font-family:var(--rd-ui);font-weight:700;font-size:13px}
+  .rd-navpill.is-active::before,.rd-navpill[aria-current="true"]::before{font-weight:800}
   .rd-loginpill{min-height:44px}
   .rd-soon__t{font-size:21px}
   .rd-page__body{padding:0 12px 20px}

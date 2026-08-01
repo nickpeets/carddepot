@@ -32,12 +32,12 @@
   function navBase(){ try { return /\/game\//.test(location.pathname) ? '../' : ''; } catch(e){ return ''; } }
 
   var TABS = [
-  { mode: 'binder', label: 'Binder',      href: 'index.html' },
-  { mode: 'shop',   label: 'Pack Shop',   href: 'game/shop.html' },
-  { mode: 'game',   label: 'Play Ball',   href: 'game/index.html' },
+  { mode: 'binder', label: 'Binder',      short: 'Binder', href: 'index.html' },
+  { mode: 'shop',   label: 'Pack Shop',   short: 'Shop',   href: 'game/shop.html' },
+  { mode: 'game',   label: 'Play Ball',   short: 'Play',   href: 'game/index.html' },
   /* Chapter 14 is roadmap. The label ships anyway - a nav that hides a surface
      teaches nothing; marketplace.html answers with a DESIGNED coming-soon. */
-  { mode: 'market', label: 'Marketplace', href: 'marketplace.html' }
+  { mode: 'market', label: 'Marketplace', short: 'Market', href: 'marketplace.html' }
 ];
 
   // Task C: the nav row carries the page title, the mode pills and the green
@@ -62,7 +62,9 @@ function pillFor(mode){ return PILL_FOR[mode] || mode; }
       var t = TABS[i];
       var on = (t.mode === pillFor(active));
       html += '<a class="depot-tab v2-pill' + (t.mode === 'game' ? ' v2-pill--orange' : '') + '" data-mode="' + t.mode + '" href="' + navBase() + t.href + '"' +
-              (on ? ' aria-current="true"' : '') + '>' + esc(t.label) + '</a>';
+              (on ? ' aria-current="true"' : '') +
+      /* 01b shortens the labels on the 390 strip so four fit without a scroller */
+      ' data-rd-short="' + esc(t.short || t.label) + '">' + esc(t.label) + '</a>';
     }
     return html;
   }
