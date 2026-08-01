@@ -118,12 +118,20 @@ insert into public.user_roles (user_id, role, note)
 values ('9e4e47d2-8836-4100-b846-fe1bb059fded', 'admin', 'founding admin (Nick)')
 on conflict (user_id) do update set role = 'admin';
 
--- Tim is a TESTER, not an admin. Written explicitly so the absence is a
--- decision on the record rather than an oversight. He gets the standard
--- scan-required Add-a-Card flow, which is exactly what we want tested.
+-- 1.2 TIM'S ADMIN ROW -- a REVERSAL, on the record.
+-- Tim was seeded here as a plain 'user' and deliberately left out of the
+-- client fallback list so the standard scan-required Add-a-Card flow had a
+-- live test subject. Nick has since granted him the add-bypass, so this row
+-- and FOUNDING_ADMINS in js/depot-roles.js were changed together and still
+-- agree -- which is the whole point of keeping both in one commit.
+--
+-- SCOPE WARNING: 'admin' here bundles the Add-a-Card bypass with every other
+-- admin power this file defines (depot_admin_grant, depot_wallet_repair, the
+-- analytics exclusion). If Tim should hold ONLY the bypass, that is a
+-- role-granularity split -- FUTURE_ITEMS Sec 21. Flagged, not built.
 insert into public.user_roles (user_id, role, note)
-values ('9861ce0d-e081-4123-b445-041dfed6cf34', 'user', 'tester (Tim) -- deliberately NOT admin')
-on conflict (user_id) do nothing;
+values ('9861ce0d-e081-4123-b445-041dfed6cf34', 'admin', 'admin (Tim) -- add-bypass granted by Nick')
+on conflict (user_id) do update set role = 'admin';
 
 -- =============================================================================
 -- SECTION 2. FRANCHISE (AND COLLECTION) ON SIGNUP -- kill the window.prompt path
@@ -502,15 +510,15 @@ commit;
 --   select relname, relrowsecurity from pg_class where relname = 'user_roles';
 --   -- expect: user_roles | t
 --   select user_id, role, note from public.user_roles order by role, created_at;
---   -- expect: 9e4e47d2-... admin (Nick), and every other auth user as 'user',
---   --         including 9861ce0d-... (Tim) -- Tim must NOT read as admin.
+--   -- expect: 9e4e47d2-... admin (Nick) AND 9861ce0d-... admin (Tim, Sec 1.2);
+--   --         every other auth user reads as 'user'.
 --   select count(*) as admins from public.user_roles where role = 'admin';
---   -- expect: 1
+--   -- expect: 2  -- Nick and Tim
 --
 -- 5.2 depot_is_admin() answers for the CALLER, not for the table.
 --   -- Run signed in as Nick in the SQL editor's "run as" or from the app console:
 --   select public.depot_is_admin();          -- expect: true  (as Nick)
---   -- and from Tim's session:                  expect: false
+--   -- and from Tim's session:                  expect: true (Tim is an admin as of Sec 1.2)
 --   -- Client-side equivalent (browser console, signed in):
 --   --   await depotSB().rpc('depot_is_admin')
 --
@@ -568,7 +576,8 @@ commit;
 -- 5.10 The admin grant path works and is role-gated.
 --   -- as Nick:  select public.depot_admin_grant('<owner-uuid>'::uuid, 1000, 'smoke test');
 --   --           then: select * from public.depot_wallet_check();  -- drift still 0
---   -- as Tim:   select public.depot_admin_grant('<any-uuid>'::uuid, 1000);
+--   -- as any NON-ADMIN id (Tim is an admin as of Sec 1.2):
+--   --   select public.depot_admin_grant('<any-uuid>'::uuid, 1000);
 --   --           expect: ERROR depot_admin_grant: admin only
 
 -- =============================================================================
