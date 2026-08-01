@@ -1,23 +1,23 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <script src="js/version.js?v=8a708db"></script>
-  <script src="js/depot-core.js?v=8a708db"></script>
+  <script src="js/version.js?v=25bab7d"></script>
+  <script src="js/depot-core.js?v=25bab7d"></script>
   <!-- roles shim: window.depotIsAdmin(). Dark-safe (resolves false) until db/proposals/MIGRATION_roles.sql runs. Must load AFTER depot-core: it reads depotSB()/depotUser(). -->
-  <script src="js/depot-roles.js?v=8a708db"></script>
+  <script src="js/depot-roles.js?v=25bab7d"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>The Depot</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gshtatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Spectral:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/depot-style.css?v=8a708db">
-  <link rel="stylesheet" href="css/season.css?v=8a708db">
-  <link rel="stylesheet" href="css/depot-redesign.css?v=8a708db">
-<link rel="stylesheet" href="css/depot-redesign-binder.css?v=8a708db">
-    <script src="js/depot-shell.js?v=8a708db"></script>
-  <script src="js/depot-redesign.js?v=8a708db"></script>
-  <script src="js/depot-season-shell.js?v=8a708db"></script>
+  <link rel="stylesheet" href="css/depot-style.css?v=25bab7d">
+  <link rel="stylesheet" href="css/season.css?v=25bab7d">
+  <link rel="stylesheet" href="css/depot-redesign.css?v=25bab7d">
+<link rel="stylesheet" href="css/depot-redesign-binder.css?v=25bab7d">
+    <script src="js/depot-shell.js?v=25bab7d"></script>
+  <script src="js/depot-redesign.js?v=25bab7d"></script>
+  <script src="js/depot-season-shell.js?v=25bab7d"></script>
   <style>
 /* The spotlight skin that used to live in this block - four interleaved
    layers, from the original leather/paper rules through the Phase-2 2b demo
@@ -796,7 +796,7 @@ body{padding:0 !important;}
 .rolo-noimg{margin-top:.4rem;font-size:.72rem;color:#7a5a00}
 .rolo-uphint{margin-top:.2rem;font-size:.68rem;opacity:.75}
 </style>
-<link rel="stylesheet" href="css/depot-spotlight-legacy.css?v=8a708db">
+<link rel="stylesheet" href="css/depot-spotlight-legacy.css?v=25bab7d">
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 <!-- ===== DEPOT AUTH (Phase 1): Supabase client + auth UI styles ===== -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -1024,8 +1024,8 @@ body{padding:0 !important;}
 </style>
 <!-- /PHASE5-SHARE-CSS -->
 
-  <link rel="stylesheet" href="css/depot-redesign-shop.css?v=8a708db">
-    <link rel="stylesheet" href="depot-v2.css?v=8a708db">
+  <link rel="stylesheet" href="css/depot-redesign-shop.css?v=25bab7d">
+    <link rel="stylesheet" href="depot-v2.css?v=25bab7d">
 </head>
 <body class="v2-body">
   <div id="sharedUnavailable"><div class="su-card"><div class="su-title">Not available</div><div class="su-sub">This collection isn&rsquo;t available.</div></div></div>
@@ -1095,8 +1095,9 @@ body.logged-out #appFrame{display:none !important;}
 <option value="year">Year</option>
 <option value="set">Set</option>
 <option value="brand">Brand</option>
-<option value="position" disabled>Position &#8212; SOON</option>
-<option value="team" disabled>Team &#8212; SOON</option>
+<option value="position">Position</option>
+<option value="team">Team</option>
+<option value="band">Band</option>
 </select>
 </div>
 </div>
@@ -1820,7 +1821,7 @@ function groupKeyFor(c, mode){
 function renderGrouped(){
   showEraChrome(false);
   var head = document.getElementById('eraTitle');
-  var labels = {year:'Year', set:'Set', brand:'Brand', team:'Team', player:'Player', decade:'Decade'};
+  var labels = {year:'Year', set:'Set', brand:'Brand', team:'Team', player:'Player', decade:'Decade', position:'Position', band:'Band'};
   if(head) head.textContent = 'Grouped by ' + (labels[groupMode]||'Era');
   var blurb = document.getElementById('eraBlurb');
   if(blurb) blurb.textContent = eraCards(curEra).length + ' cards.';
@@ -3386,22 +3387,24 @@ setAuthUI(false);
   });
 })();
 </script>
-<script src="game/season.js?v=8a708db" defer></script>
-<script src="js/depot-index-shell.js?v=8a708db"></script>
-<script src="js/depot-prestige.js?v=8a708db"></script>
-<script src="js/depot-wallet.js?v=8a708db"></script>
-  <script src="js/depot-pack-engine.js?v=8a708db"></script>
-  <script src="js/depot-pixel-card.js?v=8a708db"></script>
-  <script src="js/depot-library-index.js?v=8a708db"></script>
-  <script src="js/depot-shop.js?v=8a708db"></script>
-  <script src="js/depot-shop-view.js?v=8a708db"></script>
-  <script src="js/depot-pack-history.js?v=8a708db"></script>
-  <script src="js/depot-binder-shop.js?v=8a708db"></script>
-  <script src="js/depot-library-art.js?v=8a708db"></script>
-  <script src="js/depot-add-card-search.js?v=8a708db"></script>
-    <script src="js/depot-position.js?v=8a708db"></script>
-  <script src="js/depot-card-detail-2b.js?v=8a708db"></script>
-  <script src="js/depot-card-detail-polish.js?v=8a708db"></script>
+<script src="game/season.js?v=25bab7d" defer></script>
+<script src="js/depot-index-shell.js?v=25bab7d"></script>
+<script src="js/depot-prestige.js?v=25bab7d"></script>
+<script src="js/depot-wallet.js?v=25bab7d"></script>
+  <script src="js/depot-pack-engine.js?v=25bab7d"></script>
+  <script src="js/depot-pixel-card.js?v=25bab7d"></script>
+  <script src="js/depot-library-index.js?v=25bab7d"></script>
+  <script src="js/depot-shop.js?v=25bab7d"></script>
+  <script src="js/depot-shop-view.js?v=25bab7d"></script>
+  <script src="js/depot-pack-history.js?v=25bab7d"></script>
+  <script src="js/depot-binder-shop.js?v=25bab7d"></script>
+  <script src="js/depot-library-art.js?v=25bab7d"></script>
+  <script src="js/depot-add-card-search.js?v=25bab7d"></script>
+    <script src="js/depot-position.js?v=25bab7d"></script>
+  <script src="js/depot-card-detail-2b.js?v=25bab7d"></script>
+  <script src="js/depot-card-detail-polish.js?v=25bab7d"></script>
+<!-- browse: Group By Position / Team / Band on the proven renderGrouped path, plus mobile (<=500px) infinite scroll. Additive + guarded; desktop pagination untouched. -->
+<script src="js/depot-binder-browse.js?v=25bab7d"></script>
 <script>
 /* Franchise Economy Slice A: arm wallet chip + payout hook. Additive, fail-loud, graceful until DDL. */
 (function(){
@@ -3454,7 +3457,7 @@ setAuthUI(false);
   .group-grid{ display:grid !important; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)) !important; gap:12px !important; }
   .group-grid .slot{ aspect-ratio:auto !important; min-height:0 !important; }
 </style>
-<link rel="stylesheet" href="css/depot-redesign-addcard.css?v=8a708db">
+<link rel="stylesheet" href="css/depot-redesign-addcard.css?v=25bab7d">
 
 <script>
 /* Route Group By = Set through the labeled-sections grid (renderGrouped) instead of the
