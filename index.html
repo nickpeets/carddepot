@@ -839,7 +839,15 @@ body{padding:0 !important;}
 
   var mode = 'login'; // or 'signup'
   function $(id){ return document.getElementById(id); }
-  function setMsg(t, cls){ var m=$('authMsg'); if(!m) return; m.textContent=t||''; m.className='auth-msg'+(cls?(' '+cls):''); }
+  function setMsg(t, cls){ var m=$('authMsg'); if(!m) return;
+      /* fix/signup-flow: the redesign dresser adds .rd-modal__msg to this node at
+         dress time (js/depot-redesign.js chapter 02) and setMsg used to blow the whole
+         className away, so the FIRST message a visitor ever saw fell out of the parts
+         language back to the legacy 11px line - part of why a refusal reads as nothing
+         happening. Keep the part, swap only the ok/err state class. */
+      var dressed = m.classList.contains('rd-modal__msg');
+      m.textContent=t||''; m.className='auth-msg'+(cls?(' '+cls):'');
+      if(dressed){ m.classList.add('rd-modal__msg'); } }
 
   function reflectMode(){
     var login = mode==='login';
