@@ -37,12 +37,16 @@
   { mode: 'game',   label: 'Play Ball',   short: 'Play',   href: 'game/index.html' },
   /* Chapter 14 is roadmap. The label ships anyway - a nav that hides a surface
      teaches nothing; marketplace.html answers with a DESIGNED coming-soon. */
-  { mode: 'market', label: 'Marketplace', short: 'Market', href: 'marketplace.html' }
+  { mode: 'market', label: 'Marketplace', short: 'Market', href: 'marketplace.html' },
+  /* VS: the nextgen hub tile promoted to a first-class mode. The surface is
+     real - challenges, stakes, play, settlement - so the pill is live, not a
+     designed coming-soon like Marketplace. */
+  { mode: 'vs', label: 'VS', short: 'VS', href: 'vs.html' }
 ];
 
   // Task C: the nav row carries the page title, the mode pills and the green
   // add-a-card action -- one header language on every surface.
-  var TITLES = { binder: 'The Binder', shop: 'Pack Shop', game: 'Play Ball', builder: 'Lineup', market: 'Marketplace' };
+  var TITLES = { binder: 'The Binder', shop: 'Pack Shop', game: 'Play Ball', builder: 'Lineup', market: 'Marketplace', vs: 'VS' };
   function titleFor(mode){ return TITLES[mode] || 'The Depot'; }
 
 /* Chapter 09 is reached THROUGH Play Ball, and rule 7 says the active gold pill
