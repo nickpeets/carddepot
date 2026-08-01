@@ -854,7 +854,14 @@ body{padding:0 !important;}
   var DepotAuth = {
     openModal: function(){ setMsg(''); mode='login'; reflectMode(); $('authOverlay').classList.add('open'); var e=$('authEmailInput'); if(e) e.focus(); },
     closeModal: function(){ $('authOverlay').classList.remove('open'); },
-    toggleMode: function(){ mode = (mode==='login') ? 'signup' : 'login'; setMsg(''); reflectMode(); },
+    toggleMode: function(){ mode = (mode==='login') ? 'signup' : 'login'; setMsg(''); reflectMode();
+      /* fix/signup-flow: switching INTO sign-up wipes whatever the browser autofilled.
+         One #authEmailInput / #authPassInput pair serves BOTH modes, so Chrome drops the
+         saved LOGIN pair into the sign-up form. The visitor then registers an address
+         that already has an account, Supabase answers 'User already registered', and the
+         button reads as dead. A sign-up now carries only what was typed. */
+      if(mode==='signup'){ var __e=$('authEmailInput'), __p=$('authPassInput'); if(__e) __e.value=''; if(__p) __p.value=''; if(__e){ try{ __e.focus(); }catch(_e){} } }
+    },
     submit: async function(){
       var email = ($('authEmailInput').value||'').trim();
       var pass = $('authPassInput').value||'';
@@ -862,13 +869,41 @@ body{padding:0 !important;}
       setMsg('Working...'); $('authSubmitBtn').disabled = true;
       try{
         var res;
-        if(mode==='signup'){ res = await sb.auth.signUp({ email: email, password: pass }); }
+        if(mode==='signup'){
+          /* fix/signup-flow: emailRedirectTo was ABSENT, so every confirmation and
+             recovery link fell back to the project Site URL (now https://thedepot.cards
+             after the cutover). A sign-up begun on any other origin came back to the
+             wrong place. Pass THIS origin + path explicitly, never a query string. */
+          res = await sb.auth.signUp({ email: email, password: pass, options: { emailRedirectTo: location.origin + location.pathname } });
+        }
         else { res = await sb.auth.signInWithPassword({ email: email, password: pass }); }
-        if(res.error){ setMsg(res.error.message, 'err'); }
+        if(res.error){
+          var __m = (res.error.message||'')+'';
+          console.warn('[DepotAuth] ' + mode + ' refused by Supabase: status=' + (res.error.status||'?') + ' code=' + (res.error.code||'?') + ' msg=' + __m);
+          /* The commonest sign-up refusal is an address that already has an account.
+             Name it and move the visitor to Log in with the email kept, instead of
+             leaving a bare server string under the button (a silent bounce). */
+          if(/already registered|already exists|already been registered/i.test(__m)){
+            mode='login'; reflectMode();
+            var __p2=$('authPassInput'); if(__p2){ __p2.value=''; try{ __p2.focus(); }catch(_e){} }
+            setMsg('That email already has an account - switched you to Log in. Enter your password.', 'err');
+          } else { setMsg(__m || 'That did not go through. Please try again.', 'err'); }
+        }
         else if(mode==='signup' && res.data && res.data.session===null){
-          setMsg('Account created. Check your email to confirm, then log in.', 'ok');
+          var __u = (res.data && res.data.user) || null;
+          if(__u && __u.identities && __u.identities.length === 0){
+            /* Supabase obfuscates an existing address while confirmations are ON: it
+               answers with an identity-less user and NO session instead of an error. */
+            console.warn('[DepotAuth] sign-up returned an identity-less user -> that email already has an account');
+            mode='login'; reflectMode();
+            setMsg('That email already has an account - switched you to Log in. Enter your password.', 'err');
+          } else {
+            console.log('[DepotAuth] sign-up returned no session -> email confirmation is ON for this project; the visitor must confirm before logging in');
+            setMsg('Account created. Check your email to confirm, then come back and log in.', 'ok');
+          }
         } else {
-          setMsg('Success.', 'ok'); setTimeout(DepotAuth.closeModal, 500);
+          console.log('[DepotAuth] ' + mode + ' succeeded with a live session; the gate lifts on the SIGNED_IN event');
+          setMsg(mode==='signup' ? 'Account created - you are signed in.' : 'Success.', 'ok'); setTimeout(DepotAuth.closeModal, 900);
         }
       }catch(err){ setMsg(String(err && err.message || err), 'err'); }
       finally{ $('authSubmitBtn').disabled = false; }
