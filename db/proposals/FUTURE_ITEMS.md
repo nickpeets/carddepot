@@ -607,3 +607,48 @@ with a NO IMAGE badge. The part is already dressed as `.rolo-showall` in
 `css/depot-redesign-addcard.css`, so this is a JS-only item: filter the rows,
 add the toggle, and it arrives wearing the right clothes. A dress branch does
 not invent behaviour, which is why it is here and not in PR.
+
+### 19f. The pre-`pks` shop tile and the pre-`prip` ceremony, both dead
+
+The chapter 06/07 dissolve deleted three sheets. Two of them carried whole
+layers that nothing has rendered since the shared `DepotShopView` landed:
+
+- `css/depot-shop-view.css`: `.dsv-tile`, `.dsv-back`, `.dsv-wrap`, `.dsv-ribbon`,
+  `.dsv-info`, `.dsv-name`, `.dsv-price`, `.dsv-odds`, `.dsv-foot`, `.dsv-btn`,
+  `.dsv-gap`, `.dsv-cd` -- the tile the shop drew before `.pks-tier`; and
+  `.dpc-modal`, `.dpc-panel`, `.dpc-held`, `.dpc-packback`, `.dpc-pblabel`,
+  `.dpc-head`, `.dpc-sub`, `.dpc-ripbtn`, `.dpc-stagewrap`, `.dpc-progress`,
+  `.dpc-tapcue`, `.dpc-cardslot`, `.dpc-collect`, `.dpc-replaytag` -- the
+  ceremony `.prip` replaced.
+- `css/shop.css` (all 66 lines): `.pack`, `.pack .wrapart/.pname/.pdesc/.odds/
+  .coin/.buy/.gap`, `.pack.free`, `.free-ribbon`, `.shop-head`, `.shop-bal`,
+  `.reveal-wrap`, `.reveal-card`, `.rc-back/.rc-front`, `.reveal-cap`,
+  `.band-tag`. `game/shop.html` stopped rendering that markup when it moved to
+  the shared view; only `.shop-grid` / `.shop-status` still had elements, and
+  both are now described by the redesign sheet.
+
+Nothing was carried into `css/depot-redesign-shop.css`. If a future surface
+wants a compact tile again, it gets a designed one, not this.
+
+### 19g. The in-binder PACK SHOP tab has no door any more
+
+`js/depot-binder-shop.js` still wraps `renderBinder` and mounts the shared view
+when `curEra === "packshop"` -- it works, and this branch verified the dressed
+surface renders there. But the Phase-2 binder dress replaced the old
+`.era-tab` rail with `.rd-pill` era buttons (All / Vintage / Junk Wax / Modern /
+Stars), and none of them selects `packshop`. The only way in today is
+`selectEra('packshop')` from the console; the header PACK SHOP pill navigates to
+`game/shop.html` instead.
+
+So the second surface is real, mounted and now dressed, but unreachable by
+click. Either the era rail gets its pill back or the tab is retired and the
+standing page becomes the only shop. That is a product call, not a dress call.
+The `.rd-shop-tab` hook in the dress keeps the old tab's gold spine working the
+moment a pill returns.
+
+### 19h. `js/depot-shop-entry.js` is loaded by nobody
+
+Noted while inventorying chapter 06: the file exists (67 lines) and
+`game/shop.html` explains in a comment that its header entry link "was an
+unstyled self-link here and is unwired". No shell includes it. It is dead
+weight, not a dress problem -- delete it in the 19a-19c cleanup branch.
