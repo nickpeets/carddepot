@@ -93,6 +93,9 @@ See docs/RD_CH0607_SHOP_SCOPE.md.
   border:2px solid var(--rd-navy); border-radius:var(--rd-r-pill); padding:3px 8px; }
 .rd-shop .pks-foot{ font:600 12px/1.5 var(--rd-ui); color:#c8ecfb; margin:16px 0 0; }
 .rd-shop.pks--binder .pks-foot{ color:var(--rd-muted); }
+/* the binder panel is ~640px wide: four tier panels there are 150px each and
+   the HOT/GATED badges crowd the edge. Two up, same panels, same order. */
+.rd-shop.pks--binder .pks-grid{ grid-template-columns:repeat(2,1fr); }
 
 /* ---- buttons: one pill recipe, gloss over fill (chapter 00) ----------- */
 .rd-shop .pks-btn{ display:flex; align-items:center; justify-content:center; gap:7px;
