@@ -37,12 +37,14 @@
     function mountShop() {
       var grid = document.getElementById("binderGrid");
       if (!grid) return;
-      grid.classList.add("dsv-grid");
+      grid.classList.add("dsv-grid", "rd-shop-grid");
+    var _pt = document.querySelector(".era-tab.packshop");
+    if (_pt) _pt.classList.add("rd-shop-tab"); // the tab keeps its gold spine after the dissolve
       // a status line above the tiles
       var status = document.getElementById("dsvStatus");
       if (!status) {
         status = document.createElement("div");
-        status.id = "dsvStatus"; status.className = "dsv-status";
+        status.id = "dsvStatus"; status.className = "dsv-status rd-shop-status";
         grid.parentNode.insertBefore(status, grid);
       }
       if (view) view.destroy();
@@ -99,7 +101,7 @@
           if (idx < 0) continue;
           var tile = document.querySelector('#binderGrid .dc-tile[data-idx="' + idx + '"], #binderGrid .card[data-idx="' + idx + '"]');
           if (!tile) continue;
-          tile.classList.add("just-landed");           // dsv-settle (css/depot-shop-view.css)
+          tile.classList.add("just-landed", "rd-shop-landed");           // dsv-settle (css/depot-shop-view.css)
           if (!landed) { try { tile.scrollIntoView({ behavior:"smooth", block:"center" }); } catch (e) {} }
           landed++;
         }
@@ -144,7 +146,7 @@
         // best-effort: match by player name on the freshly rendered grid
         for (var i=0;i<btns.length;i++){
           if (btns[i].getAttribute("aria-label") && btns[i].getAttribute("aria-label").indexOf(newCard.name) === 0) {
-            btns[i].classList.add("just-landed");
+            btns[i].classList.add("just-landed", "rd-shop-landed");
             btns[i].scrollIntoView({ behavior:"smooth", block:"center" });
             break;
           }
@@ -173,7 +175,7 @@
       }
       // leaving the shop: tear it down + restore pager
       if (view) { view.destroy(); view = null; }
-      var grid = document.getElementById("binderGrid"); if (grid) grid.classList.remove("dsv-grid");
+      var grid = document.getElementById("binderGrid"); if (grid) grid.classList.remove("dsv-grid", "rd-shop-grid", "pks-host", "rd-shop-host");
       var st = document.getElementById("dsvStatus"); if (st && st.parentNode) st.parentNode.removeChild(st);
       ["pageDots","prevPage","nextPage"].forEach(function(id){ var el=document.getElementById(id); if(el) el.style.visibility=""; });
       return _renderBinder.apply(this, arguments);

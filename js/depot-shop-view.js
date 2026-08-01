@@ -294,7 +294,24 @@
            '</div>';
   }
 
-  /* ---- 3.3 / 3.4 / 3.5 FREE DAILY panel -- ONE card (the live RPC) ---- */
+  /* ---- 06a: the DESIGNED-but-GATED Diamond panel -----------------------
+ * The design keeps Diamond on the shelf, reading "Locked - economy pass
+ * pending" (chapter 06 SPEC). It is not a tier the engine sells: no price,
+ * no odds slot, no buy hook, nothing clickable -- a designed door rather
+ * than a dead one, with its reason beside it (README rule 6).
+ */
+function diamondTileHtml(){
+  return '<div class="pks-tier tier-diamond" data-tier="diamond" aria-disabled="true">' +
+    wrapHtml("diamond", "DIAMOND", "ECONOMY PASS", { gem:true }) +
+    '<div class="pks-tier-txt">' +
+      '<div class="pks-tier-name">Diamond</div>' +
+      '<div class="pks-odds">Designed, held back until the economy work lands.</div>' +
+      '<div class="pks-locked">Locked \u2014 economy pass pending</div>' +
+    '</div>' +
+  '</div>';
+}
+
+/* ---- 3.3 / 3.4 / 3.5 FREE DAILY panel -- ONE card (the live RPC) ---- */
   var FREE_WINDOW_MS = 24 * 60 * 60 * 1000;
   function freePanelHtml(nextClaimAt, signedIn){
     var now = Date.now();
@@ -432,17 +449,17 @@
 
     function setStatus(kind, html) {
       if (!statusEl) return;
-      statusEl.className = "dsv-status " + (kind || "");
+      statusEl.className = "dsv-status rd-shop-status " + (kind || "");
       statusEl.innerHTML = html || "";
     }
-    function clearStatus(){ if (statusEl){ statusEl.className="dsv-status"; statusEl.innerHTML=""; } }
+    function clearStatus(){ if (statusEl){ statusEl.className="dsv-status rd-shop-status"; statusEl.innerHTML=""; } }
     function setBal(v){ balance=v; if(balEl) balEl.textContent = (v==null?"\u2014":v) + ""; }
 
     // Reveal, then hand the card to the grid (binder) or leave it (shop page).
     function runReveal(card, band) {
       var rev = buildReveal(card, band);
       var host = document.createElement("div");
-      host.className = "dsv-reveal-host";
+      host.className = "dsv-reveal-host rd-shop";
       host.appendChild(rev.node);
       document.body.appendChild(host);
       // dismiss on click after landed
@@ -665,17 +682,17 @@
     }
 
     function render() {
-      gridEl.classList.add("pks-host");
+      gridEl.classList.add("pks-host", "rd-shop-host");
       var tiers = "";
       Shop.TIER_ORDER.forEach(function(t){ tiers += tierCardHtml(t, catalog, balance, _sin); });
       var foot = "Odds are per pack. Cards land in your binder the moment you collect. " +
                  "The free pack comes back 24 hours after you claim it.";
       var freeOdds = freeOddsText();
       gridEl.innerHTML =
-        '<div class="pks' + (context === "binder" ? " pks--binder" : "") + '">' +
+        '<div class="pks rd-shop' + (context === "binder" ? " pks--binder" : "") + '">' +
           headHtml(balance, _sin) +
           freePanelHtml(nextClaimAt, _sin) +
-          '<div class="pks-grid">' + tiers + '</div>' +
+          '<div class="pks-grid">' + tiers + diamondTileHtml() + '</div>' +
           '<div class="pks-foot">' + esc(foot) + (freeOdds ? " " + esc(freeOdds) : "") + '</div>' +
           renderHistoryHtml() +
         '</div>';
@@ -944,7 +961,7 @@ function playPackSession(cards, hitIndex, opts){
 
   return new Promise(function(resolve){
     var root = document.createElement("div");
-    root.className = "prip prip-tier-" + tier;
+    root.className = "prip rd-shop prip-tier-" + tier;
     root.setAttribute("role", "dialog");
     root.setAttribute("aria-modal", "true");
     root.setAttribute("aria-label", (tier === "free" ? "Free daily" : tier) + " pack rip");

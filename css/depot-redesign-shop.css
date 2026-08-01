@@ -1,0 +1,488 @@
+/* =============================================================================
+css/depot-redesign-shop.css - CHAPTERS 06 (Pack Shop) + 07 (The Rip)
+
+Dissolve-and-replace. This sheet REPLACES three sheets:
+  css/pack-shop-v2.css   (584) the private --pk-* skin
+  css/depot-shop-view.css (214) the dsv ceremony + two dead layers
+  css/shop.css            (66) dead since the shared view landed
+The dead layers (.dsv-tile*, .dpc-modal ceremony, all of shop.css) are NOT
+carried across; they are logged in FUTURE_ITEMS section 19.
+
+Measured from build_package chapters 06/07 + exports/desktop/06a-shop-tiers.png,
+06b-shop-tiles.png, 07-rip.png and exports/mobile-390/{pack-shop,rip}.png.
+Every value here is a chapter-00 token from css/depot-redesign.css; this sheet
+declares no private palette.
+
+SCOPE: every selector carries .rd-shop, .rd-shop-host, .rd-shop-grid,
+.rd-shop-status, .rd-shop-landed or .rd-shop-tab. The view puts .rd-shop on the
+three roots it creates (the .pks surface, the .prip theatre, the reveal host) so
+both surfaces are dressed by one sheet and nothing outside them can be reached.
+See docs/RD_CH0607_SHOP_SCOPE.md.
+========================================================================== */
+
+/* ---- the surface ----------------------------------------------------- */
+.rd-shop{ font-family:var(--rd-ui); color:var(--rd-navy); text-align:left; }
+.rd-shop *,.rd-shop *::before,.rd-shop *::after{ box-sizing:border-box; }
+/* both hosts are grids in their day job; the shop is a column */
+.rd-shop-host{ display:block !important; grid-template-columns:none !important; }
+.rd-shop-grid{ display:block !important; }
+.rd-shop{ padding:0 0 26px; }
+.rd-shop.pks--binder{ padding:8px 0 18px; }
+
+/* ---- head: title, guest strip, wallet (06a/06b) ---------------------- */
+.rd-shop .pks-head{ display:flex; align-items:flex-start; gap:16px; flex-wrap:wrap; margin:0 0 20px; }
+.rd-shop .pks-head-txt{ flex:1 1 auto; min-width:0; }
+.rd-shop .pks-h1{ font:800 28px/1 var(--rd-ui); color:#fff; margin:0 0 4px;
+  text-shadow:0 3px 0 var(--rd-navy); }
+.rd-shop .pks-sub{ font:600 13px/1.45 var(--rd-ui); color:#c8ecfb; margin:0; }
+.rd-shop.pks--binder .pks-h1,.rd-shop.pks--binder .pks-sub{ display:none; }
+.rd-shop .pks-guest{ flex:0 0 auto; align-self:center; font:600 12px/1.45 var(--rd-ui);
+  color:var(--rd-ink-gold); background:var(--rd-cream); border:var(--rd-bd-sub) solid var(--rd-gold);
+  border-radius:var(--rd-r-sub); box-shadow:0 4px 0 var(--rd-gold-deep); padding:9px 13px; }
+.rd-shop .pks-wallet{ flex:0 0 auto; display:flex; align-items:center; gap:10px; }
+.rd-shop .pks-coin{ display:inline-flex; align-items:center; gap:9px;
+  background:var(--rd-gloss),var(--rd-gold); border:var(--rd-bd-sub) solid var(--rd-navy);
+  border-radius:var(--rd-r-pill); box-shadow:var(--rd-sh-sub); padding:6px 15px; }
+.rd-shop .pks-coin i{ width:19px; height:19px; border-radius:50%; background:var(--rd-gold);
+  border:2px solid var(--rd-ink-gold); }
+.rd-shop .pks-coin b{ font-family:var(--rd-num); font-size:22px; line-height:1;
+  color:var(--rd-ink-gold); letter-spacing:.04em; }
+.rd-shop .pks-login{ font:800 14px/1 var(--rd-ui); color:var(--rd-navy); cursor:pointer;
+  background:var(--rd-gloss),#fff; border:var(--rd-bd-sub) solid var(--rd-navy);
+  border-radius:var(--rd-r-pill); box-shadow:var(--rd-sh-sub); padding:9px 18px; }
+.rd-shop .pks-login:hover{ transform:translateY(2px); box-shadow:var(--rd-sh-press); }
+
+/* ---- 06a: the free daily is its own wide row ------------------------- */
+.rd-shop .pks-free{ display:flex; align-items:center; gap:20px; background:#fff;
+  border:var(--rd-bd) solid var(--rd-navy); border-radius:var(--rd-r);
+  box-shadow:var(--rd-sh); padding:15px; margin:0 0 18px; }
+.rd-shop .pks-free-body{ flex:1 1 auto; min-width:0; }
+.rd-shop .pks-chip{ display:inline-block; font-family:var(--rd-micro); font-size:7px;
+  line-height:1.6; color:var(--rd-ink-green); background:#e8fbe4;
+  border:2px solid var(--rd-green); border-radius:var(--rd-r-pill); padding:4px 9px; }
+.rd-shop .pks-free-head{ font:800 22px/1.1 var(--rd-ui); color:var(--rd-navy); margin:7px 0 4px; }
+.rd-shop .pks-free-sub{ font:600 12.5px/1.45 var(--rd-ui); color:var(--rd-muted); margin:0 0 9px; }
+/* the countdown bar + LED clock: the wait is legible, never a dead button */
+.rd-shop .pks-cdrow{ display:flex; align-items:center; gap:13px; margin:0 0 11px; }
+.rd-shop .pks-bar{ flex:1 1 auto; height:14px; border-radius:var(--rd-r-pill);
+  background:var(--rd-tint-deep); border:2px solid var(--rd-tint-line); overflow:hidden; }
+.rd-shop .pks-bar i{ display:block; height:100%; border-radius:var(--rd-r-pill);
+  background:var(--rd-gloss),var(--rd-gold); }
+.rd-shop .pks-cd{ flex:0 0 auto; font-family:var(--rd-num); font-size:23px; line-height:1;
+  color:var(--rd-ink-red); letter-spacing:.03em; }
+.rd-shop .pks-cdt{ font-family:var(--rd-num); font-size:1.05em; letter-spacing:.03em; }
+/* 06a right-hand quiet pill: "Come back tomorrow / cooling down - 24h" */
+.rd-shop .pks-cdsub{ display:block; font:700 9px/1.5 var(--rd-ui); }
+.rd-shop .pks-btn--free:disabled,.rd-shop .pks-btn--free[aria-disabled="true"]{
+  color:var(--rd-muted-2); background:var(--rd-tint);
+  border-color:var(--rd-tint-line); box-shadow:none; }
+
+/* ---- 06a/06b: the tier row ------------------------------------------- */
+.rd-shop .pks-grid{ display:grid; grid-template-columns:repeat(4,1fr); gap:12px; align-items:stretch; }
+.rd-shop .pks-tier{ position:relative; display:flex; flex-direction:column; align-items:center;
+  text-align:center; background:#fff; border:var(--rd-bd) solid var(--rd-navy);
+  border-radius:var(--rd-r); box-shadow:var(--rd-sh); padding:14px; }
+.rd-shop .pks-tier-txt{ display:flex; flex-direction:column; align-items:stretch; width:100%; }
+.rd-shop .pks-tier-name{ font:800 16px/1.1 var(--rd-ui); color:var(--rd-navy); margin:10px 0 0; }
+.rd-shop .pks-odds{ font:600 11.5px/1.35 var(--rd-ui); color:var(--rd-muted);
+  margin:3px 0 9px; min-height:2.7em; }
+.rd-shop .pks-tier .pks-btn{ margin-top:auto; }
+/* the HOT flag the design puts on the top live tier */
+.rd-shop .pks-tier.tier-gold::before{ content:"HOT"; position:absolute; top:8px; right:8px;
+  font:800 9.5px/1 var(--rd-ui); color:#fff; background:var(--rd-orange);
+  border:2px solid var(--rd-navy); border-radius:var(--rd-r-pill); padding:3px 8px; }
+.rd-shop .pks-foot{ font:600 12px/1.5 var(--rd-ui); color:#c8ecfb; margin:16px 0 0; }
+.rd-shop.pks--binder .pks-foot{ color:var(--rd-muted); }
+
+/* ---- buttons: one pill recipe, gloss over fill (chapter 00) ----------- */
+.rd-shop .pks-btn{ display:flex; align-items:center; justify-content:center; gap:7px;
+  width:100%; min-height:44px; font:800 14px/1 var(--rd-ui); color:var(--rd-navy);
+  cursor:pointer; background:var(--rd-gloss),#fff;
+  border:var(--rd-bd-sub) solid var(--rd-navy); border-radius:var(--rd-r-pill);
+  box-shadow:var(--rd-sh-sub); padding:12px 18px; text-align:center; }
+.rd-shop .pks-btn:hover:not(:disabled){ transform:translateY(2px); box-shadow:var(--rd-sh-press); }
+.rd-shop .pks-btn:active:not(:disabled){ transform:translateY(4px); box-shadow:0 0 0 var(--rd-navy); }
+.rd-shop .pks-btn:focus-visible{ outline:3px solid var(--rd-orange); outline-offset:3px; }
+.rd-shop .pks-btn--green{ background:var(--rd-gloss),var(--rd-green); }
+.rd-shop .tier-gold .pks-btn{ color:var(--rd-ink-gold); background:var(--rd-gloss),var(--rd-gold); }
+/* LOCKED SAYS WHY (README 6): greyed, reason in the label, never a mystery */
+.rd-shop .pks-btn:disabled,.rd-shop .pks-btn[aria-disabled="true"]{
+  color:var(--rd-muted-2); background:var(--rd-tint); border-color:var(--rd-tint-line);
+  box-shadow:none; cursor:not-allowed; }
+.rd-shop .pks-status,.rd-shop-status{ font:600 12.5px/1.5 var(--rd-ui); color:var(--rd-navy);
+  background:#fff; border:var(--rd-bd-sub) solid var(--rd-navy); border-radius:var(--rd-r-sub);
+  box-shadow:var(--rd-sh-sub); padding:10px 13px; margin:0 0 14px; display:none; }
+.rd-shop-status.ok{ display:block; background:#e8fbe4; border-color:var(--rd-green); }
+.rd-shop-status.warn{ display:block; background:var(--rd-cream); border-color:var(--rd-gold); }
+.rd-shop-status.err{ display:block; background:#fdeae7; border-color:var(--rd-red);
+  color:var(--rd-ink-red-2); }
+
+/* ---- 06a: the DESIGNED Diamond tile (gated, not a dead door) ---------- */
+.rd-shop .pks-tier.tier-diamond{ background:var(--rd-tint); }
+.rd-shop .pks-tier.tier-diamond .pks-tier-name{ color:var(--rd-muted); }
+.rd-shop .pks-tier.tier-diamond .pks-odds{ color:var(--rd-muted-2); }
+.rd-shop .pks-tier.tier-diamond::before{ content:"GATED"; position:absolute; top:8px; right:8px;
+  font:800 9.5px/1 var(--rd-ui); color:var(--rd-ink-gold); background:var(--rd-cream);
+  border:2px solid var(--rd-gold); border-radius:var(--rd-r-pill); padding:3px 8px; }
+.rd-shop .pks-locked{ display:flex; align-items:center; justify-content:center;
+  min-height:44px; font:800 12px/1.25 var(--rd-ui); color:var(--rd-muted-2);
+  background:#fff; border:var(--rd-bd-sub) solid var(--rd-tint-line);
+  border-radius:var(--rd-r-pill); padding:11px 14px; text-align:center; margin-top:auto; }
+.rd-shop .pks-tier.tier-diamond .pk-wrap{ filter:saturate(.62); }
+
+/* ---- the wax wrapper: one recipe, every tier (06b art) --------------- */
+.rd-shop .pk-wrap{ position:relative; overflow:hidden; flex:0 0 auto;
+  width:104px; height:140px; border-radius:10px; display:flex; flex-direction:column;
+  align-items:center; justify-content:center; gap:8px;
+  border:var(--rd-bd-sub) solid var(--rd-navy); box-shadow:var(--rd-sh-sub); }
+.rd-shop .pks-free .pk-wrap{ width:78px; height:104px; }
+.rd-shop .pk-wrap--bronze{ background:linear-gradient(150deg,#7a4a1e 0%,#c8853b 30%,#e8b183 50%,#a86a2e 72%,#5c3413 100%); }
+.rd-shop .pk-wrap--silver{ background:linear-gradient(150deg,#5d6b7a 0%,#9aa7b4 26%,#eef4f9 48%,#8a939e 72%,#454b52 100%); }
+.rd-shop .pk-wrap--gold{ background:linear-gradient(150deg,#8a6413 0%,#e8b53c 26%,#fff0b8 48%,#d7a52c 72%,#6d4f12 100%); }
+.rd-shop .pk-wrap--diamond{ background:linear-gradient(150deg,#4d7ba8 0%,#9fd8f0 16%,#fff 32%,#c9b8f0 48%,#9fe8e0 64%,#5bc0eb 82%,#3a6f9e 100%); }
+.rd-shop .pk-wrap--free{ background:linear-gradient(160deg,var(--rd-green),var(--rd-green-deep)); }
+.rd-shop .pk-crimp{ position:absolute; left:0; right:0; height:12px; z-index:2; }
+.rd-shop .pk-crimp--t{ top:0; border-bottom:2px solid rgba(7,44,71,.42); }
+.rd-shop .pk-crimp--b{ bottom:0; border-top:2px solid rgba(7,44,71,.42); }
+.rd-shop .pk-wrap--bronze .pk-crimp{ background:repeating-linear-gradient(90deg,#5c3413 0 5px,rgba(255,255,255,.40) 5px 10px); }
+.rd-shop .pk-wrap--silver .pk-crimp{ background:repeating-linear-gradient(90deg,#454b52 0 5px,rgba(255,255,255,.58) 5px 10px); }
+.rd-shop .pk-wrap--gold .pk-crimp{ background:repeating-linear-gradient(90deg,#6d4f12 0 5px,rgba(255,255,255,.46) 5px 10px); }
+.rd-shop .pk-wrap--diamond .pk-crimp{ background:repeating-linear-gradient(90deg,#3a6f9e 0 5px,rgba(255,255,255,.62) 5px 10px); }
+.rd-shop .pk-wrap--free .pk-crimp{ background:repeating-linear-gradient(90deg,var(--rd-ink-green) 0 5px,rgba(255,255,255,.34) 5px 10px); }
+/* the sheen is the only moving part of a sealed pack */
+.rd-shop .pk-sheen{ position:absolute; inset:0; z-index:1; pointer-events:none;
+  background:linear-gradient(105deg,transparent 34%,rgba(255,255,255,.5) 50%,transparent 66%);
+  background-size:260% 100%; animation:rd-shop-sheen 4.6s linear infinite; }
+@keyframes rd-shop-sheen{ from{ background-position:130% 0; } to{ background-position:-130% 0; } }
+.rd-shop .pk-wrap-mark{ position:relative; z-index:3; font-family:var(--rd-micro);
+  font-size:6px; line-height:1; color:#fff; text-shadow:1px 1px 0 rgba(7,44,71,.55); }
+.rd-shop .pk-plate{ position:relative; z-index:3; background:#fff;
+  border:2px solid var(--rd-navy); border-radius:6px; padding:5px 11px;
+  font:800 15px/1 var(--rd-ui); color:var(--rd-navy); }
+.rd-shop .pk-wrap-count{ position:relative; z-index:3; font-family:var(--rd-micro);
+  font-size:6px; line-height:1.4; color:#fff; text-shadow:1px 1px 0 rgba(7,44,71,.55); }
+.rd-shop .pk-gem{ position:relative; z-index:3; width:22px; height:22px; background:#fff;
+  border:2px solid var(--rd-navy); transform:rotate(45deg); }
+.rd-shop .pk-wrap--breathe{ animation:rd-shop-breathe 2.8s ease-in-out infinite; }
+@keyframes rd-shop-breathe{ 0%,100%{ transform:translateY(0) scale(1); } 50%{ transform:translateY(-5px) scale(1.015); } }
+
+/* ---- Pack History shelf (PR #208 markup, redressed) ------------------- */
+.rd-shop .dpc-history{ margin:24px 0 0; }
+.rd-shop .dpc-history h3{ font-family:var(--rd-micro); font-size:8px; line-height:1.7;
+  color:#c8ecfb; margin:0 0 11px; }
+.rd-shop.pks--binder .dpc-history h3{ color:var(--rd-navy); }
+.rd-shop .dpc-hist-empty{ font:600 12.5px/1.5 var(--rd-ui); color:var(--rd-muted);
+  background:#fff; border:var(--rd-bd-sub) solid var(--rd-tint-line);
+  border-radius:var(--rd-r-sub); padding:13px; }
+.rd-shop .dpc-hist-list{ display:flex; flex-direction:column; gap:10px; }
+.rd-shop .dpc-hist-row{ display:block; }
+.rd-shop .dpc-hist-item{ display:flex; align-items:center; gap:13px; background:#fff;
+  border:var(--rd-bd-sub) solid var(--rd-navy); border-radius:var(--rd-r-sub);
+  box-shadow:var(--rd-sh-sub); padding:11px 13px; }
+.rd-shop .dpc-hist-spine{ flex:0 0 auto; width:30px; height:42px; border-radius:5px;
+  border:2px solid var(--rd-navy); }
+.rd-shop .dpc-hist-bronze .dpc-hist-spine{ background:linear-gradient(150deg,#c8853b,#5c3413); }
+.rd-shop .dpc-hist-silver .dpc-hist-spine{ background:linear-gradient(150deg,#eef4f9,#454b52); }
+.rd-shop .dpc-hist-gold .dpc-hist-spine{ background:linear-gradient(150deg,#fff0b8,#6d4f12); }
+.rd-shop .dpc-hist-free .dpc-hist-spine{ background:linear-gradient(150deg,var(--rd-green),var(--rd-ink-green)); }
+.rd-shop .dpc-hist-meta{ flex:1 1 auto; min-width:0; text-align:left; }
+.rd-shop .dpc-hist-tier{ font:800 13px/1.2 var(--rd-ui); color:var(--rd-navy); }
+.rd-shop .dpc-hist-when{ font:600 11.5px/1.35 var(--rd-ui); color:var(--rd-muted); }
+.rd-shop .dpc-cardsbtn,.rd-shop .dpc-replaybtn{ flex:0 0 auto; min-height:44px;
+  font-family:var(--rd-micro); font-size:7px; line-height:1.6; color:var(--rd-navy);
+  cursor:pointer; background:var(--rd-gloss),#fff;
+  border:var(--rd-bd-sub) solid var(--rd-navy); border-radius:var(--rd-r-pill);
+  box-shadow:var(--rd-sh-sub); padding:12px 14px; }
+.rd-shop .dpc-replaybtn{ background:var(--rd-gloss),var(--rd-gold); color:var(--rd-ink-gold); }
+.rd-shop .dpc-cardsbtn:hover,.rd-shop .dpc-replaybtn:hover{ transform:translateY(2px);
+  box-shadow:var(--rd-sh-press); }
+.rd-shop .dpc-cardsbtn[aria-expanded="true"]{ background:var(--rd-gloss),var(--rd-tint-deep); }
+/* the expanded contents panel: rows the pack actually produced */
+.rd-shop .dpc-hist-cards{ margin:-4px 0 0; padding:12px 13px; background:var(--rd-tint);
+  border:var(--rd-bd-sub) solid var(--rd-tint-line); border-top:0;
+  border-radius:0 0 var(--rd-r-sub) var(--rd-r-sub); }
+.rd-shop .dpc-hist-note,.rd-shop .dpc-hist-none{ font:600 11.5px/1.45 var(--rd-ui);
+  color:var(--rd-ink-gold); background:var(--rd-cream); border:2px solid var(--rd-gold);
+  border-radius:9px; padding:8px 10px; margin:0 0 9px; }
+.rd-shop .dpc-hist-cardlist{ list-style:none; margin:0; padding:0;
+  display:flex; flex-direction:column; gap:6px; }
+.rd-shop .dpc-hist-card{ display:flex; align-items:center; gap:9px; min-height:44px;
+  background:#fff; border:2px solid var(--rd-tint-line); border-radius:9px; padding:7px 10px; }
+.rd-shop .dpc-hist-card.is-linked{ cursor:pointer; border-color:var(--rd-navy); }
+.rd-shop .dpc-hist-card.is-linked:hover{ background:var(--rd-tint-deep); }
+.rd-shop .dpc-hist-cardname{ flex:1 1 auto; font:800 13px/1.2 var(--rd-ui); color:var(--rd-navy); }
+.rd-shop .dpc-hist-cardmeta{ flex:0 0 auto; font-family:var(--rd-num); font-size:17px;
+  line-height:1; color:var(--rd-muted); }
+.rd-shop .dpc-hist-go{ flex:0 0 auto; font-family:var(--rd-micro); font-size:6.5px;
+  line-height:1.6; color:var(--rd-ink-gold); background:var(--rd-gold);
+  border:2px solid var(--rd-navy); border-radius:var(--rd-r-pill); padding:5px 8px; }
+
+/* =====================================================================
+   CHAPTER 07 - THE RIP. A body-level theatre, one phase at a time.
+   ===================================================================== */
+.rd-shop.prip{ position:fixed; inset:0; z-index:10000; display:flex; flex-direction:column;
+  align-items:center; background:var(--rd-sky); opacity:0; transition:opacity .28s ease;
+  overflow:auto; padding:0; }
+.rd-shop.prip.prip-in{ opacity:1; }
+.rd-shop .prip-top{ flex:0 0 auto; width:100%; max-width:1180px; display:flex;
+  align-items:center; gap:14px; padding:16px 20px; }
+.rd-shop .prip-tier{ flex:0 0 auto; font-family:var(--rd-micro); font-size:8px; line-height:1.6;
+  color:var(--rd-navy); background:#fff; border:var(--rd-bd-sub) solid var(--rd-navy);
+  border-radius:var(--rd-r-pill); box-shadow:var(--rd-sh-sub); padding:8px 12px; }
+.rd-shop .prip-tier.tier-bronze{ background:linear-gradient(150deg,#e8b183,#a86a2e); }
+.rd-shop .prip-tier.tier-silver{ background:linear-gradient(150deg,#eef4f9,#8a939e); }
+.rd-shop .prip-tier.tier-gold{ background:var(--rd-gloss),var(--rd-gold); color:var(--rd-ink-gold); }
+.rd-shop .prip-tier.tier-free{ background:var(--rd-gloss),var(--rd-green); color:var(--rd-ink-green); }
+.rd-shop .prip-dots{ flex:1 1 auto; display:flex; align-items:center; justify-content:center; gap:11px; }
+.rd-shop .prip-dot{ width:15px; height:15px; border-radius:50%;
+  border:var(--rd-bd-sub) solid var(--rd-navy); background:rgba(255,255,255,.45); }
+.rd-shop .prip-dot.is-cur{ background:var(--rd-gold); }
+.rd-shop .prip-dot.band-plain{ background:#fff; }
+.rd-shop .prip-dot.band-bronze{ background:#c8853b; }
+.rd-shop .prip-dot.band-silver{ background:#dfe6ee; }
+.rd-shop .prip-dot.band-gold{ background:var(--rd-gold); }
+.rd-shop .prip-close{ flex:0 0 auto; min-height:44px; font:800 13px/1 var(--rd-ui);
+  color:var(--rd-navy); cursor:pointer; background:var(--rd-gloss),#fff;
+  border:var(--rd-bd-sub) solid var(--rd-navy); border-radius:var(--rd-r-pill);
+  box-shadow:var(--rd-sh-sub); padding:12px 18px; }
+.rd-shop .prip-close:hover{ transform:translateY(2px); box-shadow:var(--rd-sh-press); }
+.rd-shop .prip-body{ flex:1 1 auto; width:100%; max-width:1180px; padding:0 20px 36px;
+  display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; }
+.rd-shop .prip-replay{ font-family:var(--rd-micro); font-size:7px; line-height:1.6;
+  color:var(--rd-ink-gold); background:var(--rd-cream); border:2px solid var(--rd-gold);
+  border-radius:var(--rd-r-pill); padding:5px 10px; margin:0 0 14px; }
+/* 4.1 HELD - the sealed pack, breathing, nothing auto-plays */
+.rd-shop .prip-held-wrap{ width:212px; height:292px; margin:0 0 20px; cursor:pointer; }
+.rd-shop .prip-held-wrap .pk-wrap{ width:100%; height:100%; border-radius:16px; gap:13px;
+  border-width:var(--rd-bd); box-shadow:var(--rd-sh); }
+.rd-shop .prip-held-wrap .pk-wrap .pk-plate{ font-size:21px; padding:8px 17px; }
+.rd-shop .prip-held-wrap .pk-wrap .pk-crimp{ height:16px; }
+.rd-shop .prip-head{ font:800 24px/1.15 var(--rd-ui); color:#fff;
+  text-shadow:0 3px 0 var(--rd-navy); margin:0 0 9px; }
+.rd-shop .prip-kicker{ font-family:var(--rd-micro); font-size:8px; line-height:1.7;
+  color:var(--rd-navy); margin:0 0 22px; }
+.rd-shop .prip-cta{ min-height:44px; font:800 15px/1 var(--rd-ui); color:var(--rd-navy);
+  cursor:pointer; background:var(--rd-gloss),#fff; border:var(--rd-bd-sub) solid var(--rd-navy);
+  border-radius:var(--rd-r-pill); box-shadow:var(--rd-sh-sub); padding:13px 26px; }
+.rd-shop .prip-cta:hover:not(:disabled){ transform:translateY(2px); box-shadow:var(--rd-sh-press); }
+.rd-shop .prip-cta--gold{ background:var(--rd-gloss),var(--rd-gold); color:var(--rd-ink-gold); }
+.rd-shop .prip-cta--green{ background:var(--rd-gloss),var(--rd-green); }
+.rd-shop .prip-cta:disabled{ color:var(--rd-muted-2); background:var(--rd-tint);
+  border-color:var(--rd-tint-line); box-shadow:none; cursor:not-allowed; }
+.rd-shop .prip-ctas{ display:flex; align-items:center; justify-content:center; gap:11px;
+  flex-wrap:wrap; margin:18px 0 0; }
+
+/* 4.2 REVEAL - one card at a time; the front is a real card face --------- */
+.rd-shop .prip-counter{ font-family:var(--rd-micro); font-size:9px; line-height:1.6;
+  color:var(--rd-navy); margin:0 0 12px; }
+.rd-shop .prip-counter.is-hit{ color:var(--rd-ink-red); }
+.rd-shop .prip-stage{ position:relative; display:flex; align-items:center; justify-content:center;
+  min-height:352px; width:100%; }
+.rd-shop .prip-card{ position:relative; width:238px; height:333px; cursor:pointer; }
+.rd-shop .prip-back{ position:absolute; inset:0; display:flex; flex-direction:column;
+  align-items:center; justify-content:center; gap:12px; border-radius:12px;
+  background:var(--rd-navy-deep); background-image:repeating-linear-gradient(45deg,rgba(255,255,255,.06) 0 10px,transparent 10px 20px);
+  border:var(--rd-bd) solid var(--rd-navy); box-shadow:var(--rd-sh); }
+.rd-shop .prip-back-tile{ width:70px; height:70px; border-radius:16px; background:var(--rd-gold);
+  border:var(--rd-bd-sub) solid var(--rd-navy); display:flex; align-items:center;
+  justify-content:center; font:800 34px/1 var(--rd-ui); color:var(--rd-navy); }
+.rd-shop .prip-back-mark{ font-family:var(--rd-micro); font-size:9px; line-height:1.6; color:var(--rd-gold); }
+.rd-shop .prip-front{ position:absolute; inset:0; display:flex; flex-direction:column;
+  overflow:hidden; border-radius:12px; background:#fff;
+  border:var(--rd-bd) solid var(--rd-navy); box-shadow:var(--rd-sh); }
+.rd-shop .prip-band{ flex:0 0 auto; display:flex; align-items:center; justify-content:space-between;
+  padding:6px 11px; background:var(--rd-navy); color:#fff; }
+.rd-shop .prip-band-lab{ font-family:var(--rd-micro); font-size:8px; line-height:1.6; }
+.rd-shop .prip-band-yr{ font-family:var(--rd-num); font-size:20px; line-height:1; }
+.rd-shop .prip-well{ flex:1 1 auto; position:relative; overflow:hidden;
+  background-color:var(--rd-tint); background-image:var(--rd-stripe); }
+.rd-shop .prip-well img{ position:absolute; inset:0; width:100%; height:100%; display:block;
+  object-fit:cover; }
+.rd-shop .prip-plate{ flex:0 0 auto; background:#fff; border-top:var(--rd-bd-sub) solid var(--rd-navy);
+  padding:8px 11px 10px; text-align:left; }
+.rd-shop .prip-plate b{ display:block; font:800 19px/1.15 var(--rd-ui); color:var(--rd-navy); }
+.rd-shop .prip-plate span{ display:block; font:600 12px/1.3 var(--rd-ui); color:var(--rd-muted); }
+/* the band IS the reward language: plain gets the plain navy strip */
+.rd-shop .pk-b-bronze .prip-band{ background:#a86a2e; }
+.rd-shop .pk-b-silver .prip-band{ background:#dfe6ee; color:var(--rd-navy); }
+.rd-shop .pk-b-gold .prip-band{ background:var(--rd-gold); color:var(--rd-ink-gold); }
+.rd-shop .prip-front.pk-b-gold{ border-color:var(--rd-gold-deep); }
+/* designed no-art placeholder: band + year + name still land (README 4) */
+.rd-shop .prip-well.is-noart{ background-color:var(--rd-tint-deep); background-image:none;
+  display:flex; align-items:center; justify-content:center; }
+.rd-shop .prip-noart{ display:flex; flex-direction:column; align-items:center; gap:7px; padding:10px; }
+.rd-shop .prip-noart-tile{ width:44px; height:44px; border-radius:12px; background:var(--rd-tint);
+  border:var(--rd-bd-sub) solid var(--rd-tint-line); display:flex; align-items:center;
+  justify-content:center; font:800 20px/1 var(--rd-ui); color:var(--rd-muted-2); }
+.rd-shop .prip-noart-lab{ font-family:var(--rd-micro); font-size:7px; line-height:1.6; color:var(--rd-navy); }
+.rd-shop .prip-noart-say{ font:600 11.5px/1.35 var(--rd-ui); color:var(--rd-muted); }
+/* the flip itself + band-scaled escalation. A COMMON GETS NOTHING EXTRA. */
+.rd-shop .prip-card .prip-front{ display:none; }
+.rd-shop .prip-card.is-flipped .prip-back{ display:none; }
+.rd-shop .prip-card.is-flipped .prip-front{ display:flex; animation:rd-shop-flip .5s ease-out; }
+@keyframes rd-shop-flip{ 0%{ transform:rotateY(90deg) scale(.94); opacity:.2 }
+  60%{ transform:rotateY(-8deg) scale(1.02); opacity:1 } 100%{ transform:none } }
+.rd-shop .prip-card.is-flipped.esc-silver .prip-front{ box-shadow:0 0 0 3px #dfe6ee,var(--rd-sh); }
+.rd-shop .prip-card.is-flipped.esc-gold .prip-front{ box-shadow:0 0 0 4px var(--rd-gold),var(--rd-sh); }
+.rd-shop .prip-rays{ position:absolute; width:720px; height:720px; left:50%; top:50%; z-index:0;
+  transform:translate(-50%,-50%); pointer-events:none;
+  background:repeating-conic-gradient(from 0deg,rgba(255,210,62,.42) 0deg 6deg,transparent 6deg 14deg);
+  animation:rd-spin 9s linear infinite; }
+.rd-shop .prip-confetti{ position:absolute; inset:-40px; z-index:3; pointer-events:none; overflow:hidden; }
+.rd-shop .prip-confetti i{ position:absolute; top:-18px; display:block; border-radius:2px;
+  animation:rd-shop-fall 2.6s linear infinite; }
+@keyframes rd-shop-fall{ 0%{ transform:translateY(0) rotate(0); opacity:1 }
+  100%{ transform:translateY(420px) rotate(320deg); opacity:0 } }
+.rd-shop .prip-stamp{ position:absolute; top:-22px; right:-30px; z-index:4;
+  font-family:var(--rd-micro); font-size:11px; line-height:1.5; color:#fff;
+  background:var(--rd-red); border:var(--rd-bd-sub) solid var(--rd-navy);
+  border-radius:var(--rd-r-pill); padding:9px 13px; transform:rotate(-12deg);
+  animation:rd-bannerpop .42s cubic-bezier(.2,.9,.3,1.2) both; }
+
+/* the tray: what is still sealed, what is open, where the hit lives ----- */
+.rd-shop .prip-prompt{ font-family:var(--rd-micro); font-size:8px; line-height:1.6;
+  color:var(--rd-navy); margin:14px 0 0; }
+.rd-shop .prip-tray{ display:flex; align-items:stretch; justify-content:center; gap:9px;
+  flex-wrap:wrap; margin:18px 0 0; }
+.rd-shop .prip-slot{ width:96px; min-height:58px; display:flex; flex-direction:column;
+  align-items:center; justify-content:center; gap:3px; padding:7px 8px; background:#fff;
+  border:var(--rd-bd-sub) solid var(--rd-navy); border-radius:11px; box-shadow:var(--rd-sh-sub); }
+.rd-shop .prip-slot .q{ font-family:var(--rd-micro); font-size:8px; line-height:1.6; color:var(--rd-muted-2); }
+.rd-shop .prip-slot.is-hitslot{ background:var(--rd-cream); border-color:var(--rd-gold-deep); }
+.rd-shop .prip-slot.is-hitslot .q{ color:var(--rd-ink-gold); }
+.rd-shop .prip-slot-lab{ font-family:var(--rd-micro); font-size:6.5px; line-height:1.6;
+  color:var(--rd-navy); }
+.rd-shop .prip-slot-name{ font:800 11px/1.2 var(--rd-ui); color:var(--rd-navy); }
+.rd-shop .prip-slot.is-open.pk-b-bronze{ border-color:#a86a2e; }
+.rd-shop .prip-slot.is-open.pk-b-silver{ border-color:#8a939e; }
+.rd-shop .prip-slot.is-open.pk-b-gold{ background:var(--rd-cream); border-color:var(--rd-gold-deep); }
+
+/* 4.6 ALL FIVE + 4.7 ADDED ---------------------------------------------- */
+.rd-shop .prip-done-head{ font:800 26px/1.15 var(--rd-ui); color:#fff;
+  text-shadow:0 3px 0 var(--rd-navy); margin:0 0 6px; }
+.rd-shop .prip-summary{ font:600 13px/1.45 var(--rd-ui); color:var(--rd-navy); margin:0 0 18px; }
+.rd-shop .prip-row{ display:flex; align-items:flex-start; justify-content:center; gap:11px;
+  flex-wrap:wrap; }
+.rd-shop .prip-mini{ width:124px; }
+.rd-shop .prip-mini .prip-front{ position:relative; inset:auto; height:174px; display:flex;
+  border-width:var(--rd-bd-sub); box-shadow:var(--rd-sh-sub); }
+.rd-shop .prip-mini .prip-band-yr{ font-size:15px; }
+.rd-shop .prip-mini .prip-band-lab{ font-size:6.5px; }
+.rd-shop .prip-mini .prip-plate b{ font-size:12px; }
+.rd-shop .prip-mini .prip-plate span{ font-size:9.5px; }
+.rd-shop .prip-mini .prip-noart-tile{ width:30px; height:30px; font-size:14px; }
+.rd-shop .prip-mini .prip-noart-say{ display:none; }
+.rd-shop .prip-check{ font:800 42px/1 var(--rd-ui); color:var(--rd-green-deep);
+  background:#fff; border:var(--rd-bd) solid var(--rd-navy); border-radius:50%;
+  box-shadow:var(--rd-sh); width:88px; height:88px; display:flex; align-items:center;
+  justify-content:center; margin:0 auto 16px; }
+.rd-shop .prip-added-head{ font:800 24px/1.15 var(--rd-ui); color:#fff;
+  text-shadow:0 3px 0 var(--rd-navy); margin:0 0 7px; }
+.rd-shop .prip-added-line{ font:600 13px/1.45 var(--rd-ui); color:var(--rd-navy); }
+
+/* ---- the single-card ceremony (claims that settle one card) ----------- */
+.rd-shop.dsv-reveal-host{ position:fixed; inset:0; z-index:9999; display:flex;
+  align-items:center; justify-content:center; pointer-events:none; }
+.rd-shop .dsv-reveal{ position:absolute; inset:0; display:flex; align-items:center;
+  justify-content:center; pointer-events:auto; cursor:pointer; }
+.rd-shop .dsv-scrim{ position:absolute; inset:0; background:rgba(46,178,230,0); transition:background .5s ease; }
+.rd-shop .dsv-reveal.landed .dsv-scrim{ background:rgba(46,178,230,.72); }
+.rd-shop .dsv-stage{ position:relative; z-index:2; text-align:center; }
+.rd-shop .dsv-card{ position:relative; width:238px; height:333px; margin:0 auto;
+  transform-style:preserve-3d; transition:transform .5s cubic-bezier(.2,.7,.2,1); }
+.rd-shop .dsv-reveal.flipping .dsv-card,.rd-shop .dsv-reveal.landed .dsv-card{ transform:rotateY(180deg); }
+.rd-shop .dsv-face{ position:absolute; inset:0; backface-visibility:hidden; border-radius:12px;
+  border:var(--rd-bd) solid var(--rd-navy); box-shadow:var(--rd-sh); overflow:hidden; }
+.rd-shop .dsv-cardback{ background:var(--rd-navy-deep);
+  background-image:repeating-linear-gradient(45deg,rgba(255,255,255,.06) 0 10px,transparent 10px 20px);
+  display:flex; align-items:center; justify-content:center; }
+.rd-shop .dsv-cardback::after{ content:"THE DEPOT"; font-family:var(--rd-micro); font-size:9px;
+  line-height:1.6; color:var(--rd-gold); }
+.rd-shop .dsv-cardfront{ transform:rotateY(180deg); background:#fff; }
+.rd-shop .dsv-cardfront img{ width:100%; height:100%; display:block; object-fit:cover; }
+.rd-shop .dsv-reveal.anticipating .dsv-card{ animation:rd-shop-wiggle .5s ease-in-out infinite; }
+@keyframes rd-shop-wiggle{ 0%,100%{ transform:rotate(-2deg) } 50%{ transform:rotate(2deg) } }
+.rd-shop .dsv-burst{ position:absolute; inset:0; z-index:1; opacity:0;
+  background:repeating-conic-gradient(from 0deg,rgba(255,210,62,.35) 0deg 6deg,transparent 6deg 14deg); }
+.rd-shop .dsv-reveal.ceremony-gold.landed .dsv-burst{ opacity:1; animation:rd-spin 9s linear infinite; }
+.rd-shop .dsv-chip{ display:inline-block; margin-top:15px; font-family:var(--rd-micro);
+  font-size:9px; line-height:1.6; color:var(--rd-navy); background:#fff;
+  border:var(--rd-bd-sub) solid var(--rd-navy); border-radius:var(--rd-r-pill);
+  box-shadow:var(--rd-sh-sub); padding:8px 12px; opacity:0; }
+.rd-shop .dsv-chip.band-bronze{ background:#e8b183; }
+.rd-shop .dsv-chip.band-silver{ background:#eef4f9; }
+.rd-shop .dsv-chip.band-gold{ background:var(--rd-gloss),var(--rd-gold); color:var(--rd-ink-gold); }
+.rd-shop .dsv-reveal.landed .dsv-chip{ animation:rd-bannerpop .42s cubic-bezier(.2,.9,.3,1.2) both; }
+.rd-shop .dsv-cap{ margin-top:11px; font:600 13px/1.45 var(--rd-ui); color:var(--rd-navy); opacity:0; }
+.rd-shop .dsv-reveal.landed .dsv-cap{ opacity:1; transition:opacity .4s ease .3s; }
+.rd-shop .dsv-reveal.dismissing{ opacity:0; transition:opacity .3s ease; }
+/* the binder tile's landing flash, kept as its own class token */
+.rd-shop-landed{ animation:rd-shop-settle .7s cubic-bezier(.2,.9,.3,1); z-index:3; }
+@keyframes rd-shop-settle{ 0%{ transform:scale(1.3) translateY(-16px); box-shadow:0 0 0 5px var(--rd-gold) }
+  100%{ transform:none; box-shadow:var(--rd-sh-sub) } }
+/* the PACK SHOP era tab keeps its gold spine + green active state */
+.rd-shop-tab{ border-left-color:var(--rd-gold) !important; }
+.rd-shop-tab.active{ background:var(--rd-green) !important; color:var(--rd-navy) !important; }
+
+/* ---- the two copy variants: long on desktop, short at 390 ------------- */
+.rd-shop .pks-m{ display:none; }
+.rd-shop .pks-d{ display:inline; }
+
+/* =====================================================================
+   390 IS ITS OWN LAYOUT (README 5). Rows, not a squeezed grid; every
+   target >= 44px. Measured against exports/mobile-390/pack-shop.png + rip.png.
+   ===================================================================== */
+@media (max-width:560px){
+  .rd-shop .pks-d{ display:none; }
+  .rd-shop .pks-m{ display:inline; }
+  .rd-shop .pks-head{ gap:11px; margin:0 0 14px; }
+  .rd-shop .pks-h1{ font-size:22px; }
+  .rd-shop .pks-sub{ font-size:12px; }
+  .rd-shop .pks-guest{ order:3; width:100%; }
+  /* every tier is a row: art left, name + one line, pill under it */
+  .rd-shop .pks-grid{ grid-template-columns:1fr; gap:11px; }
+  .rd-shop .pks-tier{ flex-direction:row; align-items:center; gap:13px;
+    text-align:left; padding:12px; }
+  .rd-shop .pks-tier .pk-wrap{ width:78px; height:104px; }
+  .rd-shop .pks-tier-txt{ flex:1 1 auto; min-width:0; }
+  .rd-shop .pks-tier-name{ margin:0; }
+  .rd-shop .pks-odds{ min-height:0; margin:2px 0 8px; }
+  .rd-shop .pks-tier.tier-gold::before,.rd-shop .pks-tier.tier-diamond::before{ top:6px; right:6px; }
+  .rd-shop .pks-free{ gap:13px; padding:12px; }
+  .rd-shop .pks-free-head{ font-size:18px; }
+  .rd-shop .pks-cdrow{ gap:10px; }
+  .rd-shop .pks-cd{ font-size:19px; }
+  /* the rip theatre at 390: one card, big enough to read */
+  .rd-shop .prip-top{ padding:12px 14px; gap:9px; }
+  .rd-shop .prip-body{ padding:0 14px 28px; }
+  .rd-shop .prip-held-wrap{ width:172px; height:238px; }
+  .rd-shop .prip-head{ font-size:19px; }
+  .rd-shop .prip-card{ width:min(74vw,238px); height:min(104vw,333px); }
+  .rd-shop .prip-stage{ min-height:min(108vw,352px); }
+  .rd-shop .prip-slot{ width:calc(50% - 6px); }
+  .rd-shop .prip-mini{ width:calc(50% - 8px); max-width:150px; }
+  .rd-shop .prip-rays{ width:520px; height:520px; }
+  .rd-shop .prip-done-head,.rd-shop .prip-added-head{ font-size:20px; }
+  .rd-shop .dpc-hist-item{ flex-wrap:wrap; }
+  .rd-shop .dpc-hist-meta{ flex:1 1 60%; }
+  .rd-shop .dsv-card{ width:min(74vw,238px); height:min(104vw,333px); }
+}
+
+/* =====================================================================
+   REDUCED MOTION: cross-fades replace tear / pop / rays / sheen. The
+   bands, the stamp and the counters still appear -- nothing in this
+   chapter is communicated by movement alone (chapter 07 spec).
+   ===================================================================== */
+@media (prefers-reduced-motion:reduce){
+  .rd-shop .pk-sheen,.rd-shop .pk-wrap--breathe,.rd-shop .prip-rays,
+  .rd-shop .prip-confetti,.rd-shop .dsv-burst{ animation:none !important; }
+  .rd-shop .prip-confetti{ display:none; }
+  .rd-shop .prip-rays{ opacity:.5; }
+  .rd-shop .prip-card.is-flipped .prip-front,.rd-shop .prip-stamp,
+  .rd-shop .dsv-reveal.landed .dsv-chip{ animation:rd-crossfade .32s ease both; }
+  .rd-shop .dsv-card{ transition:none; }
+  .rd-shop .pks-btn:hover,.rd-shop .prip-cta:hover,.rd-shop .pks-login:hover,
+  .rd-shop .prip-close:hover,.rd-shop .dpc-cardsbtn:hover,.rd-shop .dpc-replaybtn:hover{
+    transform:none; }
+  .rd-shop-landed{ animation:rd-crossfade .32s ease both; }
+}
