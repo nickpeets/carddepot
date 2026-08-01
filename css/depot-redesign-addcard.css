@@ -584,3 +584,14 @@
 /* 3. the season list is long (38 seasons for Henderson): cap it and let it
    scroll inside the cream tray instead of pushing gate 4 off the panel. */
 #formScrim.rd-addcard .rolo-years{ max-height:168px; overflow-y:auto; }
+
+/* admin designation chip on the Add-a-Card head. Small, quiet, and ONLY a
+   label: the bypass itself is decided by depotAddCardGateOk, and the server
+   check that actually matters lands with MIGRATION_roles.sql (GRADE_PRESTIGE 7.4). */
+.rd-addcard__admin{
+display:inline-block;margin-left:8px;padding:3px 6px;
+font-family:var(--rd-micro);font-size:8px;letter-spacing:.1em;line-height:1;
+color:var(--rd-navy);background:var(--rd-gold);border:2px solid var(--rd-navy);border-radius:4px;
+vertical-align:middle;
+}
+.rd-addcard__admin[hidden]{display:none}
