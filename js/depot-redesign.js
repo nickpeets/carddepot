@@ -220,7 +220,32 @@ function dressHeader(){
   frag.appendChild(left);
   frag.appendChild(hair());
   var nav = document.querySelector('[data-depot-nav]');
-  if (nav){ nav.classList.remove('v2-nav'); frag.appendChild(nav); }  /* MOVES the element - carry delegation intact */
+  if (nav){
+    /* Play Ball parks its OWN sim controls (#sim-controls) inside the mode row.
+       Rule 7 says the bar carries nav and nothing else, so anything in there
+       that is not a mode tab moves out to the surface's first control row, one
+       20px step under the bar. Nodes are MOVED, so their handlers survive. */
+    var keep = [], strays = [], kids = [].slice.call(nav.children), ki;
+    for (ki = 0; ki < kids.length; ki++){
+      var kid = kids[ki];
+      if (kid.classList && kid.classList.contains('depot-tab')){ keep.push(kid); continue; }
+      if (kid.hasAttribute && kid.hasAttribute('data-depot-navtitle')){ keep.push(kid); continue; }
+      if (kid.classList && kid.classList.contains('spacer')){ keep.push(kid); continue; }
+      strays.push(kid);
+    }
+    if (strays.length){
+      var row = ce('div', 'rd-controls');
+      for (ki = 0; ki < strays.length; ki++){ row.appendChild(strays[ki]); }
+      var anchorEl = (shellRoot && shellRoot.parentNode) ? shellRoot : host;
+      if (anchorEl.parentNode){
+        if (shellRoot && getComputedStyle(shellRoot).position === 'fixed'){ row.classList.add('rd-controls--clearbar'); }
+        anchorEl.parentNode.insertBefore(row, anchorEl.nextSibling);
+        log('chapter 01: moved ' + strays.length + ' non-nav control(s) out of the bar into the surface control row');
+      } else { warn('dressHeader: nowhere to put the surface control row; ' + strays.length + ' control(s) stay in the bar'); }
+    }
+    nav.classList.remove('v2-nav');
+    frag.appendChild(nav);
+  }  /* MOVES the element - carry delegation intact */
   else { warn('dressHeader: no [data-depot-nav] to fold into the bar; this surface has no nav'); }
   frag.appendChild(ce('span', 'rd-header__spacer'));
   frag.appendChild(plate);

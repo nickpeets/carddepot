@@ -457,6 +457,11 @@
 /* stop the stage-s first child collapsing its own margin THROUGH the stage and
    turning the one 20px step into 18 or 38. */
 .rd-shell > .depot-stage > :first-child{margin-top:0}
+/* the surface control row: whatever a page parked in the mode row lands here,
+   one 20px step under the bar. Play Ball pins the bar (position:fixed), so its
+   row clears the bar height as well. */
+.rd-controls{display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding:0 20px;margin:0 0 var(--rd-step)}
+.rd-controls--clearbar{margin-top:calc(var(--rd-bar-h) + var(--rd-step))}
 .rd-binderwrap > .rd-binder__controls{margin:0 0 var(--rd-step)}
 .rd-shell .depot-stage:empty{display:none}
 .rd-rhythm > * + *{margin-top:var(--rd-step)}
