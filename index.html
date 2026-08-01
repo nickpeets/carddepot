@@ -1599,7 +1599,18 @@ function depotOnAuth(session){
 }
 if(depotSB()){
   depotSB().auth.onAuthStateChange(function(ev, session){ depotOnAuth(session); });
-  depotSB().auth.getSession().then(function(r){ depotOnAuth(r && r.data ? r.data.session : null); });
+  depotSB().auth.getSession().then(function(r){
+    /* fix/signup-flow: this boot read was SILENT, so 'it keeps kicking me back to
+       the login page' had no witness. Sessions live in localStorage and are bound to
+       the ORIGIN, so the domain cutover (nickpeets.github.io -> thedepot.cards, a 301)
+       strands the old one and the gate closes with nothing said. Say which of the
+       three it is: a failed read, no session on this origin, or a restored session. */
+    var __s = (r && r.data) ? r.data.session : null;
+    if(r && r.error){ console.warn('[DepotAuth] getSession FAILED at boot on ' + location.origin + '; the login gate stays closed: ' + ((r.error && r.error.message) || r.error)); }
+    else if(!__s){ console.log('[DepotAuth] getSession: no stored session on ' + location.origin + ' - showing the login gate (sessions are per-origin; one saved on another host does not carry over)'); }
+    else { console.log('[DepotAuth] getSession: restored a stored session on ' + location.origin + '; lifting the gate'); }
+    depotOnAuth(__s);
+  });
 }
 /* ===== END DEPOT DATA (Phase 2) ===== */
 
