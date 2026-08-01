@@ -386,7 +386,7 @@
 .rd-plate__season{font-family:var(--rd-micro);font-weight:400;font-size:7px;color:var(--rd-dim)}
 .rd-plate__streak{font-family:var(--rd-micro);font-weight:400;font-size:7px;color:var(--rd-orange)}
 .rd-plate__streak.is-empty{display:none}
-.rd-plate__rule{display:none}
+.rd-plate__rule{width:1px;height:18px;margin:0 3px;background:var(--rd-hairline);align-self:center}
 
 /* the coin + balance. The coin keeps its 4.5s flip but drops to a plain rim at
    19px - the detailed ring and the pixel highlights read as noise below 24px. */
@@ -451,7 +451,9 @@
 /* RULE 8 - one spacing unit. The bar, then 20px, then the surface's own first
    control row, then 20px, then the content panel. The shell wrapper owns the
    first step so every surface inherits it from one place. */
-.rd-shell{display:block;margin:0 0 var(--rd-step)}
+.rd-shell{display:block;margin:0 0 var(--rd-step);padding-bottom:0}
+.rd-shell > .depot-stage:empty{display:none}
+.rd-binderwrap > .rd-binder__controls{margin:0 0 var(--rd-step)}
 .rd-shell .depot-stage:empty{display:none}
 .rd-rhythm > * + *{margin-top:var(--rd-step)}
 
