@@ -58,6 +58,11 @@
   // frontConfirmed is true when either the library front probed TRUE for the
   // selected row, or the user attached a front scan. ADD is enabled iff true.
   var _frontConfirmed=false;
+  // _libFront: the LIBRARY front probed TRUE for the selected row. Kept
+  // separate from _frontConfirmed (which mirrors the button state) because
+  // after the scan gate they are no longer the same fact: library art can be
+  // confirmed while ADD stays locked. design/GRADE_PRESTIGE.md 7.3.
+  var _libFront=false;
   function addBtn(){ return document.getElementById('addCardBtn') || document.getElementById('f-save') || document.querySelector('[data-role="add-card-save"]'); }
   function setAddEnabled(on){
     _frontConfirmed=!!on;
@@ -72,7 +77,34 @@
   window.depotAddCardRefreshGate=refreshGateFromUpload;
   // Functional ADD gate consulted by saveCard on EVERY save path (legacy inline onclick included).
   // True only when a front image is confirmed: library probe TRUE (_frontConfirmed) OR the user attached a front scan.
-  window.depotAddCardGateOk=function(){ try{ return !!(_frontConfirmed || userAttachedFront()); }catch(e){ return true; } };
+  // ADD-gate, RE-AIMED by feat/roles-foundation for the DECIDED scan gate
+  // (design/GRADE_PRESTIGE.md 7.3): library art may IDENTIFY a card, but for a
+  // standard user only a front scan the user attached completes an add. If
+  // library art could fill a card, "scanned" would stop meaning "I hold this",
+  // the verified axis collapses, and anyone could mint prestigious cards
+  // straight out of the catalog. Admins keep the library auto-feed (7.4), which
+  // is what makes curation and live testing possible at all.
+  // FAIL SHUT. The old gate returned true from its catch. Under a scan gate an
+  // open failure mode is the wrong one: a thrown DOM read must not mint.
+  function isAdminNow(){ try{ return !!window.depotIsAdminCached; }catch(e){ return false; } }
+  window.depotAddCardGateOk=function(){
+    try{
+      if(userAttachedFront()) return true;
+      if(_libFront && isAdminNow()){ log("ADD allowed on library art alone: admin bypass"); return true; }
+      console.warn("[depot] add-card: ADD refused - no user scan attached" + (_libFront
+        ? " (library front EXISTS for this row, but library art does not complete an add for a standard user - GRADE_PRESTIGE 7.3)"
+        : " and no library front for this row"));
+      return false;
+    }catch(e){ console.warn("[depot] add-card: gate threw, refusing (fail shut):", e&&e.message); return false; }
+  };
+  // If the admin flag settles AFTER a row was picked, re-apply the gate instead
+  // of leaving an admin locked out of a row they already selected. The shim
+  // resolves async and its own INITIAL_SESSION double-fire guard means this
+  // fires once per resolution, not once per auth event.
+  try{ window.addEventListener("depot:admin-resolved", function(ev){
+    var adm = !!(ev && ev.detail && ev.detail.admin);
+    if(adm && _libFront && !userAttachedFront()){ setAddEnabled(true); log("admin resolved late; ADD unlocked on library art"); }
+  }); }catch(e){ console.warn("[depot] add-card: could not listen for depot:admin-resolved:", e&&e.message); }
 
   // ---- Row thumbnails -------------------------------------------------------
 // Recognition thumbs: the SAME library front the CARD IMAGES panel will show,
@@ -175,7 +207,7 @@ function resetThumbs(){
 
     var cardObj=makeCardObj(row, year);
     // Authoritative gate: probe the real bucket (table can run ~2 objects behind).
-    setAddEnabled(false);
+    setAddEnabled(false); _libFront=false;
     clearPreviews();
     var uploadHint=document.getElementById('rolo-upload-hint');
     if(!window.depotProbeCardArt){ warn('no probe fn; leaving locked'); return; }
@@ -183,8 +215,17 @@ function resetThumbs(){
       if(hasFront){
         paintPreviewFromLibrary(cardObj);
         if(uploadHint) uploadHint.style.display='';   // shown, NOT disabling upload
-        setAddEnabled(true);
-        log('front art confirmed for', window.DEPOT_PENDING_CATALOG_KEY);
+        _libFront=true;
+        if(isAdminNow()){
+          setAddEnabled(true);
+          log('front art confirmed + ADMIN BYPASS -> ADD unlocked for', window.DEPOT_PENDING_CATALOG_KEY);
+        } else {
+          // Standard user: the art is shown to help them confirm WHICH card this is,
+          // and that is all it does. ADD waits for their own scan (refreshGate).
+          setAddEnabled(false);
+          refreshGateFromUpload();
+          log('front art confirmed for', window.DEPOT_PENDING_CATALOG_KEY, '- ADD still locked: a standard user must attach their own scan (GRADE_PRESTIGE 7.3)');
+        }
       } else {
         // No library front: friendly prompt + existing upload affordances stay live.
         if(uploadHint){ uploadHint.style.display=''; }

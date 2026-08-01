@@ -3,6 +3,8 @@
 <head>
   <script src="js/version.js?v=a30aa21"></script>
   <script src="js/depot-core.js?v=a30aa21"></script>
+  <!-- roles shim: window.depotIsAdmin(). Dark-safe (resolves false) until db/proposals/MIGRATION_roles.sql runs. Must load AFTER depot-core: it reads depotSB()/depotUser(). -->
+  <script src="js/depot-roles.js?v=a30aa21"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>The Depot</title>
@@ -2774,7 +2776,7 @@ function parseStats(s){
 }
 async function saveCard(){
   const name=document.getElementById('f-name').value.trim();
-  if(!name){toast("A card needs a player name.");document.getElementById('f-name').focus();return;} if(window.depotAddCardGateOk && !window.depotAddCardGateOk()){ toast("Add a front image first — pick a card with library art or attach your own scan."); return; } // gate EVERY save path: no confirmed front = no add
+  if(!name){toast("A card needs a player name.");document.getElementById('f-name').focus();return;} if(window.depotAddCardGateOk && !window.depotAddCardGateOk()){ toast(window.depotIsAdminCached ? "Pick a card with library art, or attach your own scan." : "Attach a photo of your card to add it. Library art helps you find the right card \u2014 only your own scan can add it."); return; } // gate EVERY save path: no confirmed front = no add
   // Position is derived, not typed: normalize whatever the form holds, and if it
   // is empty ask MLB for the primary position so EVERY new row carries one.
   let posVal = (window.depotNormalizePos ? window.depotNormalizePos(document.getElementById('f-pos').value) : null);
