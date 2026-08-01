@@ -357,8 +357,7 @@ function diamondTileHtml(){
       '<div class="pks-guest">\ud83d\udc40 Browsing as a guest \u2014 log in to buy or claim.</div>';
     return '<div class="pks-head">' +
              '<div class="pks-head-txt">' +
-               '<h1 class="pks-h1">Rip a pack \u26be</h1>' +
-               '<p class="pks-sub">Five cards a pack. The last one is always the hit slot.</p>' +
+                              '<p class="pks-sub">Five cards a pack. The last one is always the hit slot.</p>' +
              '</div>' + guest +
              '<div class="pks-wallet">' + wallet + '</div>' +
            '</div>';

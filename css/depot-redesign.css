@@ -451,7 +451,7 @@
 /* RULE 8 - one spacing unit. The bar, then 20px, then the surface's own first
    control row, then 20px, then the content panel. The shell wrapper owns the
    first step so every surface inherits it from one place. */
-.rd-shell{display:block;margin:0 0 var(--rd-step);padding-bottom:0}
+.rd-shell{display:block;width:auto;max-width:none;margin:0 0 var(--rd-step);padding-bottom:0}
 .rd-shell > .depot-stage:empty{display:none}
 .rd-binderwrap > .rd-binder__controls{margin:0 0 var(--rd-step)}
 .rd-shell .depot-stage:empty{display:none}
