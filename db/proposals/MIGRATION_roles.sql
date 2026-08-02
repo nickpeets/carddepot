@@ -165,7 +165,14 @@ begin
     select owner_id from public.franchises group by owner_id having count(*) > 1
   ) d;
   if v_dupes > 0 then
-    raise notice 'SKIPPED franchises_owner_uidx: % owner(s) hold more than one franchise row. Resolve by hand, then re-run this file.', v_dupes;
+    -- STOP. This used to be a notice, which read as harmless and was not:
+    -- Sec 2.1 (depot_ensure_onboarding) and Sec 2.4 (the backfill) both use
+    -- ON CONFLICT (owner_id), which REQUIRES the unique index this branch just
+    -- declined to create. Carrying on hit 42P10 'there is no unique or exclusion
+    -- constraint matching the ON CONFLICT specification' 160 lines later and
+    -- rolled the whole file back anyway -- with a reassuring NOTICE on screen.
+    -- Fail here instead, where the message is actionable.
+    raise exception 'franchises_owner_uidx NOT created: % owner(s) hold more than one franchise row. Nothing has been changed. Resolve the duplicates by hand, then re-run this file.', v_dupes;
   else
     create unique index if not exists franchises_owner_uidx
       on public.franchises (owner_id);
@@ -353,7 +360,7 @@ on conflict (owner_id) do nothing;
 
 -- 3.1 The drift view. One row per franchise: what the column says, what the
 -- ledger says, and the difference. A non-zero drift is a bug in a writer.
-create or replace view public.depot_balance_drift as
+create or replace view public.depot_balance_drift with (security_invoker = true) as
 select f.owner_id,
        f.team_name,
        coalesce(f.balance, 0)                     as balance_column,
@@ -370,9 +377,15 @@ select f.owner_id,
 comment on view public.depot_balance_drift is
   'balance-column vs ledger-sum per franchise. drift <> 0 means a writer moved one side and not the other. See RUNBOOK Sec 4.4.';
 
--- The view inherits the RLS of franchises + wallet_transactions for a normal
--- caller, so a collector can only ever see their own line. Admins read the
--- whole table through 3.2, which is SECURITY DEFINER and role-gated.
+-- security_invoker = true is load-bearing, not decoration. A plain Postgres
+-- view executes as its OWNER, so without it this view is read with postgres's
+-- rights and RLS on franchises + wallet_transactions never applies to it.
+-- Measured on a local PG16 with own-row RLS in place: a plain 'authenticated'
+-- caller saw 1 row in public.franchises and 5 rows -- everybody -- through the
+-- view. With security_invoker the view is evaluated as the caller and the base
+-- table policies apply, so a collector sees only their own line. Requires
+-- PG15+; Supabase is well past that. Admins still read the whole fleet through
+-- 3.2, which is SECURITY DEFINER and role-gated on purpose.
 
 -- 3.2 The check function. Self by default; the whole fleet for an admin.
 -- Read-only: it reports, it never repairs.
@@ -487,7 +500,7 @@ grant execute on function public.depot_admin_grant(uuid, bigint, text) to authen
 -- takes the honest coarse cut: every row belonging to an account flagged admin
 -- is out, plus any row anywhere carrying the explicit flag. Documented so the
 -- next person tuning prices knows exactly what was excluded and why.
-create or replace view public.depot_economy_ledger as
+create or replace view public.depot_economy_ledger with (security_invoker = true) as
 select w.*
   from public.wallet_transactions w
   left join public.user_roles r on r.user_id = w.owner_id

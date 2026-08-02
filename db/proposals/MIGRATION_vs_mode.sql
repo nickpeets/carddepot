@@ -33,9 +33,16 @@ comment on table public.match_settlements is
 
 alter table public.match_settlements enable row level security;
 
+-- DROP-then-CREATE, matching MIGRATION_roles.sql and MIGRATION_starter_box.sql.
+-- CREATE POLICY has no IF NOT EXISTS, so without these drops a second run of
+-- this file dies on 42710 'policy already exists' and, because the file is one
+-- transaction, takes the wallet_transactions.match_id column and its index down
+-- with it. Verified: re-running the unpatched file exits 3 at this line.
+drop policy if exists match_settlements_select_own on public.match_settlements;
 create policy match_settlements_select_own on public.match_settlements
   for select using (owner_id = auth.uid());
 
+drop policy if exists match_settlements_insert_own on public.match_settlements;
 create policy match_settlements_insert_own on public.match_settlements
   for insert with check (owner_id = auth.uid());
 
