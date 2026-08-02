@@ -86,7 +86,19 @@
   // is what makes curation and live testing possible at all.
   // FAIL SHUT. The old gate returned true from its catch. Under a scan gate an
   // open failure mode is the wrong one: a thrown DOM read must not mint.
-  function isAdminNow(){ try{ return !!window.depotIsAdminCached; }catch(e){ return false; } }
+  // ADMIN DESIGNATION on the modal. The chip is a LABEL for the state the gate is
+// already in - depotAddCardGateOk stays the single decision point, this only
+// tells the collector which door they are standing in front of. Subtle by
+// design: a small chip on the head, never a different layout.
+function adminChip(){ return document.getElementById('addCardAdminChip'); }
+function paintAdminChip(on){
+  var c=adminChip(); if(!c) return;
+  if(on){ c.hidden=false; c.setAttribute('title','Admin: a library-art card can complete an add on its own (GRADE_PRESTIGE 7.4). Your own scan still wins when you attach one.'); }
+  else { c.hidden=true; c.removeAttribute('title'); }
+}
+function bootAdminChip(){ try{ paintAdminChip(!!window.depotIsAdminCached); }catch(e){ console.warn("[depot] add-card: admin chip paint failed:", e&&e.message); } }
+if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', bootAdminChip); else bootAdminChip();
+function isAdminNow(){ try{ return !!window.depotIsAdminCached; }catch(e){ return false; } }
   window.depotAddCardGateOk=function(){
     try{
       if(userAttachedFront()) return true;
@@ -103,6 +115,7 @@
   // fires once per resolution, not once per auth event.
   try{ window.addEventListener("depot:admin-resolved", function(ev){
     var adm = !!(ev && ev.detail && ev.detail.admin);
+  paintAdminChip(adm);
     if(adm && _libFront && !userAttachedFront()){ setAddEnabled(true); log("admin resolved late; ADD unlocked on library art"); }
   }); }catch(e){ console.warn("[depot] add-card: could not listen for depot:admin-resolved:", e&&e.message); }
 

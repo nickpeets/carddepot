@@ -716,3 +716,30 @@ What is NOT designed, and must not be invented: the card-SELECTION algorithm.
 The README says so outright - which players from the catalog, and what era
 weighting, is undecided. The hit band is guaranteed; the rest are "mostly plain".
 Don't write odds into the design or the strings (override rule 3).
+
+## 21. `admin` is ONE role, and it bundles the add-bypass with everything else
+
+Nick granted Tim the Add-a-Card bypass. There is exactly one lever for that
+today: the `admin` role. So Tim's id now sits in `FOUNDING_ADMINS`
+(`js/depot-roles.js`) and in `MIGRATION_roles.sql` Sec 1.2 as `role = 'admin'`,
+and both were changed in the same commit so the shim and the migration cannot
+drift apart.
+
+The consequence, flagged and NOT built: `admin` is also what gates
+`depot_admin_grant()` (mint testing wallets), `depot_wallet_repair()` (rewrite a
+balance to the ledger sum) and the analytics exclusion in
+`depot_economy_ledger`. Granting the bypass grants all of that too.
+
+If Nick later wants Tim to have ONLY the add-bypass, that is a role-granularity
+split, and it is a schema decision, not a client one:
+
+1. either a capability column/table (`user_roles.caps text[]`, or a
+   `user_capabilities` child table) with `depot_is_admin()` kept for the
+   money-path functions and a new `depot_can(cap text)` for the gate, or
+2. a second role value (`curator`) that the Add-a-Card gate accepts and the
+   grant/repair functions do not.
+
+Either way the client shim needs a matching third state, because today
+`window.depotIsAdmin()` answers one boolean and the Add-a-Card gate
+(`depotAddCardGateOk`) reads exactly that boolean. Until then: one role, all
+powers, on the record.

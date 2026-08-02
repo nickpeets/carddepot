@@ -41,13 +41,20 @@
   var TAG = '[depot] roles:';
 
   /* FOUNDING ADMIN FALLBACK.
-   * Nick. Hardcoded on purpose, and ONLY consulted when the roles table cannot
-   * answer -- so the moment MIGRATION_roles.sql runs, the table is the
-   * authority and this list stops mattering. Tim
-   * (9861ce0d-e081-4123-b445-041dfed6cf34) is deliberately ABSENT: he is the
-   * test case for the standard scan-required flow, and an accidental admin
-   * would silently invalidate that test. */
-  var FOUNDING_ADMINS = ['9e4e47d2-8836-4100-b846-fe1bb059fded'];
+ * Nick and Tim. Hardcoded on purpose, and ONLY consulted when the roles table
+ * cannot answer -- so the moment MIGRATION_roles.sql runs, the table is the
+ * authority and this list stops mattering.
+ *
+ * TIM WAS DELIBERATELY ABSENT AND IS NOW DELIBERATELY PRESENT. He was written
+ * in as the test case for the standard scan-required flow; Nick has since
+ * granted him the add-bypass, so this list and MIGRATION_roles.sql section 1.1
+ * were changed together and still agree. The standard flow stays testable with
+ * any id that is not on this list. See FUTURE_ITEMS on splitting the
+ * add-bypass out of 'admin' if Tim should not carry future admin powers. */
+var FOUNDING_ADMINS = [
+  '9e4e47d2-8836-4100-b846-fe1bb059fded', // Nick
+  '9861ce0d-e081-4123-b445-041dfed6cf34'  // Tim -- granted by Nick, this session
+];
 
   var _promise = null;   // in-flight or settled resolution
   var _forUid  = null;   // the uid the memo belongs to
