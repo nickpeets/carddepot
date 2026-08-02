@@ -72,13 +72,46 @@ begin
     raise notice 'cards.source check (%) already permits ''starter'' -- no change.', v_name;
   else
     raise notice 'cards.source check (%) currently: %', v_name, v_def;
-    -- Extend the IN/ANY list by inserting 'starter' before its closing paren.
-    v_new := regexp_replace(v_def, '\)\s*\)\s*$', ', ''starter''::text))');
+    -- Extend the VALUE LIST ITSELF -- inside the ARRAY[...] or the IN (...) --
+    -- never by chopping parens off the tail of the whole expression. The old
+    -- form matched the last two ')' of the CHECK body, so 'starter' landed as a
+    -- SECOND ARGUMENT to CHECK() instead of a third element of the list:
+    --   CHECK ((source = ANY (ARRAY['scan'::text, 'pack'::text]), 'starter'::text))
+    -- which Postgres rejects with 42804 "argument of CHECK must be type
+    -- boolean, not type record" and which rolls the whole file back.
+    if v_def ~ 'ARRAY\[' then
+      -- = ANY (ARRAY['scan'::text, 'pack'::text])  ->  insert before the ']'
+      v_new := regexp_replace(v_def, '(ARRAY\[[^]]*)\]', '\1, ''starter''::text]');
+    elsif v_def ~* '\yIN\s*\(' then
+      -- source IN ('scan', 'pack')  ->  insert before the closing paren
+      v_new := regexp_replace(v_def, '(\yIN\s*\([^)]*)\)', '\1, ''starter''::text)', 'i');
+    else
+      v_new := v_def;   -- shape not recognised: falls through to the raise below
+    end if;
     if v_new = v_def then
       raise exception 'Could not extend cards.source check automatically. Definition was: %. Run the ALTER by hand, adding ''starter'' to the list, then re-run this file.', v_def;
     end if;
     execute format('alter table public.cards drop constraint %I', v_name);
     execute format('alter table public.cards add constraint %I %s', v_name, v_new);
+    -- POST-CONDITION (RUNBOOK 3.6): a green run has to say what it checked.
+    -- Read the constraint back OUT OF THE CATALOG rather than trusting the
+    -- string we just built. If this raises, the enclosing transaction rolls
+    -- back and the ORIGINAL constraint is still in place -- nothing half-lands.
+    if not exists (
+      select 1
+      from pg_constraint c
+      join pg_class t on t.oid = c.conrelid
+      join pg_namespace n on n.oid = t.relnamespace
+      where n.nspname = 'public' and t.relname = 'cards' and c.conname = v_name
+        and pg_get_constraintdef(c.oid) like '%''starter''%'
+    ) then
+      raise exception 'cards.source check % did not come back carrying ''starter''. Rolled back; nothing changed.', v_name;
+    end if;
+    select pg_get_constraintdef(c.oid) into v_new
+      from pg_constraint c
+      join pg_class t on t.oid = c.conrelid
+      join pg_namespace n on n.oid = t.relnamespace
+     where n.nspname = 'public' and t.relname = 'cards' and c.conname = v_name;
     raise notice 'cards.source check (%) extended to: %', v_name, v_new;
   end if;
 end
