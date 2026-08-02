@@ -19,7 +19,7 @@ import re, sys, os
 
 DEFAULT_CSS = ['css/depot-redesign.css', 'css/depot-redesign-deinline.css']
 DEFAULT_SHELLS = ['index.html', 'game/shop.html', 'game/index.html',
-                  'game/builder.html', 'preview.html', 'marketplace.html']
+                  'game/builder.html', 'preview.html', 'marketplace.html', 'vs.html']  # vs.html joined the shells with VS MODE. RUNBOOK 2.2: a list the checker infers under-covers - preview.html sat stranded for weeks that way.
 
 AT_OK = ('@media', '@keyframes', '@import', '@supports', '@font-face', '@charset')
 

@@ -1,0 +1,104 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Card Depot &mdash; VS</title>
+<script src="js/version.js?v=b63c9e7"></script>
+<script src="js/depot-core.js?v=b63c9e7"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+// depot-core Supabase config (additive; mirrors game/shop.html). Publishable key
+// only, same project as the main app. Without it depotSB() returns null and the
+// bar renders anonymous even for a signed-in collector.
+var SUPABASE_URL='https://nuymzokvbdntbvinsnda.supabase.co';
+var SUPABASE_KEY=['sb','publishable','IiTsIBqYgGTIEnwdvQEXPA','4rmQdYVo'].join('_');
+window.DEPOT_SUPABASE_CONFIG = window.DEPOT_SUPABASE_CONFIG || { url: SUPABASE_URL, key: SUPABASE_KEY };
+var sb=null;
+try{ if(window.supabase&&window.supabase.createClient){ sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY); } }catch(e){}
+try{ if(sb){ window.sb = sb; window.supabaseClient = sb; } }catch(e){}
+</script>
+<link rel="stylesheet" href="css/depot-style.css?v=b63c9e7">
+<link rel="stylesheet" href="depot-v2.css?v=b63c9e7">
+<link rel="stylesheet" href="css/depot-redesign.css?v=b63c9e7">
+<script src="js/depot-wallet.js?v=b63c9e7"></script>
+<script src="js/depot-shell.js?v=b63c9e7" defer></script>
+<script src="js/depot-redesign.js?v=b63c9e7" defer></script>
+<script src="js/depot-vs.js?v=b63c9e7" defer></script>
+</head>
+<body class="v2-body rd-page">
+<script>
+/* VS MODE v1 - this surface is READ + ROUTE + SETTLE only. Challenge creation
+   stays where the lineup lives (game/builder.html CHALLENGE) and the match is
+   still played by the existing two-lineup seeded engine (game/index.html?match=).
+   Nothing here duplicates that plumbing. */
+document.addEventListener('DOMContentLoaded', function () {
+  if (window.DepotShell && window.DepotShell.mount) { window.DepotShell.mount({ active: 'vs', wordmark: 'THE <b>DEPOT</b>' }); }
+  else { console.warn('[vs] DepotShell.mount missing; this surface has no header'); }
+});
+</script>
+<main class="depot-stage rd-page__body" data-depot-stage>
+<section class="rd-panel">
+<div class="rd-panel__h">VS &mdash; CHALLENGE A FRIEND</div>
+<p class="rd-panel__note">Build a lineup, send the link, and the two real nines play each other from one seed.
+Stakes are <b>FRIENDLY</b>: the winner takes a fixed <span data-vs-purse>&hellip;</span>-coin purse, the loser takes the flat <span data-vs-consolation>&hellip;</span>.
+No cards are ever wagered.</p>
+<p><a class="rd-btn rd-btn--gold rd-btn--sm" href="game/builder.html">Build a lineup &amp; create a challenge</a></p>
+</section>
+<section class="rd-panel">
+<div class="rd-panel__h">YOUR CHALLENGES</div>
+<div id="vsList"><p class="rd-panel__note">Loading&hellip;</p></div>
+</section>
+</main>
+<script>
+(function(){
+  var TAG='[vs page]';
+  function esc(s){ return String(s==null?'':s).replace(/[&<>"']/g,function(c){ return ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'})[c]; }); }
+  function team(L,fb){ try{ if(L&&L.teamName) return String(L.teamName); }catch(e){} return fb; }
+  function rowHtml(m){
+    var st=window.DepotVs.stakesOf(m);
+    var c=esc(team(m.challenger_lineup,'Challenger'));
+    var o=m.opponent_id?esc(team(m.opponent_lineup,'Opponent')):'<i>waiting for an opponent</i>';
+    var act;
+    if(m.status==='pending'){ act='<input readonly style="width:100%;max-width:520px" value="'+esc(window.DepotVs.linkFor(m.id))+'">'; }
+    else if(m.status==='accepted'){ act='<a class="rd-btn rd-btn--gold rd-btn--sm" href="game/index.html?match='+encodeURIComponent(m.id)+'">PLAY MATCH</a>'; }
+    else if(m.status==='played'){ var s=m.result&&m.result.final;
+      act='FINAL '+(s?(s.challenger+' - '+s.opponent):'?')+' <a class="rd-btn rd-btn--sm" href="game/index.html?match='+encodeURIComponent(m.id)+'">REPLAY</a><span data-settle="'+esc(m.id)+'"></span>'; }
+    else { act=esc(m.status); }
+    return '<div class="rd-panel rd-panel--sub" style="margin-bottom:10px"><b>'+c+'</b> vs '+o+
+      '<div style="margin-top:6px">'+act+'</div>'+
+      '<div class="rd-micro rd-micro--orange" style="margin-top:6px">Stakes: FRIENDLY &middot; purse '+st.purse+' / consolation '+st.consolation+'</div></div>';
+  }
+  function paint(){
+    fillStakesCopy();
+    var host=document.getElementById('vsList');
+    if(!host){ console.warn(TAG,'no #vsList element; nothing rendered'); return; }
+    window.DepotVs.listMine().then(function(rows){
+      if(!rows.length){ host.innerHTML='<p class="rd-panel__note">No challenges yet. Build a lineup and send someone the link.</p>'; return; }
+      host.innerHTML=rows.map(rowHtml).join('');
+      rows.forEach(function(m){
+        if(m.status!=='played'){ return; }
+        window.DepotVs.settle(m).then(function(r){
+          var slot=document.querySelector('[data-settle="'+m.id+'"]');
+          if(!slot){ return; }
+          if(r.ok&&r.settled){ slot.textContent=' - '+r.label+' +'+r.amount+' coins'; }
+          else if(r.ok&&r.noop){ slot.textContent=' - settled ('+r.label+' +'+r.amount+')'; }
+          else { slot.textContent=' - settlement waiting on the migration'; }
+        });
+      });
+    });
+  }
+  function fillStakesCopy(){ var pn=document.querySelector('[data-vs-purse]'), cn=document.querySelector('[data-vs-consolation]'); if(pn){ pn.textContent=String(window.DepotVs.PURSE); } else { console.warn(TAG,'no [data-vs-purse] node; purse copy not filled'); } if(cn){ cn.textContent=String(window.DepotVs.CONSOLATION); } else { console.warn(TAG,'no [data-vs-consolation] node; consolation copy not filled'); } }
+  function boot(t){ t=t||0;
+    if(window.DepotVs){ paint(); return; }
+    if(t>40){ console.warn(TAG,'DepotVs never loaded; list not rendered'); return; }
+    setTimeout(function(){ boot(t+1); },150);
+  }
+  if(document.readyState==='loading'){ document.addEventListener('DOMContentLoaded',function(){ boot(0); }); } else { boot(0); }
+})();
+</script>
+</body>
+</html>
