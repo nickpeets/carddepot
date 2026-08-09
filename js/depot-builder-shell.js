@@ -124,7 +124,7 @@
     // Dressing complete — reveal the shell (FOUC guard), and cancel the fail-loud timer.
     reveal('depot-builder-dressed');
 
-    console.log('[depot] builder-shell: lineup builder wearing shared shell (active=builder)');
+    (window.depotLog||function(){})('[depot] builder-shell: lineup builder wearing shared shell (active=builder)');
   }
 
   if (document.readyState === 'loading') {

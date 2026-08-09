@@ -249,7 +249,7 @@ function accountBtn(){ return q('[data-depot-logout]'); }
 function shellLogout(){
   var owned = document.getElementById('authLogoutBtn') || document.getElementById('logoutBtn');
   if (owned && owned !== accountBtn() && typeof owned.click === 'function'){
-    console.log('[depot] shell: Log out delegating to #' + owned.id);
+    (window.depotLog||function(){})('[depot] shell: Log out delegating to #' + owned.id);
     owned.click();
     return;
   }
@@ -292,7 +292,7 @@ function mount(opts){
     if (_lo){ _lo.addEventListener('click', shellLogout); }
     else { console.warn('[depot] shell.mount: no [data-depot-logout] in the account cluster; this surface has no Log out'); }
     paintAccount();
-    console.log('[depot] depot-shell mounted (active=' + (opts.active || 'none') + ')');
+    (window.depotLog||function(){})('[depot] depot-shell mounted (active=' + (opts.active || 'none') + ')');
     // Auto-resolve franchise/record unless caller opts out.
     if (opts.autoFranchise !== false){ refreshFranchise(); }
     return _root;
@@ -313,5 +313,5 @@ function mount(opts){
     stageEl: function(){ return q('[data-depot-stage]'); }
   };
 
-  console.log('[depot] depot-shell.js loaded');
+  (window.depotLog||function(){})('[depot] depot-shell.js loaded');
 })();

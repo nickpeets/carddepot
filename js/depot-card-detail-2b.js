@@ -315,7 +315,7 @@
     };
     wrapped.__dc2b = true;
     window.openSpot = wrapped;
-    console.log(TAG, "openSpot wrapped (2b layout active)");
+    (window.depotLog||function(){})(TAG, "openSpot wrapped (2b layout active)");
     return true;
   }
 

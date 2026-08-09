@@ -12,7 +12,7 @@
 (function(){
   "use strict";
   var VIEW_ID = 'depotSeasonView';
-  function log(m){ try { console.log('[depot] season-shell: ' + m); } catch(e){} }
+  function log(m){ try { (window.depotLog||function(){})('[depot] season-shell: ' + m); } catch(e){} }
   function warn(m){ try { console.warn('[depot] season-shell: ' + m); } catch(e){} }
   function readIdentity(){
     var name = 'MY CLUB', anon = false, email = '';

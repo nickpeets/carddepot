@@ -58,7 +58,7 @@
       ensureButton();
       if (tries > 40) clearInterval(iv); // ~stop after a while; observer carries on
     }, 500);
-    try { console.log(TAG + ' entry button ' + (ok ? 'mounted' : 'deferred (shell not ready)')); } catch (e) {}
+    try { (window.depotLog||function(){})(TAG + ' entry button ' + (ok ? 'mounted' : 'deferred (shell not ready)')); } catch (e) {}
   }
 
   if (document.readyState === 'loading') {

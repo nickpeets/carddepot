@@ -39,7 +39,7 @@
     }).then(function (j) {
       _pos = (j && j.positions) || {};
       _posState = 'ready';
-      console.log(TAG, 'positions table loaded,', Object.keys(_pos).length, 'players');
+      (window.depotLog||function(){})(TAG, 'positions table loaded,', Object.keys(_pos).length, 'players');
       rerender(['position']);
     }).catch(function (e) {
       _pos = {}; _posState = 'failed';
@@ -92,7 +92,7 @@
         rerender(['band']);
       });
     }
-    console.log(TAG, 'group keys ready: position, team, band');
+    (window.depotLog||function(){})(TAG, 'group keys ready: position, team, band');
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
 })();
@@ -306,7 +306,7 @@
       if (!_st) return null;
       return { kind: _st.kind, gen: _st.gen, done: _st.done, flatShown: _st.i, sectionsShown: _st.s, total: _st.total, cardsShown: _st.shown, cardsTotal: _st.cardsTotal, sentinelAttached: !!(_st.sentinel && _st.sentinel.parentNode) };
     };
-    console.log(TAG, 'mobile continuous scroll armed at <=500px');
+    (window.depotLog||function(){})(TAG, 'mobile continuous scroll armed at <=500px');
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', install); else install();
 })();

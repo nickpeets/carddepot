@@ -205,19 +205,19 @@
   // store the created match_id on the season_game row.
   async function attachMatchToSeasonGame(seasonGameId, matchId){
     var sb = SB(), uid = UID();
-    try { console.log('[season] attachMatch', { haveSb: !!sb, haveUid: !!uid, seasonGameId: seasonGameId, matchId: matchId }); } catch (e) {}
+    try { (window.depotLog||function(){})('[season] attachMatch', { haveSb: !!sb, haveUid: !!uid, seasonGameId: seasonGameId, matchId: matchId }); } catch (e) {}
     if (!sb || !uid || !seasonGameId || !matchId) { console.warn('[season] attach writeback skipped:', {sb: !!sb, uid: !!uid, seasonGameId: !!seasonGameId, matchId: !!matchId}); return; }
     var u = await sb.from('season_games').update({ match_id: matchId })
                     .eq('owner_id', uid).eq('id', seasonGameId).select();
     if (u.error) throw u.error;
-    try { console.log('[season] attach match_id rows affected:', (u.data ? u.data.length : 0), { seasonGameId: seasonGameId, matchId: matchId }); } catch (e) {}
+    try { (window.depotLog||function(){})('[season] attach match_id rows affected:', (u.data ? u.data.length : 0), { seasonGameId: seasonGameId, matchId: matchId }); } catch (e) {}
     if (!u.data || !u.data.length) { try { console.error('[season] attach UPDATE hit 0 rows - match_id NOT written. Wrong season_game id, wrong owner, or missing RLS UPDATE policy on season_games'); } catch (e) {} }
   }
 
   // idempotent writeback: only fires when the row is still pending.
   async function recordSeasonResult(seasonGameId, userScore, oppScore){
     var sb = SB(), uid = UID();
-    try { console.log('[season] recordResult', { haveSb: !!sb, haveUid: !!uid, seasonGameId: seasonGameId, userScore: userScore, oppScore: oppScore }); } catch (e) {}
+    try { (window.depotLog||function(){})('[season] recordResult', { haveSb: !!sb, haveUid: !!uid, seasonGameId: seasonGameId, userScore: userScore, oppScore: oppScore }); } catch (e) {}
     if (!sb || !uid || !seasonGameId) { console.warn('[season] record writeback skipped:', {sb: !!sb, uid: !!uid, seasonGameId: !!seasonGameId}); return; }
     userScore = userScore|0; oppScore = oppScore|0;
     var result = (userScore > oppScore) ? 'win' : 'loss';
@@ -236,8 +236,8 @@
       .eq('owner_id', uid).eq('id', seasonGameId).eq('result','pending').select();
     if (upd.error) throw upd.error;
     if (!upd.data || !upd.data.length) { try { console.warn('[season] recordResult: season_games UPDATE affected 0 rows for id', seasonGameId, '- either already non-pending (idempotent) OR missing RLS UPDATE policy on season_games'); } catch (e) {} return; }
-    try { console.log('[season] recordResult: season_games UPDATE applied', { seasonGameId: seasonGameId, result: result, rows: upd.data.length }); } catch (e) {}
-    try { var vrf = await sb.from('season_games').select('id, result, user_score, opp_score, match_id, played_at').eq('owner_id', uid).eq('id', seasonGameId).single(); console.log('[season] verify season_games row after write:', vrf && vrf.data); } catch (e) { try { console.error('[season] verify read failed', e); } catch (e2) {} }
+    try { (window.depotLog||function(){})('[season] recordResult: season_games UPDATE applied', { seasonGameId: seasonGameId, result: result, rows: upd.data.length }); } catch (e) {}
+    try { var vrf = await sb.from('season_games').select('id, result, user_score, opp_score, match_id, played_at').eq('owner_id', uid).eq('id', seasonGameId).single(); (window.depotLog||function(){})('[season] verify season_games row after write:', vrf && vrf.data); } catch (e) { try { console.error('[season] verify read failed', e); } catch (e2) {} }
 
     // increment the season W-L off the confirmed write.
     var s = await sb.from('seasons').select('*')
@@ -251,7 +251,7 @@
     if (played >= (season.games_total|0 || GAMES_TOTAL)) patch.status = 'complete';
     var su = await sb.from('seasons').update(patch).eq('owner_id', uid).eq('id', season.id).select();
     if (su.error) throw su.error;
-    try { console.log('[season] seasons W-L update rows:', (su.data ? su.data.length : 0), { wins: wins, losses: losses }); } catch (e) {}
+    try { (window.depotLog||function(){})('[season] seasons W-L update rows:', (su.data ? su.data.length : 0), { wins: wins, losses: losses }); } catch (e) {}
     if (!su.data || !su.data.length) { try { console.error('[season] seasons UPDATE hit 0 rows - likely missing RLS UPDATE policy on seasons'); } catch (e) {} }
     return { result: result, wins: wins, losses: losses };
   }
@@ -260,13 +260,13 @@
   // Called from index.html __onMatchComplete (which knows match_id, not sgId).
   async function recordSeasonResultByMatch(matchId, userScore, oppScore){
     var sb = SB(), uid = UID();
-    try { console.log('[season] recordByMatch', { haveSb: !!sb, haveUid: !!uid, matchId: matchId }); } catch (e) {}
+    try { (window.depotLog||function(){})('[season] recordByMatch', { haveSb: !!sb, haveUid: !!uid, matchId: matchId }); } catch (e) {}
     if (!sb || !uid || !matchId) { console.warn('[season] writeback skipped:', {sb: !!sb, uid: !!uid, matchId: !!matchId}); return; }
     var q = await sb.from('season_games').select('*')
                     .eq('owner_id', uid).eq('match_id', matchId).limit(1);
     if (q.error) throw q.error;
     if (!q.data || !q.data.length) { try { console.warn('[season] byMatch: NO season_game row for match_id', matchId, '- attach never wrote match_id, or wrong owner/RLS'); } catch (e) {} return; }
-    try { console.log('[season] byMatch resolved season_game', { seasonGameId: q.data[0].id, matchId: matchId }); } catch (e) {}
+    try { (window.depotLog||function(){})('[season] byMatch resolved season_game', { seasonGameId: q.data[0].id, matchId: matchId }); } catch (e) {}
     return await recordSeasonResult(q.data[0].id, userScore, oppScore);
   }
 

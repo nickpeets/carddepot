@@ -106,7 +106,7 @@
           landed++;
         }
         if (landed) {
-          console.log(TAG + " settle batch: " + landed + "/" + made.length + " slot(s) flashed with dsv-settle");
+          (window.depotLog||function(){})(TAG + " settle batch: " + landed + "/" + made.length + " slot(s) flashed with dsv-settle");
           return;
         }
         if (tries < 12 && typeof window.turnPage === "function") {
@@ -204,6 +204,6 @@
       return html;
     };
 
-    console.log(TAG + " in-binder pack shop ready (PACK SHOP tab registered).");
+    (window.depotLog||function(){})(TAG + " in-binder pack shop ready (PACK SHOP tab registered).");
   });
 })();

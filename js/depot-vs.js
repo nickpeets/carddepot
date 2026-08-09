@@ -111,7 +111,7 @@
       var led = { match_id: row.id, owner_id: me, role: out.role, amount: pay.amount, won: !!out.won };
       return c.from('match_settlements').insert(led).select().maybeSingle().then(function (ins) {
         if (ins.error) {
-          if (ins.error.code === '23505') { console.log(TAG, 'settle: match', row.id, 'already settled for this party - clean no-op, no coins moved'); return { ok: true, noop: true, amount: pay.amount, label: pay.label }; }
+          if (ins.error.code === '23505') { (window.depotLog||function(){})(TAG, 'settle: match', row.id, 'already settled for this party - clean no-op, no coins moved'); return { ok: true, noop: true, amount: pay.amount, label: pay.label }; }
           console.warn(TAG, 'settle: settlement ledger insert failed (DDL likely not run):', ins.error.message);
           return { ok: false, reason: 'ddl', amount: pay.amount, label: pay.label };
         }
@@ -133,5 +133,5 @@
   }
   window.DepotVs = { PURSE: PURSE, CONSOLATION: CONSOLATION, stakes: stakes, stakesOf: stakesOf,
     listMine: listMine, roleOf: roleOf, outcomeFor: outcomeFor, settle: settle, settleById: settleById, linkFor: linkFor };
-  console.log(TAG, 'module ready - friendly stakes, purse ' + PURSE + ' / consolation ' + CONSOLATION);
+  (window.depotLog||function(){})(TAG, 'module ready - friendly stakes, purse ' + PURSE + ' / consolation ' + CONSOLATION);
 })();

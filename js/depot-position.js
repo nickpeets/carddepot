@@ -258,7 +258,7 @@
         if (v.indexOf(key) >= 0 && spanCovers(people[i], year)) hits.push(people[i]);
       }
       if (hits.length === 1) {
-        console.log(TAG + ' surname retry matched "' + nm + '" to ' + hits[0].fullName + ' #' + hits[0].id + ' via an official name variant');
+        (window.depotLog||function(){})(TAG + ' surname retry matched "' + nm + '" to ' + hits[0].fullName + ' #' + hits[0].id + ' via an official name variant');
         return hits[0];
       }
       if (hits.length > 1) console.warn(TAG + ' surname retry refused "' + nm + '": ' + hits.length + ' people share that name and cover ' + year);
@@ -324,7 +324,7 @@
           for (k = 0; k < hits.length; k++) { if (tiers[tier](hits[k])) { exact = hits[k]; break; } }
         }
         if (!exact) { exact = hits[0]; tier = 0; }
-        console.log(TAG + ' "' + nm + '" matched ' + hits.length + ' people exactly; took ' + exact.fullName + ' #' + exact.id + ' at tier ' + tier + ' for ' + year);
+        (window.depotLog||function(){})(TAG + ' "' + nm + '" matched ' + hits.length + ' people exactly; took ' + exact.fullName + ' #' + exact.id + ' at tier ' + tier + ' for ' + year);
       }
       return { people: people, exact: exact };
     }).catch(function () { return { people: [], exact: null }; });
@@ -354,7 +354,7 @@
         return searchOne(nm, year).then(function (r) {
           lastPeople = r.people || [];
           if (r.exact && i > 0) {
-            console.log(TAG + ' "' + name + '" resolved as "' + nm + '" after stripping trailing subset code(s) -> ' + r.exact.fullName + ' #' + r.exact.id);
+            (window.depotLog||function(){})(TAG + ' "' + name + '" resolved as "' + nm + '" after stripping trailing subset code(s) -> ' + r.exact.fullName + ' #' + r.exact.id);
           }
           return r.exact || null;
         });
@@ -515,7 +515,7 @@
           });
         }).catch(function () {});
       }, Promise.resolve()).then(function () {
-        if (done) console.log(TAG + ' enriched ' + done + ' new card(s) with a position');
+        if (done) (window.depotLog||function(){})(TAG + ' enriched ' + done + ' new card(s) with a position');
         return done;
       });
     }).catch(function () { return 0; });
@@ -540,8 +540,8 @@
       return rows.reduce(function (chain, row) {
         return chain.then(function () { return backfillOne(client, row, dry, report); });
       }, Promise.resolve()).then(function () {
-        console.log(TAG + (dry ? ' DRY RUN -- ' : ' ') + report.length + ' row(s) examined');
-        if (console.table) console.table(report); else console.log(report);
+        (window.depotLog||function(){})(TAG + (dry ? ' DRY RUN -- ' : ' ') + report.length + ' row(s) examined');
+        if (console.table) console.table(report); else (window.depotLog||function(){})(report);
         return report;
       });
     });
@@ -702,8 +702,8 @@
           if (report[i].wrote === 'written') wrote++;
           if (report[i].wrote === 'SKIPPED') skipped++;
         }
-        console.log(TAG + (dry ? ' REPULL DRY RUN -- ' : ' REPULL -- ') + report.length + ' candidate(s), ' + wrote + ' written, ' + skipped + ' skipped');
-        if (console.table) console.table(report); else console.log(report);
+        (window.depotLog||function(){})(TAG + (dry ? ' REPULL DRY RUN -- ' : ' REPULL -- ') + report.length + ' candidate(s), ' + wrote + ' written, ' + skipped + ' skipped');
+        if (console.table) console.table(report); else (window.depotLog||function(){})(report);
         return report;
       });
     });
@@ -741,7 +741,7 @@
       }, Promise.resolve()).then(function () {
         var wrote = 0, i;
         for (i = 0; i < report.length; i++) { if (report[i].wrote === 'written') wrote++; }
-        console.log(TAG + ' stats enrichment: filled ' + wrote + ' of ' + rows.length + ' stat-less row(s)');
+        (window.depotLog||function(){})(TAG + ' stats enrichment: filled ' + wrote + ' of ' + rows.length + ' stat-less row(s)');
         return wrote;
       });
     }).catch(function (e) { console.warn(TAG + ' stats enrichment threw: ' + ((e && e.message) || e)); return 0; });

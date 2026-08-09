@@ -73,7 +73,7 @@
   function shelf(localList) {
     return ledgerShelf().then(function (rows) {
       var merged = mergeShelf(localList || [], rows);
-      console.log(TAG + ' shelf: ' + merged.length + ' pack(s) (' + rows.length + ' from the ledger, ' + ((localList || []).length) + ' local)');
+      (window.depotLog||function(){})(TAG + ' shelf: ' + merged.length + ' pack(s) (' + rows.length + ' from the ledger, ' + ((localList || []).length) + ' local)');
       return merged;
     });
   }
@@ -156,11 +156,11 @@
       if (typeof window.depotOpenSpotById === 'function' && window.depotOpenSpotById(id)) return true;
     } catch (e) { console.warn(TAG + ' depotOpenSpotById threw: ' + ((e && e.message) || e)); }
     var href = (/\/game\//.test(location.pathname || '') ? '../index.html' : 'index.html') + '?card=' + encodeURIComponent(id);
-    console.log(TAG + ' no in-page binder; handing off to ' + href);
+    (window.depotLog||function(){})(TAG + ' no in-page binder; handing off to ' + href);
     location.href = href;
     return true;
   }
 
   window.DepotPackHistory = { shelf: shelf, contents: contents, reset: reset, openCard: openCard, mergeShelf: mergeShelf };
-  console.log(TAG + ' ready');
+  (window.depotLog||function(){})(TAG + ' ready');
 })();

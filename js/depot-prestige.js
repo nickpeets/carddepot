@@ -46,7 +46,7 @@
       _tierPts = pt._tiers || { COMMON: 0, REGULAR: 8, STAR: 20, SUPERSTAR: 30, HOF: 40 };
       _sets = st.sets || {};
       _setBonus = st._bonuses || { ICONIC: 20, PREMIUM: 12, NOTABLE: 6 };
-      console.log(TAG, 'tables loaded', Object.keys(_players).length, 'players,', Object.keys(_sets).length, 'sets');
+      (window.depotLog||function(){})(TAG, 'tables loaded', Object.keys(_players).length, 'players,', Object.keys(_sets).length, 'sets');
       return true;
     }).catch(function (e) {
       console.error(TAG, 'TABLE LOAD FAILED — prestige is NOT reliable, all cards scoring COMMON. Fix the data path:', (e && e.message) || e);
@@ -144,7 +144,7 @@
 
   function decorateBinder() {
     // Binder decoration disabled — prestige lives in the Lineup section only (Nick's call).
-    console.log(TAG, 'binder decoration disabled — prestige lives in Lineup only'); return;
+    (window.depotLog||function(){})(TAG, 'binder decoration disabled — prestige lives in Lineup only'); return;
     var coll = collection();
     if (!coll) { console.warn(TAG, 'decorateBinder: no COLLECTION, skipping'); return; }
     var grid = document.getElementById('binderGrid');
@@ -161,7 +161,7 @@
       host.insertAdjacentHTML('afterbegin', badgeHTML(res));
       done++;
     });
-    console.log(TAG, 'decorated', done, 'of', cards.length, 'binder cards');
+    (window.depotLog||function(){})(TAG, 'decorated', done, 'of', cards.length, 'binder cards');
   }
 
   function breakdownHTML(res) {
@@ -201,7 +201,7 @@
       return r;
     };
     _spotHooked = true;
-    console.log(TAG, 'spotlight hooked');
+    (window.depotLog||function(){})(TAG, 'spotlight hooked');
   }
 
   function ready(cb) {
