@@ -83,8 +83,44 @@
     return _userPromise;
   }
 
+  /* [record-integrity] ONE franchise resolver for every consumer.
+   * Before this existed, depot-shell resolveRecord() read the NEWEST franchise
+   * (created_at desc) while season.js ensureFranchise() played under the
+   * OLDEST (asc) — with more than one franchises row the header showed a
+   * different club's record than the one being played. Gameplay writes under
+   * the oldest row, so the OLDEST is canonical and both sides now come here.
+   * Returns Promise<franchise row|null>; never creates a row (creation stays
+   * in season.js ensureFranchise, which falls back when this yields null). */
+  var _franCached = null;
+  var _franPromise = null;
+  function depotFranchise() {
+    if (_franCached) return Promise.resolve(_franCached);
+    if (_franPromise) return _franPromise;
+    var sb = getClient();
+    if (!sb) { console.warn('[depot] depotFranchise: no client; returning null'); return Promise.resolve(null); }
+    _franPromise = depotUser().then(function (u) {
+      if (!u) { console.warn('[depot] depotFranchise: no user; returning null'); _franPromise = null; return null; }
+      return sb.from('franchises').select('*').eq('owner_id', u.id)
+        .order('created_at', { ascending: true }).limit(1)
+        .then(function (res) {
+          _franPromise = null;
+          if (res.error) { console.warn('[depot] depotFranchise: franchises query failed:', res.error.message); return null; }
+          var row = (res.data && res.data[0]) ? res.data[0] : null;
+          if (!row) { console.warn('[depot] depotFranchise: no franchise row for user'); return null; }
+          _franCached = row;
+          return row;
+        });
+    }).catch(function (e) {
+      console.warn('[depot] depotFranchise threw:', e);
+      _franPromise = null;
+      return null;
+    });
+    return _franPromise;
+  }
+
   window.depotSB = depotSB;
   window.depotUser = depotUser;
+  window.depotFranchise = depotFranchise;
   window.depotUserCached = window.depotUserCached || null;
 
   // Kick off a best-effort user resolve so depotUserCached warms up for sync callers (e.g. season.js UID()).
