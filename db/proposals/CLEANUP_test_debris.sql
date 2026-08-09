@@ -18,6 +18,18 @@
 -- Idempotent by construction: every DELETE re-derives its candidate set; a
 -- second run deletes 0 rows. Each section SELECTs its count first (RUNBOOK
 -- fail-loud: know what you deleted, not "some rows").
+--
+-- 2026-08-09 hardening, after inventory G2 came back NON-ZERO in production:
+-- 6 orphaned PLAYED self-matches carry match_settlements rows (the self-match
+-- settlement incident - see REVERSAL_self_match_settlements.sql). Those 6 were
+-- already out of Sections 1-2's reach (S1 wants status 'pending', S2 wants
+-- result null; settled matches are 'played' with a result) and the FK's
+-- on delete RESTRICT is the hard backstop - but the settlement guard is now
+-- EXPLICIT in Sections 1-2 too, so no future edit can widen a candidate set
+-- onto a settled match without deleting a guard line on purpose. This file
+-- therefore assumes public.match_settlements EXISTS (true in production since
+-- 2026-08-02); on a DB without it these sections error loudly instead of
+-- deleting - acceptable, per fail-loud.
 -- =============================================================================
 
 begin;
@@ -30,6 +42,7 @@ with doomed as (
      and m.created_at < now() - interval '7 days'
      and not exists (select 1 from public.season_games       sg where sg.match_id = m.id)
      and not exists (select 1 from public.wallet_transactions w  where w.match_id  = m.id)
+     and not exists (select 1 from public.match_settlements  ms where ms.match_id  = m.id)
 )
 select 'S1: dead pending links to delete' as action, count(*) as rows from doomed;
 
@@ -38,7 +51,8 @@ delete from public.matches m
    and m.opponent_id is null
    and m.created_at < now() - interval '7 days'
    and not exists (select 1 from public.season_games       sg where sg.match_id = m.id)
-   and not exists (select 1 from public.wallet_transactions w  where w.match_id  = m.id);
+   and not exists (select 1 from public.wallet_transactions w  where w.match_id  = m.id)
+   and not exists (select 1 from public.match_settlements  ms where ms.match_id  = m.id);
 
 -- ---------- Section 2: orphaned UNPLAYED season self-matches ----------------
 -- challenger_id = opponent_id (only the season pipeline creates these), no
@@ -51,6 +65,7 @@ with doomed as (
      and m.result is null
      and not exists (select 1 from public.season_games       sg where sg.match_id = m.id)
      and not exists (select 1 from public.wallet_transactions w  where w.match_id  = m.id)
+     and not exists (select 1 from public.match_settlements  ms where ms.match_id  = m.id)
 )
 select 'S2: orphaned unplayed self-matches to delete' as action, count(*) as rows from doomed;
 
@@ -58,7 +73,8 @@ delete from public.matches m
  where m.challenger_id = m.opponent_id
    and m.result is null
    and not exists (select 1 from public.season_games       sg where sg.match_id = m.id)
-   and not exists (select 1 from public.wallet_transactions w  where w.match_id  = m.id);
+   and not exists (select 1 from public.wallet_transactions w  where w.match_id  = m.id)
+   and not exists (select 1 from public.match_settlements  ms where ms.match_id  = m.id);
 
 commit;
 

@@ -79,7 +79,21 @@
         .order('created_at', { ascending: false }).limit(50)
         .then(function (res) {
           if (res.error) { console.warn(TAG, 'listMine: matches read failed:', res.error.message); return []; }
-          return res.data || [];
+          /* [self-match settlement bug] SEASON games ride the matches pipeline as
+             SELF-matches (challenger_id = opponent_id, builder __depotSeasonPlay).
+             They are season plumbing, never VS games: not VS surface material and
+             NEVER settle-eligible. Before this filter the settle sweep paid the
+             full friendly purse for playing yourself - production minted ~1,300
+             coins across 13 self-settlements when settlement went live 2026-08-02.
+             This is the sweep's candidate-query half; settle() carries the same
+             refusal as defense in depth. */
+          var rows = res.data || [], keep = [], dropped = 0;
+          for (var i = 0; i < rows.length; i++) {
+            if (rows[i] && rows[i].challenger_id && rows[i].challenger_id === rows[i].opponent_id) { dropped++; continue; }
+            keep.push(rows[i]);
+          }
+          if (dropped) { console.warn(TAG, 'listMine: excluded ' + dropped + ' season self-match(es) - season plumbing, never VS material, never settle-eligible'); }
+          return keep;
         });
     });
   }
@@ -102,6 +116,14 @@
     var c = client();
     if (!c) { console.warn(TAG, 'settle: no client; nothing settled'); return Promise.resolve({ ok: false, reason: 'no-client' }); }
     if (!row || !row.id) { console.warn(TAG, 'settle: no match row given'); return Promise.resolve({ ok: false, reason: 'no-row' }); }
+    /* [self-match settlement bug] defense-in-depth half of the fix (the sweep's
+       candidate filter in listMine is the other): a season SELF-match must never
+       reach the ledger, whatever path delivered it (settleById, a future caller,
+       a stale cached row). Eligibility narrows; ledger-first discipline unchanged. */
+    if (row.challenger_id && row.challenger_id === row.opponent_id) {
+      console.warn(TAG, 'settle REFUSED: match', row.id, 'is a season SELF-match (challenger_id = opponent_id) - season plumbing, no purse. See db/proposals/REVERSAL_self_match_settlements.sql for the production cleanup.');
+      return Promise.resolve({ ok: false, reason: 'self-match' });
+    }
     if (row.status !== 'played') { console.warn(TAG, 'settle: match', row.id, 'is', row.status, '- only a played match settles'); return Promise.resolve({ ok: false, reason: 'not-played' }); }
     return userId().then(function (me) {
       if (!me) { console.warn(TAG, 'settle: anonymous; nothing settled'); return { ok: false, reason: 'anon' }; }
