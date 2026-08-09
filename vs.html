@@ -4,6 +4,20 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Card Depot &mdash; VS</title>
+<!-- [site chrome] favicon + unfurl card (see index.html for the rationale). -->
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="canonical" href="https://thedepot.cards/vs.html">
+<meta name="description" content="Challenge a friend: two real nines, one seed, friendly stakes.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="The Depot">
+<meta property="og:title" content="The Depot &mdash; VS: challenge a friend">
+<meta property="og:description" content="Challenge a friend: two real nines, one seed, friendly stakes.">
+<meta property="og:url" content="https://thedepot.cards/vs.html">
+<meta property="og:image" content="https://thedepot.cards/assets/og-depot.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://thedepot.cards/assets/og-depot.png">
 <script src="js/version.js?v=b63c9e7"></script>
 <script src="js/depot-core.js?v=b63c9e7"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -63,7 +77,8 @@ No cards are ever wagered.</p>
     var c=esc(team(m.challenger_lineup,'Challenger'));
     var o=m.opponent_id?esc(team(m.opponent_lineup,'Opponent')):'<i>waiting for an opponent</i>';
     var act;
-    if(m.status==='pending'){ act='<input readonly style="width:100%;max-width:520px" value="'+esc(window.DepotVs.linkFor(m.id))+'">'; }
+    if(m.status==='pending'){ act='<input readonly style="width:100%;max-width:520px" value="'+esc(window.DepotVs.linkFor(m.id))+'">'+
+      ' <button class="rd-btn rd-btn--gold rd-btn--sm" type="button" data-share="'+esc(m.id)+'" data-share-team="'+c+'">SHARE</button>'; }
     else if(m.status==='accepted'){ act='<a class="rd-btn rd-btn--gold rd-btn--sm" href="game/index.html?match='+encodeURIComponent(m.id)+'">PLAY MATCH</a>'; }
     else if(m.status==='played'){ var s=m.result&&m.result.final;
       act='FINAL '+(s?(s.challenger+' - '+s.opponent):'?')+' <a class="rd-btn rd-btn--sm" href="game/index.html?match='+encodeURIComponent(m.id)+'">REPLAY</a><span data-settle="'+esc(m.id)+'"></span>'; }
@@ -79,6 +94,31 @@ No cards are ever wagered.</p>
     window.DepotVs.listMine().then(function(rows){
       if(!rows.length){ host.innerHTML='<p class="rd-panel__note">No challenges yet. Build a lineup and send someone the link.</p>'; return; }
       host.innerHTML=rows.map(rowHtml).join('');
+      /* [challenge share] one delegated handler on the list host (assignment, not
+         addEventListener, so a re-paint can never stack duplicates). Native share
+         sheet when the platform has one; clipboard fallback; fail-loud. */
+      host.onclick=function(ev){
+        var b=ev.target && ev.target.closest ? ev.target.closest('[data-share]') : null;
+        if(!b){ return; }
+        var url=window.DepotVs.linkFor(b.getAttribute('data-share'));
+        var team=b.getAttribute('data-share-team')||'A rival club';
+        function flash(msg){ b.textContent=msg; setTimeout(function(){ b.textContent='SHARE'; },1600); }
+        function copy(){
+          if(navigator.clipboard&&navigator.clipboard.writeText){
+            navigator.clipboard.writeText(url).then(function(){ flash('COPIED!'); },
+              function(e){ console.warn(TAG,'share: clipboard copy failed:', e&&e.message); flash('COPY FAILED'); });
+          } else { console.warn(TAG,'share: no navigator.share and no clipboard API on this browser'); flash('COPY FAILED'); }
+        }
+        if(navigator.share){
+          navigator.share({ title:'The Depot — you’ve been challenged',
+                            text:team+' challenges you to play ball — one seed, two real nines.', url:url })
+            .catch(function(e){
+              if(e && e.name==='AbortError'){ return; } // sheet dismissed; not an error
+              console.warn(TAG,'share: navigator.share failed, copying instead:', e&&e.message);
+              copy();
+            });
+        } else { copy(); }
+      };
       rows.forEach(function(m){
         if(m.status!=='played'){ return; }
         window.DepotVs.settle(m).then(function(r){
