@@ -1,21 +1,36 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <script src="../js/version.js?v=b63c9e7"></script>
-  <script src="../js/depot-core.js?v=b63c9e7"></script>
+  <script src="../js/version.js?v=0df4cd3"></script>
+  <script src="../js/depot-core.js?v=0df4cd3"></script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>The Depot &mdash; Lineup Builder</title>
+<!-- [site chrome] favicon + unfurl card. Challenge links (?match=) land HERE, so
+     this page's card is what an invite unfurls as in a chat. See index.html. -->
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link rel="canonical" href="https://thedepot.cards/game/builder.html">
+<meta name="description" content="You've been challenged. Build your nine, send the link, and the two real lineups play from one seed.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="The Depot">
+<meta property="og:title" content="The Depot &mdash; you've been challenged">
+<meta property="og:description" content="Build your nine, send the link, and the two real lineups play from one seed.">
+<meta property="og:url" content="https://thedepot.cards/game/builder.html">
+<meta property="og:image" content="https://thedepot.cards/assets/og-depot.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://thedepot.cards/assets/og-depot.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="season.js?v=b63c9e7" defer></script>
-  <link rel="stylesheet" href="../css/depot-style.css?v=b63c9e7">
-    <link rel="stylesheet" href="../depot-v2.css?v=b63c9e7">
-  <link rel="stylesheet" href="../css/depot-redesign.css?v=b63c9e7">
-  <script src="../js/depot-shell.js?v=b63c9e7" defer></script>
-  <script src="../js/depot-redesign.js?v=b63c9e7" defer></script>
+<script src="season.js?v=0df4cd3" defer></script>
+  <link rel="stylesheet" href="../css/depot-style.css?v=0df4cd3">
+    <link rel="stylesheet" href="../depot-v2.css?v=0df4cd3">
+  <link rel="stylesheet" href="../css/depot-redesign.css?v=0df4cd3">
+  <script src="../js/depot-shell.js?v=0df4cd3" defer></script>
+  <script src="../js/depot-redesign.js?v=0df4cd3" defer></script>
   <style>
   :root{
     /* The Depot palette — lightened for a brighter, more readable builder */
@@ -367,7 +382,7 @@
         <div id="challengePanel" style="display:none;margin-top:14px;padding:12px;border:2px solid var(--gold);background:var(--field-dark);">
           <div style="font-size:9px;letter-spacing:1px;color:var(--gold);margin-bottom:8px;">CHALLENGE CREATED &mdash; SEND THIS LINK TO YOUR OPPONENT</div>
           <input type="text" id="challengeLink" readonly style="width:100%;max-width:520px;box-sizing:border-box;font-family:inherit;font-size:10px;padding:8px;background:#0d1f12;color:var(--cream);border:1px solid var(--gold);" value="">
-          <div style="margin-top:8px;"><button class="btn-ghost" id="copyChallengeBtn" type="button">Copy link</button> <span class="muted" id="copyMsg" style="font-size:9px;margin-left:6px;"></span></div>
+          <div style="margin-top:8px;"><button class="btn-ghost" id="copyChallengeBtn" type="button">Copy link</button> <button class="btn-ghost" id="shareChallengeBtn" type="button">Share</button> <span class="muted" id="copyMsg" style="font-size:9px;margin-left:6px;"></span></div>
         </div>
         <div id="challengeError" style="display:none;margin-top:10px;font-size:10px;color:var(--red-bright);"></div>
 
@@ -1186,6 +1201,28 @@
             navigator.clipboard.writeText(txt).then(ok, fallback);
           } else { fallback(); }
         });
+        /* [challenge share] native share sheet where the platform has one
+           (navigator.share); everywhere else falls back to the copy path.
+           Fail-loud per AGENTS.md 4. */
+        $('shareChallengeBtn').addEventListener('click',function(){
+          var li=$('challengeLink'); var cm=$('copyMsg');
+          var url=(li&&li.value)||'';
+          if(!url){ if(cm) cm.textContent='Create a challenge first.'; console.warn('[builder] share: no challenge link yet'); return; }
+          var tn=''; try{ var el=$('teamNameInput'); tn=el?String(el.value||'').trim():''; }catch(e){}
+          var payload={ title:'The Depot \u2014 you\'ve been challenged',
+                        text:(tn||'A rival club')+' challenges you to play ball \u2014 one seed, two real nines.', url:url };
+          if(navigator.share){
+            navigator.share(payload).then(function(){ if(cm) cm.textContent='Shared!'; })
+              .catch(function(e){
+                if(e && e.name==='AbortError'){ return; } // user closed the sheet; not an error
+                console.warn('[builder] share: navigator.share failed, falling back to copy:', e&&e.message);
+                $('copyChallengeBtn').click();
+              });
+          } else {
+            console.warn('[builder] share: navigator.share unavailable on this browser; copying instead');
+            $('copyChallengeBtn').click();
+          }
+        });
     
     // ===== Resolve all cards after load (sequential, gentle on the API) =====
   // PERF: bounded-concurrency pool instead of a sequential for-await, so cold loads
@@ -1585,10 +1622,10 @@
   }
   /* ===== end SEASON MODE play handler ===== */
 </script>
-<script src="../js/depot-builder-shell.js?v=b63c9e7"></script>
-<script src="../js/depot-prestige.js?v=b63c9e7"></script>
-<script src="../js/depot-pixel-card.js?v=b63c9e7"></script>
-<script src="../js/depot-wallet.js?v=b63c9e7"></script>
+<script src="../js/depot-builder-shell.js?v=0df4cd3"></script>
+<script src="../js/depot-prestige.js?v=0df4cd3"></script>
+<script src="../js/depot-pixel-card.js?v=0df4cd3"></script>
+<script src="../js/depot-wallet.js?v=0df4cd3"></script>
 <script>
 /* Franchise Economy Slice A: mount wallet chip on the builder. Additive, graceful until DDL. */
 (function(){
