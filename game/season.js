@@ -115,8 +115,19 @@
 
   /* ---- franchise / season lifecycle ----------------------------------- */
 
-  // create franchise if none (prompt team name); else reuse most-recent.
+  // create franchise if none (prompt team name); else reuse the OLDEST row.
   async function ensureFranchise(sb, uid){
+    // [record-integrity] shared resolver first: depot-core depotFranchise() is the
+    // single owner of "which franchise" (oldest-first), so the header record
+    // (depot-shell resolveRecord) and gameplay can never disagree again. Null or
+    // absent -> fall through to the identical local query + create path below.
+    try {
+      if (typeof window !== 'undefined' && typeof window.depotFranchise === 'function'){
+        var shared = await window.depotFranchise();
+        if (shared && shared.id) return shared;
+        console.warn('[season] ensureFranchise: depotFranchise gave null; using local query/create path');
+      }
+    } catch(e){ console.warn('[season] ensureFranchise: depotFranchise threw; using local path:', e); }
     var q = await sb.from('franchises').select('*').eq('owner_id', uid)
                     .order('created_at', { ascending: true }).limit(1);
     if (q.error) throw q.error;
@@ -221,6 +232,10 @@
     if (!sb || !uid || !seasonGameId) { console.warn('[season] record writeback skipped:', {sb: !!sb, uid: !!uid, seasonGameId: !!seasonGameId}); return; }
     userScore = userScore|0; oppScore = oppScore|0;
     var result = (userScore > oppScore) ? 'win' : 'loss';
+    // [record-integrity, flag-only] no tie state exists in season_games, so a tied
+    // final records as a LOSS. Logged loud so it can't hide; changing the schema
+    // to a real 'tie' result is a separate, signed-off decision.
+    if (userScore === oppScore) { console.warn('[season] recordSeasonResult: TIE', userScore + '-' + oppScore, 'on', seasonGameId, '- recording as LOSS (known limitation, flagged)'); }
 
     // guard: read current row; bail if already recorded (idempotent).
     var g = await sb.from('season_games').select('*')

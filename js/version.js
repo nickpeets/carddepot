@@ -10,7 +10,7 @@
   var BUILD='34a909c';
   window.DEPOT_BUILD = BUILD;
   try {
-    console.log('[depot] build ' + BUILD);
+    (window.depotLog||function(){})('[depot] build ' + BUILD);
   } catch (e) {
     /* console unavailable: still expose window.DEPOT_BUILD */
   }
