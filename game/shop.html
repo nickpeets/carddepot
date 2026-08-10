@@ -18,8 +18,8 @@
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://thedepot.cards/assets/og-depot.png">
-<script src="../js/version.js?v=f92e1ce"></script>
-<script src="../js/depot-core.js?v=f92e1ce"></script>
+<script src="../js/version.js?v=0df4cd3"></script>
+<script src="../js/depot-core.js?v=0df4cd3"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
@@ -35,12 +35,12 @@
     try{ if(window.supabase&&window.supabase.createClient){ sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY); } }catch(e){}
     try{ if(sb){ window.sb = sb; window.supabaseClient = sb; } }catch(e){}
   </script>
-<link rel="stylesheet" href="../css/depot-style.css?v=f92e1ce">
-  <link rel="stylesheet" href="../css/depot-redesign-shop.css?v=f92e1ce">
-    <link rel="stylesheet" href="../depot-v2.css?v=f92e1ce">
-<link rel="stylesheet" href="../css/depot-redesign.css?v=f92e1ce">
-<script src="../js/depot-shell.js?v=f92e1ce" defer></script>
-<script src="../js/depot-redesign.js?v=f92e1ce" defer></script>
+<link rel="stylesheet" href="../css/depot-style.css?v=0df4cd3">
+  <link rel="stylesheet" href="../css/depot-redesign-shop.css?v=0df4cd3">
+    <link rel="stylesheet" href="../depot-v2.css?v=0df4cd3">
+<link rel="stylesheet" href="../css/depot-redesign.css?v=0df4cd3">
+<script src="../js/depot-shell.js?v=0df4cd3" defer></script>
+<script src="../js/depot-redesign.js?v=0df4cd3" defer></script>
 </head>
 <body class="v2-body">
 <script>
@@ -54,23 +54,39 @@
   });
 </script>
 
+<style>
+  /* [shop boot skeleton] paints with the static HTML, zero JS required, and the
+     shared renderer's first render() wipes it via gridEl.innerHTML. Palette-native
+     shimmer; motion respects prefers-reduced-motion. */
+  .shop-skel{ display:flex; flex-wrap:wrap; gap:18px; justify-content:center; padding:26px 8px; }
+  .shop-skel__tile{ width:210px; height:300px; border:3px solid rgba(246,200,30,.35); border-radius:10px;
+    background:linear-gradient(100deg, rgba(247,240,219,.05) 38%, rgba(247,240,219,.14) 50%, rgba(247,240,219,.05) 62%);
+    background-size:220% 100%; animation:shopSkelShimmer 1.4s linear infinite; }
+  .shop-skel__cap{ width:100%; text-align:center; font-family:'Press Start 2P',monospace; font-size:10px;
+    letter-spacing:2px; color:#b3ab93; padding-top:6px; }
+  @keyframes shopSkelShimmer{ from{ background-position:120% 0; } to{ background-position:-100% 0; } }
+  @media (prefers-reduced-motion: reduce){ .shop-skel__tile{ animation:none; } }
+</style>
 <main class="depot-stage" data-depot-stage>
-  <div class="shop-grid" id="shopGrid"><!-- packs injected here --></div>
+  <div class="shop-grid" id="shopGrid"><div class="shop-skel" data-shop-skeleton>
+    <div class="shop-skel__tile"></div><div class="shop-skel__tile"></div><div class="shop-skel__tile"></div>
+    <div class="shop-skel__cap" data-shop-skeleton-cap>STOCKING THE RACK&hellip;</div>
+  </div></div>
 
   <div class="shop-status" id="shopStatus" role="status" aria-live="polite"></div>
 </main>
 
 <!-- engine + prestige + wallet + shop controller -->
-<script src="../js/depot-prestige.js?v=f92e1ce"></script>
-<script src="../js/depot-wallet.js?v=f92e1ce"></script>
-<script src="../js/depot-pack-engine.js?v=f92e1ce"></script>
-<script src="../js/depot-pixel-card.js?v=f92e1ce"></script>
-<script src="../js/depot-position.js?v=f92e1ce"></script>
-<script src="../js/depot-library-index.js?v=f92e1ce"></script>
-<script src="../js/depot-shop.js?v=f92e1ce"></script>
-  <script src="../js/depot-library-art.js?v=f92e1ce"></script>
-  <script src="../js/depot-shop-view.js?v=f92e1ce"></script>
-  <script src="../js/depot-pack-history.js?v=f92e1ce"></script>
+<script src="../js/depot-prestige.js?v=0df4cd3"></script>
+<script src="../js/depot-wallet.js?v=0df4cd3"></script>
+<script src="../js/depot-pack-engine.js?v=0df4cd3"></script>
+<script src="../js/depot-pixel-card.js?v=0df4cd3"></script>
+<script src="../js/depot-position.js?v=0df4cd3"></script>
+<script src="../js/depot-library-index.js?v=0df4cd3"></script>
+<script src="../js/depot-shop.js?v=0df4cd3"></script>
+  <script src="../js/depot-library-art.js?v=0df4cd3"></script>
+  <script src="../js/depot-shop-view.js?v=0df4cd3"></script>
+  <script src="../js/depot-pack-history.js?v=0df4cd3"></script>
 
 <script>
   /* ONE RENDERER, BOTH SURFACES (feat/pack-shop-redesign).
@@ -84,16 +100,34 @@
    */
   (function () {
     var LOG = '[depot] shop-page:';
+    /* [shop boot skeleton] the static skeleton above holds the stage until the
+       shared renderer's first render() replaces gridEl.innerHTML. Two fail-loud
+       exits: boot errors swap the skeleton for a visible error line (a shimmer
+       that never resolves is a silent guard with better clothes), and a 12s
+       watchdog names a stall if the skeleton is still on stage. */
+    function skelFail(msg){
+      var sk = document.querySelector('[data-shop-skeleton]');
+      if (!sk) return;
+      sk.innerHTML = '<div class="shop-skel__cap">' + msg + '</div>';
+    }
     function boot() {
       var grid = document.getElementById('shopGrid');
       var status = document.getElementById('shopStatus');
       if (!grid) { console.error(LOG + ' #shopGrid missing; shop cannot mount'); return; }
       if (!window.DepotShopView || !window.DepotShopView.mount) {
         console.error(LOG + ' DepotShopView.mount missing (include-order bug); shop cannot mount');
+        skelFail('THE RACK DID NOT LOAD &mdash; TRY A HARD REFRESH');
         return;
       }
       window.DepotShopView.mount({ gridEl: grid, statusEl: status, context: 'shop' });
       console.log(LOG + ' mounted the shared pack-shop renderer');
+      setTimeout(function(){
+        if (document.querySelector('[data-shop-skeleton]')) {
+          console.warn(LOG + ' skeleton still on stage 12s after mount - catalog/balance fetch is stalling or threw upstream');
+          var cap = document.querySelector('[data-shop-skeleton-cap]');
+          if (cap) cap.innerHTML = 'STILL STOCKING&hellip; SLOW CONNECTION OR THE SHOP HIT AN ERROR (SEE CONSOLE)';
+        }
+      }, 12000);
     }
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
     else boot();
