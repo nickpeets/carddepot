@@ -1,21 +1,36 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <script src="../js/version.js?v=4d09934"></script>
-  <script src="../js/depot-core.js?v=4d09934"></script>
+  <script src="../js/version.js?v=f92e1ce"></script>
+  <script src="../js/depot-core.js?v=f92e1ce"></script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>The Depot &mdash; Lineup Builder</title>
+<!-- [site chrome] favicon + unfurl card. Challenge links (?match=) land HERE, so
+     this page's card is what an invite unfurls as in a chat. See index.html. -->
+<link rel="icon" type="image/svg+xml" href="../favicon.svg">
+<link rel="canonical" href="https://thedepot.cards/game/builder.html">
+<meta name="description" content="You've been challenged. Build your nine, send the link, and the two real lineups play from one seed.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="The Depot">
+<meta property="og:title" content="The Depot &mdash; you've been challenged">
+<meta property="og:description" content="Build your nine, send the link, and the two real lineups play from one seed.">
+<meta property="og:url" content="https://thedepot.cards/game/builder.html">
+<meta property="og:image" content="https://thedepot.cards/assets/og-depot.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://thedepot.cards/assets/og-depot.png">
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="season.js?v=4d09934" defer></script>
-  <link rel="stylesheet" href="../css/depot-style.css?v=4d09934">
-    <link rel="stylesheet" href="../depot-v2.css?v=4d09934">
-  <link rel="stylesheet" href="../css/depot-redesign.css?v=4d09934">
-  <script src="../js/depot-shell.js?v=4d09934" defer></script>
-  <script src="../js/depot-redesign.js?v=4d09934" defer></script>
+<script src="season.js?v=f92e1ce" defer></script>
+  <link rel="stylesheet" href="../css/depot-style.css?v=f92e1ce">
+    <link rel="stylesheet" href="../depot-v2.css?v=f92e1ce">
+  <link rel="stylesheet" href="../css/depot-redesign.css?v=f92e1ce">
+  <script src="../js/depot-shell.js?v=f92e1ce" defer></script>
+  <script src="../js/depot-redesign.js?v=f92e1ce" defer></script>
   <style>
   :root{
     /* The Depot palette — lightened for a brighter, more readable builder */
@@ -328,12 +343,7 @@
     <button class="btn-primary" id="loginBtn" style="flex:1">Log in</button>
   </div>
   <div id="authMsg"></div>
-  <p class="muted" style="margin-top:12px;font-size:9px">
-    <a href="#" id="builderSignupLink" style="color:var(--gold)">No account? Sign up</a>
-    &nbsp;&middot;&nbsp;
-    <a href="#" id="builderForgotLink" style="color:var(--gold)">Forgot password?</a>
-  </p>
-  <p class="muted" style="margin-top:8px">No password entry is stored by this page; it uses the same Supabase login as the main app.</p>
+  <p class="muted" style="margin-top:14px">No password entry is stored by this page; it uses the same Supabase login as the main app.</p>
 </div>
 
 <!-- Logged-in: builder -->
@@ -372,7 +382,7 @@
         <div id="challengePanel" style="display:none;margin-top:14px;padding:12px;border:2px solid var(--gold);background:var(--field-dark);">
           <div style="font-size:9px;letter-spacing:1px;color:var(--gold);margin-bottom:8px;">CHALLENGE CREATED &mdash; SEND THIS LINK TO YOUR OPPONENT</div>
           <input type="text" id="challengeLink" readonly style="width:100%;max-width:520px;box-sizing:border-box;font-family:inherit;font-size:10px;padding:8px;background:#0d1f12;color:var(--cream);border:1px solid var(--gold);" value="">
-          <div style="margin-top:8px;"><button class="btn-ghost" id="copyChallengeBtn" type="button">Copy link</button> <span class="muted" id="copyMsg" style="font-size:9px;margin-left:6px;"></span></div>
+          <div style="margin-top:8px;"><button class="btn-ghost" id="copyChallengeBtn" type="button">Copy link</button> <button class="btn-ghost" id="shareChallengeBtn" type="button">Share</button> <span class="muted" id="copyMsg" style="font-size:9px;margin-left:6px;"></span></div>
         </div>
         <div id="challengeError" style="display:none;margin-top:10px;font-size:10px;color:var(--red-bright);"></div>
 
@@ -533,44 +543,6 @@
   }
   $('loginBtn').addEventListener('click',doLogin);
   $('pass').addEventListener('keydown',function(e){ if(e.key==='Enter') doLogin(); });
-  /* [auth everywhere] the builder's own login card offered ONLY sign-in - a
-     visitor with no account (or a lost password) hit a dead end on the exact
-     page challenge links land on. Same Supabase project as the index modal;
-     fail-loud per AGENTS.md 4. */
-  (function(){
-    var su=$('builderSignupLink'), fp=$('builderForgotLink');
-    if(!su||!fp){ console.warn('[builder] auth links missing from loginView; signup/recovery unavailable'); return; }
-    if(!sb||!sb.auth){ console.warn('[builder] auth links: no supabase client; leaving links inert'); return; }
-    su.addEventListener('click', async function(ev){
-      ev.preventDefault();
-      var email=($('email').value||'').trim(), pass=$('pass').value||'';
-      if(!email||!pass){ setAuthMsg('Enter email and a password above, then press Sign up.'); return; }
-      setAuthMsg('Working\u2026');
-      try{
-        // emailRedirectTo: THIS page, never a query string (fix/signup-flow lesson).
-        var res=await sb.auth.signUp({ email:email, password:pass, options:{ emailRedirectTo: location.origin+location.pathname } });
-        if(res.error){ console.warn('[builder] signUp refused:', res.error.message); setAuthMsg(res.error.message||'Sign-up failed.'); return; }
-        var u=res.data&&res.data.user;
-        if(u&&u.identities&&u.identities.length===0){ console.warn('[builder] signUp returned an identity-less user -> address already registered'); setAuthMsg('That email already has an account - log in above.'); return; }
-        if(res.data&&res.data.session===null){ setAuthMsg('Account created. Check your email to confirm, then log in here.'); }
-        else { setAuthMsg('Account created - you are signed in.'); }
-      }catch(e){ console.warn('[builder] signUp threw:', e&&e.message); setAuthMsg(String(e&&e.message||e)); }
-    });
-    fp.addEventListener('click', async function(ev){
-      ev.preventDefault();
-      var email=($('email').value||'').trim();
-      if(!email){ setAuthMsg('Enter your email above, then press Forgot password.'); return; }
-      setAuthMsg('Working\u2026');
-      try{
-        /* recovery lands on the ROOT binder: index.html owns the set-new-password
-           modal (its PASSWORD_RECOVERY handler). Path-derived, never a query string. */
-        var target=location.origin+location.pathname.replace(/game\/builder\.html$/,'');
-        var r=await sb.auth.resetPasswordForEmail(email, { redirectTo: target });
-        if(r.error){ console.warn('[builder] resetPasswordForEmail refused:', r.error.message); setAuthMsg(r.error.message||'Could not send the reset link.'); return; }
-        setAuthMsg('If that address has an account, a reset link is on its way.');
-      }catch(e){ console.warn('[builder] reset threw:', e&&e.message); setAuthMsg(String(e&&e.message||e)); }
-    });
-  })();
   $('logoutBtn').addEventListener('click',doLogout);
   // Back to Depot: warn only if a lineup is mid-build (any batting slot filled or a pitcher chosen).
   (function(){ var b=document.getElementById('backToDepot'); if(!b) return;
@@ -1229,6 +1201,28 @@
             navigator.clipboard.writeText(txt).then(ok, fallback);
           } else { fallback(); }
         });
+        /* [challenge share] native share sheet where the platform has one
+           (navigator.share); everywhere else falls back to the copy path.
+           Fail-loud per AGENTS.md 4. */
+        $('shareChallengeBtn').addEventListener('click',function(){
+          var li=$('challengeLink'); var cm=$('copyMsg');
+          var url=(li&&li.value)||'';
+          if(!url){ if(cm) cm.textContent='Create a challenge first.'; console.warn('[builder] share: no challenge link yet'); return; }
+          var tn=''; try{ var el=$('teamNameInput'); tn=el?String(el.value||'').trim():''; }catch(e){}
+          var payload={ title:'The Depot \u2014 you\'ve been challenged',
+                        text:(tn||'A rival club')+' challenges you to play ball \u2014 one seed, two real nines.', url:url };
+          if(navigator.share){
+            navigator.share(payload).then(function(){ if(cm) cm.textContent='Shared!'; })
+              .catch(function(e){
+                if(e && e.name==='AbortError'){ return; } // user closed the sheet; not an error
+                console.warn('[builder] share: navigator.share failed, falling back to copy:', e&&e.message);
+                $('copyChallengeBtn').click();
+              });
+          } else {
+            console.warn('[builder] share: navigator.share unavailable on this browser; copying instead');
+            $('copyChallengeBtn').click();
+          }
+        });
     
     // ===== Resolve all cards after load (sequential, gentle on the API) =====
   // PERF: bounded-concurrency pool instead of a sequential for-await, so cold loads
@@ -1628,10 +1622,10 @@
   }
   /* ===== end SEASON MODE play handler ===== */
 </script>
-<script src="../js/depot-builder-shell.js?v=4d09934"></script>
-<script src="../js/depot-prestige.js?v=4d09934"></script>
-<script src="../js/depot-pixel-card.js?v=4d09934"></script>
-<script src="../js/depot-wallet.js?v=4d09934"></script>
+<script src="../js/depot-builder-shell.js?v=f92e1ce"></script>
+<script src="../js/depot-prestige.js?v=f92e1ce"></script>
+<script src="../js/depot-pixel-card.js?v=f92e1ce"></script>
+<script src="../js/depot-wallet.js?v=f92e1ce"></script>
 <script>
 /* Franchise Economy Slice A: mount wallet chip on the builder. Additive, graceful until DDL. */
 (function(){
