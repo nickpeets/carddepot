@@ -174,29 +174,79 @@ box.querySelector('.record').textContent = w + '-' + l;
           : (typeof window.depotUser === 'function' ? window.depotUser() : Promise.resolve(null));
         return userP.then(function (user){
           if (!user){ return null; }
-          return sb.from('franchises').select('id,team_name').eq('owner_id', user.id).order('created_at', { ascending: false }).limit(1)
-            .then(function (fr){
-              if (fr.error){ console.warn('[depot] shell: franchises query failed:', fr.error.message); return null; }
-              var row = (fr.data && fr.data[0]) ? fr.data[0] : null;
+          // [record-integrity] franchise comes from the SHARED resolver (depot-core
+          // depotFranchise, OLDEST-first) — season.js plays under the oldest row, so
+          // reading the newest here (the old `ascending:false`) could paint another
+          // club's record. Fallback keeps this file self-sufficient if core is stale,
+          // but with the SAME ordering as gameplay.
+          var franP = (typeof window.depotFranchise === 'function')
+            ? window.depotFranchise()
+            : sb.from('franchises').select('id,team_name').eq('owner_id', user.id).order('created_at', { ascending: true }).limit(1)
+                .then(function (fr){
+                  if (fr.error){ console.warn('[depot] shell: franchises query failed:', fr.error.message); return null; }
+                  return (fr.data && fr.data[0]) ? fr.data[0] : null;
+                });
+          return franP
+            .then(function (row){
               if (!row){ console.warn('[depot] shell: no franchise row for user; anonymous shell'); return null; }
               // Hybrid record: ACTIVE season once it has games played; else the most-recent
               // COMPLETED season, so a fresh 0-0 campaign doesn't erase the standing record.
-              return sb.from('seasons').select('wins,losses,status,created_at').eq('owner_id', user.id).eq('franchise_id', row.id).order('created_at', { ascending: true })
+              return sb.from('seasons').select('id,wins,losses,status,created_at').eq('owner_id', user.id).eq('franchise_id', row.id).order('created_at', { ascending: true })
                 .then(function (se){
                   if (se.error){ console.warn('[depot] shell: seasons query failed:', se.error.message); }
                   var rows = (se.data && se.data.length) ? se.data : [];
                   for (var k = 0; k < rows.length; k++){ rows[k]._ord = k + 1; }
-                  var active = null, m;
-                  for (m = rows.length - 1; m >= 0; m--){ if (rows[m].status === 'active'){ active = rows[m]; break; } }
-                  var lastComplete = null;
-                  for (m = rows.length - 1; m >= 0; m--){ if (rows[m].status === 'complete'){ lastComplete = rows[m]; break; } }
-                  var played = function (r){ return r ? (r.wins||0) + (r.losses||0) : 0; };
-                  var srow = null, prefix = '';
-                  if (active && played(active) > 0){ srow = active; }
-                  else if (lastComplete){ srow = lastComplete; prefix = 'S' + lastComplete._ord + ' \u00b7 '; }
-                  else if (active){ srow = active; }
-                  if (!srow){ console.warn('[depot] shell: no season for franchise; record defaults 0-0'); }
-                  return { name: row.team_name || 'MY CLUB', wins: srow ? srow.wins : 0, losses: srow ? srow.losses : 0, recordPrefix: prefix, email: user.email || '' };
+                  // [record-integrity] the displayed W-L is COUNTED from season_games,
+                  // not read from seasons.wins/losses. Those columns are denormalized
+                  // counters maintained client-side by read-then-write (season.js
+                  // recordSeasonResult) \u2014 the \u00a74-banned pattern \u2014 so they can drift
+                  // silently. Counting the game rows is always true. The stored
+                  // counters remain only as the fallback when this query fails, and
+                  // any stored-vs-counted disagreement is logged as drift.
+                  var ids = [];
+                  for (var i2 = 0; i2 < rows.length; i2++){ ids.push(rows[i2].id); }
+                  var countP = ids.length
+                    ? sb.from('season_games').select('season_id,result').eq('owner_id', user.id).in('season_id', ids)
+                    : Promise.resolve({ data: [] });
+                  return countP.then(function (sg){
+                    var counted = {};
+                    if (sg.error){
+                      console.warn('[depot] shell: season_games count failed (' + sg.error.message + '); record falls back to stored seasons counters');
+                    } else {
+                      var list = sg.data || [];
+                      for (var j = 0; j < list.length; j++){
+                        var g = list[j];
+                        var c = counted[g.season_id] || (counted[g.season_id] = { wins: 0, losses: 0 });
+                        if (g.result === 'win'){ c.wins++; }
+                        else if (g.result === 'loss'){ c.losses++; }
+                      }
+                      for (var d = 0; d < rows.length; d++){
+                        var r2 = rows[d], cd = counted[r2.id];
+                        if (cd && (((r2.wins|0) !== cd.wins) || ((r2.losses|0) !== cd.losses))){
+                          console.warn('[depot] shell: RECORD DRIFT on season', r2.id,
+                            '- stored ' + (r2.wins|0) + '-' + (r2.losses|0),
+                            'vs counted ' + cd.wins + '-' + cd.losses,
+                            '(displaying counted; stored counter needs repair)');
+                        }
+                      }
+                    }
+                    var wl = function (r){
+                      var c2 = r ? counted[r.id] : null;
+                      return c2 ? c2 : { wins: (r ? r.wins|0 : 0), losses: (r ? r.losses|0 : 0) };
+                    };
+                    var active = null, m;
+                    for (m = rows.length - 1; m >= 0; m--){ if (rows[m].status === 'active'){ active = rows[m]; break; } }
+                    var lastComplete = null;
+                    for (m = rows.length - 1; m >= 0; m--){ if (rows[m].status === 'complete'){ lastComplete = rows[m]; break; } }
+                    var played = function (r){ var x = wl(r); return r ? x.wins + x.losses : 0; };
+                    var srow = null, prefix = '';
+                    if (active && played(active) > 0){ srow = active; }
+                    else if (lastComplete){ srow = lastComplete; prefix = 'S' + lastComplete._ord + ' \u00b7 '; }
+                    else if (active){ srow = active; }
+                    if (!srow){ console.warn('[depot] shell: no season for franchise; record defaults 0-0'); }
+                    var rec = wl(srow);
+                    return { name: row.team_name || 'MY CLUB', wins: srow ? rec.wins : 0, losses: srow ? rec.losses : 0, recordPrefix: prefix, email: user.email || '' };
+                  });
                 });
             });
         });
