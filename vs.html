@@ -4,8 +4,8 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Card Depot &mdash; VS</title>
-<script src="js/version.js?v=b63c9e7"></script>
-<script src="js/depot-core.js?v=b63c9e7"></script>
+<script src="js/version.js?v=dc9482b"></script>
+<script src="js/depot-core.js?v=dc9482b"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
@@ -17,17 +17,19 @@
 var SUPABASE_URL='https://nuymzokvbdntbvinsnda.supabase.co';
 var SUPABASE_KEY=['sb','publishable','IiTsIBqYgGTIEnwdvQEXPA','4rmQdYVo'].join('_');
 window.DEPOT_SUPABASE_CONFIG = window.DEPOT_SUPABASE_CONFIG || { url: SUPABASE_URL, key: SUPABASE_KEY };
-var sb=null;
-try{ if(window.supabase&&window.supabase.createClient){ sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY); } }catch(e){}
-try{ if(sb){ window.sb = sb; window.supabaseClient = sb; } }catch(e){}
+/* [vs hygiene] the ad-hoc per-page createClient + window.sb/window.supabaseClient
+   mirrors that used to live here are GONE — AGENTS.md §3: never introduce a new
+   per-page client or bare global mirror (the phantom-reference bug class). Every
+   consumer on this page (depot-vs.js, depot-wallet.js, depot-shell.js) already
+   resolves through depot-core depotSB(); nothing on this page read window.sb. */
 </script>
-<link rel="stylesheet" href="css/depot-style.css?v=b63c9e7">
-<link rel="stylesheet" href="depot-v2.css?v=b63c9e7">
-<link rel="stylesheet" href="css/depot-redesign.css?v=b63c9e7">
-<script src="js/depot-wallet.js?v=b63c9e7"></script>
-<script src="js/depot-shell.js?v=b63c9e7" defer></script>
-<script src="js/depot-redesign.js?v=b63c9e7" defer></script>
-<script src="js/depot-vs.js?v=b63c9e7" defer></script>
+<link rel="stylesheet" href="css/depot-style.css?v=dc9482b">
+<link rel="stylesheet" href="depot-v2.css?v=dc9482b">
+<link rel="stylesheet" href="css/depot-redesign.css?v=dc9482b">
+<script src="js/depot-wallet.js?v=dc9482b"></script>
+<script src="js/depot-shell.js?v=dc9482b" defer></script>
+<script src="js/depot-redesign.js?v=dc9482b" defer></script>
+<script src="js/depot-vs.js?v=dc9482b" defer></script>
 </head>
 <body class="v2-body rd-page">
 <script>
