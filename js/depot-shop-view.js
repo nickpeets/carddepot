@@ -31,15 +31,15 @@
     var fired = false;
     function fire(reason){
       if (fired) return; fired = true;
-      console.log(TAG + ' auto-redeem firing (' + reason + ')');
+      (window.depotLog||function(){})(TAG + ' auto-redeem firing (' + reason + ')');
       try {
         Shop.redeemPending(catalog, window.DepotShopView, { render: ctx.render, revealOne: ctx.revealOne })
           .then(function(res){
             if (res && res.redeemed){
-              console.log(TAG + ' auto-redeem OK: pack opened (' + ((res.cards && res.cards.length) || '?') + ' cards)');
+              (window.depotLog||function(){})(TAG + ' auto-redeem OK: pack opened (' + ((res.cards && res.cards.length) || '?') + ' cards)');
               if (ctx.onOpened) ctx.onOpened(res);
             } else {
-              console.log(TAG + ' auto-redeem: no pending pack to open');
+              (window.depotLog||function(){})(TAG + ' auto-redeem: no pending pack to open');
             }
           })
           .catch(function(e){
@@ -56,7 +56,7 @@
     try {
       c.auth.getUser().then(function(r){
         if (r && r.data && r.data.user){ fire('already-authed'); }
-        else { console.log(TAG + ' auto-redeem: no user yet, waiting for sign-in'); }
+        else { (window.depotLog||function(){})(TAG + ' auto-redeem: no user yet, waiting for sign-in'); }
       }).catch(function(e){ console.warn(TAG + ' auto-redeem getUser failed: ' + (e && (e.message || e))); });
     } catch (e) { console.warn(TAG + ' auto-redeem getUser threw: ' + (e && (e.message || e))); }
     // Re-fire once auth is (re)established
@@ -644,7 +644,7 @@ function diamondTileHtml(){
           panel.setAttribute('data-loaded','1');
           panel.innerHTML = cardsPanelHtml(res);
           wireCardLinks(panel);
-          console.log(TAG+' history: row '+idx+' -> '+res.cards.length+' card(s) from '+res.source);
+          (window.depotLog||function(){})(TAG+' history: row '+idx+' -> '+res.cards.length+' card(s) from '+res.source);
         });
       });
     })(btns[i]); }
@@ -748,16 +748,16 @@ function diamondTileHtml(){
       if (!c || !c.from){ console.warn(TAG + " cooldown probe skipped: no supabase client"); return; }
       Promise.resolve((typeof window.depotUser === "function") ? window.depotUser() : null).then(function(u){
         var uid = (u && u.id) || (u && u.data && u.data.user && u.data.user.id) || null;
-        if (!uid){ console.log(TAG + " cooldown probe: no signed-in user; free panel stays in its signed-out state"); return; }
+        if (!uid){ (window.depotLog||function(){})(TAG + " cooldown probe: no signed-in user; free panel stays in its signed-out state"); return; }
         return c.from("wallet_transactions").select("created_at").eq("owner_id", uid)
           .eq("reason", "free_pack").order("created_at", { ascending:false }).limit(1)
           .then(function(r){
             if (r && r.error){ console.warn(TAG + " cooldown probe failed: " + r.error.message); return; }
             var rows = (r && r.data) || [];
-            if (!rows.length){ console.log(TAG + " cooldown probe: no free_pack claim on record -- pack is ready"); return; }
+            if (!rows.length){ (window.depotLog||function(){})(TAG + " cooldown probe: no free_pack claim on record -- pack is ready"); return; }
             var next = new Date(rows[0].created_at).getTime() + FREE_WINDOW_MS;
-            if (next > Date.now()){ nextClaimAt = new Date(next); console.log(TAG + " cooldown until " + nextClaimAt.toISOString()); }
-            else { nextClaimAt = null; console.log(TAG + " last free claim has lapsed -- pack is ready"); }
+            if (next > Date.now()){ nextClaimAt = new Date(next); (window.depotLog||function(){})(TAG + " cooldown until " + nextClaimAt.toISOString()); }
+            else { nextClaimAt = null; (window.depotLog||function(){})(TAG + " last free claim has lapsed -- pack is ready"); }
             render();
           });
       }).catch(function(e){ console.warn(TAG + " cooldown probe threw: " + (e && e.message)); });
@@ -804,7 +804,7 @@ function diamondTileHtml(){
         // and this callback resolves after that -- repainting here would yank the
         // player straight back out of the binder they were just sent to.
         if (gridEl && gridEl.querySelector(".pks")) render();
-        else console.log(TAG + " refresh: grid has moved on (settled into the binder); balance updated, no repaint");
+        else (window.depotLog||function(){})(TAG + " refresh: grid has moved on (settled into the binder); balance updated, no repaint");
       }).catch(function(e){ console.warn(TAG + " refresh balance read failed: " + (e && e.message)); });
     };
     _hooks.buyTier  = function(tier){
@@ -827,7 +827,7 @@ function diamondTileHtml(){
         }
         return ok;
       }
-      console.log(TAG + " settle: this surface has no binder grid; cards are already granted server-side");
+      (window.depotLog||function(){})(TAG + " settle: this surface has no binder grid; cards are already granted server-side");
       return false;
     };
 
@@ -897,7 +897,7 @@ function diamondTileHtml(){
       try { if (_histSinks[i].paint(opts) !== false) painted++; }
       catch(e){ console.warn(TAG + " history refresh sink failed: " + ((e && e.message) || e)); }
     }
-    console.log(TAG + " history refresh (" + (opts.reason || "?") + "): " + painted + "/" + _histSinks.length + " surface(s) repainted");
+    (window.depotLog||function(){})(TAG + " history refresh (" + (opts.reason || "?") + "): " + painted + "/" + _histSinks.length + " surface(s) repainted");
     return painted;
   }
 
@@ -923,7 +923,7 @@ function diamondTileHtml(){
     local.unshift(row);
     saveHistory(local);
     if(_shelf) _shelf = [row].concat(_shelf);  // and the live shelf carries it immediately
-    console.log(TAG+" history: shelved "+key+" ("+local.length+" local receipt(s))");
+    (window.depotLog||function(){})(TAG+" history: shelved "+key+" ("+local.length+" local receipt(s))");
     refreshHistorySurfaces({ reason: "record" });
   }
 
@@ -1186,7 +1186,7 @@ function playPackSession(cards, hitIndex, opts){
         // the pull's era and re-renders the grid, and a shop re-render after that
         // would clobber the binder right back into the shop.
         var settled = _hooks.settle ? _hooks.settle(cards, bands) : false;
-        if (!settled) console.log(TAG + " collect: nothing to settle on this surface (cards already granted)");
+        if (!settled) (window.depotLog||function(){})(TAG + " collect: nothing to settle on this surface (cards already granted)");
         if (_hooks.refresh) _hooks.refresh();
         phaseAdded();
       });
@@ -1246,7 +1246,7 @@ function playPackSession(cards, hitIndex, opts){
       var pack = window.DepotPackEngine.rollPack({ tier: entry.tier, catalog: cat, seed: entry.seed, prestige: window.DepotPrestige });
       var cards = pack.cards || [];
       var hi = (typeof pack.hitIndex==="number") ? pack.hitIndex : (cards.length-1);
-      console.log(TAG+" REPLAY: re-rolled "+cards.length+" card(s) from seed "+entry.seed+" (cosmetic, no DB writes)");
+      (window.depotLog||function(){})(TAG+" REPLAY: re-rolled "+cards.length+" card(s) from seed "+entry.seed+" (cosmetic, no DB writes)");
       return playPackSession(cards, hi, { tier: entry.tier, held: true, seed: entry.seed, replay: true });
     } catch(e){
       console.error(TAG+" REPLAY failed for seed "+entry.seed+": "+(e&&e.message));

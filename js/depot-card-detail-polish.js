@@ -420,7 +420,7 @@
     };
     wrapped.__polish = true;
     window.openSpot = wrapped;
-    console.log(TAG, "openSpot + flipSpot wrapped (orientation, flip, clean back, zoom)");
+    (window.depotLog||function(){})(TAG, "openSpot + flipSpot wrapped (orientation, flip, clean back, zoom)");
     return true;
   }
 

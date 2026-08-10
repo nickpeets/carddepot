@@ -67,7 +67,7 @@
       back.setAttribute('data-depot-hidden', '1');
       back.setAttribute('aria-hidden', 'true');
       if (!backRemovalLogged) {
-        console.log('[depot] game-shell: hid redundant #backToDepot (SEASON/BINDER tabs cover it); writeback protection moved to nav guard');
+        (window.depotLog||function(){})('[depot] game-shell: hid redundant #backToDepot (SEASON/BINDER tabs cover it); writeback protection moved to nav guard');
         backRemovalLogged = true;
       }
     }
@@ -85,7 +85,7 @@
     // The bundle may have re-created the BACK button; keep it suppressed.
     hideBackButton();
     if (changed) {
-      console.log('[depot] game-shell: re-asserted depot-game(-dressed) on live <html>');
+      (window.depotLog||function(){})('[depot] game-shell: re-asserted depot-game(-dressed) on live <html>');
       setChromeOffset();
       setTabbarOffset();
     }
@@ -114,7 +114,7 @@
       link.rel = 'stylesheet';
       link.href = '../depot-v2.css' + (window.DEPOT_BUILD ? ('?v=' + window.DEPOT_BUILD) : '');  /* Task C: the runtime-injected sheets carried no cache-bust */
       (document.head || html()).appendChild(link);
-      console.log('[depot] game-shell: depot-v2.css injected at runtime');
+      (window.depotLog||function(){})('[depot] game-shell: depot-v2.css injected at runtime');
     } catch (e) { console.warn('[depot] game-shell: ensureV2Stylesheet threw: ' + e); }
   }
 
@@ -263,14 +263,14 @@ function gameReady() {
       e.preventDefault();
       console.warn('[season] game-shell nav guard: holding navigation to ' + a.getAttribute('href') + ' until the pending season writeback settles (season context active)');
       var release = function (why) {
-        console.log('[season] game-shell nav guard: ' + why + '; releasing navigation');
+        (window.depotLog||function(){})('[season] game-shell nav guard: ' + why + '; releasing navigation');
         window.location.href = dest;
       };
       Promise.resolve(wb).then(function () { release('season writeback settled'); },
         function (err) { console.warn('[depot] game-shell nav guard: season writeback rejected (' + err + '); releasing navigation anyway to avoid trapping the user'); window.location.href = dest; });
     }, true); // capture phase: intercept before the anchor's default follows the href
     navInterceptorInstalled = true;
-    console.log('[depot] game-shell: season-writeback nav guard armed on shell nav links');
+    (window.depotLog||function(){})('[depot] game-shell: season-writeback nav guard armed on shell nav links');
   }
 
   // --- Desktop-only relocation of the sim controls off the field and into the shell chrome. ---
@@ -299,14 +299,14 @@ function gameReady() {
         if (ctrls.parentElement === nav) { return; } // already docked (idempotent)
         var spacer = nav.querySelector('.spacer');
         if (spacer) { nav.insertBefore(ctrls, spacer); } else { nav.appendChild(ctrls); }
-        console.log('[depot] game-shell: docked #sim-controls into the chrome mode-nav (desktop); field/plate untouched');
+        (window.depotLog||function(){})('[depot] game-shell: docked #sim-controls into the chrome mode-nav (desktop); field/plate untouched');
       } else {
         // Mobile: return the node to its bundle home (<body>) so the fixed bottom bar +
         // measured tab-bar clearance behave exactly as before. Fixed positioning is
         // viewport-relative, so body is the correct, side-effect-free restore target.
         if (ctrls.parentElement && ctrls.parentElement !== document.body) {
           document.body.appendChild(ctrls);
-          console.log('[depot] game-shell: restored #sim-controls to bundle bottom bar (mobile)');
+          (window.depotLog||function(){})('[depot] game-shell: restored #sim-controls to bundle bottom bar (mobile)');
         }
       }
     } catch (e) {
@@ -366,7 +366,7 @@ function gameReady() {
     mounted = true;
     ensureHtmlObserver();
 
-    console.log('[depot] game-shell: play-ball screen wearing thin shared shell (active=game); in-game stage untouched');
+    (window.depotLog||function(){})('[depot] game-shell: play-ball screen wearing thin shared shell (active=game); in-game stage untouched');
   }
 
   var poll = null, obs = null, giveUpAt = Date.now() + 20000;

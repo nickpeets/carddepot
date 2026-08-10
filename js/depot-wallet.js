@@ -111,7 +111,7 @@
           '<span class="dw-amt v2-coin-amt">' + bal + '</span>' +
           '<span class="dw-cur">' + CURRENCY + '</span>' +
         '</span>');
-      console.log(TAG, 'chip mounted, balance', bal);
+      (window.depotLog||function(){})(TAG, 'chip mounted, balance', bal);
     });
   }
 
@@ -126,7 +126,7 @@
     if (!host) { console.warn(TAG, 'showPayday: no host, skipping panel'); return; }
     var prev = document.querySelector('.depot-payday'); if (prev) prev.remove();
     host.insertAdjacentHTML('beforeend', paydayHTML(detail));
-    console.log(TAG, 'payday panel shown: +' + detail.total + ' ' + CURRENCY);
+    (window.depotLog||function(){})(TAG, 'payday panel shown: +' + detail.total + ' ' + CURRENCY);
   }
 
   var _hooked = false;
@@ -166,7 +166,7 @@
   // policy as season losses (no ledger write; consolation is display-only) for consistency.
   function recordExhibitionResult(matchId, userScore, oppScore) {
     var detail = earningsFor(userScore, oppScore, { season: false, exhibition: true });
-    if (!detail.win) { console.log(TAG, 'exhibition loss - consolation only, no ledger write'); return; }
+    if (!detail.win) { (window.depotLog||function(){})(TAG, 'exhibition loss - consolation only, no ledger write'); return; }
     if (_tablesOk === false) { console.warn(TAG, 'wallet tables absent (DDL not run) - skipping exhibition payout, showing preview panel'); showPayday({ lines: detail.lines, total: detail.total, balance: null }); return; }
     writePayout(detail.total, 'exhibition_win', null).then(function (r) {
       if (!r.ok) { console.warn(TAG, 'exhibition payout not persisted (DDL likely not run); showing preview panel'); showPayday({ lines: detail.lines, total: detail.total, balance: null }); return; }
@@ -187,7 +187,7 @@
       return out;
     };
     _hooked = true;
-    console.log(TAG, 'payout hook armed around DepotSeason.recordSeasonResult');
+    (window.depotLog||function(){})(TAG, 'payout hook armed around DepotSeason.recordSeasonResult');
   }
 
   var _authSubbed = false;
@@ -205,7 +205,7 @@
         }
       });
       _authSubbed = true;
-      console.log(TAG, 'auth re-mount subscription armed');
+      (window.depotLog||function(){})(TAG, 'auth re-mount subscription armed');
     } catch (e) { console.warn(TAG, 'subscribeAuth failed:', e && e.message); }
   }
 

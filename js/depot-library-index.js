@@ -78,7 +78,7 @@
         return Promise.all(lanes).then(function () {
           var t1 = (window.performance && performance.now) ? performance.now() : Date.now();
           _stats = { keys: keys.size, reported: total, ms: Math.round(t1 - t0) };
-          console.log(TAG + ' ' + keys.size + ' art-backed keys in ' + _stats.ms + 'ms');
+          (window.depotLog||function(){})(TAG + ' ' + keys.size + ' art-backed keys in ' + _stats.ms + 'ms');
           if (keys.size < total) {
             console.warn(TAG + ' fetched ' + keys.size + ' of ' + total + ' reported rows');
           }
@@ -97,5 +97,5 @@
     stats: function () { return _stats; },
     reset: function () { _promise = null; _stats = null; }
   };
-  console.log(TAG + ' loaded');
+  (window.depotLog||function(){})(TAG + ' loaded');
 })();

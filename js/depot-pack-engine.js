@@ -278,5 +278,5 @@
     TIERS: TIERS, tierConfig: tierConfig, makeRng: makeRng, eraClass: eraClass,
     cardWeight: cardWeight, rollPack: rollPack, rollFree: rollFree, estimateOdds: estimateOdds
   };
-  try { console.log(TAG + ' ready (deterministic, seedable, memoized)'); } catch (e) {}
+  try { (window.depotLog||function(){})(TAG + ' ready (deterministic, seedable, memoized)'); } catch (e) {}
 })();

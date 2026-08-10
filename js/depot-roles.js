@@ -87,7 +87,7 @@ var FOUNDING_ADMINS = [
     admin = !!admin;
     _source = source;
     window.depotIsAdminCached = admin;
-    console.log(TAG, 'admin=' + admin + ' (source: ' + source + ')' + (why ? ' -- ' + why : ''));
+    (window.depotLog||function(){})(TAG, 'admin=' + admin + ' (source: ' + source + ')' + (why ? ' -- ' + why : ''));
     try {
       window.dispatchEvent(new CustomEvent('depot:admin-resolved', { detail: { admin: admin, source: source } }));
     } catch (e) { /* no CustomEvent: the cached flag is still correct */ }
@@ -142,7 +142,7 @@ var FOUNDING_ADMINS = [
   function reset(why) {
     _promise = null; _forUid = null; _source = null;
     window.depotIsAdminCached = false;
-    console.log(TAG, 'memo reset' + (why ? ' (' + why + ')' : ''));
+    (window.depotLog||function(){})(TAG, 'memo reset' + (why ? ' (' + why + ')' : ''));
   }
 
   /* Re-resolve when the session changes. Same shape depot-wallet.js uses and
@@ -168,7 +168,7 @@ var FOUNDING_ADMINS = [
            * as real, and a listener that re-renders on the event should not be
            * handed the same answer twice. */
           if (_promise && _forUid && newUid && _forUid === newUid) {
-            console.log(TAG, event + ' ignored: already resolved for this uid (double-fire guard)');
+            (window.depotLog||function(){})(TAG, event + ' ignored: already resolved for this uid (double-fire guard)');
             return;
           }
           reset(event);
@@ -176,7 +176,7 @@ var FOUNDING_ADMINS = [
         }
       });
       _subbed = true;
-      console.log(TAG, 'auth re-resolve subscription armed');
+      (window.depotLog||function(){})(TAG, 'auth re-resolve subscription armed');
     } catch (e) { console.warn(TAG, 'subscribeAuth failed:', e && e.message); }
   }
 
@@ -190,5 +190,5 @@ var FOUNDING_ADMINS = [
 
   subscribeAuth();
   depotIsAdmin();
-  console.log(TAG, 'loaded');
+  (window.depotLog||function(){})(TAG, 'loaded');
 })();

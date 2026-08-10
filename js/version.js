@@ -7,10 +7,10 @@
  */
 (function () {
   // Deployed commit short-hash. Bumped on every merge (AGENTS.md section 5).
-  var BUILD='0df4cd3';
+  var BUILD='f920409';
   window.DEPOT_BUILD = BUILD;
   try {
-    console.log('[depot] build ' + BUILD);
+    (window.depotLog||function(){})('[depot] build ' + BUILD);
   } catch (e) {
     /* console unavailable: still expose window.DEPOT_BUILD */
   }

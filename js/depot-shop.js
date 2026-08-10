@@ -100,7 +100,7 @@ function filterToArtBacked(all) {
       console.error(TAG + ' art filter emptied the catalog; rolling the UNFILTERED catalog');
       return all;
     }
-    console.log(TAG + ' art-backed roll pool: ' + out.length + '/' + all.length +
+    (window.depotLog||function(){})(TAG + ' art-backed roll pool: ' + out.length + '/' + all.length +
                 ' (' + (out.length / all.length * 100).toFixed(1) + '%)');
     return out;
   }).catch(function (e) {
@@ -154,7 +154,7 @@ function loadCatalog() {
       ts: Date.now(), balanceAfter: null, status: 'rolled'
     };
     saveReceipt(receipt);
-    console.log(TAG + ' receipt persisted BEFORE debit', receipt);
+    (window.depotLog||function(){})(TAG + ' receipt persisted BEFORE debit', receipt);
 
     // 2) Call the atomic RPC.
     var client = sb();
@@ -192,7 +192,7 @@ function loadCatalog() {
         var newBal = (res && typeof res.data === 'number') ? res.data : null;
         receipt.balanceAfter = newBal; receipt.status = 'debited';
         saveReceipt(receipt);
-        console.log(TAG + ' purchase OK, new balance ' + newBal + '. Receipt retained for rip.', receipt);
+        (window.depotLog||function(){})(TAG + ' purchase OK, new balance ' + newBal + '. Receipt retained for rip.', receipt);
         // A debit just completed; receipt is stamped 'debited'. Honor it NOW:
         // never leave a paid pack un-opened. Prefer the caller's rip hook
         // (redeemPending -> grant + ceremony); fall back to the unmissable
@@ -253,12 +253,12 @@ function loadCatalog() {
       var data = res && res.data ? res.data : {};
       if (data.ok === false) {
         // On cooldown: server refused WITHOUT inserting. Show the countdown to next_claim_at.
-        console.log(TAG + " free claim on cooldown until " + data.next_claim_at);
+        (window.depotLog||function(){})(TAG + " free claim on cooldown until " + data.next_claim_at);
         ui.cooldown(data.next_claim_at);
         return;
       }
       // Success: the card is granted server-side. Reveal it.
-      console.log(TAG + " free claim OK card_id=" + data.card_id + " tier=" + data.tier);
+      (window.depotLog||function(){})(TAG + " free claim OK card_id=" + data.card_id + " tier=" + data.tier);
       ui.claimed(card, band, data.next_claim_at, data.card_id);
       // POST-GRANT position enrichment. The free card is already granted
       // server-side and revealed above; this is fire-and-forget, deliberately
@@ -317,7 +317,7 @@ function loadCatalog() {
     var __seedKey = 'seed:' + (receipt && receipt.seed);
     window.__depotRedeemInFlight = window.__depotRedeemInFlight || {};
     if (window.__depotRedeemInFlight[__seedKey]) {
-      console.log(TAG+' redeem: attempt already in flight for '+__seedKey+' -> sharing it (race latch)');
+      (window.depotLog||function(){})(TAG+' redeem: attempt already in flight for '+__seedKey+' -> sharing it (race latch)');
       return window.__depotRedeemInFlight[__seedKey];
     }
     // Honor the catalog we were given (raw array from loadCatalog), accept a {cards:[]} wrapper too,
@@ -332,7 +332,7 @@ function loadCatalog() {
       .catch(function(e){ console.error(TAG+' redeem: catalog load failed (receipt kept, money safe): '+(e&&(e.message||e))); return {redeemed:false, error:'catalog-load-failed'}; });
   }
   catalog = _cat;
-    console.log(TAG+' redeeming pending pack', receipt);
+    (window.depotLog||function(){})(TAG+' redeeming pending pack', receipt);
     var ownerId, collectionId, pack, cards, hitIndex;
     var __chain = client.auth.getUser().then(function(u){
       ownerId=u&&u.data&&u.data.user?u.data.user.id:null;
@@ -351,7 +351,7 @@ function loadCatalog() {
       if(grant.error){
         var __gm = (grant.error.message||'')+' '+(grant.error.details||'');
         if((grant.error.code+'')==='23505' || /duplicate key|already exists|unique constraint/i.test(__gm)){
-          console.log(TAG+' redeem: pack_grants rejected duplicate for seed '+receipt.seed+' (23505) -> pack already granted, clean no-op (no cards inserted)');
+          (window.depotLog||function(){})(TAG+' redeem: pack_grants rejected duplicate for seed '+receipt.seed+' (23505) -> pack already granted, clean no-op (no cards inserted)');
           return {skipInsert:true};
         }
         throw new Error('pack_grants insert rejected: '+grant.error.message);
@@ -360,7 +360,7 @@ function loadCatalog() {
       var toInsert=cards.map(function(c){return cardRow(c,ownerId,collectionId,receipt.seed);});
       return client.from('cards').insert(toInsert).select('id').then(function(ins){
         if(ins.error) throw new Error('card insert rejected: '+ins.error.message);
-        console.log(TAG+' redeem: inserted '+((ins.data||[]).length)+' card(s) after grant row');
+        (window.depotLog||function(){})(TAG+' redeem: inserted '+((ins.data||[]).length)+' card(s) after grant row');
         // POST-GRANT position enrichment. Fire-and-forget, deliberately AFTER the
         // grant row and the card insert have landed: the money path must never
         // wait on statsapi and must never fail because of it. Anything missed
@@ -379,7 +379,7 @@ function loadCatalog() {
       });
     }).then(function(){
       if(typeof opts.render==='function'){ try{opts.render();}catch(e){} }
-      return playPackCeremony(view, cards, hitIndex, Object.assign({}, opts, {tier: receipt.tier, seed: receipt.seed, held: true})).then(function(){ clearReceipt(); console.log(TAG+' redeem: ceremony done, receipt cleared'); return {redeemed:true, count:cards.length}; });
+      return playPackCeremony(view, cards, hitIndex, Object.assign({}, opts, {tier: receipt.tier, seed: receipt.seed, held: true})).then(function(){ clearReceipt(); (window.depotLog||function(){})(TAG+' redeem: ceremony done, receipt cleared'); return {redeemed:true, count:cards.length}; });
     }).catch(function(e){
       console.error(TAG+' redeem failed (receipt retained): ', e&&e.message||e);
       return {redeemed:false, error:(e&&e.message)||String(e)};
@@ -435,5 +435,5 @@ function loadCatalog() {
     saveReceipt: saveReceipt,
     clearReceipt: clearReceipt
   };
-  try { console.log(TAG + ' controller ready'); } catch (e) {}
+  try { (window.depotLog||function(){})(TAG + ' controller ready'); } catch (e) {}
 })();

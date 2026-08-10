@@ -27,7 +27,7 @@
 
   var TAG = '[depot-rd]';
   function warn(m, x){ try { console.warn(TAG + ' ' + m, (x === undefined ? '' : x)); } catch (e) {} }
-  function log(m){ try { console.log(TAG + ' ' + m); } catch (e) {} }
+  function log(m){ try { (window.depotLog||function(){})(TAG + ' ' + m); } catch (e) {} }
 
   function esc(s){
     return String(s == null ? '' : s).replace(/[&<>"]/g, function (c){

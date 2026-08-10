@@ -21,6 +21,23 @@
 (function () {
   'use strict';
 
+  /* [console hygiene] gated INFO channel. console.warn / console.error stay
+   * UNCONDITIONAL everywhere - fail-loud (AGENTS.md 4) is about guards naming
+   * why they bailed, and that must never be silenced. What IS gated is routine
+   * narration ("module ready", "client initialised", per-paint notes), which
+   * had grown to ~70 lines per load and buried the warns it exists to serve.
+   * Opt in from any console: localStorage.setItem('depot_debug','1'); reload.
+   * NOT routed here on purpose: js/version.js's '[depot] build <hash>' - the
+   * deploy live-verify ritual (AGENTS.md 5) reads it unconditionally. */
+  function depotLog() {
+    try {
+      if (typeof localStorage !== 'undefined' && localStorage.getItem('depot_debug')) {
+        console.log.apply(console, arguments);
+      }
+    } catch (e) { /* storage blocked (private mode etc): the optional channel stays quiet */ }
+  }
+  window.depotLog = depotLog;
+
   var _client = null;
   var _clientTried = false;
   var _configWarned = false;
@@ -44,7 +61,7 @@
         return null;
       }
       _client = window.supabase.createClient(cfg.url, cfg.key);
-      console.log('[depot] depot-core client initialised');
+      depotLog('[depot] depot-core client initialised');
       return _client;
     } catch (e) {
       console.warn('[depot] depotSB: createClient threw:', e);
@@ -126,5 +143,5 @@
   // Kick off a best-effort user resolve so depotUserCached warms up for sync callers (e.g. season.js UID()).
   try { depotUser(); } catch (e) { console.warn('[depot] depot-core warm-up threw:', e); }
 
-  console.log('[depot] depot-core.js loaded');
+  depotLog('[depot] depot-core.js loaded');
 })();

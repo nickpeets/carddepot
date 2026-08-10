@@ -108,13 +108,13 @@
           }
         }
       });
-      console.log('[depot] index-shell: header repaint wired to auth-state changes');
+      (window.depotLog||function(){})('[depot] index-shell: header repaint wired to auth-state changes');
     }
   } catch (e) {
     console.warn('[depot] index-shell: failed to wire auth-state header repaint:', e);
   }
 
-  console.log('[depot] index-shell: binder wearing shared shell (active=binder)');
+  (window.depotLog||function(){})('[depot] index-shell: binder wearing shared shell (active=binder)');
    }
 
    if (document.readyState === 'loading') {

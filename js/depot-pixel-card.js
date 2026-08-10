@@ -173,5 +173,5 @@
     initials: initials,
     PAL: PAL
   };
-  try { console.log(TAG + ' ready (text-only, no external imagery)'); } catch (e) {}
+  try { (window.depotLog||function(){})(TAG + ' ready (text-only, no external imagery)'); } catch (e) {}
 })();
