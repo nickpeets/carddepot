@@ -363,6 +363,18 @@ function dressHeader(){
     body.appendChild(submit);
     if (msg){ body.appendChild(msg); }
     if (toggle){ toggle.className = 'rd-modal__foot'; body.appendChild(toggle); }
+    /* [auth recovery] PR #241 restored #authForgotRow / #authBackRow into the
+    undressed modal, but this dresser rebuilds .auth-modal from an EXPLICIT
+    node list and then drops every child it did not name. So the only entry
+    point into forgot-password mode was destroyed on load: verified live on
+    f11c871, thedepot.cards showed no "Forgot password?" link at all while
+    DepotAuth.forgotMode existed. Carry both rows across, fail loud if gone. */
+    var forgotRow = modal.querySelector('#authForgotRow');
+    var backRow   = modal.querySelector('#authBackRow');
+    if (forgotRow){ forgotRow.className = 'rd-modal__foot'; body.appendChild(forgotRow); }
+    else { warn('dressAuthModal: no #authForgotRow; password recovery has no entry point in the dressed modal'); }
+    if (backRow){ backRow.className = 'rd-modal__foot'; body.appendChild(backRow); }
+    else { warn('dressAuthModal: no #authBackRow; forgot mode has no way back to log in'); }
 
     /* drop the now-empty original children, then install the frame */
     while (modal.firstChild){ modal.removeChild(modal.firstChild); }
