@@ -21,7 +21,28 @@ Counted at `cd73b68`, re-counted after the vs.html fix. AGENTS.md section 6 says
 
 The arithmetic that explains it: `9a30ee0` had it right and said so — "all 91 ?v= tags (index 31, shop 18, game 12, builder 12, preview 1, market 8, vs 9)". `cafa045` then restamped 31+18+12+12+1 = 74 and left `marketplace.html` (8) and `vs.html` (9) behind. 74 + 17 = 91. Two shells were missed, not one, and the message undercounted seven files as five shells.
 
-**Correct AGENTS.md section 6 to 91 across seven files** as part of this work.
+**AGENTS.md section 6 is ALREADY CORRECTED — do not redo it.** A correction block dated 2026-08-11, written by someone other than the author of this file, is already in AGENTS.md. It carries the same 91-across-seven table and records the previous figure as 55 across five files. That half of the job is done.
+
+### 1A. But the tree does not match the claim (recorded 2026-08-11)
+
+That same AGENTS.md block cites `25c0bea` as having "stamped all 91 across seven files". The tree says otherwise. Census taken at `main` after the vs.html fix:
+
+| file | tags | stamp in the tree right now |
+|---|---|---|
+| `index.html` | 31 | f11c871 |
+| `game/shop.html` | 18 | f11c871 |
+| `game/index.html` | 12 | f11c871 |
+| `game/builder.html` | 12 | f11c871 |
+| `vs.html` | 9 | cd73b68 |
+| `marketplace.html` | 8 | **f920409** |
+| `preview.html` | 1 | f11c871 |
+| `js/version.js` | — | BUILD = cd73b68 |
+
+**Three distinct stamps are live in the tree**, and `marketplace.html` is still on the oldest of them.
+
+So the real remaining job is not simply "restamp seven files". It is: **establish whether `25c0bea` stamped all seven and was partly undone by a later merge, or never covered them.** Those are different problems. AGENTS.md 2.4 exists precisely because a landing merge once silently discarded a superset — `cc311f8`, which took `index.html` wholesale from its branch side and threw away two days of password-recovery work that had merged clean one commit earlier. That failure mode has happened here before and it is invisible on GitHub.
+
+Read the history on `25c0bea` before restamping. If it did cover all seven, a merge ate part of it, and that is a bigger finding than the stamps.
 
 ---
 
