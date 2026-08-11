@@ -1,9 +1,39 @@
 -- =============================================================================
 -- Card Depot -- MIGRATION: ROLES + FRANCHISE-ON-SIGNUP + BALANCE RECONCILIATION
 --
--- STATUS: PROPOSAL. **NOT EXECUTED.** Nick runs this in the Supabase SQL editor.
+-- STATUS CORRECTED 2026-08-11: *** THIS FILE HAS RUN. *** It previously said
+-- PROPOSAL, NOT EXECUTED, which was false and actively misleading -- an agent
+-- read it, believed these objects were hypothetical, and reasoned from the file
+-- instead of from the database.
+--
+-- Verified in the Supabase dashboard on 2026-08-11:
+--   * franchises_owner_uidx on public.franchises (owner_id)   -- Sec 2.0, present
+--   * public.depot_is_admin() in BOTH the zero-arg and p_user uuid forms
+--   * public.depot_apply_payout, depot_admin_grant, depot_wallet_repair,
+--     depot_ensure_onboarding, depot_rename_franchise, depot_handle_new_user
+--     all present, all SECURITY DEFINER
+--   * public.depot_balance_drift and public.depot_economy_ledger present, and
+--     both are VIEWS, not tables -- an empty depot_economy_ledger means every
+--     ledger row belongs to an admin account or carries the analytics-exclusion
+--     flag, NOT that no money has moved. That misreading cost a session.
+--
+-- TREAT THIS FILE AS A RECORD OF WHAT WAS BUILT, NOT AS A PLAN. Where it and
+-- production disagree, PRODUCTION WINS -- and they already do disagree. The
+-- deployed depot_apply_payout body reads:
+--     if auth.uid() <> p_owner then raise exception 'not authorized'; end if;
+--     update public.franchises set balance = balance + p_amount ...
+-- Sec 3 of this file writes 'coalesce(balance,0) + p_amount'. The deployed
+-- version omits the coalesce, and its guard uses <> where IS DISTINCT FROM is
+-- correct (auth.uid() is NULL for an anonymous caller, so NULL <> p_owner is
+-- NULL and the exception does not fire). Read the stored definition before
+-- trusting any function body in db/proposals/.
+--
+-- Also unbuilt and still needed, found 2026-08-11: nothing validates p_amount
+-- in depot_apply_payout or p_cost in depot_purchase_pack against any
+-- server-side source of truth. See docs/GRANT_AUTHORITY.md.
+--
 -- Per AGENTS.md Sec 2 and RUNBOOK Sec 4.6 the agent does not execute DDL, RPC
--- definitions, or RLS policy changes. This file is the ready-to-run artifact.
+-- definitions, or RLS policy changes. This file WAS the ready-to-run artifact.
 --
 -- WHY THIS FILE EXISTS -- three documents point at the same missing table:
 --   design/GRADE_PRESTIGE.md Sec 7.4  (admin bypass for the Add-a-Card scan gate)
