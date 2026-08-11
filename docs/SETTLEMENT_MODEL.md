@@ -142,7 +142,14 @@ Four objects, and only one of them is a table anyone should treat as truth.
 | `depot_economy_ledger` | **view** | analytics cut of `wallet_transactions` |
 | `depot_balance_drift` | **view** | reconciliation report, franchises vs ledger sum |
 
-`franchises.balance` is moved by exactly one thing, the RPC `depot_apply_payout(p_owner, p_amount)`:
+`franchises.balance` has **at least three writers**, not one. Confirmed against production
+2026-08-11: `depot_apply_payout`, `depot_purchase_pack` and `depot_admin_grant` all update the
+column, and the latter two do it directly rather than by calling the payout RPC. An earlier
+revision of this document claimed a single writer; that was wrong, and it made the
+"nothing enforces `balance = sum(ledger)`" problem below look smaller than it is. More writers
+means more places to forget the ledger half.
+
+The canonical one is the RPC `depot_apply_payout(p_owner, p_amount)`:
 
 ```sql
 update public.franchises set balance = coalesce(balance,0) + p_amount
@@ -212,6 +219,33 @@ So the chip cannot lie, and the stored counters can be wrong indefinitely withou
 
 **Repair shape for gap 3:** recount from `season_games` and write the result back into `seasons` — the same computation `resolveRecord()` already performs on every page load. Cheap, and idempotent by construction.
 
+**Gap 4 — every grant path checks *who* and takes the client's word for *what*.**
+Five `SECURITY DEFINER` RPCs were read against production on 2026-08-11. All five authenticate
+correctly and all five authorise correctly. None of them validates the value being granted:
+
+| function | identity / concurrency | value |
+|---|---|---|
+| `depot_apply_payout` | `auth.uid() <> p_owner` raises | `p_amount` unbounded, unchecked |
+| `depot_purchase_pack` | `auth.uid()`, `FOR UPDATE` lock, one transaction | `p_cost` client-named, never checked against `p_tier` |
+| `depot_claim_free_pack` | `auth.uid()`, 24h cooldown enforced server-side | the entire card comes from `p_card` |
+| `depot_claim_starter_box` | `auth.uid()`, PK-gated once-only, count fixed at 25 | all 25 cards come from `p_cards` |
+| `depot_wallet_repair` | admin-gated | derives its own number from the ledger — the exception |
+
+This is one habit applied five times, not five defects. The hard parts — identity, idempotency,
+row locking, rate limiting — are done, and several are done well. The easy part is missing
+everywhere: there is no server-side source of truth for the thing being handed out.
+
+Two notes on the deployed bodies, because they matter more than the summary. `depot_apply_payout`
+guards with `if auth.uid() <> p_owner`, which evaluates to NULL rather than TRUE for an anonymous
+caller, so the exception does not fire; the UPDATE then matches no row and it returns NULL.
+Harmless today, and harmless by accident — `is distinct from` is the correct guard. The deployed
+body also reads `balance = balance + p_amount` where `MIGRATION_roles.sql` reads
+`coalesce(balance,0) + p_amount`, so the deployed function and the proposal file have already
+diverged.
+
+**Repair shape for gap 4:** a server-side price table for `p_cost` and `p_amount`, and
+`card_library` as the authority for what a pull produces. See `docs/GRANT_AUTHORITY.md`.
+
 ---
 
 ## 7. The misdiagnosis, recorded
@@ -220,7 +254,19 @@ On 2026-08-11 a session observed that all 17 rows in `match_settlements` belonge
 
 Every observation was accurate. The conclusion was wrong.
 
-What the row distribution actually showed was a **second player who had never logged in**, blocked on email delivery that has never worked. Under a pull model that produces exactly the distribution observed, and it produces it from a system working as designed.
+What the row distribution actually showed was a **second player who had not opened the VS surface
+since those matches were played**. Under a pull model that produces exactly the distribution
+observed, and it produces it from a system working as designed.
+
+A first pass at this correction went too far the other way and asserted the second player had
+*never logged in*. That is also false, and it is recorded here because being wrong twice about
+the same person is the instructive part. Authentication → Users on 2026-08-11 shows
+`timwstout@gmail.com` created 2026-06-20 21:06:13 -0700 with a last sign-in of
+**2026-08-05 18:07:40 -0700** — six weeks later, so a real return session and not the auto-login
+that stamps signup. The dates are what close it: sixteen of the seventeen settlement rows were
+written in one second on 2026-08-02, and the newest match was played 2026-08-10. His 5 August
+visit fell in the gap. He has logged in; he has not been to `vs.html` with anything settleable
+waiting.
 
 The lesson is narrow and worth stating: **a distribution of rows is evidence about the population that wrote them, not only about the code that writes them.** Before concluding that a writer is broken, establish that everyone who should have invoked it actually could.
 
