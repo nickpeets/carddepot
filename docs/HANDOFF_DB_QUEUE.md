@@ -4,7 +4,11 @@ Status: **handoff to the codespace agent.** Written 2026-08-11. Everything here 
 
 ---
 
-## 0. Two things to know before you start
+## 0. Three things to know before you start
+
+**The numbers in section 1 are CONFIRMED, not tallied.** An earlier revision of this file said they were read off Table Editor rows by eye. They have since been re-derived with real group-bys — see section 2A for how, and for why the SQL editor was never the only way in.
+
+### The other two
 
 **The Supabase SQL editor does not work in the browser path.** Fifteen attempts across three tabs and two reload strategies, including a hard reload with cache bypass. It renders its toolbar — Run, Role postgres, Limit 100 rows, Autosave enabled — then two spinners that never resolve, `document.querySelector('.cm-content')` stays null past sixty seconds, and eventually `document.body.innerText` is length zero. No console errors on any attempt. Every other dashboard surface loads fine on the same session: Database → Functions, Indexes, Policies, and the Table Editor all returned data. It is that one bundle. **Do not spend a cycle rediscovering this.** Use psql-shaped access and ignore the dashboard.
 
@@ -14,7 +18,7 @@ Status: **handoff to the codespace agent.** Written 2026-08-11. Everything here 
 
 ## 1. The target — item 6, the self-match settlement reversal
 
-Measured by reading rows in the Table Editor, not by group-by. Treat every number below as an **expected result to verify**, not as an input to a write.
+**CONFIRMED 2026-08-11 by group-by** (see section 2A). These are results, not estimates. Re-check them anyway before writing — but expect them to hold.
 
 `public.match_settlements` holds **17 rows**, every one with `owner_id = 9e4e47d2-8836-4100-b846-fe1bb059fded` (Nick). Sixteen were created `2026-08-02 21:24:26`–`27`, inside one second — the settle sweep firing once when settlement went live and back-settling everything then. The seventeenth is `46ff69f7`, created `2026-08-10 18:12:00`.
 
@@ -34,6 +38,55 @@ The filter that prevents a recurrence is deployed — `listMine()` drops self-ma
 ### The reversal is worth more than it looks
 
 Those same 13 rows are why the VS record chip reads **14-3**: fourteen settlement rows with `won = TRUE`, three with `won = FALSE`. Thirteen of the fourteen are Nick beating himself. **His real VS record is 1-3** — Tim leads 3-1. The reversal corrects the coin balance and the displayed record in one operation. Both distortions have the same cause and the same fix.
+
+---
+
+## 2A. How to query without the SQL editor
+
+The Supabase SQL editor never hydrated. That is a broken **path**, not an unreachable **resource**, and the distinction cost forty minutes before it was noticed.
+
+Nick's browser is signed in to thedepot.cards, and every page carries an authenticated Supabase client. From the page console:
+
+    const sb = depotSB();
+    const m = await sb.from('matches').select('*');
+    const w = await sb.rpc('depot_wallet_check');
+
+That runs as Nick, under RLS, and it is how every number in section 1 was confirmed. `depot_wallet_check()` returns all four accounts because Nick is flagged `role = 'admin'` in `user_roles` and the function gates on `public.depot_is_admin() or d.owner_id = auth.uid()`. It is correctly gated; the all-rows result is not a leak.
+
+Use it. It will not cover writes or anything RLS hides from Nick, but it covers most of section 2.
+
+---
+
+## 2B. Wallet state as of 2026-08-11
+
+    owner                     team          balance   ledger_sum   drift   rows
+    Nick    9e4e47d2...       MY CLUB        93,945      93,945      0      49
+    Tim     9861ce0d...       Tim's Club     91,850      91,850      0      14
+            e04ef721...       MY CLUB             0           0      0       0
+            0e6e7dcd...       MY CLUB             0           0      0       0
+
+**Drift is zero on all four.** The reconciliation gap in SETTLEMENT_MODEL.md is real as a design flaw and clean as a fact today.
+
+Nick's 49 ledger rows by reason, summing to 93,945:
+
+    admin_grant       1    +100,000
+    challenge_win    14      +1,400     <- 13 of these are the self-match incident
+    challenge_loss    3         +45
+    exhibition_win    6        +150
+    free_pack         9           0
+    pack_purchase    16      -7,650
+
+**After the reversal, challenge_win should read 1 row / +100 and Nick's balance 92,645.** That is the acceptance check.
+
+`select id from depot_economy_ledger` returns **0 rows** — observed. Nick is the only account with ledger rows and he is flagged admin, so the analytics view excludes everything. Expected, not alarming.
+
+---
+
+## 2C. Three corrections to earlier statements in this repo
+
+1. **Match dates.** The Nick-vs-Tim matches were created 2026-06-26 to 06-30. The `2026-08-10` figure carried in the session constants is the **settlement** timestamp, not the play date. That matters: the 2026-08-02 sweep back-settled games that were months old.
+2. **"MY CLUB" is a stored value, not a fallback.** `resolveRecord()` returns it because `franchises.team_name` literally contains it on three rows, not because the `|| 'MY CLUB'` default fired.
+3. **Tim is not a ghost account.** Franchise "Tim's Club", 91,850 coins, 14 ledger rows, last sign-in 2026-08-05. He has been playing. What he has not done is open `vs.html` since those four matches were played.
 
 ---
 
@@ -80,3 +133,4 @@ Read off the Supabase dashboard 2026-08-11:
 - `docs/SETTLEMENT_MODEL.md` — how settlement actually works, and its four gaps.
 - `docs/GRANT_AUTHORITY.md` — the grant-path validation hole. First item in the V2 build.
 - `docs/RESTAMP_SPEC.md` — the cache-bust stamps. 91 tags across seven files, low priority, scripted.
+- `docs/BOXSCORE_RUN_ATTRIBUTION.md` — the box score headline disagrees with its own line score. Display-only, no money affected, but it contains a real sim-engine defect: a run credited to a batter who was never on base.
