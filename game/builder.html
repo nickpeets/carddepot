@@ -1,8 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <script src="../js/version.js?v=f920409"></script>
-  <script src="../js/depot-core.js?v=f920409"></script>
+  <script src="../js/version.js?v=f11c871"></script>
+  <script src="../js/depot-core.js?v=f11c871"></script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>The Depot &mdash; Lineup Builder</title>
@@ -25,12 +25,12 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-<script src="season.js?v=f920409" defer></script>
-  <link rel="stylesheet" href="../css/depot-style.css?v=f920409">
-    <link rel="stylesheet" href="../depot-v2.css?v=f920409">
-  <link rel="stylesheet" href="../css/depot-redesign.css?v=f920409">
-  <script src="../js/depot-shell.js?v=f920409" defer></script>
-  <script src="../js/depot-redesign.js?v=f920409" defer></script>
+<script src="season.js?v=f11c871" defer></script>
+  <link rel="stylesheet" href="../css/depot-style.css?v=f11c871">
+    <link rel="stylesheet" href="../depot-v2.css?v=f11c871">
+  <link rel="stylesheet" href="../css/depot-redesign.css?v=f11c871">
+  <script src="../js/depot-shell.js?v=f11c871" defer></script>
+  <script src="../js/depot-redesign.js?v=f11c871" defer></script>
   <style>
   :root{
     /* The Depot palette — lightened for a brighter, more readable builder */
@@ -343,7 +343,12 @@
     <button class="btn-primary" id="loginBtn" style="flex:1">Log in</button>
   </div>
   <div id="authMsg"></div>
-  <p class="muted" style="margin-top:14px">No password entry is stored by this page; it uses the same Supabase login as the main app.</p>
+  <p class="muted" style="margin-top:12px;font-size:9px">
+    <a href="#" id="builderSignupLink" style="color:var(--gold)">No account? Sign up</a>
+    &nbsp;&middot;&nbsp;
+    <a href="#" id="builderForgotLink" style="color:var(--gold)">Forgot password?</a>
+  </p>
+  <p class="muted" style="margin-top:8px">No password entry is stored by this page; it uses the same Supabase login as the main app.</p>
 </div>
 
 <!-- Logged-in: builder -->
@@ -543,6 +548,44 @@
   }
   $('loginBtn').addEventListener('click',doLogin);
   $('pass').addEventListener('keydown',function(e){ if(e.key==='Enter') doLogin(); });
+  /* [auth everywhere] the builder's own login card offered ONLY sign-in - a
+     visitor with no account (or a lost password) hit a dead end on the exact
+     page challenge links land on. Same Supabase project as the index modal;
+     fail-loud per AGENTS.md 4. */
+  (function(){
+    var su=$('builderSignupLink'), fp=$('builderForgotLink');
+    if(!su||!fp){ console.warn('[builder] auth links missing from loginView; signup/recovery unavailable'); return; }
+    if(!sb||!sb.auth){ console.warn('[builder] auth links: no supabase client; leaving links inert'); return; }
+    su.addEventListener('click', async function(ev){
+      ev.preventDefault();
+      var email=($('email').value||'').trim(), pass=$('pass').value||'';
+      if(!email||!pass){ setAuthMsg('Enter email and a password above, then press Sign up.'); return; }
+      setAuthMsg('Working\u2026');
+      try{
+        // emailRedirectTo: THIS page, never a query string (fix/signup-flow lesson).
+        var res=await sb.auth.signUp({ email:email, password:pass, options:{ emailRedirectTo: location.origin+location.pathname } });
+        if(res.error){ console.warn('[builder] signUp refused:', res.error.message); setAuthMsg(res.error.message||'Sign-up failed.'); return; }
+        var u=res.data&&res.data.user;
+        if(u&&u.identities&&u.identities.length===0){ console.warn('[builder] signUp returned an identity-less user -> address already registered'); setAuthMsg('That email already has an account - log in above.'); return; }
+        if(res.data&&res.data.session===null){ setAuthMsg('Account created. Check your email to confirm, then log in here.'); }
+        else { setAuthMsg('Account created - you are signed in.'); }
+      }catch(e){ console.warn('[builder] signUp threw:', e&&e.message); setAuthMsg(String(e&&e.message||e)); }
+    });
+    fp.addEventListener('click', async function(ev){
+      ev.preventDefault();
+      var email=($('email').value||'').trim();
+      if(!email){ setAuthMsg('Enter your email above, then press Forgot password.'); return; }
+      setAuthMsg('Working\u2026');
+      try{
+        /* recovery lands on the ROOT binder: index.html owns the set-new-password
+           modal (its PASSWORD_RECOVERY handler). Path-derived, never a query string. */
+        var target=location.origin+location.pathname.replace(/game\/builder\.html$/,'');
+        var r=await sb.auth.resetPasswordForEmail(email, { redirectTo: target });
+        if(r.error){ console.warn('[builder] resetPasswordForEmail refused:', r.error.message); setAuthMsg(r.error.message||'Could not send the reset link.'); return; }
+        setAuthMsg('If that address has an account, a reset link is on its way.');
+      }catch(e){ console.warn('[builder] reset threw:', e&&e.message); setAuthMsg(String(e&&e.message||e)); }
+    });
+  })();
   $('logoutBtn').addEventListener('click',doLogout);
   // Back to Depot: warn only if a lineup is mid-build (any batting slot filled or a pitcher chosen).
   (function(){ var b=document.getElementById('backToDepot'); if(!b) return;
@@ -1622,10 +1665,10 @@
   }
   /* ===== end SEASON MODE play handler ===== */
 </script>
-<script src="../js/depot-builder-shell.js?v=f920409"></script>
-<script src="../js/depot-prestige.js?v=f920409"></script>
-<script src="../js/depot-pixel-card.js?v=f920409"></script>
-<script src="../js/depot-wallet.js?v=f920409"></script>
+<script src="../js/depot-builder-shell.js?v=f11c871"></script>
+<script src="../js/depot-prestige.js?v=f11c871"></script>
+<script src="../js/depot-pixel-card.js?v=f11c871"></script>
+<script src="../js/depot-wallet.js?v=f11c871"></script>
 <script>
 /* Franchise Economy Slice A: mount wallet chip on the builder. Additive, graceful until DDL. */
 (function(){
