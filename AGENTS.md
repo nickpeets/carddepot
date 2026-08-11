@@ -26,6 +26,23 @@ The rule, concretely:
 
 The generalisation beyond the database: a broken tool, a stale credential, a rate limit and a missing permission all present identically as "cannot do the thing." They have different path-lists. Enumerate before concluding.
 
+### 0.2 The tree moves under you (added 2026-08-11)
+
+**Another agent may be on `main` right now.** Before any whole-file web edit, fetch the file fresh and diff your intended content against what is actually there **at this moment** — not against what you read earlier in the session.
+
+A fetch-and-replace against a stale read silently discards whatever landed in between, and GitHub will not warn you. There is no conflict, no prompt, no red text. The commit looks clean and the diff looks like your change.
+
+This is §2.4's failure at a smaller scale, and it has already nearly happened. On 2026-08-11 an agent fetched `AGENTS.md`, edited its local copy, and committed a whole-file replacement. A §6 correction block written by a *different* author the same day happened to be present in that fetch, so it survived. Had it landed thirty seconds later it would have been erased, by a commit whose message said "no other section touched."
+
+Practically:
+
+1. Fetch immediately before writing, not at the start of the task.
+2. Prefer anchored string replacement over whole-file replacement — assert the anchor exists and fail loudly if it does not. An anchor miss is the signal that the file moved.
+3. After committing, read the landed diff and confirm it contains only your change. `git show <sha> --stat` and a count of removed lines is enough.
+4. If you are making several edits to one file, re-fetch between each one.
+
+The companion failure is the same shape from the other direction: on the same day, two GitHub commit dialogs failed to open, and on one of them the commit-message keystrokes went into the file body instead. **Whole-file web edits have quiet failure modes in both directions.** Verify the landed result, always.
+
 ---
 
 ## 1. Git rules
