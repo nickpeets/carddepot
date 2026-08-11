@@ -31,6 +31,47 @@ Read this first, every session. It encodes hard-won rules from real incidents in
   - is a **non-additive change to a working path** (index.html / game/index.html / game/builder.html / season.js behavior, auth, the sim, or the season writeback).
 - For working-path changes that are permitted, **live-verify every affected page first** (see §5) and only then merge with a merge commit.
 
+### 2.4 The per-hunk superset gate (LAW — added after the cc311f8 incident)
+
+**Blanket `--ours` and blanket `--theirs` are banned.** So is any whole-file
+resolution (`git checkout --ours <file>`, "take the branch copy", accepting a
+web-UI "use this version" button) on a file both sides have edited.
+
+When merging `main` into a stale branch — or landing a stale branch onto `main` —
+classify **every conflict hunk** into exactly one of four buckets, and record the
+classification in the merge commit body:
+
+| bucket | test | resolution |
+|---|---|---|
+| **EQUAL** | both sides identical once `?v=<sha>` stamps are normalized out | take either; note it is stamp-only |
+| **OURS-SUPERSET** | our side contains everything theirs does, plus more | take **ours** |
+| **THEIRS-SUPERSET** | their side contains everything ours does, plus more | take **theirs** |
+| **TRUE-CONFLICT** | neither contains the other | **stop** — resolve by hand, line by line, and say so in the merge body |
+
+Take the superset side **per hunk**. Never per file. A file is not a unit of
+intent; a hunk is.
+
+**The incident.** `cc311f8` (the #236 landing merge) took `index.html` wholesale
+from its branch side. The branch had already merged `main` into itself and
+resolved that file to its own older copy, so the landing merge was faithful
+transport of an already-reverted tree — it looked innocent on GitHub, and nothing
+flagged it. It silently discarded `main`'s superset, including all of PR #235's
+password-recovery and sign-up work, which had merged clean one commit earlier at
+`29ca202`. The feature was gone from production for two days and a real user was
+handed a dead password-reset link. Recovery took PR #241 plus a follow-up
+(#242) for the redesign layer.
+
+**The tell, and how to check for it before you merge.** If a merge claims to
+resolve a file and
+
+    git diff <branch-side-parent> <merge-commit> -- <file>
+
+is **EMPTY**, that merge took the file wholesale from the branch. On a file
+`main` also advanced, that is the cc311f8 signature. Run it on every conflicted
+file before pushing the merge; an empty diff is a stop condition, not a green
+light.
+
+
 ---
 
 ## 3. Architecture map
@@ -144,4 +185,26 @@ Rule: any chrome/shell/style work on the game page must go through `js/depot-gam
 
 > **§6 correction (2026-07-28).** The shell list above said four files for a long time and left out `preview.html`, which carries one `?v=` tag of its own. Because it was not on the list it was not stamped, and it sat at `4af61d3` while the other 54 tags moved on -- a stranded cache of exactly the kind this ritual exists to prevent. It was picked up incidentally by the stats-provenance branch (#181) and is current again.
 >
-> Do not trust any hard-coded count, including this one. **Count the tags fresh at your branch tip** before stamping -- `git ls-files -z '*.html'` and match `?v=`, do not assume the file list. At the time of writing that yields **55 tags across five files**: index.html 21, game/shop.html 14, game/index.html 10, game/builder.html 9, preview.html 1. If your count disagrees, believe your count and update this line.
+> Do not trust any hard-coded count, including this one. **Count the tags fresh at your branch tip** before stamping -- `git ls-files -z '*.html'` and match `?v=`, do not assume the file list. If your count disagrees, believe your count and update this line.
+>
+> **§6 correction (2026-08-11).** The count recorded here was **55 across five
+> files** and the ritual paragraph above still names only five shells. Both are
+> stale, and in the same direction as the 2026-07-28 miss. Counted fresh at
+> `9526744`, the real figure is **91 tags across SEVEN files**:
+>
+> | file | tags |
+> |---|---|
+> | `index.html` | 31 |
+> | `game/shop.html` | 18 |
+> | `game/index.html` | 12 |
+> | `game/builder.html` | 12 |
+> | `marketplace.html` | 8 |
+> | `vs.html` | 9 |
+> | `preview.html` | 1 |
+> | **total** | **91** |
+>
+> `marketplace.html` and `vs.html` carry 17 tags between them and appear on **no**
+> shell list in this document, which is precisely the condition that stranded
+> `preview.html` at `4af61d3`. Stamping practice is already ahead of the doc --
+> `25c0bea` stamped all 91 across seven files -- so treat **seven files** as the
+> ritual's scope and this table as the current count.
