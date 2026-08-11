@@ -833,6 +833,12 @@ body{padding:0 !important;}
     <div class="auth-toggle" id="authToggle">
       <span id="authToggleText">No account?</span> <a onclick="DepotAuth.toggleMode()" id="authToggleLink">Sign up</a>
     </div>
+    <div class="auth-toggle" id="authForgotRow">
+      <a onclick="DepotAuth.forgotMode()" id="authForgotLink">Forgot password?</a>
+    </div>
+    <div class="auth-toggle" id="authBackRow" style="display:none">
+      <a onclick="DepotAuth.backToLogin()" id="authBackLink">Back to log in</a>
+    </div>
   </div>
 </div>
 
@@ -865,18 +871,36 @@ body{padding:0 !important;}
       if(dressed){ m.classList.add('rd-modal__msg'); } }
 
   function reflectMode(){
-    var login = mode==='login';
-    $('authTitle').textContent = login ? 'Log in' : 'Sign up';
-    $('authSub').textContent = login ? 'Sign in to sync your collection across devices.' : 'Create an account to sync your collection across devices.';
-    $('authSubmitBtn').textContent = login ? 'Log in' : 'Sign up';
+    /* [auth recovery] four modes now: login / signup / forgot (send reset link)
+       / reset (arrived via the email link; a recovery session is live). */
+    var login = mode==='login', signup = mode==='signup', forgot = mode==='forgot', reset = mode==='reset';
+    $('authTitle').textContent   = login ? 'Log in' : signup ? 'Sign up' : forgot ? 'Reset password' : 'Set a new password';
+    $('authSub').textContent     = login  ? 'Sign in to sync your collection across devices.'
+                                 : signup ? 'Create an account to sync your collection across devices.'
+                                 : forgot ? 'Enter your email and we\'ll send a reset link.'
+                                 :          'You followed a reset link - choose a new password.';
+    $('authSubmitBtn').textContent = login ? 'Log in' : signup ? 'Sign up' : forgot ? 'Send reset link' : 'Set password';
     $('authToggleText').textContent = login ? 'No account?' : 'Have an account?';
     $('authToggleLink').textContent = login ? 'Sign up' : 'Log in';
-    $('authPassInput').setAttribute('autocomplete', login ? 'current-password' : 'new-password');
+    $('authPassInput').setAttribute('autocomplete', (login||forgot) ? 'current-password' : 'new-password');
+    var passLabel = document.querySelector('label[for="authPassInput"]');
+    var emailLabel = document.querySelector('label[for="authEmailInput"]');
+    // forgot needs no password; reset needs no email (the recovery session knows who)
+    [$('authPassInput'), passLabel].forEach(function(el){ if(el) el.style.display = forgot ? 'none' : ''; });
+    [$('authEmailInput'), emailLabel].forEach(function(el){ if(el) el.style.display = reset ? 'none' : ''; });
+    var tog=$('authToggle');       if(tog)  tog.style.display  = (forgot||reset) ? 'none' : '';
+    var fr =$('authForgotRow');    if(fr)   fr.style.display   = login ? '' : 'none';
+    var back=$('authBackRow');     if(back) back.style.display = forgot ? '' : 'none';
   }
 
   var DepotAuth = {
     openModal: function(){ setMsg(''); mode='login'; reflectMode(); $('authOverlay').classList.add('open'); var e=$('authEmailInput'); if(e) e.focus(); },
     closeModal: function(){ $('authOverlay').classList.remove('open'); },
+    forgotMode: function(){ mode='forgot'; setMsg(''); reflectMode(); var e=$('authEmailInput'); if(e){ try{ e.focus(); }catch(_e){} } },
+    backToLogin: function(){ mode='login'; setMsg(''); reflectMode(); },
+    /* [auth recovery] called off the PASSWORD_RECOVERY auth event: the visitor
+       arrived from the reset email and holds a live recovery session. */
+    recoveryMode: function(){ mode='reset'; setMsg(''); reflectMode(); $('authOverlay').classList.add('open'); var p=$('authPassInput'); if(p){ p.value=''; try{ p.focus(); }catch(_e){} } },
     toggleMode: function(){ mode = (mode==='login') ? 'signup' : 'login'; setMsg(''); reflectMode();
       /* fix/signup-flow: switching INTO sign-up wipes whatever the browser autofilled.
          One #authEmailInput / #authPassInput pair serves BOTH modes, so Chrome drops the
@@ -888,10 +912,27 @@ body{padding:0 !important;}
     submit: async function(){
       var email = ($('authEmailInput').value||'').trim();
       var pass = $('authPassInput').value||'';
-      if(!email || !pass){ setMsg('Enter email and password.', 'err'); return; }
+      if(mode==='forgot'){ if(!email){ setMsg('Enter your email.', 'err'); return; } }
+      else if(mode==='reset'){ if(!pass){ setMsg('Enter a new password.', 'err'); return; } }
+      else if(!email || !pass){ setMsg('Enter email and password.', 'err'); return; }
       setMsg('Working...'); $('authSubmitBtn').disabled = true;
       try{
         var res;
+        if(mode==='forgot'){
+          /* [auth recovery] redirect back to THIS origin+path; index owns the
+             set-new-password modal. Supabase answers OK whether or not the address
+             exists, so the copy must not promise a mail is coming. */
+          var fr2 = await sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin + location.pathname });
+          if(fr2.error){ console.warn('[DepotAuth] resetPasswordForEmail refused: status=' + (fr2.error.status||'?') + ' msg=' + (fr2.error.message||'')); setMsg(fr2.error.message || 'Could not send the reset link. Please try again.', 'err'); }
+          else { setMsg('If that address has an account, a reset link is on its way. Check your email.', 'ok'); }
+          return;
+        }
+        if(mode==='reset'){
+          var up = await sb.auth.updateUser({ password: pass });
+          if(up.error){ console.warn('[DepotAuth] updateUser(password) refused: status=' + (up.error.status||'?') + ' msg=' + (up.error.message||'')); setMsg(up.error.message || 'Could not set the new password. Please try again.', 'err'); }
+          else { (window.depotLog||function(){})('[DepotAuth] password updated off the recovery session'); setMsg('Password updated - you are signed in.', 'ok'); setTimeout(DepotAuth.closeModal, 1200); }
+          return;
+        }
         if(mode==='signup'){
           /* fix/signup-flow: emailRedirectTo was ABSENT, so every confirmation and
              recovery link fell back to the project Site URL (now https://thedepot.cards
@@ -950,6 +991,12 @@ body{padding:0 !important;}
   // NOTE: Phase 1 does NOT gate the card UI. Cards still load/save via localStorage, untouched.
   sb.auth.onAuthStateChange(function(event, session){
     console.log('[DepotAuth] onAuthStateChange:', event);
+    if(event === 'PASSWORD_RECOVERY'){
+      /* [auth recovery] the visitor arrived off the reset email; open the modal
+         in set-new-password mode against the live recovery session. */
+      (window.depotLog||function(){})('[DepotAuth] PASSWORD_RECOVERY -> set-new-password modal');
+      try{ DepotAuth.recoveryMode(); }catch(e){ console.warn('[DepotAuth] recoveryMode failed:', e && e.message); }
+    }
     renderSession(session);
   });
   // Initial auth chrome render: run exactly once, AFTER the auth-area DOM exists.
