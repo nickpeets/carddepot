@@ -1,8 +1,28 @@
--- MIGRATION_vs_mode.sql - VS MODE v1 (friendly stakes). QUEUED, NOT EXECUTED.
+-- MIGRATION_vs_mode.sql - VS MODE v1 (friendly stakes). *** THIS FILE HAS RUN. ***
 --
--- Nothing in this file has been run. The client (js/depot-vs.js + vs.html) is
--- dark-safe against every object below: if the table is absent the settlement
--- logs why and moves no coins, and the VS surface still lists and plays matches.
+-- STATUS CORRECTED 2026-08-11. This header said QUEUED, NOT EXECUTED for weeks
+-- while every object below existed in production. It cost a session: an agent
+-- read it, believed match_settlements was hypothetical, and reasoned from the
+-- file instead of from the database. Verified in the Supabase dashboard on
+-- 2026-08-11 -- Database > Indexes shows match_settlements_pkey on
+-- (match_id, owner_id), and Database > Policies shows RLS enabled with exactly
+-- match_settlements_insert_own and match_settlements_select_own. The table
+-- holds 17 rows. It ran.
+--
+-- TREAT THIS FILE AS A RECORD OF WHAT WAS BUILT, NOT AS A PLAN. Where it and
+-- production disagree, production wins. One known divergence already exists
+-- elsewhere: the deployed depot_apply_payout reads 'balance = balance + p_amount'
+-- where MIGRATION_roles.sql reads 'coalesce(balance,0) + p_amount'. Read the
+-- stored definition before trusting any body in db/proposals/.
+--
+-- The DEFERRED block at the foot of this file is still genuinely deferred:
+-- public.depot_settle_match() does NOT exist in production. Confirmed against
+-- the full function list on 2026-08-11. See docs/SETTLEMENT_MODEL.md and
+-- docs/GRANT_AUTHORITY.md.
+--
+-- The client (js/depot-vs.js + vs.html) is dark-safe against every object below:
+-- if the table is absent the settlement logs why and moves no coins, and the VS
+-- surface still lists and plays matches.
 --
 -- WHY THE KEY IS (match_id, owner_id) AND NOT match_id ALONE.
 -- AGENTS.md 4, the canonical incident: the unique key must sit at the
