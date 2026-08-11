@@ -10,6 +10,22 @@ Read this first, every session. It encodes hard-won rules from real incidents in
 - Concretely: check the default branch HEAD and the file tree (GitHub API `/git/trees/main?recursive=1`), and read the raw file(s) you intend to change from `raw.githubusercontent.com` on `main` before editing. Diff your assumptions against reality and adjust.
 - If the summary and reality disagree, believe reality and note the discrepancy in your report.
 
+### 0.1 A blocked path is not an unreachable resource (added 2026-08-11)
+
+**Before declaring a resource unavailable, enumerate the other paths to it.**
+
+The incident: the Supabase SQL editor would not hydrate. An agent retried it fifteen times across three tabs and two reload strategies over forty minutes, then routed the entire database queue to a different agent as unreachable. The database was reachable the whole time. Nick's browser was signed in to thedepot.cards, every page on the site carries an authenticated Supabase client, and `depotSB()` from the page console runs RLS-scoped `SELECT`s and RPCs as the signed-in user. Every number that had been "tallied by eye from the Table Editor" was confirmed by real group-by within two minutes of someone thinking of it.
+
+Worse, the same session had *already been using* three other paths to the same database — Database > Functions, Database > Indexes, Database > Policies and the Table Editor all loaded fine and returned data. The evidence that only one bundle was broken was on screen and went unread as evidence.
+
+The rule, concretely:
+
+1. When a path fails twice, stop retrying and **list the paths**. For this project's database that list is: the SQL editor; the Table Editor; the Database > * metadata pages; `depotSB()` from any signed-in page on the live site; and psql from a codespace.
+2. Ask which of them the failure actually rules out. "The editor bundle will not load" rules out one client, not the resource.
+3. Only escalate or hand off once the list is exhausted, and say which paths were tried when you do.
+
+The generalisation beyond the database: a broken tool, a stale credential, a rate limit and a missing permission all present identically as "cannot do the thing." They have different path-lists. Enumerate before concluding.
+
 ---
 
 ## 1. Git rules
