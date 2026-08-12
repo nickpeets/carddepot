@@ -437,36 +437,58 @@ file as a result — from an observed DOM node rather than from the code that
 emits it. The sentence above stays, because it is true. This subsection exists so
 that it is not misread a third time.
 
-Searched every `.js` and `.html` file on `main`, excluding `mockups/`, for the
-render sites. **There are three printers, in two files:**
+**CORRECTED 2026-08-12, same day, and how it was wrong is the point.** The first
+version of this subsection said "three printers, in two files" and called
+`nameOf()` "the only path through this view". Both were wrong. The search behind
+them looked for the class names of the two sites already known, plus `nameOf`;
+it did not enumerate every place a player string is written into markup. **What
+was checked got reported as what was concluded** — which is the exact failure
+this repo's documents keep correcting, committed an hour after writing a
+subsection about misreading a list.
 
-| # | file | site | what it prints |
+**It was caught by trying to live-verify the fix.** Expanding a real Pack
+History row on the live site printed `Yonathan Daza SP, VARVAR: Running` back
+out of the DOM — from inside the very file that had just been fixed.
+Verification found it. Reading did not, twice.
+
+Re-measured by searching every `.js` and `.html` on `main` — excluding
+`mockups/` and `design/` — for `.player` and `.name` in a markup-emitting
+context. **At least six printers across four files:**
+
+| # | file | site | status |
 |---|---|---|---|
-| 1 | `js/depot-shop-view.js` | `nameOf()` | the rip and shop reveal — the only path through this view |
-| 2 | `index.html` | `dcTileHTML` | the binder tile — `'<div class="rd-tile__name">'+dcEsc(c.name)+'</div>'` |
-| 3 | `index.html` | `openSpot` | the detail headline — `<div class="spot-name">${c.name}</div>` into `#spotMeta`'s innerHTML |
+| 1 | `js/depot-shop-view.js` | `nameOf()` — the rip and shop reveal | **done** — `e1ca2d1`, refactored in `68daa3e` |
+| 2 | `js/depot-shop-view.js` | Pack History card list, `.dpc-hist-cardname` | **done** — `68daa3e` |
+| 3 | `index.html` | `dcTileHTML` — the binder tile | open |
+| 4 | `index.html` | `openSpot` — the detail headline | open, and unescaped: `GRANT_AUTHORITY.md` section 12 |
+| 5 | `game/builder.html` | **twelve** sites — lineup tiles, `.ctile-ph`, `.nm`, `.who`, `.sp-ph`, and `alt` text | open, and on no previous list |
+| 6 | `game/index.html` | one site | open, and on no previous list |
 
-**Struck as printers:** `depot-card-detail-2b.js`, `depot-pixel-card.js` and
-`depot-binder-browse.js`. The first is a decorator — injected styles, prestige
-relocation, the grade stepper — and its own comment says so: *"name already
-emitted by openSpot as `.spot-name`"*. None of the three contains
-`rd-tile__name` or `spot-name`, and none of them prints a card name at all.
+`js/depot-shop-view.js` now has **one** definition of "print a player name" —
+`cleanNm()`, module-level, next to `esc()`. The guard that `e1ca2d1` inlined
+inside `nameOf` was removed rather than copied: a second definition is a second
+thing to drift, which is the argument section 4 already makes about the box
+roller.
 
-**Status.** Site 1 is **done**: `e1ca2d1` routes `nameOf()` through
-`depotCleanName` with the house-style guard and a fail-loud fallback if the
-cleaner ever returns empty. Sites 2 and 3 are both in `index.html` — a 196 KB
-shell that carries the Supabase constants — and want a surgical edit rather than
-a whole-file replacement. They belong to the same agent and the same session as
-the restamp.
+**The lineup builder is the surface this keeps missing, and it is the worst
+one.** `game/builder.html` prints a player's name twelve times over — it is the
+screen where a name is most repeated and most load-bearing, and it appears
+neither in section 5's four files nor in the first version of this table.
 
-**And nothing changes on screen until the restamp lands.** The cache-bust tags
-sit behind the deployed build and GitHub Pages caches `js`, so a corrected
-bundle ships as bytes no browser fetches. `e1ca2d1` is correct and invisible,
-and it cannot be live-verified past the deployed file itself.
+**Struck as printers:** `depot-card-detail-2b.js` (a decorator — its own comment
+reads *"name already emitted by openSpot as `.spot-name`"*),
+`depot-pixel-card.js`, and `depot-binder-browse.js`. None prints a card name.
 
-**`depotCleanName` is present on both surfaces.** `game/shop.html` and
-`index.html` both load `js/depot-position.js`, so the guard is a real call on
-either page rather than a silent fallback to `trim()`.
+**`depotCleanName` is present where the fix has landed.** `game/shop.html` and
+`index.html` both load `js/depot-position.js`. **It is NOT loaded by
+`game/builder.html` or `game/index.html`** — measured — so sites 5 and 6 need
+the script include added before the guard would be anything but a `trim()`
+fallback.
+
+**Still unproven:** the re-measure is a regex for `.player` / `.name` near
+markup tokens. A site that assembles a name through a variable, a helper, or a
+different property would still not appear. Treat six as a floor, not a count —
+the same way 471 is a floor in `PULL_POLICY.md` 1.3.2.
 
 ---
 
