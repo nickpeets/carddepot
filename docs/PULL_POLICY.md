@@ -21,13 +21,16 @@ happens.
 
 ---
 
-## 1. Eligibility — the whole library, minus anything without art
+## 1. Eligibility — two gates: art, and playability
 
 ### The rule
 
-**If it cannot be shown, it cannot be pulled.** This is not a new rule invented
-here. It is the design constitution's Rule 1 — no image, no entry — applied to
-the roll, and it is ~~already the shipped behaviour~~ **implemented in the
+**Two gates, both at the same point in the pipeline: a card must have an image
+AND be playable to be pullable.** Neither is new policy invented by this
+document; both are Nick's rules, recorded here as decided.
+
+**Gate 1 — if it cannot be shown, it cannot be pulled.** The design
+constitution's Rule 1, no image no entry, applied to the roll. It is ~~already the shipped behaviour~~ **implemented in the
 shipped client but NOT IN FORCE IN PRODUCTION as of 2026-08-12. See 1.1.**
 
 `js/depot-shop.js` carries it under the heading *"Task D — ART GATE ON THE ROLL
@@ -81,40 +84,133 @@ examples — `RECORD DRIFT` and the trigger's `raise warning`. Both of those rep
 void. A detector nobody reads is bad; a *guard* that disables itself and reports
 it to nobody is worse, and the distinction belongs in the pattern.
 
-### 1.2 Open question for the server-side roll: fail open, or fail closed?
+### 1.2 ~~Open question~~ DECIDED 2026-08-12: fail closed
 
-**This is a product decision and it is Nick's, not the build agent's.** It is
-recorded here because the server roll cannot be written without answering it.
+**Nick has ruled. If a card has no image it is not sold.** An unavailable art
+index means packs do not open and the starter box does not fire, and the player
+sees a real error rather than a silent fallback. This supersedes the fail-open
+behaviour described in 1.1, which stays on the page as a description of what
+shipped, not of what is wanted.
 
-Client-side, fail-open is right: a missing image is a blemish, a dead shop is an
-outage, and the worst case is one ugly card.
+The reasoning, kept because the trade is real. Client-side, fail-open was
+defensible: a missing image is a blemish, a dead shop is an outage, and the worst
+case is one ugly card. Server-side it inverts. The server is the thing that is
+supposed to be authoritative — that is the entire point of moving the roll — and
+a server that quietly grants art-less cards when its index is unavailable is not
+authoritative, it is just a slower client.
 
-Server-side the calculus changes. The server is the thing that is supposed to be
-authoritative — that is the entire point of moving the roll — and a server that
-quietly grants art-less cards when its index is unavailable is not authoritative,
-it is just a slower client. The alternative is to **fail closed**: refuse the
-pull, surface a real error to the player, and let the shop be briefly broken
-rather than briefly wrong.
+**The accepted cost, stated plainly because it was chosen and not overlooked:
+the art index is now a hard dependency of the shop.** That is precisely the
+coupling the original fail-open comment was written to avoid. Nick took the other
+side of that trade deliberately, and anybody who later finds the shop down
+because an index would not load should read this paragraph before "fixing" it by
+reintroducing the fallback.
 
-The recommendation from here is fail closed, with the caveat that it makes the
-art index a hard dependency of the money path, which is exactly the kind of
-coupling the fail-open comment was written to avoid. Whoever decides should
-decide it knowingly.
+**Display is unaffected.** This rule governs **selling**, not **rendering**. A
+card already in somebody's binder shows whatever it can, index or no index. The
+gate is on the pull, not on the paint.
 
-**The case that should decide it.** The starter box rolls from this same pool,
-and it is **once per account, permanently** — a PRIMARY KEY on
-`starter_box_grants.owner_id`, not a check. So if the art index fails open during
-a starter box roll, **a brand-new player's twenty-five-card welcome arrives full
-of blank cards, and it cannot be re-rolled.** The box is claimed.
+**The case that decided it.** The starter box rolls from this same pool, and it
+is **once per account, permanently** — a PRIMARY KEY on
+`starter_box_grants.owner_id`, not a check. Under fail-open, an index outage
+during a starter box roll delivers **a brand-new player's twenty-five-card
+welcome full of blank cards, and it cannot be re-rolled.** The box is claimed.
+One art-less card in a five-card rip is a blemish. Twenty-five handed to a
+stranger as their introduction is the product failing to make a first impression
+at all — irreversibly, on the one account where the first impression is the whole
+game. See `docs/ONBOARDING_PATH_SPEC.md` section 4.
 
-That is fail-open at its worst, and it is worth holding in mind while answering
-the general question. One art-less card in a five-card rip is a blemish.
-Twenty-five handed to a stranger as their introduction to the product is the
-product failing to make a first impression at all — irreversibly, on the one
-account where the first impression is the whole game. See
-`docs/ONBOARDING_PATH_SPEC.md` section 4, which requires that path to fail closed
-regardless of how this general question is answered.
+**Consequence: diagnosing the live art-index failure is now a dependency, not a
+curiosity.** Under the old behaviour, the failure observed in 1.1 produced a
+degraded pool. Under this rule the same failure produces **a dead shop** — no
+packs, no starter box, for as long as it lasts. It moves from a quality problem
+to an availability one and it should be scheduled accordingly. The 8-lane versus
+4-lane observation in 1.1 is where to start; it wants a repro loop rather than a
+browser session, and it belongs to the codespace agent.
 
+### 1.3 Gate 2 — card playability (DECIDED 2026-08-12)
+
+**Nick's rule: only cards that can fill a lineup belong in a pack.** Two-player
+cards, team cards and checklists do not work with the game, so they do not come
+out of packs.
+
+This introduces a concept the system does not currently have anywhere — not in
+the schema, not in the client:
+
+> **A card is PLAYABLE if it depicts exactly one player who can occupy a roster
+> position.** Multi-player cards, team cards and checklists are **collectible but
+> not playable.**
+
+**Scope: everywhere, not just the starter box.** This was the open sub-question
+and it is answered. Playability gates the whole pull pool, so the box needs no
+special-case filter — it inherits the pool rule like every other path. Two gates,
+one place in the pipeline, applied once before `rollPack`, `rollFree` or any
+starter box roll sees the catalog.
+
+**What this does NOT do.** Excluded cards stay in the catalog and stay
+renderable. A card somebody already owns still displays, still sits in the
+binder, still counts. This gate governs **pulling**, exactly as gate 1 governs
+**selling**. Nothing is taken away from anyone.
+
+### 1.3.1 What it costs, measured
+
+Measured against the art-backed pool of **84,452** rows on 2026-08-12. The
+planner's working estimate was ~3,300; the real number depends on how wide the
+predicate is drawn, so all three are recorded rather than one:
+
+| predicate | rows excluded | % of pool |
+|---|---:|---:|
+| slash (multi-player) or the words Checklist / Team Card / Leaders / Highlights, or blank | 3,048 | 3.61% |
+| …plus the hobby codes `TC`, `CL`, `LL` | 4,313 | 5.11% |
+| …plus `MGR` | **4,784** | **5.66%** |
+
+Disjointly, so the overlap is visible rather than double-counted: 1,723
+multi-player only, 1,949 non-player-subject only, **610 that are both**, 471
+manager-only, 31 blank.
+
+The 610 overlap is why subtracting two earlier figures gave the wrong answer —
+strings like `Texas Rangers / Pat Corrales TC, MGR, CL` are a team card *and* a
+slash card *and* a manager, and they are one row.
+
+### 1.3.2 Two things the rule does not settle, flagged rather than decided
+
+**Managers.** Nick's rule says *one player who can occupy a roster position*. A
+manager is not a player and cannot take the field, so `MGR` cards read as
+excluded — that is the 471 rows and the difference between 5.11% and 5.66%. But
+the rule was written about two-player cards and checklists, and nobody has said
+"and managers" out loud. It is a product call, not a technical one.
+
+**4,382 rows are single-player names with no position data at all** — 5.19% of
+the pool, on top of the exclusions above. They pass the *card* test and fail the
+*roster* test, for a data reason rather than a card reason:
+`data/player_positions.json` has 18,930 entries and these are not among them.
+Observed examples: `Dave Palmer`, `Mike LaCoss`, `Buddy Solomon` — and
+`Tony La Russa` and `Jim Frey`, who are managers whose strings never carried the
+`MGR` code, which means the manager count above is understated by an unknown
+amount.
+
+If playability is enforced strictly as "resolves to a roster position", the pool
+loses **9,166** rows rather than 4,784 — about 10.9% — and it becomes hostage to
+the completeness of a static JSON file. If it is enforced structurally, as "not a
+multi-player card, team card or checklist", the pool loses 5.66% and some
+unplaceable players stay pullable. **That is a decision, and it is not this
+document's to make.**
+
+### 1.3.3 Where the verdict would live
+
+Detection is nearly free. `window.depotCleanName`'s slash-split already
+identifies multi-player strings, and the non-player subjects are a short pattern
+list. **What does not exist is anywhere to store the answer.** No column on any
+table says whether a card is playable, and the catalog is a set of static JSON
+files.
+
+Whether playability is computed at roll time or materialised into a column
+alongside the card universe (§1's blocking dependency) is an **implementation
+question for whoever builds the server roll.** It is flagged here, deliberately
+not decided. The one thing worth saying is that both gates want the same answer
+in the same place: if a `catalog_key`-keyed table lands in Postgres to carry
+player names, it is the obvious home for an `is_playable` verdict too, and
+computing it twice would be the mistake.
 
 ### Where the eligible set lives
 
@@ -254,17 +350,23 @@ The free pack does **not** use the weighted draw. It is **band-first**: pick the
 band from a literal table, then pick a card inside that band. `FREE_BAND_ODDS`
 in `depot-pack-engine.js`:
 
-| band | shipped p | proposed rebalance |
+| band | shipped p | proposed rebalance — **DECLINED FOR NOW** |
 |---|---:|---:|
-| plain (common) | **0.90** | 0.70 |
-| bronze | **0.08** | 0.22 |
-| silver | **0.015** | 0.07 |
-| gold | **0.005** | 0.01 |
+| plain (common) | **0.90** | ~~0.70~~ |
+| bronze | **0.08** | ~~0.22~~ |
+| silver | **0.015** | ~~0.07~~ |
+| gold | **0.005** | ~~0.01~~ |
 
-The left column is what is live today. The right column is a **proposed
-rebalance, not the spec** — recorded here so the diff is visible and the change
-is Nick's to take or leave. It makes the daily rip roughly four times more
-likely to produce something above common.
+**DECIDED 2026-08-12: the shipped values stand.** 90 plain / 8 bronze / 1.5
+silver / 0.5 gold is the spec. The right-hand column was a proposal to make the
+daily rip roughly four times more likely to produce something above common; Nick
+declined it for now.
+
+It stays on the page **struck rather than deleted**, for two reasons: so nobody
+relitigates it from scratch in six months, and so nobody skim-reading a table of
+numbers mistakes a proposal for the spec. If it is ever revisited, the thing to
+revisit is not the numbers but the question they encode — how often should a free
+daily card be worth telling someone about.
 
 The shape is already correct and worth protecting: **the free pack can produce
 anything, just rarely.** A daily rip with no ceiling is why someone comes back.
