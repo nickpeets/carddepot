@@ -100,7 +100,9 @@ One commit, scripted, one diff to review. Do not hand-edit.
 2. `sed -i 's/?v=[a-f0-9]\{7\}/?v=<TARGET>/g'` across the seven files in the table above. Nothing else in the repo carries a `?v=` tag that should move — verify with `git ls-files '*.html' | xargs grep -c '?v='` before and after.
 3. Bump `var BUILD='...'` in `js/version.js` to the same SHA.
 4. Re-run the census and put the real per-file numbers in the commit message. If the total is not 91, something else changed and the diff needs reading before it lands.
-5. Correct AGENTS.md section 6 in the same commit or the one after.
+5. ~~Correct AGENTS.md section 6.~~ **Already done** by another author — see §1A. Do not redo it.
+
+**Scope note, because it has already been got wrong once.** "marketplace.html is the only anomalous file" and "marketplace.html is the only file to change" are different claims. Stamping it alone leaves three distinct values live — five files on f11c871, `vs.html` on cd73b68, and marketplace on whatever is current. **No single-file edit can satisfy the acceptance check, by construction.** §1B changed the diagnosis; it did not shrink the fix. All seven plus `js/version.js`, one SHA, one commit.
 
 Acceptance: `grep -o '?v=[a-f0-9]\{7\}' <each file> | sort -u` returns exactly one value, the same value, in all seven files, and `js/version.js` agrees with it.
 
