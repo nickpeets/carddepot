@@ -92,10 +92,10 @@ target:   depot_claim_free_pack()               -- "I would like my daily pack"
 
 What the server needs in order to roll:
 
-1. **An eligible-card source.** `card_library` and `card_library_manifest` already exist and are already the catalogue. Whether every row in them is pull-eligible is a product question, not a technical one — see section 6.
+1. **An eligible-card source.** ~~`card_library` and `card_library_manifest` already exist and are already the catalogue.~~ **Corrected 2026-08-12, and this is the item that blocks the build.** `card_library` is the **art index**, not the card universe: its columns are `catalog_key, side, object_path, is_canonical, status, contributor, created_at` and it carries no player name, no team, nothing the prestige model scores on. `card_library_manifest` is an **ingest log** for the art import pipeline — `id, source_zip, source_file, catalog_key, side, object_path, status, reason, created_at` — not a catalogue either. The actual card universe is the static `data/cards-YYYY.json` files, year span from `data/index.json`. **So the server cannot roll from `card_library` alone — there are no names in it.** A card universe in Postgres, keyed on `catalog_key`, is a prerequisite for everything else in this section and it should be scoped before anyone commits to a date. Which rows are *eligible* is settled — see `docs/PULL_POLICY.md` section 1 — but eligibility is a filter, and a filter needs something to filter.
 2. **A rarity or band model.** The system already has the vocabulary: `p_tier` on purchases, a `tier` field on the free pack, and an `excluded_from_pull_band_bump` flag written into `starter_box` ledger metadata. Something already thinks in bands. Whatever that model is, it has to move out of the client and into the function.
 3. **A seed, generated server-side and recorded.** `depot_claim_starter_box` already takes `p_seed` from the client and stores it. Keep the storing; move the generating. A seed the client chose is not evidence of anything. A seed the server chose and wrote down is a reproducible record of a real event.
-4. **A roll record.** One row per pull, carrying the seed, the band, the resulting card ids and the time. This is the thing pack history reads. It does not exist today, which is precisely why pack history is fabricated.
+4. **A roll record.** One row per pull, carrying the seed, the band, the resulting card ids and the time. This is the thing pack history reads. ~~It does not exist today, which is precisely why pack history is fabricated.~~ **Corrected 2026-08-12: the table exists.** `public.pack_grants` — `owner_id, collection_id, pack_seed, tier, card_count`, unique on `(collection_id, pack_seed)` — and the client already writes it grant-row-first, treating 23505 as a clean no-op, the same discipline `match_settlements` uses. V2 moves its **writer** from the client to the server; it does not need a new table. Pack history is fabricated for a different reason than assumed: it reads `localStorage`, not the database, and the free path writes no `pack_grants` row at all. See `docs/PULL_POLICY.md` section 4.
 
 ---
 
@@ -107,15 +107,20 @@ Worth stating explicitly in the build order: **do not schedule a pack-history fi
 
 ---
 
-## 6. What is NICK'S CALL, not the build agent's
+## 6. ~~What is NICK'S CALL, not the build agent's~~ — ANSWERED 2026-08-12
 
-Three product decisions are load-bearing here and none of them belong to whoever writes the SQL.
+**These three are decided. The spec is `docs/PULL_POLICY.md`.** This section is
+kept for the reasoning, not the status; nothing here is still open.
 
-**Which cards are pull-eligible.** `card_library` is a catalogue, not a drop table. Some of it is presumably too good to hand out daily. Somebody has to say where the line is, and until they do, the roll has no domain.
+Three product decisions were load-bearing here and none of them belonged to whoever writes the SQL. All three now have answers, and one of them came out better than the recommendation this section originally made.
 
-**What the odds are.** A distribution is a design decision with an economy attached. The current answer is whatever the client felt like, which is not a distribution, so there is nothing to preserve or migrate from.
+**~~Which cards are pull-eligible.~~ ANSWERED: the whole library, minus anything without art.** `PULL_POLICY.md` section 1. It is not a curated list and it never should be — a curated list is a second thing to maintain that goes stale the day the library grows. The predicate is `card_library where side = 'front' and status = 'active'`, measured at 89,898 of 179,767 rows on 2026-08-12, and it is already the shipped client behaviour under the "ART GATE ON THE ROLL POOL" heading in `js/depot-shop.js`. If it cannot be shown, it cannot be pulled.
 
-**What happens to cards already granted under the old regime.** Every card with `source = 'pack'` or `source = 'starter'` in `public.cards` today was chosen by a client. Most were almost certainly chosen honestly, by the app's own UI doing a fair local roll. But none of them can be *shown* to have been, and V2 wants cards to be wagerable. Three options: leave them and accept that pre-cutover provenance is unverifiable; flag them with a `provenance` column so the difference is visible; or re-roll them, which destroys collections people care about. **This is Nick's call, and the recommendation from here is the middle one** — a flag is honest, cheap, and takes nothing away from anyone.
+**~~What the odds are.~~ ANSWERED: the model is the spec, and it already exists.** `PULL_POLICY.md` section 2. The claim above — "the current answer is whatever the client felt like, which is not a distribution" — was wrong, and it is worth correcting rather than deleting. There is a real distribution: era weights per tier, star bias, prestige bands at 60/30/10, and a bounded 40-try hit-slot re-roll. The published odds on the pack tiles are **generated from it** at 8,000 samples, so there is a great deal to preserve and the migration target is "reproduce this server-side", not "invent one".
+
+**~~What happens to cards already granted under the old regime.~~ ANSWERED: nothing happens to them, and no `provenance` column is needed.** `PULL_POLICY.md` section 4. This section recommended the middle option — flag them with a new column. **That recommendation is superseded by a cheaper one.** Once the server rolls and every pull writes a `pack_grants` row, the *absence* of a roll record is itself the flag, and it costs no migration and no schema change. Nothing in anyone's binder changes: no re-roll, no badge, no visible difference.
+
+The one caveat, measured rather than assumed: the absence is not a reliable flag **yet**. A free pull performed on 2026-08-12 wrote no `pack_grants` row, so absence today means "pre-V2 **or** a free pull". Two cheap fixes make it clean — the free path must write a grant row too, and the roll must stamp `cards.pack_seed` and `cards.catalog_key`, both of which exist and are both NULL today.
 
 ---
 
