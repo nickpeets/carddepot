@@ -170,6 +170,25 @@ number used* — and it is worse here for two reasons: there is no single
 substitute to point at, and the substitute is a named character rather than a
 stated average.
 
+**The size of it, measured.** The two house pitchers, read out of `game/sim.js`,
+against the batter side's league-average constant `LG`:
+
+| | BB | K | HR | 2B | 3B | 1B | ERA shown |
+|---|---:|---:|---:|---:|---:|---:|---|
+| `P SANCHEZ (R)` | .075 | **.190** | **.020** | .040 | .004 | .140 | 2.14 |
+| `D DANTE (L)` | .090 | .155 | .028 | .047 | .005 | .150 | 3.02 |
+| `LG` (the batter-side average) | .085 | .150 | .025 | .045 | .005 | .150 | — |
+
+`P SANCHEZ` is **clearly better than league average** — a quarter more
+strikeouts, a fifth fewer home runs, fewer walks. `D DANTE` is close to average
+and slightly worse on the long ball.
+
+**So the substitution is not neutral, and which substitute you get does not
+depend on the card.** An unresolved pitcher inherits whichever house arm belongs
+to the team slot he was placed in. The same card is a good pitcher on one side of
+the matchup and an average one on the other, and neither is the player printed on
+it.
+
 **Not observed.** Read from `applyDepotTeam`. Nobody has put a pitcher card with
 an ERA and no rates into the pitcher box and watched what got thrown, and the
 house pitcher's actual numbers were not looked up.
