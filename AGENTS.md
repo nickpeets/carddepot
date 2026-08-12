@@ -397,3 +397,53 @@ Rule: any chrome/shell/style work on the game page must go through `js/depot-gam
 > `preview.html` at `4af61d3`. Stamping practice is already ahead of the doc --
 > `25c0bea` stamped all 91 across seven files -- so treat **seven files** as the
 > ritual's scope and this table as the current count.
+>
+> **§6 correction (2026-08-12): the tags are not all on one hash, and this
+> section's two rules cannot both hold.** Counted fresh at `0673b6c`, as the
+> paragraph above instructs. The 91-across-seven figure is right. The unstated
+> assumption underneath it — that they are all stamped the same — is not:
+>
+> | file | tags | stamp |
+> |---|---:|---|
+> | `index.html` | 31 | `f11c871` |
+> | `game/shop.html` | 18 | `f11c871` |
+> | `game/index.html` | 12 | `f11c871` |
+> | `game/builder.html` | 12 | `f11c871` |
+> | `preview.html` | 1 | `f11c871` |
+> | `vs.html` | 9 | `cd73b68` |
+> | `marketplace.html` | 8 | `f920409` |
+> | **total** | **91** | **three hashes** |
+>
+> `js/version.js` BUILD is `cd73b68`. Live on thedepot.cards the same day,
+> `window.DEPOT_BUILD` read `cd73b68` against 31 tags at `f11c871` on the binder.
+>
+> **`marketplace.html` is stranded, and it is `preview.html` happening again.**
+> Its eight tags have sat at `f920409` since 2026-08-10 while everything else
+> moved twice. `cafa045` stamped "74 tags across 5 shells" — exactly the 74 now
+> at `f11c871` — and #243 restamped `vs.html` alone. `marketplace.html` was on
+> neither list. Second file stranded by a hard-coded shell list, which is what
+> the 2026-07-28 correction predicted would keep happening.
+>
+> **The rule conflict.** This section says BUILD is the last **substantive**
+> commit, and separately says never let `?v=` and `version.js` diverge.
+> `68ef43d` (2026-08-11) moved BUILD from `f11c871` to `cd73b68` **alone**, and
+> its message states the reason: the marker was five commits stale and "has been
+> misleading every diagnosis that read it." But `cd73b68` is docs-only, so under
+> the substantive rule it should not have moved the label at all — and under a
+> BUILD-tracks-HEAD practice every docs commit reopens the divergence the other
+> rule bans. The rest of the history is consistent the other way: earlier bumps
+> read "stamp BUILD + all 91 tags to substantive `<sha>`" and moved both
+> together. **`68ef43d` is the outlier, and it was deliberate.**
+>
+> Also from that commit, and not recorded here before: **`DEPOT_BUILD` is not
+> inert.** `js/depot-game-shell.js` composes cache-bust query strings from it at
+> runtime for four assets on the game page, so moving BUILD alone does bust
+> cache — for those four and only those four.
+>
+> **Left open deliberately:** which rule wins. BUILD tracks HEAD and the
+> never-diverge rule narrows to the stamps alone; or BUILD stays substantive and
+> a knowingly stale marker is accepted. Both are defensible, and choosing is not
+> a correction's job. What is **not** open: `marketplace.html` is two days stale
+> on any reading. And any session that read the build marker as "what is live"
+> before `68ef43d` was reading one that was five commits stale, by that commit's
+> own account.
