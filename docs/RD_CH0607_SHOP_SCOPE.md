@@ -98,6 +98,26 @@ cleaner having succeeded.
 This is the same open item as `ONBOARDING_PATH_SPEC.md` section 5's third
 bullet, recorded in both chapters on purpose.
 
+#### Observed on the live binder 2026-08-12, and it sharpens the requirement
+
+Read off the running site, not from source. The binder tile writes the raw
+string into `.rd-tile__name`, and `depot-card-detail-2b.js` prints it as the
+panel headline -- `YONATHAN DAZA SP, VARVAR: RUNNING`, uppercase, the largest
+text on the panel. Full detail in `ONBOARDING_PATH_SPEC.md` 5.1.
+
+The part that lands on this chapter: the binder tile looks clean only because
+`.rd-tile--binder.has-art .rd-tile__name { display: none; }` hides the name
+**when the card has a picture**. The protection is accidental and backwards --
+the string is suppressed where the art already identifies the card, and exposed
+where the name is all there is.
+
+**Section 2's `.prip-noart` fallback is that same case, inside the rip.**
+`fillArt()` paints a tile plus NO IMAGE YET plus a sentence whenever there is no
+live art, which means the reveal's no-art path identifies the card **by name
+alone**. That is the frame where an uncleaned string costs the most, and it is
+the frame the fallback exists to produce. If the cleaning lands in one place
+first, land it there.
+
 ## 3. The single-card ceremony (still used)
 
 `buildReveal()` + `playCeremony()` build `.dsv-reveal-host > .dsv-reveal.band-<b>.ceremony-<b>`
