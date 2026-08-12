@@ -766,8 +766,26 @@
   // PERF: in-memory name->person cache. Two cards of the same player in one load
   // share a single lookup. Stores the in-flight PROMISE so concurrent pool workers
   // don't each fire the same search. Lives for the page session only.
+  /* One definition of the MLB lookup key for this page.
+     depotCleanName comes from js/depot-position.js, included above. It falls back
+     to the RAW STRING when it finds no name token, so cleaning is allowed to be a
+     no-op -- never assume it shortened anything.
+     WHY THIS IS NOT COSMETIC: mlbFindPlayer keys the MLB people search on this
+     value. "Yonathan Daza SP, VARVAR: Running" returns ZERO matches; "Yonathan
+     Daza" returns one. An unresolved card is not blocked from a lineup -- sim.js
+     substitutes league-average rates so the batter stays playable -- so the card
+     silently plays as an average major leaguer while the tile reads .000.
+     See docs/ONBOARDING_PATH_SPEC.md 5.2. Do NOT add a second copy of this guard. */
+  function bldCleanNm(v){
+    var f = (typeof window.depotCleanName === 'function') ? window.depotCleanName : null;
+    if (!f) { console.warn('[depot] builder: depotCleanName unavailable; MLB lookup falls back to the raw name'); return String(v||'').trim(); }
+    var out = f(v);
+    if (!out) { console.warn('[depot] builder: depotCleanName returned empty for "' + v + '"; MLB lookup falls back to the raw name'); return String(v||'').trim(); }
+    return out;
+  }
   var MLB_PLAYER_CACHE={};
-  function mlbFindPlayer(name){
+  function mlbFindPlayer(rawName){
+    var name=bldCleanNm(rawName);
     var key=String(name||'').trim().toLowerCase();
     if(Object.prototype.hasOwnProperty.call(MLB_PLAYER_CACHE,key)) return MLB_PLAYER_CACHE[key];
     var p=(async function(){
@@ -1667,6 +1685,7 @@
 </script>
 <script src="../js/depot-builder-shell.js?v=f11c871"></script>
 <script src="../js/depot-prestige.js?v=f11c871"></script>
+<script src="../js/depot-position.js?v=f11c871"></script>
 <script src="../js/depot-pixel-card.js?v=f11c871"></script>
 <script src="../js/depot-wallet.js?v=f11c871"></script>
 <script>
