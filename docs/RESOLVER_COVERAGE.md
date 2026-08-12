@@ -133,6 +133,25 @@ connected to it.
 
 ---
 
+### 2.5 The two type fixes are different sizes and different owners
+
+Worth separating, because "fix the type filter" sounds like one job:
+
+| fix | size | owner |
+|---|---|---|
+| the **word** — `'pitching'` vs `'pitcher'` | one line | codespace, one-liner |
+| the **pack path writing a type at all** | a column on every granted row | the server-side roll, phase 2 |
+
+The word only helps three cards. **The 119 unmarked rows are the bigger half**,
+and they are the same has-it-versus-doesn't split as stats: the add-a-card flow
+populates `DEPOT_META`, the pack flow does not, and everything downstream assumes
+both do. Same row, same writer, same gap — so it belongs with stats in
+`docs/PULL_POLICY.md` section 4's list of what the roll must start stamping,
+not in a display patch.
+
+
+---
+
 ## 3. ▶ The open question the fix cannot be specced without — NICK'S CALL
 
 **What should a pitcher's numbers mean to the simulated game?**
@@ -167,7 +186,55 @@ Recorded as Nick's, not decided.
 
 ---
 
-## 5. What this document does not know
+## 5. Two findings from the same measurement, recorded here rather than scattered
+
+Neither is about resolver coverage. Both were measured while it was, and both are
+the same drift family, so they are kept together with a pointer rather than filed
+in three places.
+
+### 6.1 Three name cleaners, no shared source
+
+| where | what it is |
+|---|---|
+| `js/depot-position.js` | `window.depotCleanName` — the real one, audited against 47 catalog files |
+| `index.html` | `cleanPlayerName()` — **delegates** to `depotCleanName` when present, with its own fallback |
+| `game/builder.html` | `pickPerson()`'s local `cleanName()` — **does not delegate** |
+
+Three definitions of one idea, three behaviours, no shared source. This is
+`PULL_POLICY.md` 1.3's drift argument — *a second definition is a second thing to
+drift* — **already realised in the codebase rather than predicted.** It is the
+reason `js/depot-shop-view.js`'s `cleanNm()` and `game/builder.html`'s
+`bldCleanNm()` were each written as ONE module-level definition rather than a
+guard inlined per call site.
+
+**Recorded, deliberately not consolidated.** Consolidating three cleaners is a
+multi-file change to working paths and it needs somebody to decide which
+behaviour is the right one first.
+
+### 6.2 Opening a page writes to the database
+
+`game/builder.html`'s GAP2 rookie-year resolver persists `cards.rookie_year` as a
+**side effect of rendering**. Observed on 2026-08-12, in Nick's account, from
+nothing more than loading the builder:
+
+```
+[GAP2] rookie-year set Mookie Wilson RC 1981 => rookie_year 1980  id 124434
+[GAP2] rookie-year set Darin Erstad GG 2005 => rookie_year 1996  id 113889
+[GAP2] rookie-year set Andrew Benintendi R84Front view... 2018 => rookie_year 2016  id 643217
+```
+
+The values are correct and the write is owner-scoped and idempotent — it skips
+rows that already have one. **The finding is not that it is wrong. It is that a
+read surface writes, and nobody knew.** A resolver that persists derived values
+while rendering is a thing that should be deliberate rather than discovered,
+particularly on a page a player opens to look at their cards.
+
+It also means any future rule of the form "this agent may not write to the
+database" is already false in practice for anyone who opens the builder.
+
+---
+
+## 6. What this document does not know
 
 - **It does not prove that a pitcher card renders empty in the pitcher box.** The
   payload branch was read and `era/w/l` traced back to `card.stats`. Nobody put a
