@@ -199,32 +199,49 @@ module does not exist. Build it as:
   product.
 - **Decide the ordering question in section 2.1 before building the ceremony.**
 
-### 2.1 A real product decision: the grant lands before the reveal
+### 2.1 ~~A real product decision~~ DECIDED 2026-08-12: grant first, resumable
 
 Measured on the free pull, 2026-08-12: the card row was already in `cards` while
 the pack was still sealed on screen. The ceremony is decoration over a settled
 fact.
 
-For one free card that is the right trade — nothing is lost, and the player gets
-the card whatever they do.
+**Nick has ruled: cards land immediately, and the ceremony resumes at next login
+if it is interrupted.** The grant is never held hostage to the animation, and
+the moment is never lost.
 
-**For a 25-card welcome it is not obviously right, and it should be decided
-deliberately.** If a new player closes the tab mid-ceremony, they own 25 cards
-they have never seen, **and the box can never be claimed again** — the PRIMARY
-KEY on `owner_id` makes it once-per-account, permanently. There is no re-open.
+Why the question had to be asked at all: if a new player closes the tab
+mid-ceremony under a grant-first-reveal-after design, they own 25 cards they have
+never seen, **and the box can never be claimed again** — the PRIMARY KEY on
+`owner_id` makes it once-per-account, permanently. There is no re-open.
 
-Three options, and this is Nick's call:
+The three options, kept because the reasoning is worth more than the verdict:
 
-| option | consequence |
-|---|---|
-| **Grant first, reveal after** (today's shape) | Simplest, matches the free pack. A player who bounces mid-ceremony silently loses the moment forever, though not the cards. |
-| **Reveal first, grant on completion** | The player always sees what they got. But a crash mid-ceremony means no cards at all, and the money-safety ordering used for paid packs exists precisely because that is worse. |
-| **Grant first, but make the reveal resumable** | The starter box is re-openable as a *ceremony* until the player finishes it, driven off `starter_box_grants.card_ids` in the ledger meta, which is already stored. Costs a flag or a derived check; nothing is ever lost. |
+| option | consequence | |
+|---|---|---|
+| **Grant first, reveal after** (today's shape for the free pack) | Simplest. A player who bounces mid-ceremony silently loses the moment forever, though not the cards. | rejected |
+| **Reveal first, grant on completion** | The player always sees what they got. But a crash mid-ceremony means no cards at all, and the money-safety ordering used for paid packs exists precisely because that is worse. | rejected |
+| **Grant first, reveal resumable** | The box is re-openable as a *ceremony* until the player finishes it. Nothing is ever lost in either direction. | **CHOSEN** |
 
-The recommendation from here is the third. The data to support it — `card_ids` in
-the `wallet_transactions.meta` — is already being written by the deployed
-function, which suggests somebody was thinking about exactly this.
+**Why it is cheap.** The deployed RPC already writes `card_ids` into
+`wallet_transactions.meta` alongside the seed and the count. The data needed to
+replay a reveal is being stored today, by a function that has never run.
+Somebody thought about the mid-ceremony bounce before anyone had hit it.
 
+Implementation notes, not decisions:
+
+1. **"Has the player seen their box?" is a separate question from "has the player
+   claimed their box?"** The second is already answered by
+   `starter_box_grants`. The first needs somewhere to live — a flag, or a
+   derived check, or simply "show the ceremony until they reach the end of it
+   once." Whoever builds it should not overload the grant row to mean both.
+2. **Resume from the ledger, not from a re-roll.** The card ids are recorded;
+   read those rows back and reveal them. Never re-run `rollPayload()` to
+   reconstruct a box that has already been granted — that is the
+   `depot-pack-history.js` re-roll fallback's mistake, and it is labelled as such
+   everywhere it surfaces there.
+3. **Resuming is not re-claiming.** The RPC will return
+   `{already_claimed:true, inserted:0}` and insert nothing, which is correct and
+   should be treated as a normal path rather than an error.
 ---
 
 ## 3. A rename affordance
@@ -254,7 +271,7 @@ Requirements:
 
 ---
 
-## 4. The eligibility dependency, and the worst case in the product
+## 4. The eligibility dependency, and the worst case that decided the rule
 
 **Read this section as a requirement, not a description.** No starter box roller
 exists, so there is no current behaviour to describe. The sentence below —
@@ -263,34 +280,47 @@ section 2 must *make* true. It is stated in the present tense for readability an
 that is exactly how a reader in a hurry could take it for an observation.
 
 The starter box **must roll from the same pool the shop rolls from**, so that it
-inherits every property of `docs/PULL_POLICY.md` section 1 — including the one
-that is currently broken.
+inherits both of `docs/PULL_POLICY.md` section 1's gates:
 
-**The art gate is not in force in production.** `DepotLibraryIndex.load()` was
-observed failing on 2026-08-12, resolving `null`, and the shop fell back to the
-unfiltered 155,844-row catalog instead of the 84,452-row art-backed pool
-(`PULL_POLICY.md` section 1.1). It fails open by design.
+- **Gate 1, art.** A card must have an image to be pullable.
+- **Gate 2, playability.** A card must depict exactly one player who can occupy a
+  roster position. Multi-player cards, team cards and checklists are collectible
+  but not pullable — `PULL_POLICY.md` section 1.3.
+
+**No special-case filter for the box.** This is worth stating because the
+obvious instinct is to write a lineup-legality check into `rollPayload()` — after
+all, the box is position-filled, so it clearly needs playable cards. Do not.
+Playability is a **pool-level** rule now, applied everywhere, and duplicating it
+in the box roller would create a second definition to drift. The box gets legal
+cards because the pool only contains legal cards.
+
+### 4.1 The case that decided fail-closed
+
+**The art gate was not in force in production when this was written.**
+`DepotLibraryIndex.load()` was observed failing on 2026-08-12, resolving `null`,
+and the shop fell back to the unfiltered 155,844-row catalog instead of the
+84,452-row art-backed pool (`PULL_POLICY.md` section 1.1). It failed open by
+design.
 
 **So: if the art index fails open during a starter box roll, a brand-new
-player's twenty-five-card welcome arrives full of blank cards.**
+player's twenty-five-card welcome arrives full of blank cards** — and because of
+the PRIMARY KEY, **it cannot be re-rolled.** The box is claimed.
 
-That is what fail-open means at its worst, and it is the strongest version of the
-argument in `PULL_POLICY.md` section 1.2. One art-less card in a five-card rip is
-a blemish. Twenty-five art-less cards handed to a stranger as their introduction
-to the product is the product failing to make a first impression at all — and
-because of the PRIMARY KEY, **it cannot be re-rolled.** The box is claimed.
+That case is what decided the general question. `PULL_POLICY.md` section 1.2 is
+no longer open: **Nick has ruled fail closed everywhere.** If the art index is
+unavailable, packs do not open and the starter box does not fire, and the player
+sees a real error rather than a silent fallback.
 
-**Requirement: the starter box roll must fail closed.** If the art index is
-unavailable, do not roll, do not call the RPC, and show the player a real message
-saying their welcome box is not ready yet. A delayed welcome is recoverable. A
-claimed one full of blanks is not.
+**Requirement, unchanged and now redundant with the general rule rather than
+narrower than it:** if the art index is unavailable, do not roll, do not call the
+RPC, and show the player a real message saying their welcome box is not ready
+yet. A delayed welcome is recoverable. A claimed one full of blanks is not.
 
-This is stated as a requirement here because it is narrower than the general
-question — `PULL_POLICY.md` section 1.2 asks whether the *server-side roll*
-should fail open or closed and leaves it to Nick. This spec only claims that the
-**once-per-account, permanently-committing** path should fail closed regardless
-of how the general question is answered.
-
+**And a consequence the builder needs to plan for.** Under fail-closed, an index
+outage is no longer a degraded experience — it is **no onboarding at all** for
+anyone who signs up during it. The error state is therefore not a corner case to
+bolt on at the end; it is a state a brand-new player will actually see, and it
+should read like a delay rather than a breakage.
 ---
 
 ## 5. Display invariant: route names through `depotCleanName`
@@ -339,19 +369,25 @@ Measured impact: **2.5%** of the eligible pool carries the doubled-code prose bu
 `depotCleanName` covers both. Worst in junk wax at 2.5% — which is what a Bronze
 pack is weighted toward — and cleanest in vintage at 1.3%.
 
-Two caveats to decide, not to ignore:
+One caveat to decide, and one that Nick's ruling has already settled:
 
-- **Multi-player cards lose the second player.** `Lou Brock / Carl Yastrzemski`
-  renders as `Lou Brock`. That is 2.0% of the pool and a deliberate consequence
-  of splitting on the slash. Decide whether a two-player card shows one name or
-  both.
-- **Non-player subjects render oddly.** `Checklist (1-121)` becomes `Checklist`
-  and a team card becomes `Texas Rangers`. Correct as far as it goes, but a
-  rarity band under the word "Checklist" is its own small absurdity, and a
-  welcome box is a bad place to meet one. Consider excluding non-player subjects
-  from the starter box pool entirely — the 25 slots are position-filled anyway,
-  so a checklist card cannot fill a position and arguably should never have been
-  eligible.
+- ~~**Multi-player cards lose the second player.** `Lou Brock / Carl Yastrzemski`
+  renders as `Lou Brock`. Decide whether a two-player card shows one name or
+  both.~~ **Moot as of 2026-08-12.** Multi-player cards are not playable and
+  therefore not pullable (`PULL_POLICY.md` section 1.3), so no reveal will ever
+  land on one. The question survives only for cards somebody already owns, where
+  the answer is whatever the binder already does — this gate governs pulling, not
+  rendering.
+- ~~**Non-player subjects render oddly.** Consider excluding non-player subjects
+  from the starter box pool entirely.~~ **Decided, and more broadly than
+  suggested.** Checklists and team cards are excluded from the *entire pull
+  pool*, not just the box — `PULL_POLICY.md` section 1.3. So the rarity band
+  under the word "Checklist" is not a thing anyone will meet in a pack.
+- **Still open: what a reveal does with a name that cleans to nothing useful.**
+  `depotCleanName` falls back to the raw string when it cannot find a name token,
+  which is correct — better a messy name than an empty card — but it means the
+  2.5% doubled-code class is covered and any *future* malformation is not. The
+  reveal should not assume the cleaner always succeeds.
 
 ---
 
