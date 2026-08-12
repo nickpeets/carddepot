@@ -15,7 +15,7 @@ Counted at `cd73b68`, re-counted after the vs.html fix. AGENTS.md section 6 says
 | `game/index.html` | 12 | f11c871 | f11c871 |
 | `game/builder.html` | 12 | f11c871 | f11c871 |
 | `vs.html` | 9 | f920409 | **cd73b68** — fixed, PR #243 |
-| `marketplace.html` | 8 | f920409 | f920409 |
+| `marketplace.html` | 8 | f920409 | **cd73b68** — fixed, `e486046` |
 | `preview.html` | 1 | f11c871 | f11c871 |
 | **total** | **91** | | |
 
@@ -113,3 +113,53 @@ Acceptance: `grep -o '?v=[a-f0-9]\{7\}' <each file> | sort -u` returns exactly o
 Seven files is seven single-file GitHub web edits, each with its own dialog and its own chance to swallow a click. Two dialogs failed silently during this session already — once the commit-message keystrokes went into the file body instead. The failure mode is quiet, and the value of the change is low. A scripted commit with one reviewable diff is the right shape for it.
 
 `vs.html` was done by hand as PR #243 because at the time it was believed to have a live consequence. It did not. The diff was verified as exactly 9 additions and 9 deletions before merging, which is the standard the scripted version should also meet.
+---
+
+## 6. UPDATED 2026-08-12 — the job is now FIVE files and 74 tags
+
+`marketplace.html` was restamped by hand in `e486046`: 8 tags, `f920409` ->
+`cd73b68`, verified as 8 occurrences before, 8 after, and zero `f920409`
+remaining. It was done for the same reason `vs.html` was done in #243 — one
+file, one guarded replacement, a diff whose exact shape was known before the
+edit, and a stranding that had already survived two restamps.
+
+**What is left for the codespace agent:**
+
+| file | tags | stamp |
+|---|---:|---|
+| `index.html` | 31 | `f11c871` |
+| `game/shop.html` | 18 | `f11c871` |
+| `game/index.html` | 12 | `f11c871` |
+| `game/builder.html` | 12 | `f11c871` |
+| `preview.html` | 1 | `f11c871` |
+| **total** | **74** | all one hash, the stale one |
+
+`vs.html` (9) and `marketplace.html` (8) are already at `cd73b68`. So the census
+is now **two** values rather than three — 74 stale, 17 current. Section 4's
+scope note warned that stamping `marketplace.html` alone would leave three
+distinct values live; that is answered rather than ignored. It left two, and the
+second is the group `js/version.js` is already on.
+
+**Two corrections to section 4, from the `AGENTS.md` section 6 amendment of the
+same day:**
+
+1. **Step 3 is no longer part of this job.** The amendment separates the two
+   values: BUILD tracks HEAD, and the stamps only have to agree **with each
+   other**. Bumping `js/version.js` in the same commit is still allowed, but it
+   is no longer required, and section 4's acceptance line — "and
+   `js/version.js` agrees with it" — is **superseded**. Acceptance is now: every
+   shell carries one identical value.
+2. **Do not stamp "the seven files in the table above", or the five in the table
+   here.** Stamp whatever the glob returns. Three files have now been stranded
+   by three different hard-coded lists — `preview.html`, `vs.html`,
+   `marketplace.html` — and this document naming five is the same mistake in a
+   smaller size. The correct step 2 is `git ls-files '*.html'`, keep the ones
+   containing a `?v=` tag, stamp all of them, and accept only if every file the
+   glob returned carries one identical value. The table above is a description
+   of today, not the scope.
+
+**And the target is now a choice rather than a lookup.** Because the stamps no
+longer have to match BUILD, the target is only "one value, everywhere." Stamping
+the remaining 74 to `cd73b68` closes the split with the smallest diff. Stamping
+all 91 to a fresh branch tip is equally valid and costs 17 more lines. Either
+satisfies the acceptance check; neither is more correct than the other.
