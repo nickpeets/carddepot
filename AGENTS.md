@@ -43,6 +43,110 @@ Practically:
 
 The companion failure is the same shape from the other direction: on the same day, two GitHub commit dialogs failed to open, and on one of them the commit-message keystrokes went into the file body instead. **Whole-file web edits have quiet failure modes in both directions.** Verify the landed result, always.
 
+### 0.3 Never commit from editor state you did not just write and just measure (added 2026-08-11)
+
+**The GitHub web editor is a hostile surface. Treat its contents as untrusted
+input, not as your own work.**
+
+Two incidents on the same day, at opposite ends of the same failure:
+
+1. **Stale content built in.** An agent constructed a replacement for
+   `docs/GRANT_AUTHORITY.md` using an unguarded `indexOf` anchor. The anchor text
+   was wrong — the file read `"a prior, not a finding"`, the search was for
+   `"not a finding."` — so `indexOf` returned `-1`, `indexOf('\n', -1)` resolved
+   to an early newline, and the slice **doubled the file, 12,925 to 25,272
+   characters.** It was caught only because the length was logged.
+
+2. **Foreign content appearing from nowhere.** A commit dialog on
+   `docs/HANDOFF_DB_QUEUE.md` closed without committing, and the commit-message
+   keystrokes landed in the file body. The editor was then holding exactly 61
+   characters — a commit message — where an 11 KB handoff document had been. One
+   more click would have replaced the document with one sentence, as a clean
+   single-file commit on `main`, and nothing about it would have looked wrong.
+
+Different causes, one shape: **the editor was lying about its contents, and a
+length check was the only thing that caught it.** §0.2 rule 2's anchor assertion
+is a symptom-level fix for the first case and does nothing for the second. This
+is the mechanism-level rule.
+
+### The detection discipline that actually worked
+
+Reproducible, and cheap enough that there is no excuse for skipping it:
+
+1. **Compute the expected delta independently, before opening the editor.** Build
+   the new content somewhere you control, and record `before`, `after`, and
+   `delta` in characters. If you cannot state the expected delta, you are not
+   ready to edit.
+2. **Guard every replacement, not just the first.** An unguarded `indexOf`
+   returning `-1` silently produces a valid-looking index:
+
+   ```js
+   function put(str, anchor, repl){
+     const i = str.indexOf(anchor);
+     if (i < 0) throw new Error('ANCHOR MISS: ' + anchor.slice(0,60));
+     if (str.indexOf(anchor, i+1) > -1) throw new Error('ANCHOR NOT UNIQUE');
+     return str.slice(0,i) + repl + str.slice(i + anchor.length);
+   }
+   ```
+
+3. **Build the content in the page from a fresh fetch, not from editor state and
+   not from memory.** Fetch the file, apply the guarded replacement, then
+   `selectAll` + `insertText` the result. This satisfies §0.2 rule 1 at the
+   moment of writing rather than at the start of the task.
+4. **Verify three ways before opening the commit dialog:**
+   - **character delta** matches the number you computed in step 1, exactly;
+   - **line count** — read the last real line number from the CodeMirror gutter
+     (`.cm-lineNumbers .cm-gutterElement`; ignore the oversized spacer element)
+     and compare it to the expected line count;
+   - **last rendered line** matches the expected last line of the document.
+
+   CodeMirror virtualizes, so `innerText` and `getSelection()` read short. A short
+   readback is **not** a failure signal and must not be treated as one — that is
+   why the three checks above are indirect.
+5. **Set the commit message and description with a native value setter, never by
+   typing.** Typing into that dialog is the corruption mechanism in incident 2:
+
+   ```js
+   const setter = Object.getOwnPropertyDescriptor(
+     window.HTMLInputElement.prototype, 'value').set;
+   setter.call(el, val);
+   el.dispatchEvent(new Event('input', {bubbles:true}));
+   ```
+
+6. **If the editor holds anything you did not just put there, discard it.** Do not
+   repair it. Reload the edit page and start from step 1. Repairing corrupted
+   editor state is how corrupted state gets committed.
+
+### Verify the landed commit from the contents API, not from raw
+
+`raw.githubusercontent.com` served the **pre-commit** body of a file for at least
+a minute after the commit was live and visible in the commits list. Verifying a
+commit from `raw` can therefore show you the old file and tell you nothing.
+
+Use the contents API, which is not behind that cache:
+
+```js
+const j = await (await fetch(
+  'https://api.github.com/repos/<owner>/<repo>/contents/<path>?ref=main')).json();
+const text = decodeURIComponent(escape(atob(j.content.replace(/\n/g,''))));
+```
+
+Then check three things on the landed result: the **additions/deletions counts**
+from the commit API (`deletions: 0` is what "additive" means, per §0.2 rule 3),
+the **character length** against your expected `after`, and an **occurrence count
+of a unique marker** — your new heading, the document H1, and the anchor you
+replaced should each appear exactly once. Duplication is the failure mode that
+looks most like success.
+
+### Two operational notes on this editor
+
+- **Most commits need the "Commit changes…" button clicked twice** before the
+  dialog opens. This is not a diagnosis, it is a documented workaround.
+- **The dialog is not a `<dialog open>` element** — `querySelector('dialog[open]')`
+  returns `null` while it is plainly on screen. Find its fields by id
+  (`#commit-message-input`, `#commit-description-input`) instead of by walking
+  down from a dialog root.
+
 ---
 
 ## 1. Git rules
