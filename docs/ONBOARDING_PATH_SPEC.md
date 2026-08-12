@@ -1,0 +1,379 @@
+# ONBOARDING_PATH_SPEC.md — wiring up the onboarding that already exists
+
+Status: **spec, not implementation.** Written for the codespace agent. Nothing
+here was built by this document; the browser agent that wrote it is limited to
+single-file edits and this is a three-file change at minimum.
+
+Written 2026-08-12, after the first end-to-end observation of the new-player
+path (`docs/FLOW_A_OBSERVED.md`).
+
+---
+
+## 0. The premise, in one paragraph
+
+A brand-new player gets an empty binder, zero coins, a 0-0 record, a team called
+**MY CLUB** they did not name, three packs they cannot afford, and one free card.
+That is the whole first session, and it was measured on a real account, not
+inferred.
+
+It is not because the onboarding is unbuilt. It is because the onboarding is
+built and **not connected to anything.** Three deployed `SECURITY DEFINER`
+functions — careful ones, with advisory locks, 23505 no-ops, and error messages
+that name their own remedies — have **zero callers** anywhere in the repo:
+
+| function | what it does | callers |
+|---|---|---:|
+| `depot_ensure_onboarding(p_team_name text default null)` | creates the collection and franchise if the signup trigger's swallowed exception ate them | **0** |
+| `depot_claim_starter_box(p_cards jsonb, p_seed bigint)` | the 25-card welcome | **0** |
+| `depot_rename_franchise(p_name text)` | the only way to change `'MY CLUB'` | **0** |
+
+Enumerating every `.rpc(` call site across every `.js` and `.html` in the repo
+returns exactly eight, all string literals: `depot_apply_payout` (×2),
+`depot_purchase_pack`, `depot_claim_free_pack`, `depot_is_admin`,
+`share_collection`, `unshare_collection`, `get_shared_collection`,
+`get_shared_cards`. None of the three above appears.
+
+**So this is not a build. It is a wiring job with three call sites, and the
+server half is finished and good.** That is the whole reason this is one spec
+rather than three tickets: they share a moment, they share a session, and they
+would be built together or not at all.
+
+---
+
+## 1. The session-time onboarding hook
+
+### What it is
+
+Something that fires on auth state change, calls `depot_ensure_onboarding`, and
+is safe to call every single time.
+
+### Why it is first
+
+`depot_handle_new_user` — the trigger on `auth.users` — wraps its whole body in
+`exception when others then raise warning`. That is the right call: a failing
+trigger would break signup, and losing a collection row is better than losing the
+account. But it means a user can land in `auth.users` with **no role row, no
+collection and no franchise**, and the only trace is a `raise warning` in a
+Postgres log nobody reads.
+
+With no caller for `depot_ensure_onboarding`, **that account is permanently
+broken.** Every other item in this spec — the starter box, the rename, the shop —
+resolves the caller's collection with
+`select id from public.collections where owner_id = ... order by created_at asc limit 1`
+and raises if there is none. A user without a collection row cannot claim a
+starter box, cannot buy a pack, and cannot claim a free pack. They can sign in
+and do nothing.
+
+The observed account (2026-08-12) came through cleanly, so this has not been seen
+to fire. The point is that if it ever does, there is currently no way back.
+
+### The contract, as deployed
+
+Read off the deployed body, not the migration file.
+
+- `v_owner := auth.uid()`; raises `P0001 'depot_ensure_onboarding: not authenticated'` if null.
+- **Takes an advisory transaction lock** keyed on the owner:
+  `pg_advisory_xact_lock(hashtextextended('depot_onboarding:' || v_owner::text, 0))`.
+  Its own comment says why: *"Serialise concurrent callers for THIS owner only.
+  Two INITIAL_SESSION events in the same millisecond is the documented failure
+  mode."*
+- Creates `'My Collection'` if the owner has none.
+- Creates a franchise with `on conflict (owner_id) do nothing`, then re-reads on
+  a lost race.
+- `p_team_name` is sanitised — `nullif(btrim(coalesce(p_team_name,'')),'')`, then
+  `'MY CLUB'`, then `left(..., 40)` — and **never overwrites an existing name.**
+- Returns
+  `{ok, collection_id, franchise_id, created_collection, created_franchise}`.
+
+**Read that advisory lock as a message from the author.** It only makes sense if
+something calls this on session events. The function was written expecting the
+hook this spec describes. The hook is the missing half.
+
+### Requirements
+
+1. **Fire on auth state change**, not on page load. `INITIAL_SESSION` and
+   `SIGNED_IN` both need to reach it; the advisory lock exists precisely because
+   they can arrive together.
+2. **Idempotent by construction.** The RPC already is. The client must not add
+   its own "have I run this" flag in `localStorage` — that is the
+   read-then-write pattern AGENTS.md section 4 bans, and the server already
+   solves it.
+3. **One place, not per-page.** It belongs wherever the shared shell wires auth,
+   so every surface inherits it. Today `onAuthStateChange` is wired
+   independently in `index.html`, `game/builder.html`, `js/depot-shop-view.js`
+   and `js/depot-index-shell.js` — four call sites, which is exactly the
+   duplication this hook should not join.
+4. **Fail loud, fail harmless.** If the RPC errors, log it through the fail-loud
+   convention and carry on. Onboarding repair failing must never block a page.
+5. **Do not pass `p_team_name` from the hook.** Let the default apply. Naming is
+   section 3's job and the function will not overwrite an existing name anyway.
+
+### Acceptance
+
+Sign up a fresh account, then — separately — delete a test account's
+`collections` row by hand and reload. The row comes back, exactly one row comes
+back, and reloading five times still produces exactly one.
+
+---
+
+## 2. The starter box
+
+### The deployed contract
+
+Read off the deployed body of `depot_claim_starter_box(p_cards jsonb, p_seed
+bigint)` on 2026-08-12, 74 lines. Eye-transcribed from screenshots — the sandbox
+blocks text extraction from that domain — so treat the wording as
+**eyeball-accurate, not byte-accurate**, and re-read before relying on a
+character.
+
+What the server enforces, in order:
+
+1. `auth.uid()` or `P0001 'depot_claim_starter_box: not authenticated'`.
+2. `p_cards` must be a jsonb **array** or `P0001 'p_cards must be a jsonb array'`.
+3. `jsonb_array_length(p_cards)` must be **exactly 25** or
+   `P0001 'expected 25 cards, got %'`.
+4. Resolves the oldest collection; if none,
+   `P0001 'no collection for this account -- run MIGRATION_roles.sql section 2 (depot_ensure_onboarding) first'`.
+   **That error message is section 1's dependency stated by the server itself.**
+5. **GRANT ROW FIRST.** `insert into public.starter_box_grants (owner_id,
+   collection_id, seed, card_count)`. Its comment: *"second claim collides HERE,
+   before a single card exists."* `exception when unique_violation` → a notice
+   and `{ok:false, already_claimed:true, inserted:0}` — **no cards inserted.**
+6. Only then loops `jsonb_array_elements(p_cards)` inserting into `cards (...,
+   source, notes, pack_seed)` with **`source = 'starter'`** and
+   **`pack_seed = p_seed`**, collecting ids.
+7. Writes a 0-amount ledger marker: `wallet_transactions (owner_id, amount,
+   reason, meta)` = `(v_owner, 0, 'starter_box', {seed, card_count, card_ids,
+   excluded_from_pull_band_bump: true})`.
+8. Returns `{ok:true, already_claimed:false, inserted, seed, collection_id, ...}`.
+
+The once-per-account rule is the **PRIMARY KEY on `starter_box_grants.owner_id`**
+— a constraint, never a check.
+
+### The thing the spec must not gloss over
+
+**The server validates the count and nothing else.** It checks that there are 25
+elements. It never checks positions, bands, or art. So *9 fielders / 5 SP / 5 RP
+/ 5 bench* and *one guaranteed bronze-or-better* are **client-side promises with
+zero server enforcement.** This function is `docs/GRANT_AUTHORITY.md`'s thesis in
+its purest form: twenty-five cards named by the client and written down by the
+server.
+
+That is acceptable for v1 on the same reasoning every other grant path uses, and
+it is **not** acceptable once cards can change owner. Whoever moves the roll
+server-side per `docs/PULL_POLICY.md` should move this one at the same time; it
+is the largest single grant in the product.
+
+### Requirements for `window.DepotStarterBox`
+
+The migration documents the intended call site literally:
+`const p = window.DepotStarterBox.rollPayload();   // 25 cards + seed`. That
+module does not exist. Build it as:
+
+1. **`rollPayload()` → `{cards: [25], seed}`**, deterministic in the seed, drawing
+   from **the same eligible pool the shop rolls from** — see section 4.
+2. **Composition: 9 fielders, 5 SP, 5 RP, 5 bench.** Position comes from
+   `js/depot-position.js` and `data/player_positions.json`, keyed by
+   `window.depotNormName`. Resolution order is exact-key, never fuzzy
+   (`js/depot-binder-browse.js` header, STARTER_BOX 4.1 / RUNBOOK 5.1).
+3. **One guaranteed bronze-or-better**, band from `DepotPrestige.compute()`
+   (60+ gold, 30+ silver, 10+ bronze, else plain). Use the same **bounded**
+   re-roll shape `rollPack` uses and return whether the floor was met, rather
+   than looping forever. Do not use the word "guaranteed" in user-facing copy if
+   the loop is bounded — `js/depot-shop-view.js` carries a deliberate comment
+   about exactly this.
+4. **Never call the RPC with fewer or more than 25.** The server will reject it
+   with `P0001` and the player sees an error instead of a welcome.
+5. **Trigger:** on the first surface load after a session where
+   `starter_box_grants` has no row for this owner. Do not gate on a
+   `localStorage` flag; gate on the server's answer, and treat
+   `already_claimed:true` as a normal, silent no-op.
+
+### Requirements for the surface
+
+- **Something must happen visibly.** Twenty-five cards arriving silently into a
+  binder is indistinguishable from a bug.
+- **The reveal must route every name through `window.depotCleanName`** — see
+  section 5. Twenty-five cards is twenty-five chances to print a sentence of
+  hobby errata, at the exact moment a stranger is deciding whether this is a real
+  product.
+- **Decide the ordering question in section 2.1 before building the ceremony.**
+
+### 2.1 A real product decision: the grant lands before the reveal
+
+Measured on the free pull, 2026-08-12: the card row was already in `cards` while
+the pack was still sealed on screen. The ceremony is decoration over a settled
+fact.
+
+For one free card that is the right trade — nothing is lost, and the player gets
+the card whatever they do.
+
+**For a 25-card welcome it is not obviously right, and it should be decided
+deliberately.** If a new player closes the tab mid-ceremony, they own 25 cards
+they have never seen, **and the box can never be claimed again** — the PRIMARY
+KEY on `owner_id` makes it once-per-account, permanently. There is no re-open.
+
+Three options, and this is Nick's call:
+
+| option | consequence |
+|---|---|
+| **Grant first, reveal after** (today's shape) | Simplest, matches the free pack. A player who bounces mid-ceremony silently loses the moment forever, though not the cards. |
+| **Reveal first, grant on completion** | The player always sees what they got. But a crash mid-ceremony means no cards at all, and the money-safety ordering used for paid packs exists precisely because that is worse. |
+| **Grant first, but make the reveal resumable** | The starter box is re-openable as a *ceremony* until the player finishes it, driven off `starter_box_grants.card_ids` in the ledger meta, which is already stored. Costs a flag or a derived check; nothing is ever lost. |
+
+The recommendation from here is the third. The data to support it — `card_ids` in
+the `wallet_transactions.meta` — is already being written by the deployed
+function, which suggests somebody was thinking about exactly this.
+
+---
+
+## 3. A rename affordance
+
+`depot_rename_franchise(p_name text)` is deployed, correct, and has no callers.
+**There is currently no way for any user to change their team name, on any
+screen, ever.** Every franchise in the database that reads `MY CLUB` reads it
+because nothing has ever been able to write anything else.
+
+The deployed contract: `auth.uid()` gated; `v_name := left(nullif(btrim(coalesce(p_name,'')),''), 40)`;
+raises `P0001 'a team name cannot be blank'`; updates `where owner_id = v_owner`;
+raises `P0001 'no franchise for this account -- call depot_ensure_onboarding() first'`
+if not found; returns the stored name.
+
+Requirements:
+
+1. **One entry point is enough** — the franchise identity block in the shared
+   shell is the obvious home.
+2. **Prompt at least once during onboarding.** A franchise game that names your
+   team for you and never asks has given away its one piece of identity. This is
+   the cheapest item in this document and probably the highest ratio of
+   first-impression to effort.
+3. **Echo the server's returned name**, do not echo the input. The server clamps
+   to 40 characters and the player should see what was actually stored.
+4. **The blank case is a real error**, not a silent no-op — the server already
+   raises for it.
+
+---
+
+## 4. The eligibility dependency, and the worst case in the product
+
+The starter box rolls from **the same pool the shop rolls from**, so it inherits
+every property of `docs/PULL_POLICY.md` section 1 — including the one that is
+currently broken.
+
+**The art gate is not in force in production.** `DepotLibraryIndex.load()` was
+observed failing on 2026-08-12, resolving `null`, and the shop fell back to the
+unfiltered 155,844-row catalog instead of the 84,452-row art-backed pool
+(`PULL_POLICY.md` section 1.1). It fails open by design.
+
+**So: if the art index fails open during a starter box roll, a brand-new
+player's twenty-five-card welcome arrives full of blank cards.**
+
+That is what fail-open means at its worst, and it is the strongest version of the
+argument in `PULL_POLICY.md` section 1.2. One art-less card in a five-card rip is
+a blemish. Twenty-five art-less cards handed to a stranger as their introduction
+to the product is the product failing to make a first impression at all — and
+because of the PRIMARY KEY, **it cannot be re-rolled.** The box is claimed.
+
+**Requirement: the starter box roll must fail closed.** If the art index is
+unavailable, do not roll, do not call the RPC, and show the player a real message
+saying their welcome box is not ready yet. A delayed welcome is recoverable. A
+claimed one full of blanks is not.
+
+This is stated as a requirement here because it is narrower than the general
+question — `PULL_POLICY.md` section 1.2 asks whether the *server-side roll*
+should fail open or closed and leaves it to Nick. This spec only claims that the
+**once-per-account, permanently-committing** path should fail closed regardless
+of how the general question is answered.
+
+---
+
+## 5. Display invariant: route names through `depotCleanName`
+
+**Requirement for the starter box reveal, stated here in full rather than
+deferred**, because whichever of onboarding or the rip chapter is built first
+should not inherit a dependency on the other shipping. The rip chapter carries
+the identical requirement for the pack reveal.
+
+`window.depotCleanName` already exists, in `js/depot-position.js`. It is not a
+stub — its header documents an audit of all 47 catalog files, *"155,802 player
+strings, 2,882 of them multi-player: 11,889 strings end in one or more trailing
+subset codes, drawn from a vocabulary of 118 distinct tokens."*
+
+It works. Verified live against real catalog strings:
+
+| stored | rendered |
+|---|---|
+| `Yonathan Daza SP, VARVAR: Running` | `Yonathan Daza` |
+| `Rowland Office UERUER: "Greatest catch" was in 1975…` | `Rowland Office` |
+| `Greg Pryor ERRERR: No name on front` | `Greg Pryor` |
+| `Jerry Narron RC` | `Jerry Narron` |
+| `Ken Griffey Jr. RC` | `Ken Griffey Jr.` |
+| `Adrian Beltre` | `Adrian Beltre` |
+| `Lou Brock / Carl Yastrzemski HL` | `Lou Brock` |
+
+**And nothing that displays an owned card calls it.** Every existing call site is
+in `index.html`, and every one is for *matching* — `roloSameName`, the suggestion
+list, the player-index lookup. `js/depot-shop-view.js` `nameOf()` is literally
+`return s.player || s.name || "Unknown"`, which is why the free pull's reveal
+printed `Yonathan Daza SP, VARVAR: Running` across two lines on the card face.
+There is no truncation anywhere in `depot-pixel-card.js`,
+`depot-binder-browse.js`, `depot-shop-view.js` or `depot-card-detail-2b.js`.
+
+**The fix is one line per surface**, with the guard that is already the house
+style:
+
+```js
+var cn = (typeof window.depotCleanName === 'function') ? window.depotCleanName : function (x) { return String(x || '').trim(); };
+// ...
+cn(card.player)
+```
+
+Measured impact: **2.5%** of the eligible pool carries the doubled-code prose bug
+(`UERUER:`, `VARVAR:`), and a further **8.2%** carries trailing subset codes.
+`depotCleanName` covers both. Worst in junk wax at 2.5% — which is what a Bronze
+pack is weighted toward — and cleanest in vintage at 1.3%.
+
+Two caveats to decide, not to ignore:
+
+- **Multi-player cards lose the second player.** `Lou Brock / Carl Yastrzemski`
+  renders as `Lou Brock`. That is 2.0% of the pool and a deliberate consequence
+  of splitting on the slash. Decide whether a two-player card shows one name or
+  both.
+- **Non-player subjects render oddly.** `Checklist (1-121)` becomes `Checklist`
+  and a team card becomes `Texas Rangers`. Correct as far as it goes, but a
+  rarity band under the word "Checklist" is its own small absurdity, and a
+  welcome box is a bad place to meet one. Consider excluding non-player subjects
+  from the starter box pool entirely — the 25 slots are position-filled anyway,
+  so a checklist card cannot fill a position and arguably should never have been
+  eligible.
+
+---
+
+## 6. Build order, and what is deliberately not here
+
+1. **The session hook** (section 1). Everything else raises without it.
+2. **The rename affordance** (section 3). Smallest, and the highest
+   first-impression return in this document.
+3. **The starter box** (section 2), after 2.1 is decided.
+4. **`depotCleanName` on every display surface** (section 5). Independent of all
+   of the above; can land first if convenient.
+
+**Not in scope here:** the server-side roll, `depot_settle_match`, the card
+universe in Postgres, and the art-index failure itself. The first three are
+`docs/PULL_POLICY.md`; the fourth wants a repro loop rather than a browser
+session — paging the index at 4 lanes succeeded where the shipped module's 8
+lanes failed, which is where to start and is not a diagnosis.
+
+## 7. Known gaps in this document
+
+- **The `depot_claim_starter_box` and `depot_ensure_onboarding` bodies are
+  eye-transcribed from dashboard screenshots**, not copy-pasted. The sandbox
+  blocks returning text extracted from that domain. Re-read before relying on a
+  character.
+- **The `.rpc(` enumeration is a grep** over `.js` and `.html`, excluding
+  `mockups/`, on `main` only. A dynamically-constructed RPC name would not
+  appear; all eight matches are string literals, which suggests the codebase does
+  not do that, but it was not proven.
+- **Nothing here was built or tested.** Every claim about current behaviour is
+  read from a deployed function body, a deployed file, or a measurement against
+  production — and each is labelled which.
