@@ -73,9 +73,14 @@ somebody who *is* watching the console.
 not reproduce by hand: the head count returns 89,898, page 0 returns 1,000 rows,
 the last page returns its trailing 898. Paging the whole index manually at **4
 lanes** completed all 90 pages with **zero errors** in under 20 seconds. The
-shipped module uses **8 lanes**. One failure at 8 and one success at 4 is a
-correlation and nothing more — it is where to start, not an answer, and it wants
-a repro loop rather than a browser session.
+shipped module uses **8 lanes**.
+
+**Updated 2026-08-12: three hand-paged runs at 4 lanes have now completed — all
+90 pages, zero errors, exactly 89,898 keys every time — against one observed
+failure at 8.** Three-and-one is still a correlation and not a diagnosis, but it
+is a stronger starting point than one-and-one. It is where whoever writes the
+repro loop should begin, and it wants a repro loop rather than a browser
+session.
 
 **Third instance of the unread-detector pattern, and a category above the other
 two.** `docs/GRANT_AUTHORITY.md` section 10 names the pattern against two
