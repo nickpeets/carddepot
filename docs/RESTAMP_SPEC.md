@@ -6,7 +6,15 @@ Status: **spec for the codespace agent.** Small, mechanical, and explicitly not 
 
 ## 1. The real number is 91 across SEVEN files
 
-Counted at `cd73b68`, re-counted after the vs.html fix. AGENTS.md section 6 says 64. `cafa045` says "74 tags across 5 shells". Both are wrong.
+Counted at `cd73b68`, re-counted after the vs.html fix. **One owner per fact, added 2026-08-12.** `AGENTS.md` section 6 defines the
+ritual; **this document carries the census.** Neither restates the other's
+numbers, and neither should: quoting the other document's count is what put two
+figures in two places and left one of them stale for weeks. If you arrived here
+from section 6, this table is the number. If you arrived here first, section 6
+is the procedure and its amendment is the rule.
+
+(`cafa045`'s message says "74 tags across 5 shells". That is quoted below as
+evidence of what that commit did, not as a count to check this table against.)
 
 | file | tags | stamp before this session | stamp now |
 |---|---|---|---|
