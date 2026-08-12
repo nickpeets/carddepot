@@ -139,6 +139,18 @@ Open shape questions: whether the sub-baseline band (1–5) should exist at all,
 
 Ceiling check, now easier since decision 4: because **caps count raw prestige**, a ×3.0 GEM 10 no longer distorts lineup legality at all — it only moves payouts and wager stakes. That removes the sharpest objection to the ×3.0 ceiling that revision 1 raised in this section.
 
+> **REVISED 2026-08-12 — this paragraph is no longer the plan.** Nick has since
+> ruled that prestige should behave as an **Overall rating that affects play**,
+> paired with a **marquee cap** on how many high-prestige cards may be fielded at
+> once. That reverses the sentence above in a controlled form: grade is intended
+> to distort lineup strength, and a roster limit rather than the absence of an
+> effect is what bounds it. **Design intent, not built** — measured the same day,
+> `grade` appears zero times in `game/sim.js`, `game/builder.html`,
+> `game/season.js`, `js/depot-prestige.js` and `js/depot-shop-view.js`. The
+> reasoning, the open multiplier-versus-composite question and the marquee
+> sub-questions are in `docs/RESOLVER_COVERAGE.md` section 6. Do not plan from
+> the paragraph above without reading it.
+
 ---
 
 ## 6. PROPOSED — pack band feeds prestige a small bump
