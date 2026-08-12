@@ -1015,7 +1015,15 @@ function playPackSession(cards, hitIndex, opts){
 
     function nameOf(card){
       var s = (Shop.cardToShape ? Shop.cardToShape(card, card.year) : card);
-      return s.player || s.name || "Unknown";
+      var raw = s.player || s.name || "Unknown";
+      // Every name printed by this view routes through the catalog cleaner.
+      // ONBOARDING_PATH_SPEC.md section 5, RD_CH0607_SHOP_SCOPE.md 2.1.
+      // depotCleanName falls back to the RAW STRING when it finds no name token, so
+      // cleaning is allowed to be a no-op -- never assume it shortened anything.
+      var cn = (typeof window.depotCleanName === 'function') ? window.depotCleanName : function (x) { return String(x || '').trim(); };
+      var out = cn(raw);
+      if (!out) { console.warn('[depot] shop: depotCleanName returned empty for "' + raw + '"; printing the raw string'); return raw; }
+      return out;
     }
     function isNarrow(){
       try { return !!(window.matchMedia && window.matchMedia("(max-width: 520px)").matches); } catch(e){ return false; }
