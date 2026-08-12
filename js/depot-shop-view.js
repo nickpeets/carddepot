@@ -74,6 +74,18 @@
   var DOT  = " \u00b7 ";
   function esc(s){return String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;").replace(/'/g,"&#39;");}
 
+  /* ONE definition of "print a player name" for this whole view.
+     depotCleanName falls back to the RAW STRING when it finds no name token, so
+     cleaning is allowed to be a no-op -- never assume it shortened anything.
+     See ONBOARDING_PATH_SPEC.md 5.2 and RD_CH0607_SHOP_SCOPE.md 2.1. Do not add
+     a second copy of this guard: a second definition is a second thing to drift. */
+  function cleanNm(v){
+    var f = (typeof window.depotCleanName === 'function') ? window.depotCleanName : function (x) { return String(x || '').trim(); };
+    var out = f(v);
+    if (!out) { console.warn('[depot] shop-view: depotCleanName returned empty for "' + v + '"; printing the raw value'); return v; }
+    return out;
+  }
+
   /* ===================================================================== */
   /* PACK SHOP + RIP REDESIGN (feat/pack-shop-redesign)                    */
   /* Design: handoff-pack-shop/README.md. Presentation ONLY -- every money  */
@@ -600,7 +612,7 @@ function diamondTileHtml(){
       var c = res.cards[i];
       var meta = esc(String(c.year||'')) + ' ' + esc(c.set||'') + (c.number!=null && c.number!=='' ? ' #' + esc(String(c.number)) : '');
       h += '<li class="dpc-hist-card' + (c.id ? ' is-linked" data-card="' + esc(String(c.id)) + '" role="button" tabindex="0" title="Open in the binder' : '') + '">' +
-             '<span class="dpc-hist-cardname">' + esc(c.player||'(unnamed)') + '</span>' +
+             '<span class="dpc-hist-cardname">' + esc(cleanNm(c.player)||'(unnamed)') + '</span>' +
              '<span class="dpc-hist-cardmeta">' + meta + '</span>' +
              (c.id ? '<span class="dpc-hist-go">VIEW</span>' : '') +
            '</li>';
@@ -1015,15 +1027,7 @@ function playPackSession(cards, hitIndex, opts){
 
     function nameOf(card){
       var s = (Shop.cardToShape ? Shop.cardToShape(card, card.year) : card);
-      var raw = s.player || s.name || "Unknown";
-      // Every name printed by this view routes through the catalog cleaner.
-      // ONBOARDING_PATH_SPEC.md section 5, RD_CH0607_SHOP_SCOPE.md 2.1.
-      // depotCleanName falls back to the RAW STRING when it finds no name token, so
-      // cleaning is allowed to be a no-op -- never assume it shortened anything.
-      var cn = (typeof window.depotCleanName === 'function') ? window.depotCleanName : function (x) { return String(x || '').trim(); };
-      var out = cn(raw);
-      if (!out) { console.warn('[depot] shop: depotCleanName returned empty for "' + raw + '"; printing the raw string'); return raw; }
-      return out;
+      return cleanNm(s.player || s.name || "Unknown");
     }
     function isNarrow(){
       try { return !!(window.matchMedia && window.matchMedia("(max-width: 520px)").matches); } catch(e){ return false; }
