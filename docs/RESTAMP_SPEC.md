@@ -42,7 +42,21 @@ That same AGENTS.md block cites `25c0bea` as having "stamped all 91 across seven
 
 So the real remaining job is not simply "restamp seven files". It is: **establish whether `25c0bea` stamped all seven and was partly undone by a later merge, or never covered them.** Those are different problems. AGENTS.md 2.4 exists precisely because a landing merge once silently discarded a superset — `cc311f8`, which took `index.html` wholesale from its branch side and threw away two days of password-recovery work that had merged clean one commit earlier. That failure mode has happened here before and it is invisible on GitHub.
 
-Read the history on `25c0bea` before restamping. If it did cover all seven, a merge ate part of it, and that is a bigger finding than the stamps.
+### 1B. RESOLVED — no merge ate anything. `cafa045` narrowed the ritual (2026-08-11)
+
+The history question above is answered. It took one `git log` and it should not have been handed on.
+
+**`25c0bea` did exactly what its message said.** Read at that commit, all seven files carry `?v=4d09934` and nothing else — index 31, shop 18, game 12, builder 12, preview 1, market 8, vs 9, plus the `BUILD` bump. 92 insertions, 92 deletions, eight files. The message was accurate and the AGENTS.md §6 block that cites it is accurate.
+
+**It is also old, and several full restamps followed it.** The ritual has run repeatedly — `7a5c0b2` → f92e1ce, `86f3229` → 0df4cd3, `9a30ee0` → f920409 — each stamping all 91 across all seven.
+
+**The regression is `cafa045`, and it is a scope regression, not a clobber.** Its own message says it: *"stamp branch tip f11c871 — 74 tags across 5 shells."* It restamped index (31), shop (18), game (12), builder (12) and preview (1) = 74, and left `marketplace.html` (8) and `vs.html` (9) sitting at f920409 from `9a30ee0`. 74 + 17 = 91. Nobody noticed the ritual had quietly shrunk from seven files to five.
+
+So there is **no silent superset discard here**, and §2.4 is not implicated. That hypothesis is closed. The failure was simpler and more ordinary: a recurring chore ran with a smaller file list than the one before it, and its commit message honestly reported the smaller number without anyone comparing it to the previous run.
+
+**What actually remains:** `marketplace.html` is the only file still adrift, at f920409. `vs.html` was fixed to cd73b68 by PR #243. Everything else sits at f11c871. Bring all seven and `js/version.js` to one SHA and the count back to 91.
+
+**The lesson worth keeping is about the commit message, not the stamps.** "74 tags across 5 shells" was true and was the warning. A chore whose scope shrinks silently reports its own regression in the one place nobody diffs against the previous run. If this ritual stays manual, the acceptance check in section 4 — all seven files carrying one identical stamp — is what catches it, and it should be run as a check rather than trusted as an outcome.
 
 ---
 
