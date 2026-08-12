@@ -122,6 +122,13 @@ write a check that pretends it can. What actually works, and what was used for
 
 Note what that trade means: the strongest check now runs **after** the write, so
 it detects rather than prevents. A corrupted body lands and is then caught.
+
+**One caveat on the byte check, from its first outing.** If the edit appends to
+the end of the file, preserve the trailing newline the file already had. Drop it
+and your expected length is short by exactly one, the editor silently puts it
+back, and the equality check fails on a difference that does not matter.
+Observed on `4141c90`: expected 37,090, landed 37,091, and the whole difference
+was a final `\n`. Expect the off-by-one before concluding something went wrong.
 5. **Set the commit message and description with a native value setter, never by
    typing.** Typing into that dialog is the corruption mechanism in incident 2:
 
@@ -198,6 +205,31 @@ the doubling incident this section exists to prevent.
   in-page scripting — the fresh fetch, the guarded replacement, the contents-API
   verification — must run from a `github.com` origin. The same script that works
   on a repo or edit page fails on a raw page with no useful error.
+
+---
+
+### 0.4 Before recording a measurement, find out which document already owns it (added 2026-08-12)
+
+A correction was written into §6 recording a live cache-stamp census and the fact
+that `DEPOT_BUILD` is not inert. **Both were already in
+`docs/RESTAMP_SPEC.md`**, which had been tracking the same census for a day and
+was more current than §6 was. The correction said "not recorded here before",
+which is true of *this* file and was accurate by luck rather than by diligence —
+the other document had not been read.
+
+The rule is one line: **before recording a measurement, check whether another
+document already owns it.** If one does, point at it and add nothing. If none
+does, say so, and you have just made yourself the owner.
+
+This is a *different* failure from the stale-list problem §6's amendment fixes.
+That one is about a list of filenames going out of date. This one is about a
+fact with two homes, where nothing points either home at the other and only one
+of them gets updated. Two documents holding the same number is cheaper to
+prevent than to adjudicate.
+
+Current ownership, offered as an example rather than as a registry to maintain:
+`AGENTS.md` §6 owns the cache-bust **ritual**; `docs/RESTAMP_SPEC.md` owns the
+**census**.
 
 ---
 
@@ -502,3 +534,8 @@ runtime for four assets on the game page — `depot-v2.css`, `css/depot-style.cs
 `css/depot-redesign.css`, `js/depot-redesign.js`. Moving BUILD alone **does**
 bust cache, for those four and only those four. Recorded so that nobody moves
 the label believing it is a comment.
+
+**Where the numbers live.** This section owns the **ritual**.
+`docs/RESTAMP_SPEC.md` owns the **census** — the per-file tag counts and their
+current stamps. Neither restates the other's numbers, deliberately; see §0.4 for
+why. If you need a count, go there. If you need the procedure, it is here.
