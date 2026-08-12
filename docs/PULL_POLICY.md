@@ -303,6 +303,26 @@ not exist** — no `.js` or `.html` file in the repo references it, and a
 brand-new account created 2026-08-12 has `starter_box_grants` = 0 rows and an
 empty binder. See `docs/FLOW_A_OBSERVED.md`.
 
+**It is not alone, and that is the finding.** Enumerating every `.rpc(` call site
+across every `.js` and `.html` in the repo returns exactly eight, all string
+literals: `depot_apply_payout` (×2), `depot_purchase_pack`,
+`depot_claim_free_pack`, `depot_is_admin`, `share_collection`,
+`unshare_collection`, `get_shared_collection`, `get_shared_cards`. Three deployed
+functions that the new-player path depends on are absent from that list:
+
+| function | what it does | callers |
+|---|---|---:|
+| `depot_ensure_onboarding` | creates the collection and franchise if the signup trigger's swallowed exception ate them | **0** |
+| `depot_claim_starter_box` | the 25-card welcome | **0** |
+| `depot_rename_franchise` | the only way to change the hardcoded `'MY CLUB'` | **0** |
+
+All three are `SECURITY DEFINER`, all three are carefully built — advisory locks,
+23505 no-ops, error messages that name their own remedy — and none of them is
+connected to anything. The hard half of onboarding was built three times and
+wired up zero times. See `docs/GRANT_AUTHORITY.md` section 10 for the
+consequence: with no caller for `depot_ensure_onboarding`, a half-created account
+is permanently broken rather than briefly broken.
+
 That is not this document's problem to fix, but no spec for the pull path is
 honest without saying that the largest single grant in the product is
 unreachable.
@@ -340,11 +360,19 @@ So today:
   'pack'`. `'starter'` exists in the migration but has never been written
   because §3. In practice the column has two live values, `'scan'` (the default,
   for scanned cards) and `'pack'`.
-- **`cards.pack_seed` is not populated.** Paid packs stamp the seed into `notes`
-  as the text `packseed:<n>` (`depot-shop.js` `cardRow()`); the free path stamps
-  nothing. Meanwhile `depot-pack-history.js` queries `.eq('pack_seed', s)` and
-  its own comment claims "paid packs stamp cards.pack_seed at grant time."
+- **`cards.pack_seed` is not populated by any path that has ever executed.** Paid
+  packs stamp the seed into `notes` as the text `packseed:<n>`
+  (`depot-shop.js` `cardRow()`); the free path stamps nothing. Meanwhile
+  `depot-pack-history.js` queries `.eq('pack_seed', s)` and its own comment
+  claims "paid packs stamp cards.pack_seed at grant time."
   **Comment and code disagree, and the code is what runs.**
+  The wording matters, though: **`depot_claim_starter_box` does stamp it
+  correctly.** Its deployed body inserts
+  `cards (..., source, notes, pack_seed)` with `source = 'starter'` and
+  `pack_seed = p_seed`. It is the only grant path in the schema that gets this
+  right, and it is the one that has never run — see §3. So the column is not
+  vestigial and the convention is not undecided; the correct implementation
+  already exists and simply has no caller.
 - **The roll record already exists as a table.** `public.pack_grants` —
   `owner_id, collection_id, pack_seed, tier, card_count`, unique on
   `(collection_id, pack_seed)`, written by the client grant-row-first with 23505
