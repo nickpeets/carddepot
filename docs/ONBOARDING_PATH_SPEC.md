@@ -283,9 +283,13 @@ The starter box **must roll from the same pool the shop rolls from**, so that it
 inherits both of `docs/PULL_POLICY.md` section 1's gates:
 
 - **Gate 1, art.** A card must have an image to be pullable.
-- **Gate 2, playability.** A card must depict exactly one player who can occupy a
-  roster position. Multi-player cards, team cards and checklists are collectible
-  but not pullable — `PULL_POLICY.md` section 1.3.
+- **Gate 2, playability.** A card must depict exactly one player. Multi-player
+  cards, team cards, checklists and manager cards are collectible but not
+  pullable — `PULL_POLICY.md` section 1.3. The test is **structural**: it asks
+  what kind of card this is, **not** whether the player on it resolves to a
+  position in `data/player_positions.json`. Single-player cards missing from that
+  file stay pullable (`PULL_POLICY.md` 1.3.2), and that gap is tracked on its own
+  terms in 1.3.4.
 
 **No special-case filter for the box.** This is worth stating because the
 obvious instinct is to write a lineup-legality check into `rollPayload()` — after
