@@ -189,6 +189,28 @@ to the team slot he was placed in. The same card is a good pitcher on one side o
 the matchup and an average one on the other, and neither is the player printed on
 it.
 
+**▶ And once cards are wagered, this is an EXPLOIT.** `P SANCHEZ` is better than
+league average. So fielding a deliberately unresolvable pitcher in that slot is
+**strictly better than fielding a mediocre real one** — the card contributes
+nothing of its own and inherits a good arm. Nobody is exploiting it today, and
+**nobody would need to understand the mechanism to benefit from it**: a player
+who noticed that their broken cards win more would simply keep playing them.
+
+That reorders the work. The batter-side gap substitutes a **stated average** —
+wrong, but neutral and honest. The pitcher side substitutes **a character with
+opinions**. Under VS wagering the second is a competitive advantage attached to
+bad data, which makes the pitcher fix worth more than the box-score headline in
+`docs/BOXSCORE_RUN_ATTRIBUTION.md` section 9 — that one is cosmetic by
+comparison.
+
+**▶ The fix needs a neutral pitcher to point at, and there isn't one — NICK'S
+CALL.** The batter side has `LG`. The pitcher side has two named characters.
+Mirroring `LG` would put a replacement arm somewhere around **BB .085, K .150,
+HR .025**; the alternative is a deliberately **below-average** fallback, so that
+an unresolved card is a mild penalty rather than a free pass — which also closes
+the exploit by construction. Not decided here. It is the only open item on the
+pitcher work.
+
 **Not observed.** Read from `applyDepotTeam`. Nobody has put a pitcher card with
 an ERA and no rates into the pitcher box and watched what got thrown, and the
 house pitcher's actual numbers were not looked up.
