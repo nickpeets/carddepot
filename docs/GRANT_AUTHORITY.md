@@ -230,14 +230,44 @@ and no franchise**, and the only trace is a `raise warning` in the Postgres log.
 Nothing reads that log. Nobody has ever looked at it. If this has fired, we do
 not know.
 
-**The honest mitigation:** `depot_ensure_onboarding` is the repair path, it is
-idempotent, it takes an advisory lock so two concurrent `INITIAL_SESSION` events
-cannot race it, and the client calls it on load. So the system self-heals, and a
-user only stays broken if they never reach a page that calls it.
+**~~The honest mitigation.~~ CORRECTED 2026-08-12 — there is no mitigation.**
+The paragraph that stood here said `depot_ensure_onboarding` is the repair path,
+that it is idempotent, that it takes an advisory lock so two concurrent
+`INITIAL_SESSION` events cannot race it, **"and the client calls it on load"**,
+so the system self-heals and a user only stays broken if they never reach a page
+that calls it.
 
-That is a narrow window. It is also exactly the window a stranger who signs up
-and bounces is in — which is the only kind of user this project does not have
-yet, and the kind V2 is for.
+Every clause of that is true except the one that mattered. **Nothing calls it.**
+
+Enumerating every `.rpc(` call site across every `.js` and `.html` in the repo
+returns exactly eight, all string literals: `depot_apply_payout` (×2),
+`depot_purchase_pack`, `depot_claim_free_pack`, `depot_is_admin`,
+`share_collection`, `unshare_collection`, `get_shared_collection`,
+`get_shared_cards`. `depot_ensure_onboarding` is not among them, on any page, on
+any path.
+
+So the correct statement is shorter and worse: **if the swallowed exception ever
+fires, that account is permanently broken and nothing in the running system can
+repair it.** The window is not narrow. It is unbounded. There is a repair
+function — deployed, idempotent, advisory-locked, with an error message that
+names its own remedy — and it is unreachable.
+
+Two other deployed functions are in the same state, which is what makes this a
+shape rather than an oversight: `depot_claim_starter_box`, the 25-card welcome
+(see `docs/FLOW_A_OBSERVED.md` section 2), and `depot_rename_franchise`, the only
+way to change the hardcoded team name `'MY CLUB'`. Somebody built the hard half
+of onboarding three times — advisory locks, 23505 no-ops, careful errors — and
+wired up none of it.
+
+**How the wrong version got written, because it is the more useful lesson.** The
+claim was inferred from this function's own comment about serialising two
+`INITIAL_SESSION` events in the same millisecond, which only makes sense if
+something calls it on session events. That comment is evidence about what the
+author *intended*, not about what *ships*. Reading intent as behaviour is the
+exact error section 0 of AGENTS.md exists to prevent, and it was committed here,
+in a document whose entire thesis is **source presence is not function** — by the
+same agent that wrote the thesis, four hours earlier, in this file.
+
 
 ### The pattern this belongs to: unread detectors
 
