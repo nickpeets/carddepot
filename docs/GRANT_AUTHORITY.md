@@ -384,3 +384,51 @@ Whether `get_shared_cards` and `get_shared_collection` are actually granted to
 and no SQL was run. "Anonymous holders of the link can read this" is inferred
 from `security definer` + a token argument + no auth check, which is strong, but
 inference is not the grant table. Check it before quoting a severity.
+---
+
+## 12. A third shape — the client never deciding what is safe to print
+
+Found 2026-08-12 while locating the display surfaces for the `depotCleanName`
+fix. It is recorded here rather than in the display spec because the defect is
+the same kind as section 11's, one layer further out.
+
+`index.html` prints a card name in two places a few lines apart, and treats it
+as two different kinds of value:
+
+| site | what it does |
+|---|---|
+| `dcTileHTML`, the binder tile | `'<div class="rd-tile__name">'+dcEsc(c.name)+'</div>'` — **escaped** |
+| `openSpot`, the detail headline | `<div class="spot-name">${c.name}</div>` written straight into `#spotMeta`'s `innerHTML` — **not escaped** |
+
+**The finding is the inconsistency, not a claim about reachability.** By reading
+alone, `c.name` is catalog text out of the static `data/cards-*.json` files, and
+nothing observed puts user-controlled text on that path. Nothing was attempted.
+The point is that **two adjacent writes of the same value disagree about whether
+it needs escaping, which means nobody decided.** One of them is wrong and the
+codebase does not know which.
+
+That is section 11's argument pointed in a different direction. `select c.*` is
+not a defect because some particular column is sensitive; it is a defect because
+the function never enumerates, so the next column anyone adds is published by
+default. This is the same shape: not a defect because a particular string is
+dangerous, but because the next thing that reaches `c.name` is printed as markup
+by default.
+
+**And what reaches `c.name` is about to change.** Section 4's server-side roll
+needs a card universe in Postgres carrying `player` — which moves that value
+from a static file this repo controls to a column. That is exactly the kind of
+provenance change that turns "nothing user-controlled is on this path" from a
+property into an assumption, and it is scheduled.
+
+**Cheap, and it comes free.** The `depotCleanName` fix touches that exact line —
+`ONBOARDING_PATH_SPEC.md` 5.2, site 3 — so whoever makes the detail headline
+clean can make it escaped in the same edit. Doing the two separately is the only
+way this costs anything.
+
+### Unproven
+
+Nothing here was tested. No string was crafted, no injection attempted, and no
+audit was made of what else can reach `c.name`: the two render sites were found
+by searching `main` for the class names, not by tracing every writer of the
+catalog shape. Whether any other surface interpolates card text unescaped is
+unmeasured — only `index.html`'s two name sites were compared.
