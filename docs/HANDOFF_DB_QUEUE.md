@@ -90,6 +90,68 @@ Nick's 49 ledger rows by reason, summing to 93,945:
 
 ---
 
+## 2D. Item 0 — the auth trail for Tim, and a contradiction left standing
+
+Two events in the Supabase Auth logs, read 2026-08-11. Raw, unedited:
+
+```
+{"level":"info","msg":"mail.send","mail_type":"recovery","mail_from":"noreply@mail.app.supabase.io","time":"2026-08-11T20:14:53Z"}
+{"level":"info","msg":"mail.send","mail_type":"recovery","mail_from":"noreply@mail.app.supabase.io","time":"2026-08-10T17:56:28Z"}
+```
+
+**`mail.send` at level info is a handoff record, not a delivery receipt.** It says
+GoTrue handed the message to the SMTP provider. It says nothing about whether the
+provider accepted it, whether it was queued, throttled, bounced, or dropped into a
+spam folder. Reading it as proof of delivery is the same class of error as reading
+source presence as function.
+
+Org membership, read from the platform API the same day:
+
+```
+The Depot            (Pro,  klbdfqbjisukpnbonknf) -> ["nickpeets@gmail.com"]
+nickpeets's Org      (Free, fnezbapbopvdukgvpuvb) -> ["nickpeets@gmail.com"]
+```
+
+**Both organizations have exactly one member.** Tim is not an org member of either.
+
+### The contradiction
+
+This does not fit the standing correction recorded in this repo, which held that
+Tim receives auth mail because he is an org member and the project is on the
+default Supabase SMTP, whose delivery is restricted to org members. Two readings
+survive the evidence and the evidence does not choose between them:
+
+1. **Nick's testimony is right and the mechanism is misdescribed.** Nick reports
+   Tim received mail. If that happened, org membership is not what allowed it,
+   because Tim has none. Something else governs delivery — a project-level
+   allowance, a setting nobody has read, or the restriction not applying the way
+   the correction assumed.
+2. **The mail was handed off and never arrived.** The log lines are consistent
+   with this too, since `mail.send` at info is a handoff, and the restriction
+   would then be doing exactly what it says.
+
+**Correction, and it is pointed at the agent, not at Nick.** The "org member by
+design" line was written by an agent as an explanation and then carried forward
+in this repo as though it were an observation. It was never verified against the
+member list. It is now contradicted by it.
+
+This is recorded as **unresolved**. Hypothesis 2 is not the safe default just
+because it is tidier; hypothesis 1 rests on a person saying what he saw, and a
+membership list cannot overturn a report of receipt — it can only show that the
+stated mechanism was wrong.
+
+### The residue that survives either way
+
+**Whatever governs delivery to Tim, it is not org membership, because he has none.**
+Any plan that depends on Tim getting an email — the Resend cutover, a recovery
+link, an invite — cannot lean on the org-member argument. It has to be tested.
+
+**The test is one text message, not a query.** Ask Tim whether the mail arrived
+and when. No amount of SQL settles this, because the thing in question happened
+outside the database.
+
+---
+
 ## 2. Verify before writing — seven queries
 
 None of these writes. Run them all, and reconcile against the expected results before touching anything.
