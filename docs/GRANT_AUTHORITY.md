@@ -16,9 +16,16 @@ Written 2026-08-11 from a read of five deployed `SECURITY DEFINER` functions aga
 | `depot_purchase_pack(p_cost, p_tier)` | `auth.uid()`, `FOR UPDATE` row lock, ledger and debit in one transaction | `p_cost` client-named, never checked against `p_tier` |
 | `depot_claim_free_pack(p_card)` | `auth.uid()`, 24-hour cooldown enforced server-side off `wallet_transactions` | the entire card comes from `p_card` |
 | `depot_claim_starter_box(p_cards, p_seed)` | `auth.uid()`, grant-row-first with the PK on `owner_id` as the gate, count fixed at 25 | all 25 cards come from `p_cards` |
-| `depot_wallet_repair(p_owner)` | admin-gated | derives its own number from the ledger — **the only one that does** |
+| `depot_wallet_repair(p_owner)` | admin-gated | derives its own number from the ledger — **exception by derivation** |
+| `depot_admin_grant(p_owner, p_amount, p_note)` | `depot_is_admin()` gate, amount checked non-zero, ledger-then-column in one transaction | client names the amount — but **exception by role**, this is the one place a human is supposed to |
 
-This is one habit applied five times. It is not five defects, and treating it as five parameter-bound fixes will miss the point and leave the next grant path with the same hole.
+**The set is complete.** All six grant paths in `public` have now been read against production. The claim is therefore not a sample:
+
+> **Every path where the granted value is not derived server-side is either a hole or explicitly role-gated, and there is exactly one of the latter.**
+
+That is one habit applied four times, with two principled exceptions. It is not four separate defects, and treating it as four parameter-bound fixes will miss the point and leave the next grant path with the same hole.
+
+`depot_admin_grant` is worth understanding rather than lumping in. It also lets the client name the amount — but it is gated on `depot_is_admin()`, it refuses a null or zero amount, it writes the ledger row and the balance column in one transaction so they cannot disagree, and it stamps `exclude_from_economy_analytics`. That is what a sanctioned client-named value looks like. It is the shape the four holes should be measured against, not a sixth hole.
 
 The hard parts are done, and several are done well. `depot_purchase_pack` takes a `FOR UPDATE` lock so concurrent purchases cannot double-spend. `depot_claim_starter_box` inserts its grant row before a single card exists, so a concurrent second claim collides on 23505 and inserts nothing. `depot_claim_free_pack` computes its own cooldown from `max(created_at)` on the ledger rather than trusting a client timestamp. Identity is derived from `auth.uid()` in three of the five. **Keep all of that.** None of it is what needs to change.
 
@@ -128,9 +135,10 @@ Step 1 is worth doing on its own, and soon. Steps 2 to 4 are the V2 item.
 
 ## 8. Known gaps in this document
 
-- **`depot_admin_grant` is unread.** It is the one grant path in the set whose deployed body has not been examined. It is admin-gated in `MIGRATION_roles.sql`, and `depot_is_admin` exists in production in both a zero-argument and a `p_user uuid` form, so the gate it needs is there — but `depot_apply_payout` has already been shown to diverge from its file, so this should be read rather than assumed.
+- ~~`depot_admin_grant` is unread.~~ **Read 2026-08-11. The gate is real.** The deployed body opens `if not public.depot_is_admin() then raise exception 'depot_admin_grant: admin only'`, then refuses a null or zero amount, then writes the ledger row and the balance column in one transaction. It matches `MIGRATION_roles.sql`. Reading it rather than assuming was right, and it produced the narrowing below.
+- **The file/production divergence is specific to `depot_apply_payout`, not general drift.** `depot_admin_grant`'s deployed body reads `coalesce(balance,0) + p_amount` — the coalesce `depot_apply_payout` is missing. Two functions from the same file, one kept it and one did not. That is a single-function edit somewhere in the past, not a systematic gap between `db/proposals/` and production. The file is a better guide than the earlier warning implied — just not a substitute for reading.
 - **Nothing here was tested.** Every finding is read from a stored function definition. No exploit was executed, no coin moved, no card created. "It would work" is inference; "the body does not check `p_amount`" is observation.
-- **Not every function was read.** `depot_ensure_onboarding`, `depot_rename_franchise`, `depot_handle_new_user`, `depot_wallet_check` and the four share/collection functions were out of scope. The pattern held five times out of five, so the prior should be that it holds elsewhere too — but that is a prior, not a finding.
+- **Not every function was read, but every grant path was.** `depot_ensure_onboarding`, `depot_rename_franchise`, `depot_handle_new_user` and the four share/collection functions remain unread. None of them grants coins or cards, so the thesis above does not depend on them. `depot_wallet_check` was read and is correctly gated on `public.depot_is_admin() or d.owner_id = auth.uid()` — it returns all four accounts to an admin caller, which is not a leak.
 
 ---
 
