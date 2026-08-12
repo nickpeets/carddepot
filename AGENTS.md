@@ -336,9 +336,18 @@ Pages deploys are flaky **server-side** in this repo — builds sometimes queue 
 5. Merge with a `--no-ff` merge commit; **keep the branch**.
 6. Bump `js/version.js`; after merge, confirm live `[depot] build <hash>` matches.
 
-**BRANCH-TIP LABEL (supersedes the multi-file post-merge bump):** Put the label INSIDE the fix branch. Commit `js/version.js` BUILD + ALL `?v=` query strings on the branch itself (a plain terminal commit is fine), using the BRANCH TIP SHA as the label (known at commit time). Then the web-UI `--no-ff` merge is itself the web-UI action that fires the Pages deploy — one merge, one deploy, label and queries atomic by construction, with NO post-merge bump commit and NO multi-file web commit. Label semantics = feature-tip hash (not merge hash), which is fine and honest. This permanently eliminates both the label-drift bug and the OAuth/multi-file-web-commit problem. Label convention: BUILD = the last SUBSTANTIVE (code/asset) commit; the label commit that sets version.js + ?v= rides on TOP of it (a label commit cannot contain its own hash, and a docs-only commit on top does not change deployed asset hashes, so it does not move the label).
+**BRANCH-TIP LABEL (supersedes the multi-file post-merge bump):** Put the label INSIDE the fix branch. Commit `js/version.js` BUILD + ALL `?v=` query strings on the branch itself (a plain terminal commit is fine), using the BRANCH TIP SHA as the label (known at commit time). Then the web-UI `--no-ff` merge is itself the web-UI action that fires the Pages deploy — one merge, one deploy, label and queries atomic by construction, with NO post-merge bump commit and NO multi-file web commit. Label semantics = feature-tip hash (not merge hash), which is fine and honest. This permanently eliminates both the label-drift bug and the OAuth/multi-file-web-commit problem. Label convention, **AMENDED 2026-08-12 — see the amendment at the end of this
+section**: BUILD tracks **HEAD**, docs-only commits included. It answers one
+question — *what is deployed* — and it must never be knowingly stale. (The
+superseded convention was BUILD = the last SUBSTANTIVE code/asset commit, on the
+reasoning that a docs-only commit does not change deployed asset hashes. It does
+not — but a label that lies about what is live costs more than a label that
+moves for nothing.) A label commit still cannot contain its own hash, so the
+branch-tip mechanic above is unchanged.
 
-**CACHE-BUST RITUAL (atomic, added after the pack-redemption incident):** Every deploy bump updates `js/version.js` AND the `?v=<hash>` cache-bust query strings on every `js/*.js` and `css/*.css` include across ALL shells (`index.html`, `game/shop.html`, `game/index.html`, `game/builder.html`, `preview.html`) together, in the SAME merge/bump. A `?v=` that drifts from the deployed build silently recreates the stranded-cache bug: clients keep serving old bundles even after a green deploy. This bit us on the pack-redemption deploy (`0fc08af` shipped; Nick's browser ran `55f832a`, so the new `redeemPending` never loaded and his paid pack silently no-opped). The include tags carry no cache-busting otherwise, and GitHub Pages caches `js`/`css`. Ritual: in the web-editor bump commit, find-and-replace the OLD `?v=<oldhash>` with the NEW `<newhash>` across all five HTML files in one multi-file commit, and set `js/version.js` BUILD to the same hash. Never let `?v=` and version.js diverge. The CDN Supabase `<script>` is left unversioned on purpose.
+**CACHE-BUST RITUAL (atomic, added after the pack-redemption incident):** Every deploy bump updates `js/version.js` AND the `?v=<hash>` cache-bust query strings on every `js/*.js` and `css/*.css` include across ALL shells — **enumerated, never named**; see the amendment at the end of this section — together, in the SAME merge/bump. A `?v=` that drifts from the deployed build silently recreates the stranded-cache bug: clients keep serving old bundles even after a green deploy. This bit us on the pack-redemption deploy (`0fc08af` shipped; Nick's browser ran `55f832a`, so the new `redeemPending` never loaded and his paid pack silently no-opped). The include tags carry no cache-busting otherwise, and GitHub Pages caches `js`/`css`. Ritual: in the web-editor bump commit, find-and-replace the OLD `?v=<oldhash>` with the NEW `<newhash>` across all five HTML files in one multi-file commit, and set `js/version.js` BUILD to the same hash. The stamps must agree **with each other** — every shell carries one identical
+value. **BUILD and the stamps are allowed to differ**, and routinely will; see
+the amendment at the end of this section. The CDN Supabase `<script>` is left unversioned on purpose.
 7. Report: files, commit hashes, and the live-verified build hash.
 
 ## 7. Known tooling notes
@@ -447,3 +456,49 @@ Rule: any chrome/shell/style work on the game page must go through `js/depot-gam
 > on any reading. And any session that read the build marker as "what is live"
 > before `68ef43d` was reading one that was five commits stale, by that commit's
 > own account.
+
+---
+
+### §6 AMENDMENT (2026-08-12) — the label rule, the stamp rule, and the end of the shell list
+
+Three changes, all falling out of the census in the correction block above.
+
+**1. BUILD tracks HEAD, docs-only commits included.** It answers one question —
+*what is deployed* — and it must never be knowingly stale. `68ef43d` moved BUILD
+alone for exactly this reason and its message is the argument: the marker had
+been five commits behind and "has been misleading every diagnosis that read it."
+That commit stops being the outlier and becomes the precedent.
+
+**2. The never-diverge rule narrows: the stamps must agree with EACH OTHER.**
+The invariant that matters is that every shell carries one identical `?v=`
+value, because a split census is what strands files. **BUILD and the stamps are
+allowed to differ, and routinely will.** That sentence is the point of this
+amendment. Without it the next agent measures the difference, reports it as a
+defect, and this gets rewritten again — which is how it got written the first
+time.
+
+**3. Enumerate the shells. Never name them.** Three files have now been stranded
+by three different hard-coded lists: `preview.html` (2026-07-28), `vs.html`
+(missed by `cafa045`, restamped by #243), and `marketplace.html` (missed by
+both). A list that has to be maintained is a list that will be wrong, and this
+document has now been wrong three times in the same way **while containing a
+correction saying it would keep happening.** Another correction is not the fix.
+
+So the ritual's scope is **discovered, not declared**:
+
+1. Glob every `*.html` in the tree — `git ls-files -z '*.html'` — excluding
+   `mockups/`.
+2. Keep the ones containing a `?v=` query string. **Those are the shells**, by
+   definition, whatever they are called and however many there are.
+3. Stamp all of them, in the same commit.
+4. **Acceptance check: every shell the glob returned carries one identical
+   value.** Not "these seven agree" — *every file found* agrees. If the count
+   disagrees with any number written in this document, believe the count and
+   correct the document.
+
+**And BUILD is not inert, which is why change 1 is not free.**
+`js/depot-game-shell.js` composes cache-bust query strings from `DEPOT_BUILD` at
+runtime for four assets on the game page — `depot-v2.css`, `css/depot-style.css`,
+`css/depot-redesign.css`, `js/depot-redesign.js`. Moving BUILD alone **does**
+bust cache, for those four and only those four. Recorded so that nobody moves
+the label believing it is a comment.
