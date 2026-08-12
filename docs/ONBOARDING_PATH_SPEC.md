@@ -256,9 +256,15 @@ Requirements:
 
 ## 4. The eligibility dependency, and the worst case in the product
 
-The starter box rolls from **the same pool the shop rolls from**, so it inherits
-every property of `docs/PULL_POLICY.md` section 1 — including the one that is
-currently broken.
+**Read this section as a requirement, not a description.** No starter box roller
+exists, so there is no current behaviour to describe. The sentence below —
+"rolls from the same pool the shop rolls from" — is something whoever builds
+section 2 must *make* true. It is stated in the present tense for readability and
+that is exactly how a reader in a hurry could take it for an observation.
+
+The starter box **must roll from the same pool the shop rolls from**, so that it
+inherits every property of `docs/PULL_POLICY.md` section 1 — including the one
+that is currently broken.
 
 **The art gate is not in force in production.** `DepotLibraryIndex.load()` was
 observed failing on 2026-08-12, resolving `null`, and the shop fell back to the
