@@ -103,6 +103,25 @@ Reproducible, and cheap enough that there is no excuse for skipping it:
    CodeMirror virtualizes, so `innerText` and `getSelection()` read short. A short
    readback is **not** a failure signal and must not be treated as one — that is
    why the three checks above are indirect.
+
+**And in this editor the three-way check is really a two-way check. Added
+2026-08-12.** CodeMirror 6 does not expose its `EditorView` on the DOM here —
+`document.querySelector('.cm-editor').cmView` is undefined and `.cm-content`
+carries only `cmTile` — so there is no way to ask the document its own length
+before committing. **Character delta cannot be verified pre-commit.** Do not
+write a check that pretends it can. What actually works, and what was used for
+`fe9c853`, `400c599` and `26b7fc7`:
+
+- **Before the commit:** line count read from the gutter — ignore the oversized
+  spacer, which renders as `999` — plus the last rendered line, both compared to
+  numbers computed from the fresh fetch.
+- **After the commit:** exact character length from the contents API **and** a
+  byte-equality check of the landed body against the string you built. Equality
+  is strictly stronger than a length match and costs nothing, because the string
+  is still in the page.
+
+Note what that trade means: the strongest check now runs **after** the write, so
+it detects rather than prevents. A corrupted body lands and is then caught.
 5. **Set the commit message and description with a native value setter, never by
    typing.** Typing into that dialog is the corruption mechanism in incident 2:
 
@@ -138,7 +157,27 @@ of a unique marker** — your new heading, the document H1, and the anchor you
 replaced should each appear exactly once. Duplication is the failure mode that
 looks most like success.
 
-### Two operational notes on this editor
+**Correction 2026-08-12: the contents API is cached too, and a NEGATIVE read
+from it cannot be trusted.** Measured, not inferred. Three and a half seconds
+after a confirmed commit (`400c599`), the commits API already reported
+`+46/-0` while the contents API returned the **pre-commit** body — 9,388
+characters where 11,834 were expected, with the new heading absent. A second
+read 2.5 seconds later, with a cache-busting query parameter, returned 11,834
+and a byte-exact match.
+
+So:
+
+- A **positive** result from the contents API can be believed. It will not
+  invent your content.
+- A **negative** cannot. Before concluding that a commit failed or landed wrong,
+  **read a second time with a cache-buster**, and check the commits API, which
+  was correct immediately in both observations.
+
+Believing a first negative is how this ends badly: "the commit did not land"
+leads to re-editing a file that is already correct, which is the opening move of
+the doubling incident this section exists to prevent.
+
+### Operational notes on this editor
 
 - **Most commits need the "Commit changes…" button clicked twice** before the
   dialog opens. This is not a diagnosis, it is a documented workaround.
@@ -146,6 +185,19 @@ looks most like success.
   returns `null` while it is plainly on screen. Find its fields by id
   (`#commit-message-input`, `#commit-description-input`) instead of by walking
   down from a dialog root.
+- **The commit dialog autofills itself, asynchronously, and it will overwrite
+  you.** Added 2026-08-12. GitHub generates a commit message and description a
+  second or two after the dialog opens, and that generated text lands *after* a
+  native-setter write and silently replaces it. Observed: a message set to
+  `docs(onboarding): 4 - gate 2 restated structurally` read back as
+  `Clarify Gate 2 playability requirements for cards`. Rule 5's native setter is
+  necessary and not sufficient — **set, wait, read back, and re-set until it
+  sticks**, then assert the message one final time in the same call that clicks
+  commit.
+- **`raw.githubusercontent.com` serves a CSP that blocks `fetch` outright.** All
+  in-page scripting — the fresh fetch, the guarded replacement, the contents-API
+  verification — must run from a `github.com` origin. The same script that works
+  on a repo or edit page fails on a raw page with no useful error.
 
 ---
 
