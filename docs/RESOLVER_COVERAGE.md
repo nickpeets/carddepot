@@ -133,6 +133,47 @@ connected to it.
 
 ---
 
+### 2.6 And an unresolved pitcher does not fall back to an average pitcher
+
+Measured 2026-08-12 in `game/sim.js` `applyDepotTeam()`. The batter fallback and
+the pitcher fallback are not the same shape, and only one of them is a fallback
+to a *default*.
+
+**The batter side is one object, all six rates, from `LG`** — explicit, symmetric,
+and commented *"so the batter is PLAYABLE"*:
+
+```js
+var r = (p.rates && typeof p.rates === 'object') ? p.rates
+      : { BB:LG.BB, K:LG.K, HR:LG.HR, _2B:LG._2B, _3B:LG._3B, _1B:LG._1B };
+```
+
+**The pitcher side is per FIELD, and it falls back to the HOUSE PITCHER:**
+
+```js
+team.pitcher = { name: pp.name||team.pitcher.name, era: pp.era||team.pitcher.era,
+                 w:(pp.w!=null?pp.w:team.pitcher.w), BB:(pp.BB!=null?pp.BB:team.pitcher.BB),
+                 K:(pp.K!=null?pp.K:team.pitcher.K), /* ...HR, _2B, _3B, _1B the same */ };
+```
+
+`team.pitcher` is the built-in Mudcats or Acorns pitcher. So an unresolved
+pitcher card does not become league-average — **it becomes the house pitcher.**
+
+**And because the fallback is per field rather than per object, a card carrying
+an ERA but no rates produces a HYBRID that exists nowhere:** the card's ERA is
+what the panel prints, and the house pitcher's rates are what actually get
+thrown. Every pitch is a probability draw from those rates, so this is not a
+degraded version of the player on the card — **it is a different pitcher wearing
+the card's name.**
+
+This is the same defect shape as the batter side — *the number shown is not the
+number used* — and it is worse here for two reasons: there is no single
+substitute to point at, and the substitute is a named character rather than a
+stated average.
+
+**Not observed.** Read from `applyDepotTeam`. Nobody has put a pitcher card with
+an ERA and no rates into the pitcher box and watched what got thrown, and the
+house pitcher's actual numbers were not looked up.
+
 ### 2.5 The two type fixes are different sizes and different owners
 
 Worth separating, because "fix the type filter" sounds like one job:
