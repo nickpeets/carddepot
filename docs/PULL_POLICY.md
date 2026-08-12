@@ -27,7 +27,8 @@ happens.
 
 **If it cannot be shown, it cannot be pulled.** This is not a new rule invented
 here. It is the design constitution's Rule 1 — no image, no entry — applied to
-the roll, and it is already the shipped behaviour.
+the roll, and it is ~~already the shipped behaviour~~ **implemented in the
+shipped client but NOT IN FORCE IN PRODUCTION as of 2026-08-12. See 1.1.**
 
 `js/depot-shop.js` carries it under the heading *"Task D — ART GATE ON THE ROLL
 POOL"*, with the comment *"Nick's rule: any card grabbable via pack shop must
@@ -37,6 +38,69 @@ have an image."* The filter runs once, on the catalog, **before** `rollPack`,
 There is no curated list. There never should be. A curated list is a second
 thing to maintain that goes stale the day the library grows; the art index
 already grows with the library by construction.
+
+### 1.1 The gate is off right now, and it turned itself off
+
+Corrected 2026-08-12, a few hours after the paragraph above was first written.
+The sentence said "already the shipped behaviour". That was true of the code and
+false of the running system, and those are different claims.
+
+Observed on `game/shop.html`, signed in, live console:
+
+```
+[depot][library-index] load failed: Error -- catalog ships unfiltered
+[depot] shop: no art index; rolling the UNFILTERED catalog (155844 rows)
+```
+
+`DepotLibraryIndex.load()` resolved `null`, so the shop rolled the whole
+**155,844-row catalog** instead of the **84,452-row** art-backed pool. Cards with
+no art are pullable today.
+
+**This is by design, and the design is defensible.** The module says so in its
+own header: *"FAILS OPEN. If the index cannot be read we resolve null and the
+caller ships the unfiltered catalog: a missing image is a blemish, a dead shop is
+an outage."* That is a reasonable trade for a client. The problem is not the
+fallback; the problem is that nothing above the console knows it happened.
+
+Note also that the error is unreadable. The log line contains the bare string
+`Error` with no message attached, so there is nothing to diagnose from even for
+somebody who *is* watching the console.
+
+**Not diagnosed, and deliberately not chased from a browser.** The failure did
+not reproduce by hand: the head count returns 89,898, page 0 returns 1,000 rows,
+the last page returns its trailing 898. Paging the whole index manually at **4
+lanes** completed all 90 pages with **zero errors** in under 20 seconds. The
+shipped module uses **8 lanes**. One failure at 8 and one success at 4 is a
+correlation and nothing more — it is where to start, not an answer, and it wants
+a repro loop rather than a browser session.
+
+**Third instance of the unread-detector pattern, and a category above the other
+two.** `docs/GRANT_AUTHORITY.md` section 10 names the pattern against two
+examples — `RECORD DRIFT` and the trigger's `raise warning`. Both of those report
+**drift**. This one reports a **safety rule switching itself off**, into the same
+void. A detector nobody reads is bad; a *guard* that disables itself and reports
+it to nobody is worse, and the distinction belongs in the pattern.
+
+### 1.2 Open question for the server-side roll: fail open, or fail closed?
+
+**This is a product decision and it is Nick's, not the build agent's.** It is
+recorded here because the server roll cannot be written without answering it.
+
+Client-side, fail-open is right: a missing image is a blemish, a dead shop is an
+outage, and the worst case is one ugly card.
+
+Server-side the calculus changes. The server is the thing that is supposed to be
+authoritative — that is the entire point of moving the roll — and a server that
+quietly grants art-less cards when its index is unavailable is not authoritative,
+it is just a slower client. The alternative is to **fail closed**: refuse the
+pull, surface a real error to the player, and let the shop be briefly broken
+rather than briefly wrong.
+
+The recommendation from here is fail closed, with the caveat that it makes the
+art index a hard dependency of the money path, which is exactly the kind of
+coupling the fail-open comment was written to avoid. Whoever decides should
+decide it knowingly.
+
 
 ### Where the eligible set lives
 
