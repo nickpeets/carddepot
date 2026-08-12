@@ -59,8 +59,19 @@ cross-referenced, so that whichever of the rip and the onboarding starter box
 ships first does not inherit a dependency on the other shipping.
 
 **Today nothing in this chapter calls it. UPDATE 2026-08-12: now it does.**
-`e1ca2d1` routes `js/depot-shop-view.js` `nameOf()` -- the only path by which
-this chapter's surfaces get a player string -- through `window.depotCleanName`,
+`e1ca2d1` routes `js/depot-shop-view.js` `nameOf()` -- and `68daa3e` routes the
+Pack History card list with it. **Corrected same day: `nameOf()` is NOT the only
+path by which this chapter's surfaces get a player string, which is what this
+paragraph first claimed.** Section 4's Pack History builds `.dpc-hist-cardname`
+from `esc(c.player)` directly, in the same file, and `e1ca2d1` left it
+untouched. It was found by expanding a real history row on the live site and
+reading the raw string back out -- the verification of the first fix is what
+caught the second site. Both now go through one module-level `cleanNm()`; the
+guard `e1ca2d1` inlined inside `nameOf` was removed rather than copied. The full
+printer enumeration, and how the wrong claim was made twice, is
+`ONBOARDING_PATH_SPEC.md` 5.2.
+
+Both sites route through `window.depotCleanName`,
 with the house-style guard and a fail-loud fallback if the cleaner ever returns
 empty. The rip is the **first** of the three printers to be fixed, which is the
 order this section argued for. The paragraph below is kept as the record of what
