@@ -138,7 +138,8 @@ Step 1 is worth doing on its own, and soon. Steps 2 to 4 are the V2 item.
 - ~~`depot_admin_grant` is unread.~~ **Read 2026-08-11. The gate is real.** The deployed body opens `if not public.depot_is_admin() then raise exception 'depot_admin_grant: admin only'`, then refuses a null or zero amount, then writes the ledger row and the balance column in one transaction. It matches `MIGRATION_roles.sql`. Reading it rather than assuming was right, and it produced the narrowing below.
 - **The file/production divergence is specific to `depot_apply_payout`, not general drift.** `depot_admin_grant`'s deployed body reads `coalesce(balance,0) + p_amount` — the coalesce `depot_apply_payout` is missing. Two functions from the same file, one kept it and one did not. That is a single-function edit somewhere in the past, not a systematic gap between `db/proposals/` and production. The file is a better guide than the earlier warning implied — just not a substitute for reading.
 - **Nothing here was tested.** Every finding is read from a stored function definition. No exploit was executed, no coin moved, no card created. "It would work" is inference; "the body does not check `p_amount`" is observation.
-- **Not every function was read, but every grant path was.** `depot_ensure_onboarding`, `depot_rename_franchise`, `depot_handle_new_user` and the four share/collection functions remain unread. None of them grants coins or cards, so the thesis above does not depend on them. `depot_wallet_check` was read and is correctly gated on `public.depot_is_admin() or d.owner_id = auth.uid()` — it returns all four accounts to an admin caller, which is not a leak.
+- **Every function in the schema has now been read.** ~~`depot_ensure_onboarding`, `depot_rename_franchise`, `depot_handle_new_user` and the four share/collection functions remain unread.~~ Read 2026-08-11; see sections 10 and 11. None of the seven grants coins, which is what the sentence above was really claiming — but two of them changed the shape of this document, so "does not grant coins" turned out to be the wrong test for whether a function was worth reading. `depot_wallet_check` was read and is correctly gated on `public.depot_is_admin() or d.owner_id = auth.uid()` — it returns all four accounts to an admin caller, which is not a leak.
+- **The seven bodies in sections 10 and 11 are eye-transcribed, not copy-pasted.** The sandbox blocks returning any text extracted from the Supabase dashboard domain — it flags it as cookie/query-string data even when the text is five lines of plpgsql with no token in it. Every body was therefore read by screenshot, scrolling the editor by its API and capturing each screen, and transcribed by hand. Treat them as **eyeball-accurate, not byte-accurate**. Anyone re-deriving this work should re-read from the source rather than trusting a character.
 
 ---
 
@@ -147,3 +148,190 @@ Step 1 is worth doing on its own, and soon. Steps 2 to 4 are the V2 item.
 The exposure today is close to zero. There are four accounts: the owner, one active second player, and two family accounts that signed up on 2026-06-20 and never came back. Nobody is attacking this, and the two people who could would be attacking their own game.
 
 The reason it is the first V2 item anyway is that it is cheap now and expensive later. Every card granted before the cutover is a card whose provenance cannot be demonstrated, and V2 wants people to wager cards. The cost of fixing this scales with how many cards exist and how many people care about them — and both only go up.
+
+---
+
+## 10. A second authority shape: authority from the triggering row
+
+Sections 1 to 9 all sit on one axis. Every path there answers the question *who
+is calling* — `auth.uid()`, or `depot_is_admin()`, or nothing at all. The six
+grant paths differ only in whether they answer it and whether they also check
+*what* is being claimed.
+
+`depot_handle_new_user` is not on that axis. It is a trigger on `auth.users`,
+it takes no arguments, and it **cannot** call `auth.uid()` in the usual way —
+there is no caller session to ask about. Its authority comes from the row that
+fired it. The identity is `new.id`, and the only thing that vouches for it is
+that Postgres would not have run the trigger if the insert had not happened.
+
+That is a different question, not a different answer to the same question, and
+it is worth naming because the next person to add a trigger will reach for the
+`auth.uid()` checks in section 4 and find they do not apply.
+
+### The body
+
+Eye-transcribed; see section 8.
+
+```sql
+begin
+  begin
+    insert into public.user_roles (user_id, role)
+    values (new.id, 'user')
+    on conflict (user_id) do nothing;
+
+    insert into public.collections (owner_id, name)
+    select new.id, 'My Collection'
+     where not exists (select 1 from public.collections where owner_id = new.id);
+
+    insert into public.franchises (owner_id, team_name)
+    values (new.id, 'MY CLUB')
+    on conflict (owner_id) do nothing;
+  exception when others then
+    raise warning 'depot_handle_new_user: onboarding rows not created for % (%): %',
+      new.id, sqlstate, sqlerrm;
+  end;
+  return new;
+end;
+```
+
+### Why it is safe, stated precisely
+
+It writes three rows, all keyed to `new.id`, and it is a **role-granting write
+with no caller to authorize** — which sounds like the worst thing in this
+document and is not, for two reasons that are worth stating rather than
+assuming:
+
+1. **The role is a hardcoded literal, `'user'`.** There is no argument, no
+   client input, and no branch. The privilege it grants is the floor. Contrast
+   `depot_apply_payout`, whose problem is not that it lacks a caller check but
+   that the *value* comes from the client.
+2. **`on conflict (user_id) do nothing` cannot downgrade.** If a row already
+   exists — an admin, say — it is left alone. The trigger can create the floor
+   and cannot lower a ceiling.
+
+So there is no reachable escalation, and the rule generalises: **a write with no
+caller to authorize is safe exactly when the value it writes is a constant.**
+The moment anything in that insert becomes a parameter, this function joins
+section 4.
+
+### The finding: a swallowed exception and a warning nobody reads
+
+The whole body is wrapped in `exception when others then raise warning`. That is
+the right call for the obvious reason — a failing trigger on `auth.users` would
+break signup, and losing a collection row is better than losing the account.
+
+But it means a user can land in `auth.users` with **no role row, no collection
+and no franchise**, and the only trace is a `raise warning` in the Postgres log.
+Nothing reads that log. Nobody has ever looked at it. If this has fired, we do
+not know.
+
+**The honest mitigation:** `depot_ensure_onboarding` is the repair path, it is
+idempotent, it takes an advisory lock so two concurrent `INITIAL_SESSION` events
+cannot race it, and the client calls it on load. So the system self-heals, and a
+user only stays broken if they never reach a page that calls it.
+
+That is a narrow window. It is also exactly the window a stranger who signs up
+and bounces is in — which is the only kind of user this project does not have
+yet, and the kind V2 is for.
+
+### The pattern this belongs to: unread detectors
+
+Name it once and point at it from both places, because there are two:
+
+- `depot_handle_new_user` raises a **warning** into the Postgres log on
+  onboarding failure.
+- `js/depot-shell.js` `resolveRecord()` raises `RECORD DRIFT on season <id>` via
+  a raw `console.warn` — deliberately not the `depot_debug`-gated `depotLog`, so
+  it prints unconditionally. See `docs/SETTLEMENT_MODEL.md` section 6, gap 3.
+
+Both fire every time the condition holds. Both write to a channel with no
+reader. **A detector that fires unconditionally into a channel nobody reads is
+not a detector; it is a comment with a runtime cost.** Neither is a bug and
+neither needs to be removed — they need somewhere to go. That is one small
+piece of work covering both, and it is worth more than either alone.
+
+---
+
+## 11. The inverted case: the server never decides what you may see
+
+The four share/collection functions were read at the same time. Three of them
+are correct and one is the mirror image of this document's thesis.
+
+Eye-transcribed; see section 8.
+
+```sql
+-- owner-gated, mints once, idempotent while shared
+share_collection(p_collection_id uuid) returns uuid
+  update public.collections
+     set is_shared = true,
+         share_token = coalesce(share_token, gen_random_uuid())
+   where id = p_collection_id and owner_id = auth.uid()
+  returning share_token into v_token;
+  -- null -> raise 'Not authorized to share this collection, or collection not found'
+
+-- owner-gated, and it NULLS THE TOKEN
+unshare_collection(p_collection_id uuid) returns void
+  update public.collections
+     set is_shared = false, share_token = null
+   where id = p_collection_id and owner_id = auth.uid()
+
+get_shared_collection(p_token uuid)
+  select col.id, col.name from public.collections col
+   where col.is_shared = true and col.share_token = p_token;
+
+get_shared_cards(p_token uuid) returns setof cards
+  select c.* from public.cards c
+    join public.collections col on col.id = c.collection_id
+   where col.is_shared = true and col.share_token = p_token;
+```
+
+### A revocation bug that is not there
+
+Worth recording because it is the bug this shape usually has, and an earlier
+draft of this section asserted it before the body was read. `unshare_collection`
+sets `share_token = null`, not just `is_shared = false`. The `coalesce` in
+`share_collection` therefore mints a **fresh** token on re-share. Revocation is
+real and re-sharing rotates. An old link is dead permanently.
+
+The retraction is the point: the finding was half-written from the shape before
+line 7 was read. AGENTS.md section 0.3 says do not write from state you did not
+just measure, and that applies to conclusions as much as to editor buffers.
+
+### The actual finding: `select c.*`
+
+`get_shared_cards` is `security definer` and returns **every column of
+`public.cards`** to any holder of the token. `cards` has 21 of them:
+
+`id`, `owner_id`, `collection_id`, `year`, `brand`, `set`, `number`, `player`,
+`team`, `notes`, `tcdb_url`, `photo_front_path`, `photo_back_path`,
+`created_at`, `rookie_year`, `source`, `pack_seed`, `catalog_key`, `grade`,
+`is_star`, `condition_notes`.
+
+Seventeen of those are what a shared binder is for. Four are not:
+
+| column | why it should not be in a share payload |
+|---|---|
+| `notes` | free text the collector wrote for themselves |
+| `condition_notes` | same; private annotation is the entire purpose of the column |
+| `owner_id` | the `auth.users` uuid behind the binder, handed to an anonymous caller. It unlocks nothing on its own — RLS still gates every table — but it is the join key for the whole schema |
+| `pack_seed` | the seed the pack was generated from. Seed determinism has been reproduced twice in this project; a seed is not decoration here |
+
+**The defect is the star, not the four columns.** Fixing it by dropping `notes`
+from the select would leave the next column anyone adds to `cards` published on
+the day it is added, silently, by a function nobody re-reads. The fix is an
+explicit column list, and it costs nothing.
+
+### Why this belongs in this document
+
+Every other hole here is *the server taking the client's word for what you get*.
+This one is *the server never deciding what you may see*. Same failure to
+enumerate, opposite direction — and it is the only item in this document that is
+exploitable without an account.
+
+### Unproven
+
+Whether `get_shared_cards` and `get_shared_collection` are actually granted to
+`anon` has **not** been measured. It requires `information_schema.routine_privileges`
+and no SQL was run. "Anonymous holders of the link can read this" is inferred
+from `security definer` + a token argument + no auth check, which is strong, but
+inference is not the grant table. Check it before quoting a severity.
