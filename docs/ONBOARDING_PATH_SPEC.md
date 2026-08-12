@@ -359,6 +359,39 @@ printed `Yonathan Daza SP, VARVAR: Running` across two lines on the card face.
 There is no truncation anywhere in `depot-pixel-card.js`,
 `depot-binder-browse.js`, `depot-shop-view.js` or `depot-card-detail-2b.js`.
 
+### 5.1 Observed on the live binder, 2026-08-12 — and the tile's protection is accidental and inverted
+
+The paragraph above was read from source. This was read from the running site,
+signed in, against the one card in the observed account — `Yonathan Daza SP,
+VARVAR: Running`, the free pull from that morning.
+
+- **The binder tile writes the raw string.** `.rd-tile__name` holds it character
+  for character. No cleaning, no truncation, no ellipsis.
+- **`depot-card-detail-2b.js` prints it as the panel headline.** Clicking the
+  card renders `YONATHAN DAZA SP, VARVAR: RUNNING` in uppercase as the largest
+  text on the panel, above `2020 · Topps · #567b`. That surface is now an
+  **observed** offender rather than a suspected one.
+- **The tile only looks clean because of a CSS rule, and the rule is backwards.**
+  `.rd-tile--binder.has-art .rd-tile__name { display: none; }`, read out of the
+  live stylesheet, hides the name **exactly when the card has a picture.** With
+  `has-art` removed the raw string paints in full, two lines, under the art well.
+  *That state was forced in-page in order to observe it; it is not a state a user
+  has been seen hitting.*
+
+**The third bullet changes the scope of the fix, so it is not a curiosity.** The
+garbled string is suppressed on the cards that need a printed name least, and
+exposed on the cards where the name is the *only* identification the card has.
+Nobody designed that. A styling rule is doing safety work it does not know it is
+doing, and it is doing it backwards. Routing through `depotCleanName` is
+therefore not cosmetic polish on a hidden node: on an art-less card it is the
+difference between identifiable and garbage.
+
+**And the art-less case does not disappear with `PULL_POLICY.md` 1.2.**
+Fail-closed stops art-less cards being *pulled*. It does nothing about the ones
+already in binders, and the gate governs pulling rather than rendering by
+construction — 1.2 says so in as many words. Whatever is already owned still has
+to render, so this requirement outlives the rule that would have prevented it.
+
 **The fix is one line per surface**, with the guard that is already the house
 style:
 
