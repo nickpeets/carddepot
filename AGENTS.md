@@ -369,8 +369,9 @@ Pages deploys are flaky **server-side** in this repo — builds sometimes queue 
 6. Bump `js/version.js`; after merge, confirm live `[depot] build <hash>` matches.
 
 **BRANCH-TIP LABEL (supersedes the multi-file post-merge bump):** Put the label INSIDE the fix branch. Commit `js/version.js` BUILD + ALL `?v=` query strings on the branch itself (a plain terminal commit is fine), using the BRANCH TIP SHA as the label (known at commit time). Then the web-UI `--no-ff` merge is itself the web-UI action that fires the Pages deploy — one merge, one deploy, label and queries atomic by construction, with NO post-merge bump commit and NO multi-file web commit. Label semantics = feature-tip hash (not merge hash), which is fine and honest. This permanently eliminates both the label-drift bug and the OAuth/multi-file-web-commit problem. Label convention, **AMENDED 2026-08-12 — see the amendment at the end of this
-section**: BUILD tracks **HEAD**, docs-only commits included. It answers one
-question — *what is deployed* — and it must never be knowingly stale. (The
+section**: BUILD tracks the last commit that changes a **DEPLOYED ASSET** —
+`js`, `css`, `html`. Docs-only commits do **not** move it. It answers *what is
+deployed*, and it must never be knowingly stale. (The
 superseded convention was BUILD = the last SUBSTANTIVE code/asset commit, on the
 reasoning that a docs-only commit does not change deployed asset hashes. It does
 not — but a label that lies about what is live costs more than a label that
@@ -481,10 +482,13 @@ Rule: any chrome/shell/style work on the game page must go through `js/depot-gam
 > runtime for four assets on the game page, so moving BUILD alone does bust
 > cache — for those four and only those four.
 >
-> **Left open deliberately:** which rule wins. BUILD tracks HEAD and the
-> never-diverge rule narrows to the stamps alone; or BUILD stays substantive and
-> a knowingly stale marker is accepted. Both are defensible, and choosing is not
-> a correction's job. What is **not** open: `marketplace.html` is two days stale
+> **~~Left open deliberately~~ ANSWERED, twice, later the same day:** which rule
+> wins. The first answer — BUILD tracks HEAD — was unsatisfiable and was
+> corrected. **The standing rule is: BUILD tracks the last commit that changes a
+> DEPLOYED ASSET (`js`, `css`, `html`), docs-only commits do not move it, and the
+> never-diverge rule narrows to the stamps agreeing with each other.** See the
+> amendment below. Choosing was not
+> a correction's job. What is **not** open: `marketplace.html` was two days stale (fixed in `e486046`)
 > on any reading. And any session that read the build marker as "what is live"
 > before `68ef43d` was reading one that was five commits stale, by that commit's
 > own account.
@@ -495,8 +499,24 @@ Rule: any chrome/shell/style work on the game page must go through `js/depot-gam
 
 Three changes, all falling out of the census in the correction block above.
 
-**1. BUILD tracks HEAD, docs-only commits included.** It answers one question —
-*what is deployed* — and it must never be knowingly stale. `68ef43d` moved BUILD
+**1. BUILD tracks the last commit that changes a DEPLOYED ASSET — `js`, `css`,
+`html`. Docs-only commits do not move it.** It answers one question — *what is
+deployed* — and it must never be knowingly stale.
+
+**CORRECTED 2026-08-12, hours after this amendment was first written.** The first
+wording was *"BUILD tracks HEAD, docs-only commits included"*, and it was
+**unsatisfiable**: every commit moves HEAD, so "never knowingly stale" obliged a
+`version.js` bump after every commit, including docs. That is precisely the
+treadmill the superseded *last substantive commit* rule existed to avoid. The
+amendment traded one failure for another and did it in the same document that
+names the failure. **The bad wording was the planner's ruling, not the writing
+agent's** — recorded because a correction that hides who made the call is worth
+less than one that does not.
+
+The fix is the old rule stated in terms that cannot be argued with.
+**"Substantive" invited interpretation and got it; "deployed asset" is a
+file-extension test.** And `68ef43d`'s incident is still caught by it, because
+an auth fix is a `js` change. `68ef43d` moved BUILD
 alone for exactly this reason and its message is the argument: the marker had
 been five commits behind and "has been misleading every diagnosis that read it."
 That commit stops being the outlier and becomes the precedent.
