@@ -58,7 +58,19 @@ Carried here in full from `docs/ONBOARDING_PATH_SPEC.md` section 5 rather than
 cross-referenced, so that whichever of the rip and the onboarding starter box
 ships first does not inherit a dependency on the other shipping.
 
-**Today nothing in this chapter calls it.** `js/depot-shop-view.js` `nameOf()` is
+**Today nothing in this chapter calls it. UPDATE 2026-08-12: now it does.**
+`e1ca2d1` routes `js/depot-shop-view.js` `nameOf()` -- the only path by which
+this chapter's surfaces get a player string -- through `window.depotCleanName`,
+with the house-style guard and a fail-loud fallback if the cleaner ever returns
+empty. The rip is the **first** of the three printers to be fixed, which is the
+order this section argued for. The paragraph below is kept as the record of what
+was wrong and why it mattered.
+
+**It is not visible yet.** The cache-bust tags sit behind the deployed build and
+Pages caches `js`, so the corrected bundle ships as bytes no browser fetches
+until the restamp lands. Correct, and invisible.
+
+**What it used to do.** `js/depot-shop-view.js` `nameOf()` is
 literally `return s.player || s.name || "Unknown"`, and there is no truncation in
 `depot-pixel-card.js`, `depot-binder-browse.js`, `depot-shop-view.js` or
 `depot-card-detail-2b.js`. *Read by the session that wrote
@@ -101,9 +113,12 @@ bullet, recorded in both chapters on purpose.
 #### Observed on the live binder 2026-08-12, and it sharpens the requirement
 
 Read off the running site, not from source. The binder tile writes the raw
-string into `.rd-tile__name`, and `depot-card-detail-2b.js` prints it as the
+string into `.rd-tile__name`, and `index.html`'s `openSpot` prints it as the
 panel headline -- `YONATHAN DAZA SP, VARVAR: RUNNING`, uppercase, the largest
-text on the panel. Full detail in `ONBOARDING_PATH_SPEC.md` 5.1.
+text on the panel. **Corrected 2026-08-12: this paragraph first named
+`depot-card-detail-2b.js`. That file decorates the panel; `openSpot` emits the
+name. The DOM observation was right and the attribution was wrong.** Full detail
+and the full printer list in `ONBOARDING_PATH_SPEC.md` 5.2.
 
 The part that lands on this chapter: the binder tile looks clean only because
 `.rd-tile--binder.has-art .rd-tile__name { display: none; }` hides the name
