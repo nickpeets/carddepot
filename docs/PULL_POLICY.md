@@ -101,6 +101,20 @@ art index a hard dependency of the money path, which is exactly the kind of
 coupling the fail-open comment was written to avoid. Whoever decides should
 decide it knowingly.
 
+**The case that should decide it.** The starter box rolls from this same pool,
+and it is **once per account, permanently** — a PRIMARY KEY on
+`starter_box_grants.owner_id`, not a check. So if the art index fails open during
+a starter box roll, **a brand-new player's twenty-five-card welcome arrives full
+of blank cards, and it cannot be re-rolled.** The box is claimed.
+
+That is fail-open at its worst, and it is worth holding in mind while answering
+the general question. One art-less card in a five-card rip is a blemish.
+Twenty-five handed to a stranger as their introduction to the product is the
+product failing to make a first impression at all — irreversibly, on the one
+account where the first impression is the whole game. See
+`docs/ONBOARDING_PATH_SPEC.md` section 4, which requires that path to fail closed
+regardless of how this general question is answered.
+
 
 ### Where the eligible set lives
 
