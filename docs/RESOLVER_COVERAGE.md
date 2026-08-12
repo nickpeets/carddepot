@@ -166,23 +166,66 @@ questions, and `game/sim.js` currently models a batter with per-PA rates
 This is a game design question, not an implementation detail. It is recorded here
 rather than decided.
 
-## 4. ▶ The career-year population is a DECISION, not a defect
+## 4. ~~▶ The career-year population is a DECISION, not a defect~~ DECIDED 2026-08-12
 
 Ten of Nick's 126 cards are printed for a year the player did not play: a 1993
 `Derek Jeter` (debut 1995), a 1997 `Adrian Beltre` (debut 1998), a 2004
 `Mike Rouse` (debut 2006), a 2022 `Babe Ruth`, a 2024 `Wade Boggs`, a 2020
-`Carlton Fisk`, a 2020 `Lou Gehrig`.
+`Carlton Fisk`, a 2020 `Lou Gehrig`. These are real cards — prospect cards,
+legends inserts, retro sets — and no fix makes a line appear for the year printed
+on them.
 
-These are **real cards** — prospect cards, legends inserts, retro sets — and they
-will never have a line for the year printed on them. No fix makes one appear. The
-question is what the game does with them, and the options are at least:
+### 4.1 The rule
 
-- use the player's nearest real season,
-- treat them as league-average, which is silently what happens today,
-- or mark them as collectible-but-not-fieldable, which is the shape
-  `PULL_POLICY.md` 1.3 already uses for team cards and checklists.
+> **A card names the SEASON its stats come from. That season is stored on the
+> card and is separate from the printed year.**
 
-Recorded as Nick's, not decided.
+Where the two match — **116 of 126** — nothing changes and nothing is stored that
+is not already implied. Where they differ, **the card declares it** rather than
+the resolver guessing every time.
+
+**Nick's reason, and it is the point of the rule: it makes legacy inserts
+PLAYABLE.** A 1989 Babe Ruth becomes Ruth at his peak rather than a collectible
+that cannot be fielded. The alternative on the table was marking them
+collectible-but-not-fieldable, the shape `PULL_POLICY.md` 1.3 uses for team cards
+and checklists, and it was rejected for that reason.
+
+### 4.2 The default when nothing is declared
+
+**Fall back to the player's BEST SEASON.** Automatic, and overridable per card —
+the declared season wins when there is one.
+
+- **Hitters: best by OPS.**
+- **Pitchers: by ERA or WAR — UNCHOSEN.** Flagged here rather than picked,
+  because it is a game-design question and because section 3's larger pitcher
+  question is open anyway. Whoever answers section 3 should answer this in the
+  same breath.
+
+### 4.3 It covers both failure shapes, which are different tests
+
+| shape | example | test |
+|---|---|---|
+| printed year **outside** the career entirely | Ruth 1989, Jeter 1993, Beltre 1997 | card year vs debut / last-played |
+| printed year **inside** the career with no line for it | Bo Jackson 1992, the hip injury | the season query returns no splits |
+
+Section 1.3 exists because those two are not the same test and only the first is
+cheap. **The rule covers both**, because it keys on "is there a line for the
+declared season" rather than on why there is not.
+
+### 4.4 ▶ Still open: where the season lives
+
+Three candidates, not chosen here:
+
+- a column on `cards`,
+- the `DEPOT_META` comment in `cards.notes`, where `type` already lives,
+- computed at resolve time and never stored.
+
+**Note what this joins.** `stats`, `type` and now `season` are **three gaps in
+one insert path with one writer** — `js/depot-shop.js` `cardRow()` writes none of
+them, and the add-a-card flow writes some. They should be filled **together**, in
+the server-side roll (`docs/PULL_POLICY.md` section 4), rather than as three
+separate patches to the same INSERT. Filling one of them alone is the expensive
+way to do this.
 
 ---
 
