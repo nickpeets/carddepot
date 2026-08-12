@@ -318,7 +318,103 @@ database" is already false in practice for anyone who opens the builder.
 
 ---
 
-## 6. What this document does not know
+## 6. Prestige as an Overall rating — DESIGN INTENT, not current behaviour
+
+Recorded 2026-08-12 from Nick directly, after a measurement that said the
+opposite of what he expected. **Everything in this section is intent. None of it
+is built.**
+
+### 6.1 The measurement, stated first so the intent cannot be mistaken for a description
+
+**Grade and prestige do not affect play today.** Counted across every file
+between a card and the engine:
+
+| file | occurrences of `grade` |
+|---|---:|
+| `game/sim.js` | 0 |
+| `game/builder.html` (holds 8 of the rates writers) | 0 |
+| `game/season.js` | 0 |
+| `js/depot-prestige.js` | 0 |
+| `js/depot-shop-view.js` | 0 |
+| `index.html` | 30 — all of them the binder's own card record, the grade stepper and the insert payload; none near a rate, an average or a probability |
+
+`design/GRADE_PRESTIGE.md` agrees, and says so as a virtue: a ×3.0 GEM 10
+*"no longer distorts lineup legality at all — it only moves payouts and wager
+stakes."* **Code and design doc describe the same system. The intent below is a
+change to both.**
+
+### 6.2 The intent, in Nick's words
+
+> *"i think it should work that way, but we the developer will put restrictions
+> on how many marquee cards you can put in a lineup, etc."*
+>
+> *"its like the prestige is what gives a card its value based on many factors, or
+> at least factors we choose. In sports games its the Overall rating that affects
+> how great a player is in the game."*
+
+### 6.3 Prestige is already trying to be this, and that changes the size of the work
+
+**This is an extension of an existing system, not a new one.** `DepotPrestige`
+already computes a score from era, star tier and rookie status; it already has
+bands at 60 / 30 / 10; and it already drives pack odds and hit-slot placement
+(`PULL_POLICY.md` section 2).
+
+**What is missing is that it stops at the shop door.** Prestige decides what you
+are likely to *pull* and has no say in what happens on the *field*. The intent is
+to carry a number that already exists across one boundary it does not currently
+cross.
+
+### 6.4 The coupled rule, and it is not optional: a marquee cap
+
+Nick raised the cap in the same breath as the boost, and the pairing is the
+design rather than a caveat. Grade makes a card stronger; a roster limit bounds
+how many strong cards can be fielded at once.
+
+**Why it matters.** Without a cap, card value and competitive strength become one
+runaway axis: accumulate the most, win the most, earn the most, accumulate more.
+With one, **a deep binder buys CHOICES rather than a stacked lineup** — and a
+card staked in a VS wager costs a **slot**, not a rounding error.
+
+### 6.5 ▶ The question that decides the build — OPEN, not answered here
+
+**Is Overall a MULTIPLIER on the stat line, or does it REPLACE it?**
+
+| model | what the engine draws from | consequence |
+|---|---|---|
+| **multiplier** | the season's real numbers, nudged | Ruth 1921 is great because Ruth was great; a gem copy is a few percent better than a raw one. Preserves the real-baseball-numbers foundation the sim is built on. |
+| **composite** | an Overall computed from stats + grade + accolades + scarcity | Closer to how sports games actually work; further from stat-line purity. |
+
+*The planner's read is **multiplier**. That is a read, not a ruling.*
+
+### 6.6 Three sub-questions, also open
+
+1. **What counts as marquee?** The prestige bands already exist, so **gold could
+   simply BE marquee** — the concept is half-built and does not need inventing.
+2. **Cap by count, or by a prestige budget** for the whole lineup?
+3. **VS only, or everywhere?**
+
+### 6.7 Nick's Ruth example is the multiplier model working
+
+Under the season rule in section 4, a **1989 legacy insert declaring 1921 as its
+season** is a modern card carrying a peak-season stat line. That card is
+legitimately excellent — and **the stat line does most of the work, because those
+are real 1921 numbers.** Prestige would layer condition and scarcity on top of a
+foundation that is already strong on its own.
+
+That is the multiplier model, demonstrated in the example its author reached for
+without being asked to choose a model.
+
+### 6.8 Cross-reference, because one document currently says the opposite
+
+`design/GRADE_PRESTIGE.md` was written to **remove** grade's effect on lineups.
+Its "ceiling check" reasons that because caps count raw prestige, a ×3.0 GEM 10
+*"no longer distorts lineup legality at all."* **This section reverses that, in a
+controlled form** — with a cap as the control rather than the absence of an
+effect. Anybody arriving at that line must be able to find this one.
+
+---
+
+## 7. What this document does not know
 
 - **It does not prove that a pitcher card renders empty in the pitcher box.** The
   payload branch was read and `era/w/l` traced back to `card.stats`. Nobody put a
