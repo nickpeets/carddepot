@@ -135,16 +135,18 @@ browser session, and it belongs to the codespace agent.
 
 ### 1.3 Gate 2 — card playability (DECIDED 2026-08-12)
 
-**Nick's rule: only cards that can fill a lineup belong in a pack.** Two-player
-cards, team cards and checklists do not work with the game, so they do not come
-out of packs.
+**Nick's rule: only cards of a single player belong in a pack.** Two-player
+cards, team cards, checklists and manager cards do not work with the game, so
+they do not come out of packs.
 
 This introduces a concept the system does not currently have anywhere — not in
 the schema, not in the client:
 
-> **A card is PLAYABLE if it depicts exactly one player who can occupy a roster
-> position.** Multi-player cards, team cards and checklists are **collectible but
-> not playable.**
+> **A card is PLAYABLE if it depicts exactly one player.** Multi-player cards,
+> team cards, checklists and managers are **collectible but not playable.**
+> Playability is a property of the CARD, and deliberately **not** a question
+> about whether that player resolves to a roster position in our data — see
+> 1.3.2, where that distinction was ruled on.
 
 **Scope: everywhere, not just the starter box.** This was the open sub-question
 and it is answered. Playability gates the whole pull pool, so the box needs no
@@ -177,29 +179,46 @@ The 610 overlap is why subtracting two earlier figures gave the wrong answer —
 strings like `Texas Rangers / Pat Corrales TC, MGR, CL` are a team card *and* a
 slash card *and* a manager, and they are one row.
 
-### 1.3.2 Two things the rule does not settle, flagged rather than decided
+### 1.3.2 ~~Two things the rule does not settle~~ DECIDED 2026-08-12: structural, not strict
 
-**Managers.** Nick's rule says *one player who can occupy a roster position*. A
-manager is not a player and cannot take the field, so `MGR` cards read as
-excluded — that is the 471 rows and the difference between 5.11% and 5.66%. But
-the rule was written about two-player cards and checklists, and nobody has said
-"and managers" out loud. It is a product call, not a technical one.
+**Nick has ruled. Playability is STRUCTURAL.** The test is what kind of card
+this is — not whether the position data happens to know where the player on it
+played. The two enforcements the previous draft floated were never two ways of
+applying one rule; they are two different rules that happen to overlap:
 
-**4,382 rows are single-player names with no position data at all** — 5.19% of
-the pool, on top of the exclusions above. They pass the *card* test and fail the
-*roster* test, for a data reason rather than a card reason:
-`data/player_positions.json` has 18,930 entries and these are not among them.
-Observed examples: `Dave Palmer`, `Mike LaCoss`, `Buddy Solomon` — and
-`Tony La Russa` and `Jim Frey`, who are managers whose strings never carried the
-`MGR` code, which means the manager count above is understated by an unknown
-amount.
+| enforcement | the question it asks | rows out | % of pool | |
+|---|---|---:|---:|---|
+| **structural** | is this a card of one player? | **4,784** | **5.66%** | **CHOSEN** |
+| strict | does this player resolve to a roster position in `data/player_positions.json`? | 9,166 | 10.9% | rejected |
 
-If playability is enforced strictly as "resolves to a roster position", the pool
-loses **9,166** rows rather than 4,784 — about 10.9% — and it becomes hostage to
-the completeness of a static JSON file. If it is enforced structurally, as "not a
-multi-player card, team card or checklist", the pool loses 5.66% and some
-unplaceable players stay pullable. **That is a decision, and it is not this
-document's to make.**
+**Single-player cards with no position entry stay pullable.** A card of Dave
+Palmer is a playable card: it depicts one player, and a player occupies a
+position. That the system cannot say *which* position is a gap in our data, not
+a property of the card. Enforcing strictly would bake a data gap into a product
+rule and make the pull pool grow or shrink silently as somebody edits a JSON
+file — 18,930 entries deciding the shape of an 84,452-row pool, from a file that
+was never built to be an oracle. The gap is real, and it is tracked on its own
+terms in 1.3.4.
+
+**Managers are out.** A manager cannot take the field, so a manager card is not
+a card of a player. That is the 471 manager-only rows, and the whole difference
+between 5.11% and 5.66%.
+
+#### The manager residual is known-imperfect, not solved
+
+Recorded so that nobody reads 5.66% as exact, or reads this ruling as having
+closed the question:
+
+- **The `MGR` code undercounts managers.** `Tony La Russa` and `Jim Frey` sit in
+  the pool as ordinary single-player strings carrying no `MGR` token. **471 is a
+  floor, not a count**, and the true manager population is unmeasured.
+- **The only other signal is `data/player_positions.json`, and it is
+  incomplete** (1.3.4). Using it as the manager oracle would reintroduce exactly
+  the strict enforcement this ruling rejects.
+- **So some managers will be pullable.** That is an accepted residual of the
+  structural rule, sized only as a floor. It is not a solved problem, and
+  anybody tightening it later should tighten the *detection* and leave the
+  *rule* alone.
 
 ### 1.3.3 Where the verdict would live
 
@@ -216,6 +235,36 @@ not decided. The one thing worth saying is that both gates want the same answer
 in the same place: if a `catalog_key`-keyed table lands in Postgres to carry
 player names, it is the obvious home for an `is_playable` verdict too, and
 computing it twice would be the mistake.
+
+### 1.3.4 The position-file gap — tracked separately, and it is the one item that ADDS
+
+**4,382 rows — 5.19% of the 84,452-row art-backed pool — are ordinary
+single-player names with no entry in `data/player_positions.json` at all.**
+Under 1.3.2 they stay pullable, and they should. They are recorded here as a
+data defect in their own right rather than as a pull-pool question, because that
+is what they are.
+
+Observed examples: `Dave Palmer`, `Mike LaCoss`, `Buddy Solomon`.
+
+Coverage, measured 2026-08-12: the file holds **18,930** entries against a
+**155,844**-row catalog and the **84,452**-row art-backed pool.
+
+**What it costs today.** A card whose name is absent from the file cannot be
+placed in a lineup — *inference*, from the exact-key resolution order documented
+in `docs/ONBOARDING_PATH_SPEC.md` section 2, not observed in the builder. So
+these cards can be pulled and held but not fielded, which is a worse outcome
+than not pulling them, not a better one. That is the argument for filling the
+file. It is not an argument for the strict rule.
+
+**It is the only item on any list in this document that makes the pool bigger.**
+Every other rule here removes rows. Filling the position file removes nothing
+and un-strands up to 4,382 cards' worth of lineup slots. It also shrinks the
+manager residual in 1.3.2 — `Tony La Russa` and `Jim Frey` are inside this same
+4,382, so whoever fills the file has to decide, name by name, whether each is a
+player with no position or a manager with no code. That is the same judgement
+either way, and doing it here answers both questions at once.
+
+Not scoped, not scheduled, and not a blocker for the server-side roll.
 
 ### Where the eligible set lives
 
