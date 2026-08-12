@@ -166,6 +166,39 @@ From `MIGRATION_roles.sql` section 3, verbatim, and this is the sentence to reme
 > check. The only thing standing between the ledger and the balance is that
 > every writer remembered to move both.
 
+### And nothing enforces a floor
+
+Read off the dashboard 2026-08-11, `public.franchises` has five columns — `id`,
+`owner_id` (unique, FK), `team_name`, `created_at`, `balance`. `balance` is
+`int8`, `not null`, **default 0**, and the constraints column shows only
+`NON-NULLABLE`. There is no `check (balance >= 0)`.
+
+Two useful things follow. The first is reassuring: a new account starts at zero,
+so **onboarding is not a grant path**. Neither `depot_handle_new_user` nor
+`depot_ensure_onboarding` names a balance; they insert `(owner_id, team_name)`
+and take the default. That closes a question this document used to leave open.
+
+The second is not. Three facts compose:
+
+1. no `check (balance >= 0)` on the column;
+2. `depot_apply_payout` accepts any `p_amount`, positive or negative, with no
+   validation — see gap 4 and `docs/GRANT_AUTHORITY.md`;
+3. `depot_wallet_repair` sets `balance = sum(amount)` over the ledger, with no
+   floor of its own.
+
+So a negative balance is representable, reachable from the client, and
+reachable from the repair tool that exists to fix balances. Nothing would raise,
+nothing would log, and the coin chip would render it. This is not a live problem
+— the reversal in `db/proposals/REVERSAL_self_match_settlements.sql` uses
+`depot_apply_payout` with a negative amount **on purpose**, per that file's own
+comment, which is exactly why the column cannot simply be constrained without
+thinking about it first.
+
+**Repair shape:** decide whether negative is legal before adding the check. If
+it is not, the constraint belongs on the column and the reversal needs a
+different mechanism. If it is, say so here and stop treating it as an oversight.
+What is not defensible is the current state, where nobody has decided.
+
 ### An empty `depot_economy_ledger` does not mean an empty ledger
 
 State this plainly, because getting it wrong cost a session:
@@ -215,7 +248,7 @@ These are gaps, not bugs. Nothing here is code failing to do what it says.
 > banned pattern - so they can drift silently. Counting the game rows is always
 > true.
 
-So the chip cannot lie, and the stored counters can be wrong indefinitely without anyone noticing. There *is* a detector: `resolveRecord()` logs `RECORD DRIFT on season <id> - stored A-B vs counted C-D` whenever they disagree, and it logs through a raw `console.warn`, not through the `depot_debug`-gated `depotLog`. It is unconditional, it has been able to print on every page load for as long as it has existed, and nobody has ever read it. The detector is not the problem. Reading it is.
+So the chip cannot lie, and the stored counters can be wrong indefinitely without anyone noticing. There *is* a detector: `resolveRecord()` logs `RECORD DRIFT on season <id> - stored A-B vs counted C-D` whenever they disagree, and it logs through a raw `console.warn`, not through the `depot_debug`-gated `depotLog`. It is unconditional, it has been able to print on every page load for as long as it has existed, and nobody has ever read it. The detector is not the problem. Reading it is. This is one of two unread detectors in the system — the other is the `raise warning` inside `depot_handle_new_user`, which reports a half-created account into the Postgres log. The pattern is named once in `docs/GRANT_AUTHORITY.md` section 10, and closing both is one piece of work.
 
 **Repair shape for gap 3:** recount from `season_games` and write the result back into `seasons` — the same computation `resolveRecord()` already performs on every page load. Cheap, and idempotent by construction.
 
