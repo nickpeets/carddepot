@@ -367,10 +367,12 @@ VARVAR: Running`, the free pull from that morning.
 
 - **The binder tile writes the raw string.** `.rd-tile__name` holds it character
   for character. No cleaning, no truncation, no ellipsis.
-- **`depot-card-detail-2b.js` prints it as the panel headline.** Clicking the
-  card renders `YONATHAN DAZA SP, VARVAR: RUNNING` in uppercase as the largest
-  text on the panel, above `2020 · Topps · #567b`. That surface is now an
-  **observed** offender rather than a suspected one.
+- **The detail panel prints it as the headline.** Clicking the card renders
+  `YONATHAN DAZA SP, VARVAR: RUNNING` in uppercase as the largest text on the
+  panel, above `2020 · Topps · #567b`. **Corrected 2026-08-12: that headline is
+  emitted by `index.html`'s `openSpot`, not by `depot-card-detail-2b.js`, which
+  this bullet originally named.** The DOM observation was right and the
+  attribution was wrong — see 5.2.
 - **The tile only looks clean because of a CSS rule, and the rule is backwards.**
   `.rd-tile--binder.has-art .rd-tile__name { display: none; }`, read out of the
   live stylesheet, hides the name **exactly when the card has a picture.** With
@@ -425,6 +427,46 @@ One caveat to decide, and one that Nick's ruling has already settled:
   which is correct — better a messy name than an empty card — but it means the
   2.5% doubled-code class is covered and any *future* malformation is not. The
   reveal should not assume the cleaner always succeeds.
+
+### 5.2 Which files actually print a name (measured 2026-08-12), and the trap in section 5's own wording
+
+**The four files named above are a list of where truncation is ABSENT. They are
+not a list of what prints a name.** Both the session that wrote section 5 and the
+one that wrote 5.1 read that sentence the second way, and 5.1 named the wrong
+file as a result — from an observed DOM node rather than from the code that
+emits it. The sentence above stays, because it is true. This subsection exists so
+that it is not misread a third time.
+
+Searched every `.js` and `.html` file on `main`, excluding `mockups/`, for the
+render sites. **There are three printers, in two files:**
+
+| # | file | site | what it prints |
+|---|---|---|---|
+| 1 | `js/depot-shop-view.js` | `nameOf()` | the rip and shop reveal — the only path through this view |
+| 2 | `index.html` | `dcTileHTML` | the binder tile — `'<div class="rd-tile__name">'+dcEsc(c.name)+'</div>'` |
+| 3 | `index.html` | `openSpot` | the detail headline — `<div class="spot-name">${c.name}</div>` into `#spotMeta`'s innerHTML |
+
+**Struck as printers:** `depot-card-detail-2b.js`, `depot-pixel-card.js` and
+`depot-binder-browse.js`. The first is a decorator — injected styles, prestige
+relocation, the grade stepper — and its own comment says so: *"name already
+emitted by openSpot as `.spot-name`"*. None of the three contains
+`rd-tile__name` or `spot-name`, and none of them prints a card name at all.
+
+**Status.** Site 1 is **done**: `e1ca2d1` routes `nameOf()` through
+`depotCleanName` with the house-style guard and a fail-loud fallback if the
+cleaner ever returns empty. Sites 2 and 3 are both in `index.html` — a 196 KB
+shell that carries the Supabase constants — and want a surgical edit rather than
+a whole-file replacement. They belong to the same agent and the same session as
+the restamp.
+
+**And nothing changes on screen until the restamp lands.** The cache-bust tags
+sit behind the deployed build and GitHub Pages caches `js`, so a corrected
+bundle ships as bytes no browser fetches. `e1ca2d1` is correct and invisible,
+and it cannot be live-verified past the deployed file itself.
+
+**`depotCleanName` is present on both surfaces.** `game/shop.html` and
+`index.html` both load `js/depot-position.js`, so the guard is a real call on
+either page rather than a silent fallback to `trim()`.
 
 ---
 
