@@ -241,19 +241,33 @@ yet, and the kind V2 is for.
 
 ### The pattern this belongs to: unread detectors
 
-Name it once and point at it from both places, because there are two:
+Name it once and point at it from ~~both~~ **all three** places:
 
 - `depot_handle_new_user` raises a **warning** into the Postgres log on
   onboarding failure.
 - `js/depot-shell.js` `resolveRecord()` raises `RECORD DRIFT on season <id>` via
   a raw `console.warn` — deliberately not the `depot_debug`-gated `depotLog`, so
   it prints unconditionally. See `docs/SETTLEMENT_MODEL.md` section 6, gap 3.
+- **Added 2026-08-12.** `js/depot-library-index.js` logs
+  `load failed: Error -- catalog ships unfiltered` and `depot-shop.js` follows
+  with `no art index; rolling the UNFILTERED catalog (155844 rows)`. Observed
+  live. See `docs/PULL_POLICY.md` section 1.1.
 
-Both fire every time the condition holds. Both write to a channel with no
-reader. **A detector that fires unconditionally into a channel nobody reads is
-not a detector; it is a comment with a runtime cost.** Neither is a bug and
-neither needs to be removed — they need somewhere to go. That is one small
-piece of work covering both, and it is worth more than either alone.
+All three fire every time the condition holds. All three write to a channel with
+no reader. **A detector that fires unconditionally into a channel nobody reads is
+not a detector; it is a comment with a runtime cost.** None is a bug and none
+needs to be removed — they need somewhere to go. That is one small piece of work
+covering all three, and it is worth more than any of them alone.
+
+**But the third one is a category above the other two, and the difference
+matters.** The first two report **drift** — something is inconsistent, go look.
+The third reports a **safety rule switching itself off**: the art gate, the rule
+that says a card must have an image to be pullable, failed to load and fell back
+to allowing everything, and said so to nobody. A detector nobody reads is bad. A
+*guard* that disables itself and reports it to nobody is worse, because the
+system carries on looking exactly as it did when the guard was up. Whatever
+channel gets built for these, that third case is the one that should page
+somebody.
 
 ---
 
