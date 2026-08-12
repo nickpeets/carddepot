@@ -52,6 +52,52 @@ Art is probe-gated: `fillArt()` paints `.prip-well` only for a live laid-out
 node whose phase token is still current, and falls back to `.prip-noart`
 (tile + NO IMAGE YET + a sentence) -- never a broken image (README rule 4).
 
+### 2.1 Display requirement -- every name in the rip routes through `depotCleanName`
+
+Carried here in full from `docs/ONBOARDING_PATH_SPEC.md` section 5 rather than
+cross-referenced, so that whichever of the rip and the onboarding starter box
+ships first does not inherit a dependency on the other shipping.
+
+**Today nothing in this chapter calls it.** `js/depot-shop-view.js` `nameOf()` is
+literally `return s.player || s.name || "Unknown"`, and there is no truncation in
+`depot-pixel-card.js`, `depot-binder-browse.js`, `depot-shop-view.js` or
+`depot-card-detail-2b.js`. *Read by the session that wrote
+`ONBOARDING_PATH_SPEC.md` section 5 on 2026-08-12; carried across, not
+re-verified here.* It is why the free pull observed that day printed
+`Yonathan Daza SP, VARVAR: Running` across two lines on the card face, in the
+reveal, at the moment the card is the only thing on screen.
+
+**Requirement.** Every surface in this chapter that prints a player string routes
+it through `window.depotCleanName`, with the guard that is already house style:
+
+```js
+var cn = (typeof window.depotCleanName === 'function') ? window.depotCleanName : function (x) { return String(x || '').trim(); };
+// ...
+cn(card.player)
+```
+
+Which nodes those are -- the `.prip-front` plate, the `.prip-mini` summary row,
+and the `.dpc-hist-cardname` rows in section 4 -- is read off the trees in
+sections 1, 2 and 4 above, not off a grep of the view. Treat the list as the
+places to check rather than as a proven complete set.
+
+Measured impact, carried from `ONBOARDING_PATH_SPEC.md` section 5: **2.5%** of
+the eligible pool carries the doubled-code prose bug (`UERUER:`, `VARVAR:`) and
+a further **8.2%** carries trailing subset codes. Worst in junk wax at 2.5% --
+which is exactly what a Bronze pack is weighted toward -- and cleanest in vintage
+at 1.3%.
+
+**And the cleaner is not guaranteed to succeed.** `depotCleanName` falls back to
+**the raw string** when it finds no name token. That is the right fallback -- a
+messy name beats an empty card -- but it means the reveal must not assume that
+cleaning shortens anything. The 2.5% doubled-code class is covered; any *future*
+malformation is not, and it will arrive at the card face at full length.
+Whatever the plate does about overflow, it has to do without relying on the
+cleaner having succeeded.
+
+This is the same open item as `ONBOARDING_PATH_SPEC.md` section 5's third
+bullet, recorded in both chapters on purpose.
+
 ## 3. The single-card ceremony (still used)
 
 `buildReveal()` + `playCeremony()` build `.dsv-reveal-host > .dsv-reveal.band-<b>.ceremony-<b>`
