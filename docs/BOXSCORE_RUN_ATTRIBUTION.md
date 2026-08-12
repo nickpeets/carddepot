@@ -121,3 +121,91 @@ Both measurements come from pressing REPLAY on a played match while signed in, w
     [season] writeback complete
 
 The season writeback fires ahead of the `firstPlay` guard by design and returns without writing because a VS match has no `season_games` row. No settle call, no `matches` UPDATE, banner reads "(replay)" and never "(saving…)".
+---
+
+## 9. Piece one, specced for the codespace agent — and why it is FINAL-ONLY
+
+Written 2026-08-12 by the browser agent, which located the site and then did not
+touch it: `game/sim.js` is the game engine, `AGENTS.md` section 2 requires
+sign-off for it, and that agent cannot run tests.
+
+### 9.1 The exact site
+
+`renderBoxScore(stream, line, upto)` in `game/sim.js`:
+
+```js
+function __sumR(t){ var s = 0; t.order.forEach(function(idx){ s += (t.bat[idx] && t.bat[idx].r) || 0 }); return s }
+var mr = __sumR(teams.mudcats), ar = __sumR(teams.acorns)
+```
+
+`mr` and `ar` feed both the `winner` test and `resultLine` — the string printed
+largest. **The authoritative number is already in scope in the same function**,
+as `line.mudcats.r` and `line.acorns.r`, which is what `__bxLineScore(line)`
+prints directly underneath. Section 2's defect is that one panel reads two
+sources.
+
+### 9.2 ▶ The wrinkle section 5 did not know about: `renderBoxScore` takes `upto`
+
+Section 5 calls piece one "one-line" and "safe". It was written about the FINAL
+box score and it did not account for the third argument. `renderBoxScore`
+computes `__isFinal` from `upto` and renders an **in-progress** panel headed
+`IN PROGRESS — T5` and similar.
+
+`line.mudcats.r` is the total for the WHOLE GAME. **So the naive swap makes an
+in-progress box score print the final score** — a worse defect than the one being
+fixed, shipped as a safe one-liner.
+
+### 9.3 Why summing `innings[]` does not rescue the in-progress case
+
+Measured: the innings array IS written per half-inning —
+`line[code].innings[inning - 1] = runsThisInning` — so summing completed innings
+is well-defined. But the array is fully populated for a completed game, so at a
+cut in the MIDDLE of an inning, `innings[cutInning - 1]` already holds runs that
+have not happened yet at the cut. Summing to the cut inning inclusive
+over-reports; summing exclusive under-reports the current inning entirely.
+
+Closing that gap needs the runs scored **within** the current half-inning up to
+the cut, and the only per-event source for that is the same per-batter `r` the
+batting table derives — **the value section 3 proves is over-counted.**
+
+**Therefore: the in-progress headline cannot be made correct by piece one. It is
+blocked on piece two.** That is a real finding and it is why this section exists.
+
+### 9.4 The spec
+
+1. **Final:** when `__isFinal`, take `mr = line.mudcats.r` and `ar = line.acorns.r`.
+   Exact, and it removes the second source of truth for the case that is stored,
+   settled and shown to a player after every game.
+2. **In progress:** keep `__sumR` — do NOT change behaviour — and **log the
+   divergence deliberately**:
+
+```js
+if (!__isFinal) {
+  var lr = line.mudcats.r, la = line.acorns.r;
+  if (__sumR(teams.mudcats) > lr || __sumR(teams.acorns) > la) {
+    console.warn('[sim] box score: batting-table runs exceed the line score '
+      + '(mudcats ' + __sumR(teams.mudcats) + ' vs ' + lr + ', acorns '
+      + __sumR(teams.acorns) + ' vs ' + la + '); see docs/BOXSCORE_RUN_ATTRIBUTION.md piece two');
+  }
+}
+```
+
+3. **Do not touch `__bxDerive` or anything in `simHalf`.** Piece two is a
+   separate change with a separate owner.
+
+**On the warning.** This repo has named the unread-detector pattern three times —
+`RECORD DRIFT`, the signup trigger's `raise warning`, and the art index switching
+itself off (`GRANT_AUTHORITY.md` section 10, `PULL_POLICY.md` 1.1). Adding a
+fourth detector is only defensible because this one is aimed at somebody who is
+actively hunting piece two and will be watching for it. **It is a lead, not a
+guard.** If piece two is not scheduled, do not add it — log nothing rather than
+log into the void again.
+
+### 9.5 Acceptance
+
+- A completed match: the headline and the line score agree, on the two matches in
+  section 2 (`46ff69f7` seed 1052721976, and `af16f852` seed 385391966) whose
+  correct answers are 10–6 and 1–4.
+- An in-progress render at the same seeds: the headline is UNCHANGED from today's
+  behaviour, and the warning fires.
+- Nothing else in the panel moves.
