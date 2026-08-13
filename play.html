@@ -1,0 +1,137 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Card Depot &mdash; Play Ball</title>
+<!-- [site chrome] favicon + unfurl card (see index.html for the rationale). -->
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="canonical" href="https://thedepot.cards/play.html">
+<meta name="description" content="Your club, your season, your challenges &mdash; four ways to use the binder.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="The Depot">
+<meta property="og:title" content="The Depot &mdash; Play Ball">
+<meta property="og:description" content="Your club, your season, your challenges &mdash; four ways to use the binder.">
+<meta property="og:url" content="https://thedepot.cards/play.html">
+<meta property="og:image" content="https://thedepot.cards/assets/og-depot.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://thedepot.cards/assets/og-depot.png">
+<script src="js/version.js?v=cd73b68"></script>
+<script src="js/depot-core.js?v=cd73b68"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+// depot-core Supabase config (additive; mirrors vs.html). Publishable key only,
+// same project as the main app. Without it depotSB() returns null and the bar
+// renders anonymous even for a signed-in collector.
+var SUPABASE_URL='https://nuymzokvbdntbvinsnda.supabase.co';
+var SUPABASE_KEY=['sb','publishable','IiTsIBqYgGTIEnwdvQEXPA','4rmQdYVo'].join('_');
+window.DEPOT_SUPABASE_CONFIG = window.DEPOT_SUPABASE_CONFIG || { url: SUPABASE_URL, key: SUPABASE_KEY };
+var sb=null;
+try{ if(window.supabase&&window.supabase.createClient){ sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY); } }catch(e){}
+try{ if(sb){ window.sb = sb; window.supabaseClient = sb; } }catch(e){}
+</script>
+<link rel="stylesheet" href="css/depot-style.css?v=cd73b68">
+<link rel="stylesheet" href="depot-v2.css?v=cd73b68">
+<link rel="stylesheet" href="css/depot-redesign.css?v=cd73b68">
+<script src="js/depot-wallet.js?v=cd73b68"></script>
+<script src="js/depot-shell.js?v=cd73b68" defer></script>
+<script src="js/depot-redesign.js?v=cd73b68" defer></script>
+<script src="js/depot-vs.js?v=cd73b68" defer></script>
+<script src="js/depot-play-hub.js?v=cd73b68" defer></script>
+</head>
+<body class="v2-body rd-page">
+<script>
+/* CHAPTER 19 - the Play Ball hub. This surface is READ + ROUTE only: it starts
+   nothing itself, it names the four modes and hands off. Rule 7 - the shell
+   draws the one bar and the gold Play Ball pill names this surface, so there is
+   deliberately no <h1> below the header. */
+document.addEventListener('DOMContentLoaded', function () {
+  if (window.DepotShell && window.DepotShell.mount) { window.DepotShell.mount({ active: 'game', wordmark: 'THE <b>DEPOT</b>' }); }
+  else { console.warn('[play hub] DepotShell.mount missing; this surface has no header'); }
+});
+</script>
+<main class="depot-stage rd-page__body" data-depot-stage>
+<div class="rd-hub" data-hub>
+
+  <!-- YOUR CLUB. Painted by depot-play-hub.js; see that file's SCOPE RULING for
+       why this ships in the "no saved team yet" state. -->
+  <section class="rd-panel rd-panel--pad">
+    <div class="rd-hub__club" data-hub-club>
+      <span class="rd-hub__crest rd-hub__crest--empty" aria-hidden="true">&hellip;</span>
+      <span class="rd-hub__id"><span class="rd-hub__name">Your club</span></span>
+    </div>
+  </section>
+
+  <!-- THE FOUR MODES. 2x2 on desktop, one column at 390. -->
+  <div class="rd-hub__grid">
+
+    <section class="rd-panel rd-hub__tile">
+      <div class="rd-hub__tileh">
+        <span class="rd-hub__ticon" aria-hidden="true">&#128203;</span>
+        <span class="rd-hub__tname">Lineup</span>
+        <span class="rd-hub__flag">LIVE</span>
+      </div>
+      <p class="rd-hub__blurb">Your batting order, bench and bullpen. Saved teams live here.</p>
+      <div class="rd-hub__status" data-hub-lineupstatus></div>
+      <div class="rd-hub__act" data-hub-lineupact>
+        <a class="rd-btn rd-btn--primary" href="game/builder.html">Open the builder</a>
+      </div>
+    </section>
+
+    <section class="rd-panel rd-hub__tile">
+      <div class="rd-hub__tileh">
+        <span class="rd-hub__ticon" aria-hidden="true">&#127942;</span>
+        <span class="rd-hub__tname">Season</span>
+        <span class="rd-hub__flag">LIVE</span>
+      </div>
+      <p class="rd-hub__blurb">Play your schedule out. Wins pay coins into the ledger.</p>
+      <div class="rd-hub__status" data-hub-seasonstatus></div>
+      <div class="rd-hub__act" data-hub-seasonact></div>
+    </section>
+
+    <section class="rd-panel rd-hub__tile">
+      <div class="rd-hub__tileh">
+        <span class="rd-hub__ticon" aria-hidden="true">&#9876;</span>
+        <span class="rd-hub__tname">VS</span>
+        <span class="rd-hub__flag">LIVE</span>
+      </div>
+      <p class="rd-hub__blurb">Head-to-head against another collector. Challenges and rematches land here.</p>
+      <div class="rd-hub__status" data-hub-vsstatus></div>
+      <div class="rd-hub__act" data-hub-vsact></div>
+    </section>
+
+    <!-- Rule 6: locked says why, next to the control. -->
+    <section class="rd-panel rd-hub__tile rd-hub__tile--soon">
+      <div class="rd-hub__tileh">
+        <span class="rd-hub__ticon" aria-hidden="true">&#127914;</span>
+        <span class="rd-hub__tname">Exhibition</span>
+        <span class="rd-hub__flag rd-hub__flag--soon">COMING</span>
+      </div>
+      <p class="rd-hub__blurb">One-off games with a rule twist &mdash; junk wax only, rookies only, one brand. No standings, coins still pay.</p>
+      <div class="rd-hub__status">
+        <span class="rd-hub__countlbl">rule sets are drafted, not specified</span>
+      </div>
+      <div class="rd-hub__act">
+        <button class="rd-btn rd-btn--quiet" type="button" disabled>Locked</button>
+        <p class="rd-panel__note">The rule sets have been named but not written, so there is nothing to play yet.</p>
+      </div>
+    </section>
+
+  </div>
+
+  <section class="rd-panel rd-panel--dark rd-hub__replaces">
+    <div class="rd-panel__h">WHAT THIS REPLACES</div>
+    <p>Play Ball used to cold-open into an exhibition game between two clubs you had never heard of.
+    Your club goes at the top now &mdash; name, record, what the season is and when it ends &mdash; and then the four modes.
+    Nothing starts until you pick.</p>
+  </section>
+
+</div>
+</main>
+</body>
+</html>
