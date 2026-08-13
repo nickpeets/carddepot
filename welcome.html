@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Depot &mdash; Your cards. Your nine. Your season.</title>
+<!-- [site chrome] favicon + unfurl card (see index.html for the rationale). -->
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="canonical" href="https://thedepot.cards/welcome.html">
+<meta name="description" content="Scan the cards you own or pull them from a 176,000-card library. Build a lineup. Play the season out.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="The Depot">
+<meta property="og:title" content="The Depot &mdash; collect, build a nine, play ball">
+<meta property="og:description" content="Scan the cards you own or pull them from a 176,000-card library. Build a lineup. Play the season out.">
+<meta property="og:url" content="https://thedepot.cards/welcome.html">
+<meta property="og:image" content="https://thedepot.cards/assets/og-depot.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://thedepot.cards/assets/og-depot.png">
+<script src="js/version.js?v=c282bd9"></script>
+<script src="js/depot-core.js?v=c282bd9"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+// depot-core Supabase config (additive; mirrors vs.html). Publishable key only,
+// same project as the main app. Without it depotSB() returns null and the bar
+// renders anonymous even for a signed-in collector.
+var SUPABASE_URL='https://nuymzokvbdntbvinsnda.supabase.co';
+var SUPABASE_KEY=['sb','publishable','IiTsIBqYgGTIEnwdvQEXPA','4rmQdYVo'].join('_');
+window.DEPOT_SUPABASE_CONFIG = window.DEPOT_SUPABASE_CONFIG || { url: SUPABASE_URL, key: SUPABASE_KEY };
+var sb=null;
+try{ if(window.supabase&&window.supabase.createClient){ sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY); } }catch(e){}
+try{ if(sb){ window.sb = sb; window.supabaseClient = sb; } }catch(e){}
+</script>
+<link rel="stylesheet" href="css/depot-style.css?v=c282bd9">
+<link rel="stylesheet" href="depot-v2.css?v=c282bd9">
+<link rel="stylesheet" href="css/depot-redesign.css?v=c282bd9">
+<script src="js/depot-wallet.js?v=c282bd9"></script>
+<script src="js/depot-shell.js?v=c282bd9" defer></script>
+<script src="js/depot-redesign.js?v=c282bd9" defer></script>
+</head>
+<body class="v2-body rd-page">
+<script>
+/* CHAPTER 16 - the onboarding shell. The anonymous visitor's first ten seconds.
+   The 404, favicon, OG card and auth modal already exist; this page is the
+   missing piece - a landing that is not a login wall.
+   Rule 7: the shell draws the one bar; signed-out it collapses to the LOG IN
+   pill, which is exactly the chapter's drawn header. No page title below it.
+   A visitor with a live session does not belong here - route them to the hub.
+   SCOPE, decided without a planner per the standing brief: the two hero panels
+   are the DESIGNED placeholders (rule 4's band language), not autoplaying
+   product loops - shipping a fake loop would promise motion the page does not
+   have. The secondary "watch a rip first" is LOCKED WITH ITS REASON (rule 6):
+   the no-account house rip does not exist yet. */
+document.addEventListener('DOMContentLoaded', function () {
+  if (window.DepotShell && window.DepotShell.mount) { window.DepotShell.mount({ active: 'binder', wordmark: 'THE <b>DEPOT</b>' }); }
+  var t = 0;
+  (function check(){
+    if (window.depotUserCached){ location.replace('play.html'); return; }
+    if (++t < 20){ setTimeout(check, 250); }
+  })();
+});
+</script>
+<main class="depot-stage rd-page__body" data-depot-stage>
+<div class="rd-hub">
+
+  <section class="rd-panel rd-panel--pad">
+    <div class="rd-panel__h">A BASEBALL CARD APP THAT PLAYS BALL</div>
+    <div class="rd-hub__club">
+      <span class="rd-hub__id">
+        <span class="rd-hub__name">Your cards. Your nine. Your season.</span>
+        <span class="rd-hub__line"><span class="rd-hub__season">Scan the cards you own or pull them from a 176,000-card library. Build a lineup out of them. Play the season out. Win coins, rip more packs.</span></span>
+        <span class="rd-hub__line" style="margin-top:14px">
+          <a class="rd-btn rd-btn--gold" href="index.html">Open a free Starter Box &#9986;</a>
+          <button class="rd-btn rd-btn--quiet" type="button" disabled>or watch a rip first &#9654;</button>
+        </span>
+        <span class="rd-hub__line"><span class="rd-hub__countlbl">The no-account rip is not built yet &mdash; the ceremony currently needs a signed-in collector. The Starter Box does not.</span></span>
+      </span>
+    </div>
+  </section>
+
+  <div class="rd-hub__grid">
+    <section class="rd-panel rd-hub__tile">
+      <div class="rd-hub__tileh"><span class="rd-hub__ticon">&#9986;</span><span class="rd-hub__tname">A rip, right now</span></div>
+      <div class="rd-scan-slot" style="aspect-ratio:16/9;display:flex;align-items:center;justify-content:center;margin-top:12px">
+        <span class="rd-hub__countlbl">card mid-reveal &middot; rays &middot; HIT stamp</span>
+      </div>
+      <p class="rd-hub__blurb">Rip a pack and the odds are computed live &mdash; never printed on the wrapper.</p>
+    </section>
+    <section class="rd-panel rd-hub__tile">
+      <div class="rd-hub__tileh"><span class="rd-hub__ticon">&#9918;</span><span class="rd-hub__tname">A game, in ten seconds</span></div>
+      <div class="rd-scan-slot" style="aspect-ratio:16/9;display:flex;align-items:center;justify-content:center;margin-top:12px">
+        <span class="rd-hub__countlbl">an at-bat resolving on the broadcast field</span>
+      </div>
+      <p class="rd-hub__blurb">Your nine against a friend's, from one seed &mdash; the sim owns the mechanics.</p>
+    </section>
+  </div>
+
+  <section class="rd-panel rd-panel--pad">
+    <div class="rd-hub__line" style="justify-content:center;gap:12px;display:flex;flex-wrap:wrap">
+      <span class="rd-team__chip">25 CARDS TO START</span>
+      <span class="rd-team__chip">FREE DAILY PACK</span>
+      <span class="rd-team__chip">NO CARD IS EVER PAYWALLED BEHIND ART</span>
+    </div>
+  </section>
+
+</div>
+</main>
+</body>
+</html>
