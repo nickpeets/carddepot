@@ -209,3 +209,93 @@ log into the void again.
 - An in-progress render at the same seeds: the headline is UNCHANGED from today's
   behaviour, and the warning fires.
 - Nothing else in the panel moves.
+
+---
+
+## 10. CORRECTION (2026-08-13) — §9.2 is wrong, and §9.4/§9.5 would ship the bug
+
+Written on first builder contact. Nobody had read this document against the code
+before: §9 was authored by a browser agent that located the site and could not
+run anything, and the correction below is what an hour with the tree says.
+
+**§9.2's central claim is false.** It reads: *"`line.mudcats.r` is the total for
+the WHOLE GAME. So the naive swap makes an in-progress box score print the final
+score."* The `line` argument is `GAME.line`, and `GAME.line` is a **running
+total** that advances with `GAME.pos`:
+
+    game/sim.js:1382   GAME.line = { mudcats:{innings:[],r:0,h:0,e:0}, acorns:{...} }
+    game/sim.js:1177   function updateLinescore(ev)
+    game/sim.js:1184     L[code].r += ev.runsOnPlay;      // L = GAME.line
+
+`updateLinescore` is called from `applyEvent` as playback advances, so at any cut
+`GAME.line[code].r` is the score *at that cut*. Both call sites pass it:
+
+    game/sim.js:1544   window.__renderBoxScore(GAME.stream, GAME.line, GAME.pos)
+    game/sim.js:1597   window.__renderBoxScore(GAME.stream, GAME.line, GAME.pos)
+
+The whole-game line §9.2 is thinking of is a **different object** — the `line`
+local built inside the sim generator and returned as `finalLine`
+(`game/sim.js:884`, `:893`). It is never assigned to `GAME.line`.
+
+**Consequences, in order.**
+
+1. **§9.3 collapses.** Its argument quotes `line[code].innings[inning-1] =
+   runsThisInning`, which is `:884` — the `finalLine` object, not `GAME.line`.
+   `GAME.line.innings` is accumulated with `+=` per event at `:1183`. There is no
+   gap to close: the correct in-progress number is already in scope and is
+   already painted in the R column by `__bxLineScore` at `:1491`, two lines below
+   the headline it disagrees with.
+2. **§9.4's `__isFinal` branch is unnecessary.** `mr = line.mudcats.r,
+   ar = line.acorns.r` is correct at *every* cut. Piece one really is the
+   one-line change §5 said it was.
+3. **§9.5 must change.** Its second bullet — *"an in-progress render … the
+   headline is UNCHANGED from today's behaviour"* — makes the defect an
+   acceptance criterion. Anyone who satisfies §9.5 as written has certified the
+   bug this document exists to fix.
+
+**And piece two is not an investigation. It is five lines, and §9.4 step 3
+forbids looking at them.**
+
+§5 sends piece two to `simHalf`; `game/sim.js:1391` says in its own comment that
+the engine does not accumulate per-player stats. The defect is in `__bxDerive`:
+
+    game/sim.js:1436   var scorers = {};   // name -> count (across whole game)
+    game/sim.js:1453     for (…) { var nm = sc[s]; scorers[nm] = (scorers[nm]||0)+1; }
+    game/sim.js:1458   t.order.forEach(function(idx){ var rec=t.bat[idx];
+                         if(scorers[rec.name]) rec.r = scorers[rec.name]; });
+
+Two defects in three lines. `scorers` is built in **one loop over both teams'
+events**, so it is not per-team — a name that appears in both lineups accumulates
+the combined count. Then `rec.r =` is an **assignment**, applied to every
+batting-order slot bearing that name on **either** side, so both slots receive
+the full total.
+
+That is §3's Sandberg row exactly — a slot with 0 H and 0 BB credited with a run,
+because someone *else* of that name scored — and it is why §2.3 found the offset
+is not constant: it depends on how many names collide in the two lineups drawn
+for that seed. `rec.rbi` at `:1448` and `oppPit.r` at `:1449` both use `+=` per
+event, which is why §4 found RBI correct in the same table.
+
+**Revised spec, replacing §9.4 and §9.5.**
+
+1. Piece one: `var mr = line.mudcats.r, ar = line.acorns.r`. No `__isFinal`
+   branch, no divergence warning — the fourth unread detector §9.4 already
+   argued against is not needed once the number is right at every cut.
+2. Piece two: make `scorers` per-team and accumulate rather than assign. Same
+   change, same afternoon, same owner — `game/sim.js` still needs §2 sign-off.
+3. **Delete step 3.** "Do not touch `__bxDerive`" fences off the only place the
+   phantom credit demonstrably lives.
+
+**Acceptance, revised.** The completed-match check in §9.5 stands as written
+(`46ff69f7` → 10–6, `af16f852` → 1–4). Replace the in-progress bullet with: at a
+mid-game cut the headline **equals** the R column of the line score directly
+beneath it. Add: a seed whose two lineups share a player name renders that name's
+run total on one team only.
+
+**What §9 got right and should be kept.** §9.1's site quote is exact, its
+"one panel reads two sources" diagnosis is the correct frame, and its instinct to
+stop and spec rather than patch a game engine it could not test was the right
+call. The reasoning failed on one object identity — `GAME.line` versus
+`finalLine` — and everything downstream inherited it. That is worth recording as
+precisely as the finding itself, per §0.2's standard: the error is legible, and
+so is who made it and why.
