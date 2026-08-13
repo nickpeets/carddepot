@@ -859,3 +859,89 @@
   .rd-hub__blurb{display:none}            /* the 390 render keeps the count line only */
   .rd-hub__act .rd-btn{width:100%}        /* 44px full-width pills, rule 5 */
 }
+
+/* =============================================================================
+   CHAPTER 18 - THE DUGOUT, SAVED TEAMS
+   Target: exports/desktop/18-dugout-saved-teams.png +
+           exports/mobile-390/dugout-saved-teams.png.
+
+   Rule 7: no header, no page title - the shell's one bar names the surface.
+   Rule 8: every gap is one --rd-step. Rule 6: the cap state says why next to
+   the control it disables.
+   The DEFAULT row is the only one drawn in cream with a gold border; every other
+   team is a tinted sub-panel. That contrast IS the "which team does Season play"
+   answer, so it is load-bearing, not decoration.
+   ========================================================================== */
+.rd-dug{display:flex;flex-direction:column;gap:var(--rd-step)}
+.rd-dug__bar{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.rd-dug__search{flex:1 1 320px;min-width:0}
+.rd-dug__count{font-family:var(--rd-micro);font-size:9px;color:var(--rd-orange);margin-bottom:12px}
+/* canon: 44px touch beats the drawn 38, on every viewport not just 390 */
+.rd-dug__bar .rd-btn{min-height:44px;display:inline-flex;align-items:center;justify-content:center}
+.rd-team__act .rd-btn{min-height:44px;display:inline-flex;align-items:center;justify-content:center}
+
+.rd-team{
+  background:var(--rd-tint);border:var(--rd-bd-sub) solid var(--rd-tint-line);
+  border-radius:16px;padding:14px;margin-bottom:12px;
+}
+.rd-team:last-child{margin-bottom:0}
+.rd-team--default{background:var(--rd-cream);border-color:var(--rd-gold);border-width:var(--rd-bd)}
+.rd-team--invalid{background:#fdecea;border-color:var(--rd-red)}
+
+.rd-team__h{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.rd-team__crest{
+  width:52px;height:52px;flex:none;display:flex;align-items:center;justify-content:center;
+  background:#fff;border:3px solid var(--rd-navy);border-radius:12px;box-shadow:0 3px 0 var(--rd-navy);
+  font-family:var(--rd-micro);font-size:13px;color:var(--rd-navy);
+}
+.rd-team--default .rd-team__crest{background:linear-gradient(#ffe98a,#ffd23e 60%,#f0b41c)}
+.rd-team__id{flex:1 1 240px;min-width:0}
+.rd-team__nameline{display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.rd-team__name{font-family:var(--rd-ui);font-weight:800;font-size:19px;color:var(--rd-navy)}
+.rd-team__chip{
+  font-family:var(--rd-micro);font-size:7px;line-height:1.6;border-radius:var(--rd-r-pill);
+  padding:5px 10px;color:var(--rd-navy);background:#fff;border:2px solid var(--rd-navy);
+}
+.rd-team__chip--default{color:var(--rd-ink-gold);background:var(--rd-gold);border-color:var(--rd-gold-deep,#c9960a)}
+.rd-team__meta{display:flex;align-items:baseline;gap:9px;flex-wrap:wrap;margin-top:5px}
+.rd-team__rec{font-family:var(--rd-num);font-size:17px;line-height:1;color:var(--rd-green-deep)}
+.rd-team__sub{font-family:var(--rd-ui);font-weight:600;font-size:11.5px;color:var(--rd-muted-2)}
+.rd-team__act{display:flex;gap:9px;flex:none;margin-left:auto}
+
+/* the nine slots. Rule 4: a missing card is a DESIGNED placeholder, never a
+   broken image - so a slot with no art paints the scan hatch and its own label. */
+.rd-team__slots{display:grid;grid-template-columns:repeat(9,minmax(0,1fr));gap:9px;margin-top:12px}
+.rd-slot{
+  aspect-ratio:5/7;border:2px dashed var(--rd-tint-line);border-radius:9px;
+  background:repeating-linear-gradient(45deg,rgba(16,69,107,.09) 0 9px,transparent 9px 18px);
+  display:flex;align-items:center;justify-content:center;text-align:center;padding:4px;
+  font-family:var(--rd-micro);font-size:6.5px;line-height:1.6;color:var(--rd-muted-2);
+  overflow:hidden;
+}
+.rd-slot--star{border-style:solid;border-color:var(--rd-gold);color:var(--rd-ink-gold)}
+.rd-slot--broken{border-color:var(--rd-red);color:var(--rd-ink-red);background:#fdecea}
+
+/* rule 6: the broken row says WHICH slot broke, next to the fix. */
+.rd-team__why{
+  display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:11px;
+  font-family:var(--rd-ui);font-weight:700;font-size:12px;color:var(--rd-ink-red);
+}
+
+/* the two explainer panels along the bottom */
+.rd-dug__foot{display:grid;grid-template-columns:1fr 1fr;gap:var(--rd-step);align-items:start}
+.rd-consume{display:grid;grid-template-columns:auto 1fr;gap:9px 14px;align-items:baseline}
+.rd-consume dt{font-family:var(--rd-ui);font-weight:800;font-size:12.5px;color:var(--rd-navy);white-space:nowrap}
+.rd-consume dd{margin:0;font-family:var(--rd-ui);font-weight:600;font-size:12px;line-height:1.45;color:var(--rd-muted)}
+.rd-name__demo{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
+
+@media (max-width:640px){
+  .rd-dug__foot{grid-template-columns:minmax(0,1fr)}
+  .rd-team__slots{grid-template-columns:repeat(5,minmax(0,1fr))}
+  .rd-team__act{margin-left:0;width:100%}
+  .rd-team__act .rd-btn{flex:1 1 0;min-height:44px;display:inline-flex;align-items:center;justify-content:center}
+  .rd-team__crest{width:44px;height:44px;font-size:11px}
+  .rd-team__name{font-size:16px}
+  .rd-dug__bar .rd-btn{width:100%;min-height:44px}
+  .rd-consume{grid-template-columns:minmax(0,1fr);gap:2px 0}
+  .rd-consume dd{margin-bottom:8px}
+}
