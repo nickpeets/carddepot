@@ -34,7 +34,11 @@
   var TABS = [
   { mode: 'binder', label: 'Binder',      short: 'Binder', href: 'index.html' },
   { mode: 'shop',   label: 'Pack Shop',   short: 'Shop',   href: 'game/shop.html' },
-  { mode: 'game',   label: 'Play Ball',   short: 'Play',   href: 'game/index.html' },
+  /* Chapter 19: Play Ball lands on the HUB, not on a game. The old href walked
+     straight into a cold-open exhibition; the hub names your club and the four
+     modes and starts nothing by itself. game/index.html is still the game and is
+     reached from the hub's Season tile (and from VS's PLAY MATCH links). */
+  { mode: 'game',   label: 'Play Ball',   short: 'Play',   href: 'play.html' },
   /* Chapter 14 is roadmap. The label ships anyway - a nav that hides a surface
      teaches nothing; marketplace.html answers with a DESIGNED coming-soon. */
   { mode: 'market', label: 'Marketplace', short: 'Market', href: 'marketplace.html' },

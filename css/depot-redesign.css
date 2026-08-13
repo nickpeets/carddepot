@@ -756,3 +756,106 @@
    own mount logging keeps working); it just stops painting a second balance
    beside .rd-wallet, which is the drawn readout. */
 .rd-plate .depot-wallet-chip{display:none}
+
+/* =============================================================================
+   CHAPTER 19 - PLAY BALL HUB (v2, supersedes chapter 08)
+   Target: exports/desktop/19-playball-hub-v2.png +
+           exports/mobile-390/playball-hub-v2.png.
+
+   Rule 7: this surface draws NO header and NO page title - the one bar and its
+   gold pill name it. Rule 8: every gap on the surface is one --rd-step.
+   Rule 6: the locked Exhibition tile carries its reason next to the control.
+
+   The club plate at the top is the DEFAULT SAVED TEAM. Saved teams (chapter 18)
+   do not exist yet, so this sheet also carries the drawn "no saved team yet"
+   state and that is the state the surface currently ships in. Nothing here
+   fabricates a club identity out of season rows.
+   ========================================================================== */
+.rd-hub{display:flex;flex-direction:column;gap:var(--rd-step)}
+
+/* ---- the club plate ------------------------------------------------------ */
+.rd-hub__club{display:flex;align-items:center;gap:16px;flex-wrap:wrap}
+.rd-hub__crest{
+  width:74px;height:74px;flex:none;display:flex;align-items:center;justify-content:center;
+  background:linear-gradient(#ffe98a,#ffd23e 55%,#f0b41c);
+  border:var(--rd-bd) solid var(--rd-navy);border-radius:16px;
+  box-shadow:0 4px 0 var(--rd-navy);
+  font-family:var(--rd-micro);font-size:19px;line-height:1;color:var(--rd-navy);
+}
+.rd-hub__crest--empty{
+  background:var(--rd-tint);border-style:dashed;box-shadow:none;
+  color:var(--rd-muted-2);font-size:15px;
+}
+.rd-hub__id{flex:1 1 320px;min-width:0}
+.rd-hub__name{font-family:var(--rd-ui);font-weight:800;font-size:30px;line-height:1.1;color:var(--rd-navy)}
+.rd-hub__sub{font-family:var(--rd-ui);font-weight:700;font-size:13px;color:var(--rd-muted-2);margin-left:10px}
+.rd-hub__line{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:7px}
+.rd-hub__rec{font-family:var(--rd-num);font-size:26px;line-height:1;color:var(--rd-green-deep)}
+.rd-hub__season{font-family:var(--rd-ui);font-weight:700;font-size:13px;color:var(--rd-navy)}
+.rd-hub__streak{
+  font-family:var(--rd-ui);font-weight:800;font-size:12px;color:#a8520f;
+  background:#fff3e6;border:2px solid var(--rd-orange);border-radius:var(--rd-r-pill);padding:4px 12px;
+}
+.rd-hub__streak.is-empty{display:none}
+.rd-hub__clubact{flex:none;margin-left:auto}
+
+/* ---- the 2x2 ------------------------------------------------------------- */
+.rd-hub__grid{
+  display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+  gap:var(--rd-step);align-items:stretch;
+}
+.rd-hub__tile{display:flex;flex-direction:column;padding:18px}
+.rd-hub__tileh{display:flex;align-items:center;gap:10px}
+.rd-hub__ticon{font-size:19px;line-height:1;flex:none}
+.rd-hub__tname{font-family:var(--rd-ui);font-weight:800;font-size:21px;color:var(--rd-navy)}
+.rd-hub__flag{
+  margin-left:auto;flex:none;font-family:var(--rd-micro);font-size:7px;line-height:1.6;
+  border-radius:var(--rd-r-pill);padding:6px 11px;
+  color:var(--rd-ink-green);background:#eafbe6;border:2px solid var(--rd-green);
+}
+.rd-hub__flag--soon{color:var(--rd-ink-gold);background:#fff8e0;border-color:var(--rd-gold)}
+.rd-hub__blurb{
+  font-family:var(--rd-ui);font-weight:600;font-size:13px;line-height:1.45;
+  color:var(--rd-muted);margin-top:10px;
+}
+.rd-hub__status{display:flex;align-items:baseline;gap:9px;margin-top:14px;min-height:24px}
+.rd-hub__count{font-family:var(--rd-num);font-size:22px;line-height:1;color:var(--rd-green-deep)}
+.rd-hub__count--hot{color:var(--rd-ink-red)}
+.rd-hub__countlbl{font-family:var(--rd-ui);font-weight:700;font-size:12.5px;color:var(--rd-muted-2)}
+.rd-hub__act{margin-top:auto;padding-top:16px}
+/* canon: 44px touch beats the drawn 38, and it makes the two tiles in a row
+   land their actions on the same line. */
+.rd-hub__act .rd-btn{min-height:44px;display:inline-flex;align-items:center;justify-content:center}
+
+/* the COMING tile: tinted, flat, and it says why next to the dead control */
+.rd-hub__tile--soon{
+  background:var(--rd-tint);border-color:var(--rd-tint-line);
+  border-width:var(--rd-bd-sub);box-shadow:none;
+}
+.rd-hub__tile--soon .rd-hub__tname,
+.rd-hub__tile--soon .rd-hub__count{color:var(--rd-muted-2)}
+
+/* ---- what this replaces -------------------------------------------------- */
+.rd-hub__replaces{display:flex;gap:16px;align-items:flex-start;flex-wrap:wrap}
+.rd-hub__replaces .rd-panel__h{color:var(--rd-gold);margin:0;flex:none;padding-top:3px}
+.rd-hub__replaces p{
+  margin:0;flex:1 1 320px;font-family:var(--rd-ui);font-weight:600;font-size:12.5px;
+  line-height:1.5;color:#dff1fb;
+}
+
+/* ---- 390: one column, and the plate loses its action -------------------- */
+@media (max-width:640px){
+  .rd-hub__grid{grid-template-columns:minmax(0,1fr)}
+  .rd-hub__club{gap:12px}
+  .rd-hub__crest{width:56px;height:56px;border-radius:13px;font-size:15px}
+  .rd-hub__id{flex:1 1 0;min-width:0}   /* keep the crest inline with the name at 390 */
+  .rd-hub__name{font-size:21px}
+  .rd-hub__sub{display:block;margin:2px 0 0;font-size:11.5px}
+  .rd-hub__rec{font-size:20px}
+  .rd-hub__season{font-size:11.5px}
+  .rd-hub__clubact{display:none}          /* ch19 mobile export: no Edit the club */
+  .rd-hub__tile{padding:15px}
+  .rd-hub__tname{font-size:18px}
+  .rd-hub__blurb{display:none}            /* the 390 render keeps the count line only */
+  .rd-hub__act .rd-btn{width:100%}        /* 44px full-width pills, rule 5 */
+}
