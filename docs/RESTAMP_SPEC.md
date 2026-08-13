@@ -171,3 +171,20 @@ longer have to match BUILD, the target is only "one value, everywhere." Stamping
 the remaining 74 to `cd73b68` closes the split with the smallest diff. Stamping
 all 91 to a fresh branch tip is equally valid and costs 17 more lines. Either
 satisfies the acceptance check; neither is more correct than the other.
+
+---
+
+## 7. UPDATED 2026-08-13 — the census is now DISCOVERED, and today it is 102 across EIGHT
+
+Section 6's tables were stale twice over by the time the scripted ritual ran:
+game/builder.html has carried 13 tags, not 12, since 250979e added
+depot-wallet.js (so the pre-merge tree was 92 across seven, not 91), and the
+chapter-19 hub added play.html with 10 more. tools/restamp.sh now discovers the
+scope per the section 6 amendment and refuses to accept a split; the census it
+printed at landing, all stamped to one value in the same commit as this note:
+
+  index.html 31 · game/shop.html 18 · game/builder.html 13 · game/index.html 12
+  play.html 10 · vs.html 9 · marketplace.html 8 · preview.html 1 = 102, 8 shells
+
+Every table above is a description of its own day. If you need today's number,
+run tools/restamp.sh with no arguments and believe what it returns.
