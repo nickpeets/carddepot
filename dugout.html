@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Card Depot &mdash; The Dugout</title>
+<!-- [site chrome] favicon + unfurl card (see index.html for the rationale). -->
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="canonical" href="https://thedepot.cards/dugout.html">
+<meta name="description" content="Build a nine once, name it, and every mode uses it.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="The Depot">
+<meta property="og:title" content="The Depot &mdash; The Dugout">
+<meta property="og:description" content="Build a nine once, name it, and every mode uses it.">
+<meta property="og:url" content="https://thedepot.cards/dugout.html">
+<meta property="og:image" content="https://thedepot.cards/assets/og-depot.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:image" content="https://thedepot.cards/assets/og-depot.png">
+<script src="js/version.js?v=0661f15"></script>
+<script src="js/depot-core.js?v=0661f15"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+// depot-core Supabase config (additive; mirrors vs.html). Publishable key only,
+// same project as the main app. Without it depotSB() returns null and the bar
+// renders anonymous even for a signed-in collector.
+var SUPABASE_URL='https://nuymzokvbdntbvinsnda.supabase.co';
+var SUPABASE_KEY=['sb','publishable','IiTsIBqYgGTIEnwdvQEXPA','4rmQdYVo'].join('_');
+window.DEPOT_SUPABASE_CONFIG = window.DEPOT_SUPABASE_CONFIG || { url: SUPABASE_URL, key: SUPABASE_KEY };
+var sb=null;
+try{ if(window.supabase&&window.supabase.createClient){ sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY); } }catch(e){}
+try{ if(sb){ window.sb = sb; window.supabaseClient = sb; } }catch(e){}
+</script>
+<link rel="stylesheet" href="css/depot-style.css?v=0661f15">
+<link rel="stylesheet" href="depot-v2.css?v=0661f15">
+<link rel="stylesheet" href="css/depot-redesign.css?v=0661f15">
+<script src="js/depot-wallet.js?v=0661f15"></script>
+<script src="js/depot-position.js?v=0661f15" defer></script>
+<script src="js/depot-shell.js?v=0661f15" defer></script>
+<script src="js/depot-redesign.js?v=0661f15" defer></script>
+<script src="js/depot-dugout.js?v=0661f15" defer></script>
+</head>
+<body class="v2-body rd-page">
+<script>
+/* CHAPTER 18 - the Dugout. Saved teams are first-class objects and this is where
+   they persist. Rule 7: the shell draws the one bar and this surface draws no
+   page title. active:'builder' lights the Play Ball pill through PILL_FOR, which
+   is rule 7's own answer for a surface reached THROUGH a mode. */
+document.addEventListener('DOMContentLoaded', function () {
+  if (window.DepotShell && window.DepotShell.mount) { window.DepotShell.mount({ active: 'builder', wordmark: 'THE <b>DEPOT</b>' }); }
+  else { console.warn('[dugout] DepotShell.mount missing; this surface has no header'); }
+});
+</script>
+<main class="depot-stage rd-page__body" data-depot-stage>
+<div class="rd-dug" data-dugout>
+
+  <section class="rd-dug__bar">
+    <span class="rd-dug__search">
+      <input class="rd-input" type="search" data-dugout-search placeholder="&#128269; Search your teams" aria-label="Search your teams">
+    </span>
+    <a class="rd-btn rd-btn--primary" href="game/builder.html" data-dugout-new>+ New team</a>
+  </section>
+
+  <section class="rd-panel rd-panel--pad">
+    <div class="rd-dug__count" data-dugout-count>SAVED TEAMS</div>
+    <div data-dugout-list><p class="rd-panel__note">Loading&hellip;</p></div>
+    <p class="rd-panel__note" data-dugout-capwhy></p>
+  </section>
+
+  <div class="rd-dug__foot">
+    <!-- ch18: "Who consumes a saved team" is stated ON the surface. A build agent
+         should not have to infer this, and neither should a player. -->
+    <section class="rd-panel rd-panel--pad">
+      <div class="rd-panel__h">WHO CONSUMES A SAVED TEAM</div>
+      <dl class="rd-consume">
+        <dt>&#127942; Season</dt><dd>Plays your default team every game unless you change it between games.</dd>
+        <dt>&#9876; VS</dt><dd>Accepting a challenge uses your default; the accept sheet lets you swap to any saved team that satisfies the challenge&rsquo;s roster rule.</dd>
+        <dt>&#8635; Rematch</dt><dd>One tap re-sends the same stakes with the same team &mdash; no rebuild.</dd>
+        <dt>&#127914; Exhibition</dt><dd>Only offers saved teams that already satisfy the mode&rsquo;s rule set; others grey out with the reason.</dd>
+      </dl>
+    </section>
+
+    <section class="rd-panel rd-panel--pad">
+      <div class="rd-panel__h">NAMING A TEAM</div>
+      <input class="rd-input" type="text" maxlength="24" value="Depot Ducks" aria-label="Team name example">
+      <div class="rd-name__demo">
+        <span class="rd-team__chip">24 CHARACTERS MAX</span>
+        <span class="rd-team__chip">SHOWN ON THE SCOREBOARD</span>
+      </div>
+      <p class="rd-panel__note">The team name is what the opponent sees in VS, on the scoreboard, and in the challenge unfurl card. The two-letter tile derives from it automatically.</p>
+    </section>
+  </div>
+
+</div>
+</main>
+</body>
+</html>

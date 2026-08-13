@@ -94,11 +94,48 @@
     n.innerHTML = html;
   }
 
-  /* LINEUP. Saved teams do not exist, so the honest count is none-yet — not 0
-     dressed up as a total. Rule: say what is true, offer the next action. */
+  /* LINEUP. Chapter 18 landed, so the count is now READ rather than asserted —
+     but the migration is a proposal and is not run, so the table may not exist.
+     A missing table and an empty table are different facts and this tile says
+     which one it found. It never prints 0 for "not provisioned". */
   function paintLineup(){
-    paintStatus('lineupstatus', null, 'no saved teams yet · chapter 18');
-    paintAction('lineupact', '<a class="rd-btn rd-btn--primary" href="game/builder.html">Open the builder</a>');
+    paintAction('lineupact',
+      '<a class="rd-btn rd-btn--primary" href="game/builder.html">Open the builder</a>' +
+      ' <a class="rd-btn rd-btn--quiet rd-btn--sm" href="dugout.html">Saved teams</a>');
+
+    if (typeof window.depotSB !== 'function' || !window.depotSB()){
+      paintStatus('lineupstatus', null, 'log in to see your saved teams');
+      return;
+    }
+    var sb = window.depotSB();
+    var userP = window.depotUserCached ? Promise.resolve(window.depotUserCached)
+              : (typeof window.depotUser === 'function' ? window.depotUser() : Promise.resolve(null));
+    userP.then(function (user){
+      if (!user){ paintStatus('lineupstatus', null, 'log in to see your saved teams'); return; }
+      return sb.from('saved_teams').select('id,name,is_default').eq('owner_id', user.id)
+        .then(function (r){
+          if (r.error){
+            var c = String(r.error.code || ''), m = String(r.error.message || '');
+            if (c === '42P01' || c === 'PGRST205' || /does not exist|schema cache/i.test(m)){
+              warn('saved_teams absent; the migration has not been run');
+              paintStatus('lineupstatus', null, 'saved teams are not provisioned yet');
+              return;
+            }
+            warn('saved_teams read failed:', m);
+            paintStatus('lineupstatus', null, 'saved teams unavailable right now');
+            return;
+          }
+          var rows = r.data || [];
+          if (!rows.length){ paintStatus('lineupstatus', null, 'no saved teams yet'); return; }
+          var def = null;
+          for (var i = 0; i < rows.length; i++){ if (rows[i].is_default){ def = rows[i]; break; } }
+          paintStatus('lineupstatus', rows.length,
+            'saved team' + (rows.length === 1 ? '' : 's') + (def ? (' \u00b7 ' + def.name + ' is default') : ' \u00b7 no default set'));
+        });
+    }).catch(function (e){
+      warn('saved_teams read threw:', e && e.message);
+      paintStatus('lineupstatus', null, 'saved teams unavailable right now');
+    });
   }
 
   /* SEASON. Record is counted from season_games by the shared resolver, so it
