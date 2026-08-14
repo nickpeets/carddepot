@@ -643,6 +643,7 @@
         group:((extra&&extra.group)||null),
         season:((extra&&extra.season!=null)?extra.season:null),
         seasonSource:((extra&&extra.seasonSource)||null),
+        league:((extra&&extra.league)||null),
         line:(line||null)
       };
       var bio = (card._bio!=null ? card._bio : '');
@@ -659,7 +660,16 @@
   // fix/rookie-year-resolver: resolve a card's MLB debut year once and persist to the rookie_year COLUMN.
   // Cached one-time (skips if already set), fail-loud per row. Mirrors the GAP1 owner-scoped writeback shape.
   // ID_OVERRIDES pins known-ambiguous names to a specific MLB personId (checked before the name search).
-  var ROOKIE_ID_OVERRIDES = { 'Mike Piazza': 120536, 'Tony Gwynn': 115270, 'Matt Williams': 124326 };
+  // [audit cat. c] This map now feeds STAT RESOLUTION too (mlbFindPlayer consults it
+  // before searching), so an override fixes rookie-year AND the stat line in one
+  // entry -- one map, no second opinion to drift. Each entry is decided by debut
+  // year against the card's era:
+  //   Mike Stanton 122681 = the LHP reliever, debut 1989 (vs the 1975 RHP; a
+  //   1990s card means the lefty). Giancarlo no longer matches this search.
+  // Sandy Alomar / Frank Thomas / Ramon Castro stay UNPINNED until the binder
+  // audit (item 1.5) reads the card years -- both Alomars catch and both Thomases
+  // rake, so era, not name, decides, and guessing here is how the wrong man plays.
+  var ROOKIE_ID_OVERRIDES = { 'Mike Piazza': 120536, 'Tony Gwynn': 115270, 'Matt Williams': 124326, 'Mike Stanton': 122681 };
   async function persistRookieYear(card){
     try{
       if(!sb || !USER || !card || !card.id){ console.warn('[GAP2] rookie-year skipped: no client/user/card'); return false; }
@@ -816,6 +826,14 @@
     var key=String(name||'').trim().toLowerCase();
     if(Object.prototype.hasOwnProperty.call(MLB_PLAYER_CACHE,key)) return MLB_PLAYER_CACHE[key];
     var p=(async function(){
+      // [audit cat. c] ID overrides FIRST: a name pinned in ROOKIE_ID_OVERRIDES
+      // resolves to that exact person with no search -- the search is what returns
+      // two Mike Stantons and calls it ambiguous. Raw string checked before the
+      // cleaned one because the map is keyed on card-front names.
+      var ov = ROOKIE_ID_OVERRIDES[String(rawName||'').trim()]; if(ov==null) ov=ROOKIE_ID_OVERRIDES[name];
+      if(ov!=null){
+        try{ var ro=await fetch(MLB_BASE+'/people/'+ov); if(ro.ok){ var jo=await ro.json(); var po=jo&&jo.people&&jo.people[0]; if(po) return po; } }catch(e){}
+      }
       var q=encodeURIComponent(name);
       // primary: people/search
       try{
@@ -906,8 +924,13 @@
   // (MiLB / manual stats -- not built here, see GRANT_AUTHORITY queue).
   // Per-season totals: the no-team TOT split wins over team slices -- a season's
   // line is the season's line, not the biggest team-slice of it.
-  async function mlbBestSeason(personId, group){
-    var url=MLB_BASE+'/people/'+personId+'/stats?stats=yearByYear&group='+group;
+  // sportId (optional) points the same scan at a minor league level for rung 3;
+  // absent = MLB, exactly as before. Returns {year, line, score, size}: score is
+  // the comparator value when the picked season cleared its floor (null when the
+  // pick fell to the fullest season), size its PA/BF -- rung 3 compares across
+  // levels with them.
+  async function mlbBestSeason(personId, group, sportId){
+    var url=MLB_BASE+'/people/'+personId+'/stats?stats=yearByYear&group='+group+(sportId?('&sportId='+sportId):'');
     try{
       var r=await fetch(url); if(!r.ok) return null; var j=await r.json();
       var splits=(j&&j.stats&&j.stats[0]&&j.stats[0].splits)||[];
@@ -947,8 +970,36 @@
       var line=(group==='pitching')
         ? { BF:st2.battersFaced, H:st2.hits, '2B':st2.doubles, '3B':st2.triples, HR:st2.homeRuns, BB:st2.baseOnBalls, SO:st2.strikeOuts, HBP:st2.hitByPitch, ERA:st2.era, W:st2.wins, L:st2.losses, IP:st2.inningsPitched }
         : { AB:st2.atBats, H:st2.hits, '2B':st2.doubles, '3B':st2.triples, HR:st2.homeRuns, BB:st2.baseOnBalls, SO:st2.strikeOuts, HBP:st2.hitByPitch, SF:st2.sacFlies, PA:st2.plateAppearances, AVG:st2.avg, RBI:st2.rbi };
-      return { year:(parseInt(pick,10)||pick), line:line };
+      var pickedSize=(group==='pitching')?(+st2.battersFaced||0):(+st2.plateAppearances||0);
+      return { year:(parseInt(pick,10)||pick), line:line, score:((pick===best)?bestScore:null), size:pickedSize };
     }catch(e){ return null; }
+  }
+
+  // ===== [ladder rung 3] MiLB BEST SEASON (amended ruling 2026-08-14) =====
+  // A player with NO MLB line at all (the Bibbs class) plays his best MINOR-league
+  // season -- real numbers, MARKED as MiLB on every surface that shows them.
+  // sportIds per the ruling: 11 AAA, 12 AA, 13 High-A, 14 Single-A. Queried one
+  // level at a time: statsapi ignores a plural sportIds= on this endpoint
+  // (measured 2026-08-14: Bibbs 451682 sportId=12 returns his two Huntsville
+  // years; sportIds=11,12,13,14 returns zero splits).
+  var MILB_SPORT_IDS=[11,12,13,14];
+  async function mlbBestMiLBSeason(personId, group){
+    var cands=[];
+    for(var i=0;i<MILB_SPORT_IDS.length;i++){
+      var b=await mlbBestSeason(personId, group, MILB_SPORT_IDS[i]);
+      if(b) cands.push(b);
+    }
+    if(!cands.length) return null;
+    // Cross-level pick, same comparators as rung 2: floor-cleared seasons compete
+    // on score (hitters max OPS, pitchers min ERA); only when NO level cleared its
+    // floor does the fullest season anywhere play.
+    var scored=cands.filter(function(c){ return c.score!=null; });
+    var pool=scored.length?scored:cands, pick=pool[0];
+    for(var k=1;k<pool.length;k++){
+      if(scored.length){ if(group==='pitching' ? (pool[k].score<pick.score) : (pool[k].score>pick.score)) pick=pool[k]; }
+      else { if(pool[k].size>pick.size) pick=pool[k]; }
+    }
+    return pick;
   }
 
   // ----- Master resolver: API by name+year -> card-text fallback -> unusable -----
@@ -971,6 +1022,7 @@
           if(rm.group==='pitching') out.group='pitching';
           if(rm.season!=null) out.season=rm.season;
           if(rm.seasonSource) out.seasonSource=rm.seasonSource;
+          if(rm.league) out.league=rm.league;
           var _ln=rm.line||null;
           if(_ln){
             if(out.group==='pitching'){
@@ -983,7 +1035,7 @@
               if(_ln.AVG!=null) out.avg=fmtAvg(_ln.AVG); out.hr=+_ln.HR||0; out.rbi=+_ln.RBI||0;
             }
           }
-          out.note='stored MLB rates'+(rm.year!=null?(' '+rm.year):'')+((rm.seasonSource==='best'&&rm.season!=null)?(' · best season '+rm.season):''); out._stored=true;
+          out.note='stored MLB rates'+(rm.year!=null?(' '+rm.year):'')+((rm.seasonSource==='milb'&&rm.season!=null)?(' · MiLB line '+rm.season):((rm.seasonSource==='best'&&rm.season!=null)?(' · best season '+rm.season):'')); out._stored=true;
           return out;
         }
       }
@@ -1015,17 +1067,25 @@
             var pbest=await mlbBestSeason(person.id,'pitching');
             if(pbest){ var pbr=pitchLineToRates(pbest.line); if(pbr){ pline=pbest.line; prates=pbr; pyear=pbest.year; } }
           }
+          if(!prates){
+            // [ladder rung 3] no MLB line at any season -- his best MiLB season plays.
+            var pmilb=await mlbBestMiLBSeason(person.id,'pitching');
+            if(pmilb){ var pmr=pitchLineToRates(pmilb.line); if(pmr){ pline=pmilb.line; prates=pmr; pyear=pmilb.year; out.league='MiLB'; } }
+          }
           if(prates){
             out.status='api'; out.group='pitching'; out.rates=prates;
             if(pline.ERA!=null&&pline.ERA!=='') out.era=String(pline.ERA);
             if(pline.W!=null) out.w=String(pline.W);
             if(pline.L!=null) out.l=String(pline.L);
             out.season=pyear;
-            if(String(pyear)!==String(card.yr)){ out.seasonSource=(card.season!=null&&String(pyear)===String(card.season))?'declared':'best'; }
-            out.note=(out.seasonSource==='best')?('MLB API pitching, best season '+pyear):('MLB API pitching '+pyear);
+            if(out.league==='MiLB'){ out.seasonSource='milb'; out.note='MiLB pitching, best season '+pyear; }
+            else {
+              if(String(pyear)!==String(card.yr)){ out.seasonSource=(card.season!=null&&String(pyear)===String(card.season))?'declared':'best'; }
+              out.note=(out.seasonSource==='best')?('MLB API pitching, best season '+pyear):('MLB API pitching '+pyear);
+            }
             out._freshLine=pline; out._freshRates=prates; return out;
           }
-          out.note='MLB API: no pitching line for '+seasonWanted+' or any season';
+          out.note='MLB API: no pitching line for '+seasonWanted+' or any season, MLB or MiLB';
         } else {
           var line=await mlbSeasonHitting(person.id, seasonWanted);
           var rates=line?lineToRates(line):null;
@@ -1039,14 +1099,23 @@
             var hbest=await mlbBestSeason(person.id,'hitting');
             if(hbest){ var hbr=lineToRates(hbest.line); if(hbr){ line=hbest.line; rates=hbr; hyear=hbest.year; } }
           }
+          if(!rates){
+            // [ladder rung 3] no MLB line at any season (the Bibbs class) -- his
+            // best MiLB season plays, real numbers, marked MiLB wherever shown.
+            var hmilb=await mlbBestMiLBSeason(person.id,'hitting');
+            if(hmilb){ var hmr=lineToRates(hmilb.line); if(hmr){ line=hmilb.line; rates=hmr; hyear=hmilb.year; out.league='MiLB'; } }
+          }
           if(rates){
             out.status='api'; out.rates=rates; out.avg=fmtAvg(line.AVG); out.hr=+line.HR||0; out.rbi=+line.RBI||0;
             out.season=hyear;
-            if(String(hyear)!==String(card.yr)){ out.seasonSource=(card.season!=null&&String(hyear)===String(card.season))?'declared':'best'; }
-            out.note=(out.seasonSource==='best')?('MLB API, best season '+hyear):('MLB API '+hyear);
+            if(out.league==='MiLB'){ out.seasonSource='milb'; out.note='MiLB line, best season '+hyear; }
+            else {
+              if(String(hyear)!==String(card.yr)){ out.seasonSource=(card.season!=null&&String(hyear)===String(card.season))?'declared':'best'; }
+              out.note=(out.seasonSource==='best')?('MLB API, best season '+hyear):('MLB API '+hyear);
+            }
             out._freshLine=line; out._freshRates=rates; return out;
           }
-          out.note='MLB API: no '+seasonWanted+' hitting line';
+          out.note='MLB API: no '+seasonWanted+' hitting line, MLB or MiLB';
         }
       } else if(person && person.ambiguous){ out.note='MLB API: ambiguous name'; }
       else { out.note='MLB API: no match'; }
@@ -1101,8 +1170,9 @@
         // shown must be the number used -- same rule as the engine side.
         var note=(st==='bad')?('no MLB line'+((c.yr!=null)?(' for '+c.yr):''))
                    :((st==='pending')?'resolving\u2026'
+                   :((rv.seasonSource==='milb'&&rv.season!=null)?('MiLB line: '+rv.season)
                    :((rv.seasonSource==='best'&&rv.season!=null)?('best season: '+rv.season)
-                   :((rv.seasonSource==='declared'&&rv.season!=null)?('season: '+rv.season):'')));
+                   :((rv.seasonSource==='declared'&&rv.season!=null)?('season: '+rv.season):''))));
         // status text (no MLB-API pill): just a tiny dim note when unusable as a hitter
         var resPos = naturalPosFor(c.id);
         // "pitcher-ready": resolved position P, or no usable hitting line (still resolving -> neutral)
@@ -1172,7 +1242,7 @@
           html+='<div class="bat filled'+(slot.outOfPos?' outpos':'')+'" draggable="true" data-slot="'+i+'">'
               +   '<div class="ord">'+(i+1)+'</div>'
               +   '<div class="who"><b>'+esc(c?c.player:'?')+'</b>'+(slot.outOfPos?' <span class="oop-flag" title="Natural position taken \u2013 set a position below">OUT OF POS</span>':'')
-              +     '<small>'+esc((rv.avg||'.000'))+' AVG \u00b7 '+(rv.hr||0)+' HR \u00b7 '+(rv.rbi||0)+' RBI'+((rv.seasonSource==='best'&&rv.season!=null)?(' \u00b7 best season '+rv.season):((rv.seasonSource==='declared'&&rv.season!=null)?(' \u00b7 season '+rv.season):''))+'</small></div>'
+              +     '<small>'+esc((rv.avg||'.000'))+' AVG \u00b7 '+(rv.hr||0)+' HR \u00b7 '+(rv.rbi||0)+' RBI'+((rv.seasonSource==='milb'&&rv.season!=null)?(' \u00b7 MiLB line '+rv.season):((rv.seasonSource==='best'&&rv.season!=null)?(' \u00b7 best season '+rv.season):((rv.seasonSource==='declared'&&rv.season!=null)?(' \u00b7 season '+rv.season):'')))+'</small></div>'
               +   __spBox
               +   posSel
               +   '<button class="rm-btn" data-rm="'+i+'">remove</button>'
@@ -1205,7 +1275,8 @@
         var _pb=[];
         if(rv.era!=null&&rv.era!=='') _pb.push(esc(rv.era)+' ERA');
         if(rv.w!=null&&rv.l!=null) _pb.push(esc(rv.w)+'-'+esc(rv.l));
-        if(rv.seasonSource==='best'&&rv.season!=null) _pb.push('best season '+rv.season);
+        if(rv.seasonSource==='milb'&&rv.season!=null) _pb.push('MiLB line '+rv.season);
+        else if(rv.seasonSource==='best'&&rv.season!=null) _pb.push('best season '+rv.season);
         else if(rv.seasonSource==='declared'&&rv.season!=null) _pb.push('season '+rv.season);
         box.innerHTML='<div class="who"><b>'+esc(c?c.player:'?')+'</b><small>'+esc((c&&c.team)||'')+(_pb.length?(' \u00b7 '+_pb.join(' \u00b7 ')):'')+'</small></div><button class="rm-btn" id="rmPit">remove</button>';
         var rb=$('rmPit'); if(rb) rb.addEventListener('click',function(){ PITCHER=null; renderAll(); });
@@ -1229,7 +1300,7 @@
       var stt=$('spotStats'); if(stt){
         // [pitcher fix] A pitcher's spotlight shows his PITCHING line, not the
         // .000 batting line he never had. [ladder] Season labels ride along.
-        var _lbl=(rv.seasonSource==='best'&&rv.season!=null)?(' \u00b7 best season: '+rv.season):((rv.seasonSource==='declared'&&rv.season!=null)?(' \u00b7 season: '+rv.season):'');
+        var _lbl=(rv.seasonSource==='milb'&&rv.season!=null)?(' \u00b7 MiLB line: '+rv.season):((rv.seasonSource==='best'&&rv.season!=null)?(' \u00b7 best season: '+rv.season):((rv.seasonSource==='declared'&&rv.season!=null)?(' \u00b7 season: '+rv.season):''));
         if(rv.group==='pitching'){ stt.innerHTML = esc(rv.era||'\u2014')+' ERA \u00b7 '+esc(rv.w!=null?rv.w:'0')+'-'+esc(rv.l!=null?rv.l:'0')+_lbl; }
         else { var av=(rv.avg||'.000'); stt.innerHTML = esc(av)+' AVG \u00b7 '+(rv.hr||0)+' HR \u00b7 '+(rv.rbi||0)+' RBI'+(rv.era?(' \u00b7 '+esc(rv.era)+' ERA'):'')+_lbl; }
       }
@@ -1364,11 +1435,11 @@
       var lineup=await Promise.all(ORDER.map(async function(slot){ var id=slot.id; var c=cardById(id); var rv=RESOLVED[id]||{};
         // [ladder] statsSeason/statsSeasonSource ride additively so downstream
         // surfaces can label a rung-2 line; sim.js ignores unknown fields.
-        return { name:(c.player||'PLAYER').toUpperCase(), avg:rv.avg, hr:rv.hr, rbi:rv.rbi, tendency:rv.tendency||'spray', rates:rv.rates, year:(c&&c.yr!=null?c.yr:null), statsSeason:(rv.season!=null?rv.season:null), statsSeasonSource:(rv.seasonSource||null), pos:slot.pos, cardId:id, img:(c&&c.photoPath?await cardSignedUrl(c.photoPath):'') };
+        return { name:(c.player||'PLAYER').toUpperCase(), avg:rv.avg, hr:rv.hr, rbi:rv.rbi, tendency:rv.tendency||'spray', rates:rv.rates, year:(c&&c.yr!=null?c.yr:null), statsSeason:(rv.season!=null?rv.season:null), statsSeasonSource:(rv.seasonSource||null), statsLeague:(rv.league||null), pos:slot.pos, cardId:id, img:(c&&c.photoPath?await cardSignedUrl(c.photoPath):'') };
       }));
       var pitcher=null;
       if(PITCHER){ var pc=cardById(PITCHER); var prv=RESOLVED[PITCHER]||{};
-        pitcher={ cardId:PITCHER, name:(pc.player||'PITCHER').toUpperCase(), year:(pc&&pc.yr!=null?pc.yr:null), statsSeason:(prv.season!=null?prv.season:null), statsSeasonSource:(prv.seasonSource||null), img:(pc&&pc.photoPath?await cardSignedUrl(pc.photoPath):'') };
+        pitcher={ cardId:PITCHER, name:(pc.player||'PITCHER').toUpperCase(), year:(pc&&pc.yr!=null?pc.yr:null), statsSeason:(prv.season!=null?prv.season:null), statsSeasonSource:(prv.seasonSource||null), statsLeague:(prv.league||null), img:(pc&&pc.photoPath?await cardSignedUrl(pc.photoPath):'') };
             if(prv.rates){ pitcher.rates=prv.rates; pitcher.BB=prv.rates.BB; pitcher.K=prv.rates.K; pitcher.HR=prv.rates.HR; pitcher._2B=prv.rates._2B; pitcher._3B=prv.rates._3B; pitcher._1B=prv.rates._1B; }
         if(prv.era!=null && prv.era!=='') pitcher.era=String(prv.era);
         if(prv.w!=null) pitcher.w=String(prv.w);
@@ -1403,12 +1474,12 @@
           var batters=ORDER.map(function(slot){
             var id=slot.id; var c=cardById(id)||{}; var rv=RESOLVED[id]||{};
             return { cardId:id, name:(c.player||'PLAYER').toUpperCase(), pos:slot.pos,
-                     avg:rv.avg, hr:rv.hr, rbi:rv.rbi, tendency:rv.tendency||'spray', rates:rv.rates, year:(c&&c.yr!=null?c.yr:null), statsSeason:(rv.season!=null?rv.season:null), statsSeasonSource:(rv.seasonSource||null) };
+                     avg:rv.avg, hr:rv.hr, rbi:rv.rbi, tendency:rv.tendency||'spray', rates:rv.rates, year:(c&&c.yr!=null?c.yr:null), statsSeason:(rv.season!=null?rv.season:null), statsSeasonSource:(rv.seasonSource||null), statsLeague:(rv.league||null) };
           });
           var pitcher=null;
           if(PITCHER){
             var pc=cardById(PITCHER)||{}; var prv=RESOLVED[PITCHER]||{};
-            pitcher={ cardId:PITCHER, name:(pc.player||'PITCHER').toUpperCase(), year:(pc&&pc.yr!=null?pc.yr:null), statsSeason:(prv.season!=null?prv.season:null), statsSeasonSource:(prv.seasonSource||null) };
+            pitcher={ cardId:PITCHER, name:(pc.player||'PITCHER').toUpperCase(), year:(pc&&pc.yr!=null?pc.yr:null), statsSeason:(prv.season!=null?prv.season:null), statsSeasonSource:(prv.seasonSource||null), statsLeague:(prv.league||null) };
             if(prv.rates){ pitcher.rates=prv.rates; pitcher.BB=prv.rates.BB; pitcher.K=prv.rates.K; pitcher.HR=prv.rates.HR; pitcher._2B=prv.rates._2B; pitcher._3B=prv.rates._3B; pitcher._1B=prv.rates._1B; }
             if(prv.era!=null && prv.era!=='') pitcher.era=String(prv.era);
             if(prv.w!=null) pitcher.w=String(prv.w);
@@ -1508,7 +1579,7 @@
     // avgToRates 'card' fallback, never the league-average floor, never an already-stored
     // one). Best-effort/non-blocking so a failed write can't break resolution or rendering.
     if(rv && rv.status==='api' && !rv._stored && rv._freshRates){
-      try{ await persistRichRates(c, rv._freshLine||null, rv._freshRates, rv.pos, { group:rv.group||null, season:(rv.season!=null?rv.season:null), seasonSource:rv.seasonSource||null }); }catch(_pe){}
+      try{ await persistRichRates(c, rv._freshLine||null, rv._freshRates, rv.pos, { group:rv.group||null, season:(rv.season!=null?rv.season:null), seasonSource:rv.seasonSource||null, league:rv.league||null }); }catch(_pe){}
     }
     // Progressive fill: re-render as each card resolves (list already tolerates pending).
     renderCards(); renderStatus();
