@@ -1346,7 +1346,12 @@
       // Key: depot_draft for a fresh solo build; depot_draft_<matchId> when on builder.html?match=<id>
       // (so the accept-flow draft is tied to that match and never collides with a solo build).
       var DRAFT_RESTORED = false;     // guard: only restore once, on initial load
-      function draftKey(){ var m=null; try{ m = new URLSearchParams(window.location.search).get('match'); }catch(e){ m=null; } return m ? ('depot_draft_'+m) : 'depot_draft'; }
+      // [storage-scoping] uid-suffixed: depot_draft was one GLOBAL key per browser,
+      // so one account's half-built lineup restored into another's builder. USER is
+      // set before restoreDraft ever runs (loadCards is auth-gated), so signed-in
+      // drafts are always scoped; the bare legacy key survives only for the
+      // signed-out edge and is never adopted across accounts.
+      function draftKey(){ var m=null; try{ m = new URLSearchParams(window.location.search).get('match'); }catch(e){ m=null; } var base=m ? ('depot_draft_'+m) : 'depot_draft'; var u=(USER&&USER.id)||null; return u?(base+'.'+u):base; }
       function draftStore(){ try{ return window.localStorage; }catch(e){ return null; } }
       function draftIsEmpty(){
         try{

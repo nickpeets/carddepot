@@ -123,8 +123,21 @@ function loadCatalog() {
 }
 
   // ---- receipt (money-safety) ----
-  function saveReceipt(rec) { try { localStorage.setItem(RECEIPT_KEY, JSON.stringify(rec)); } catch (e) {} }
-  function clearReceipt() { try { localStorage.removeItem(RECEIPT_KEY); } catch (e) {} }
+  /* [storage-scoping] depot.pendingPack was one GLOBAL key per browser -- the
+   * same leak family as depot.packHistory, and worse: a pending (debited, not
+   * yet ripped) receipt gates a GRANT, so account B redeeming account A's
+   * receipt mints A's pack into B's binder. Keys are uid-suffixed
+   * (depot.pendingPack.<uid>) via the same sync source season.js UID() uses.
+   * Receipts also STAMP rec.owner at save time; redeemPending refuses an
+   * owner-mismatched receipt loudly and keeps it (money-safe: it belongs to
+   * the account that paid, and redeems when THEY sign in). Legacy unstamped
+   * receipts (written before this landed) behave exactly as today -- their
+   * owner is unknowable retroactively. loadReceipt remembers which key it
+   * read so clearReceipt clears the right one and never another account's. */
+  function receiptKey(){ var u=(window.depotUserCached&&window.depotUserCached.id)||null; return u?(RECEIPT_KEY+'.'+u):RECEIPT_KEY; }
+  var _receiptSrcKey=null;
+  function saveReceipt(rec) { try { var u=(window.depotUserCached&&window.depotUserCached.id)||null; if(u&&rec&&!rec.owner) rec.owner=u; var k=receiptKey(); localStorage.setItem(k, JSON.stringify(rec)); _receiptSrcKey=k; } catch (e) {} }
+  function clearReceipt() { try { localStorage.removeItem(receiptKey()); if(_receiptSrcKey) localStorage.removeItem(_receiptSrcKey); _receiptSrcKey=null; } catch (e) {} }
   function cardId(c) { return [c.year, c.brand, c.set, c.number, c.player].join('|'); }
 
   // ---- balance ----
@@ -291,7 +304,9 @@ function loadCatalog() {
   // Money-safety: NEVER clears the receipt unless all cards confirm.
   var SEED_TAG='packseed:';
   function seedNote(seed){ return SEED_TAG+seed; }
-  function loadReceipt(){ try{ var r=localStorage.getItem(RECEIPT_KEY); return r?JSON.parse(r):null; }catch(e){ return null; } }
+  // [storage-scoping] scoped key first; legacy global as fallback so a receipt
+  // written before this landed (or before depotUserCached warmed) still redeems.
+  function loadReceipt(){ try{ var k=receiptKey(); var r=localStorage.getItem(k); if(!r && k!==RECEIPT_KEY){ r=localStorage.getItem(RECEIPT_KEY); if(r){ _receiptSrcKey=RECEIPT_KEY; } } else if(r){ _receiptSrcKey=k; } return r?JSON.parse(r):null; }catch(e){ return null; } }
   function resolveCollection(client, ownerId){
     return client.from('collections').select('id,created_at').eq('owner_id',ownerId).order('created_at',{ascending:true}).limit(1).then(function(r){
       if(r.error) throw new Error('collection lookup failed: '+r.error.message);
@@ -337,6 +352,11 @@ function loadCatalog() {
     var __chain = client.auth.getUser().then(function(u){
       ownerId=u&&u.data&&u.data.user?u.data.user.id:null;
       if(!ownerId) throw new Error('not signed in');
+      // [storage-scoping] a stamped receipt redeems ONLY for the account that
+      // paid for it. Mismatch keeps the receipt (the catch below retains it)
+      // and says so loudly -- silently granting it to whoever is signed in is
+      // the leak this closes.
+      if(receipt.owner && receipt.owner!==ownerId){ throw new Error('receipt belongs to another account ('+String(receipt.owner).slice(0,8)+'…); retained for them'); }
       return resolveCollection(client, ownerId);
     }).then(function(cid){
       collectionId=cid;

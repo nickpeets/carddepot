@@ -881,6 +881,15 @@ function diamondTileHtml(){
   /* plays the full ceremony with ZERO DB writes.                           */
   /* --------------------------------------------------------------------- */
   var HISTORY_KEY = "depot.packHistory";
+  /* [storage-scoping] THE PROVEN LEAK. depot.packHistory was one GLOBAL key per
+   * browser: sign out as Nick, sign in as Tim, and Tim's shelf shows Nick's
+   * local receipts. Keys are uid-suffixed now (depot.packHistory.<uid>), same
+   * sync-uid source season.js UID() uses (window.depotUserCached, warmed by
+   * depot-core at load). Signed-out / pre-warm falls back to the legacy global
+   * key -- reads there can only show what today's code already showed, and the
+   * ledger merge repaints over it. Legacy data is NOT adopted into a scoped
+   * key: its owner is unknowable, and guessing is the bug this fixes. */
+  function histKey(){ var u=(window.depotUserCached&&window.depotUserCached.id)||null; return u?(HISTORY_KEY+'.'+u):HISTORY_KEY; }
   var TIER_CARDS  = { bronze: 5, silver: 5, gold: 5, free: 1 };
 
   /* ---- the shelf is MODULE state, and it has to be able to repaint -------
@@ -914,11 +923,11 @@ function diamondTileHtml(){
   }
 
   function loadHistory(){
-    try { var raw = window.localStorage.getItem(HISTORY_KEY); var a = raw ? JSON.parse(raw) : []; return Array.isArray(a) ? a : []; }
+    try { var raw = window.localStorage.getItem(histKey()); var a = raw ? JSON.parse(raw) : []; return Array.isArray(a) ? a : []; }
     catch(e){ console.warn(TAG+" history read failed: "+(e&&e.message)); return []; }
   }
   function saveHistory(list){
-    try { window.localStorage.setItem(HISTORY_KEY, JSON.stringify(list.slice(0,60))); }
+    try { window.localStorage.setItem(histKey(), JSON.stringify(list.slice(0,60))); }
     catch(e){ console.warn(TAG+" history write failed: "+(e&&e.message)); }
   }
   // Record a pack in history (idempotent per seed+tier). Stores ONLY tier/seed/date/count
