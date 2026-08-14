@@ -514,7 +514,13 @@
       } finally { _imgResolving=false; }
     } // caches resolved url on c._imgUrl; '' means unresolved-so-far (retried up to cap)
 
-    function isUsableHitter(id){ var rv=id?RESOLVED[id]:null; return !!(rv && (rv.status==='api'||rv.status==='card')); }
+    // [pitcher fix] A resolved PITCHER is not a usable HITTER. Pitching-group rates
+    // describe what a plate appearance AGAINST him yields, not what he does at the
+    // plate -- without this gate the new pitching lookup would make all 21 pitcher
+    // cards addable to the batting order with opponent-rates as batting-rates.
+    // Type-correctness ("only pitcher cards pitch", and only hitters bat) is
+    // separate from resolvability and STANDS under the 2026-08-14 ruling.
+    function isUsableHitter(id){ var rv=id?RESOLVED[id]:null; if(!(rv && (rv.status==='api'||rv.status==='card'))) return false; if(rv.group==='pitching' || normPos(rv.pos)==='P') return false; return true; }
     function inOrder(id){ for(var i=0;i<9;i++){ if(ORDER[i]&&ORDER[i].id===id) return i; } return -1; }
     function firstEmptySlot(){ return ORDER.indexOf(null); }
     function usedPositions(){ var u={}; for(var i=0;i<9;i++){ if(ORDER[i]) u[ORDER[i].pos]=true; } return u; }
@@ -616,7 +622,7 @@
   // so future loads read stored rich rates instead of re-deriving from AVG on an API miss.
   // Best-effort and non-blocking: any failure is swallowed and never affects rendering,
   // resolution, the handoff, or the ?match path. Only called for status==='api'.
-  async function persistRichRates(card, line, rates, pos){
+  async function persistRichRates(card, line, rates, pos, extra){
     try{
       if(!sb || !USER || !card || !card.id) return false;
       if(!rates) return false;
@@ -629,6 +635,14 @@
         resolvedAt:new Date().toISOString(),
         rates:{ BB:rates.BB, K:rates.K, HR:rates.HR, _2B:rates._2B, _3B:rates._3B, _1B:rates._1B },
         pos:((pos!=null && pos!=='') ? pos : (merged.ratesMeta && merged.ratesMeta.pos) || null),
+        // [pitcher fix]/[ladder] group ('pitching' when the pitching lookup answered),
+        // season (the season the line is FROM) and seasonSource ('best'|'declared')
+        // round-trip so a stored resolution restores its honest label. year above
+        // stays the CARD year -- it is the stored-gate key (rm.year===card.yr),
+        // not the line's season; the line's season is this `season` field.
+        group:((extra&&extra.group)||null),
+        season:((extra&&extra.season!=null)?extra.season:null),
+        seasonSource:((extra&&extra.seasonSource)||null),
         line:(line||null)
       };
       var bio = (card._bio!=null ? card._bio : '');
@@ -688,7 +702,14 @@
       var collectionId=coll.data[0].id;
       var res=await sb.from('cards').select('*').eq('collection_id',collectionId).order('created_at',{ascending:true});
       if(res.error) throw res.error;
-      CARDS=(res.data||[]).map(rowToCard).filter(function(c){ return c.type!=='pitching'; });
+      // [pitcher fix] The old filter here tested c.type!=='pitching' while the writer
+      // (index.html) stamps type:'pitcher' -- 'pitcher'!=='pitching', so it removed
+      // exactly zero rows (docs/RESOLVER_COVERAGE.md 2.3). Under the every-single-
+      // player-card-is-playable ruling (2026-08-14) it is DELETED rather than spelled
+      // correctly: pitcher cards must LOAD to be pickable in the pitching box. The
+      // batting-order exclusion it intended lives at the gate (isUsableHitter), not
+      // in hiding the card from the collection.
+      CARDS=(res.data||[]).map(rowToCard);
         try{ restoreDraft(); }catch(e){}
       renderAll();
     }catch(e){
@@ -705,6 +726,12 @@
       id:r.id, player:r.player||'', team:r.team||'', yr:yr, rookie_year:ry, photoPath:r.photo_front_path||'',
       brand:r.brand||'', set:r.set||'', number:r.number||'',
       pos:(u.meta&&u.meta.pos)||'', type:(u.meta&&u.meta.type)||'hitter',
+      // [ladder rung 1] A card may DECLARE the season its stats come from, separate
+      // from the printed year (docs/RESOLVER_COVERAGE.md 4.1, decided 2026-08-12).
+      // WHERE the season lives is 4.4's open question; until it is ruled, the
+      // DEPOT_META sidecar -- where type already lives -- is the read path. Absent
+      // (116 of 126 cards) means the printed year, exactly as before.
+      season:((u.meta&&u.meta.season!=null)?(parseInt(u.meta.season,10)||null):null),
       stats:(u.meta&&u.meta.stats)||{},
       // GAP1: carry raw notes + bio + any previously-persisted rich rates so a
       // stored resolution can short-circuit the API and a write-back can preserve bio/meta.
@@ -827,6 +854,103 @@
     }catch(e){ return null; }
   }
 
+  // ===== [pitcher fix] PITCHING RESOLUTION (docs/RESOLVER_COVERAGE.md section 2) =====
+  // The season-stats call the builder never made. Before this, mlbSeasonHitting was
+  // the ONLY season-stats call in the file: resolveCard identified the player, held
+  // the personId, then asked for hitting -- for everybody -- and 21 of Nick's 126
+  // cards (55% of the no-line bucket) were pitchers with real careers the code
+  // never asked about.
+  // "84.2" innings = 84 and 2/3. parseIP folds statsapi's .1/.2 thirds notation.
+  function parseIP(ip){ var m=String(ip==null?'':ip).match(/^(\d+)(?:\.(\d))?$/); if(!m) return 0; return (+m[1])+((+m[2]||0)/3); }
+  // Map a season pitching line to the SAME six per-PA keys the sim's log5 blend
+  // expects, measured per batter faced: what a plate appearance against this
+  // pitcher yields. Mirrors lineToRates' shape and its small-sample floor so the
+  // two sides of the blend stay symmetric.
+  function pitchLineToRates(L){
+    var H=+L.H||0, d2=+L['2B']||0, t3=+L['3B']||0, hr=+L.HR||0, bb=+L.BB||0, so=+L.SO||0, hbp=+L.HBP||0;
+    var BF=+L.BF||0;
+    if(!BF){ BF=Math.round(parseIP(L.IP)*3)+H+bb+hbp; } // pre-modern rows can lack battersFaced; reconstruct
+    if(BF<50) return null; // too few batters faced to model reliably (mirrors PA<50)
+    var singles=Math.max(0, H-d2-t3-hr);
+    var r={ BB:(bb+hbp)/BF, K:so/BF, HR:hr/BF, _2B:d2/BF, _3B:t3/BF, _1B:singles/BF };
+    return clampRates(r);
+  }
+  async function mlbSeasonPitching(personId,year){
+    var url=MLB_BASE+'/people/'+personId+'/stats?stats=season&group=pitching&season='+year;
+    try{
+      var r=await fetch(url); if(!r.ok) return null; var j=await r.json();
+      var splits=(j&&j.stats&&j.stats[0]&&j.stats[0].splits)||[];
+      if(!splits.length) return null;
+      // Prefer the no-team season-TOTAL split statsapi emits for traded years;
+      // else the largest-BF slice (same convention as mlbSeasonHitting's largest-AB).
+      var best=null;
+      splits.forEach(function(sp){ if(!sp.team && !best) best=sp; });
+      if(!best){ var bestBF=-1; splits.forEach(function(sp){ var bf=(sp.stat&&+sp.stat.battersFaced)||0; if(bf>bestBF){ bestBF=bf; best=sp; } }); }
+      var st=best.stat||{};
+      return { BF:st.battersFaced, H:st.hits, '2B':st.doubles, '3B':st.triples, HR:st.homeRuns, BB:st.baseOnBalls, SO:st.strikeOuts, HBP:st.hitByPitch, ERA:st.era, W:st.wins, L:st.losses, IP:st.inningsPitched };
+    }catch(e){ return null; }
+  }
+
+  // ===== [ladder rung 2] BEST SEASON (decided 2026-08-12, amended 2026-08-14) =====
+  // When the declared season has no modelable line, the player's BEST season plays
+  // -- a 1993 Jeter plays as peak Jeter, a 1988 Schulze as his fullest real year --
+  // and every surface that shows the line LABELS it, because a card quietly playing
+  // a different year than its face is the display/engine divergence again.
+  //   Hitters:  best OPS among seasons with PA >= 200.
+  //   Pitchers: best (lowest) ERA among seasons with IP >= 50. ERA is Nick's
+  //             INTERIM metric ruling (2026-08-14, "ERA until he says otherwise");
+  //             swap ONE comparator below when he picks another.
+  // The floors keep a 12-PA September call-up or a 3-inning cameo from winning
+  // "best"; when NO season clears its floor, the FULLEST season (most PA / most
+  // batters faced) plays, so rung 2 still lands before falling to rungs 3-4
+  // (MiLB / manual stats -- not built here, see GRANT_AUTHORITY queue).
+  // Per-season totals: the no-team TOT split wins over team slices -- a season's
+  // line is the season's line, not the biggest team-slice of it.
+  async function mlbBestSeason(personId, group){
+    var url=MLB_BASE+'/people/'+personId+'/stats?stats=yearByYear&group='+group;
+    try{
+      var r=await fetch(url); if(!r.ok) return null; var j=await r.json();
+      var splits=(j&&j.stats&&j.stats[0]&&j.stats[0].splits)||[];
+      if(!splits.length) return null;
+      var bySeason={};
+      splits.forEach(function(sp){
+        if(!sp.season || !sp.stat) return;
+        var size=(group==='pitching')?(+sp.stat.battersFaced||0):(+sp.stat.atBats||0);
+        var cur=bySeason[sp.season];
+        if(!cur){ bySeason[sp.season]={ sp:sp, size:size, total:!sp.team }; return; }
+        if(cur.total) return;
+        if(!sp.team){ bySeason[sp.season]={ sp:sp, size:size, total:true }; return; }
+        if(size>cur.size){ bySeason[sp.season]={ sp:sp, size:size, total:false }; }
+      });
+      var years=Object.keys(bySeason); if(!years.length) return null;
+      var best=null, bestScore=null, fullest=null, fullestSize=-1;
+      years.forEach(function(yr){
+        var st=bySeason[yr].sp.stat;
+        if(group==='pitching'){
+          var bf=+st.battersFaced||0;
+          if(bf>fullestSize){ fullestSize=bf; fullest=yr; }
+          if(parseIP(st.inningsPitched)>=50){
+            var era=parseFloat(st.era);
+            if(isFinite(era) && (bestScore==null || era<bestScore)){ bestScore=era; best=yr; }
+          }
+        } else {
+          var pa=+st.plateAppearances||0;
+          if(pa>fullestSize){ fullestSize=pa; fullest=yr; }
+          if(pa>=200){
+            var ops=parseFloat(st.ops);
+            if(isFinite(ops) && (bestScore==null || ops>bestScore)){ bestScore=ops; best=yr; }
+          }
+        }
+      });
+      var pick=best||fullest; if(!pick) return null;
+      var st2=bySeason[pick].sp.stat;
+      var line=(group==='pitching')
+        ? { BF:st2.battersFaced, H:st2.hits, '2B':st2.doubles, '3B':st2.triples, HR:st2.homeRuns, BB:st2.baseOnBalls, SO:st2.strikeOuts, HBP:st2.hitByPitch, ERA:st2.era, W:st2.wins, L:st2.losses, IP:st2.inningsPitched }
+        : { AB:st2.atBats, H:st2.hits, '2B':st2.doubles, '3B':st2.triples, HR:st2.homeRuns, BB:st2.baseOnBalls, SO:st2.strikeOuts, HBP:st2.hitByPitch, SF:st2.sacFlies, PA:st2.plateAppearances, AVG:st2.avg, RBI:st2.rbi };
+      return { year:(parseInt(pick,10)||pick), line:line };
+    }catch(e){ return null; }
+  }
+
   // ----- Master resolver: API by name+year -> card-text fallback -> unusable -----
   async function resolveCard(card){
     var out={ status:'pending', note:'', team:card.team||'', tendency:'spray', avg:'.000', hr:0, rbi:0, rates:null, pos:card.pos||'', era:'', w:null, l:null };
@@ -842,26 +966,88 @@
           out.status='api'; out.rates={ BB:rr.BB, K:rr.K, HR:rr.HR, _2B:rr._2B, _3B:rr._3B, _1B:rr._1B };
           // Restore the persisted fielding position so a warm load keeps its position with no API call.
           if(rm.pos!=null && rm.pos!=='') out.pos=rm.pos;
+          // [pitcher fix]/[ladder] Restore which QUESTION was asked (group) and which
+          // SEASON answered it, so a warm load labels itself exactly like a cold one.
+          if(rm.group==='pitching') out.group='pitching';
+          if(rm.season!=null) out.season=rm.season;
+          if(rm.seasonSource) out.seasonSource=rm.seasonSource;
           var _ln=rm.line||null;
-          if(_ln){ if(_ln.AVG!=null) out.avg=fmtAvg(_ln.AVG); out.hr=+_ln.HR||0; out.rbi=+_ln.RBI||0; }
-          out.note='stored MLB rates'+(rm.year!=null?(' '+rm.year):''); out._stored=true;
+          if(_ln){
+            if(out.group==='pitching'){
+              // A pitching line's H/HR/BB are ALLOWED numbers -- never let them
+              // masquerade as a batting display line.
+              if(_ln.ERA!=null&&_ln.ERA!=='') out.era=String(_ln.ERA);
+              if(_ln.W!=null) out.w=String(_ln.W);
+              if(_ln.L!=null) out.l=String(_ln.L);
+            } else {
+              if(_ln.AVG!=null) out.avg=fmtAvg(_ln.AVG); out.hr=+_ln.HR||0; out.rbi=+_ln.RBI||0;
+            }
+          }
+          out.note='stored MLB rates'+(rm.year!=null?(' '+rm.year):'')+((rm.seasonSource==='best'&&rm.season!=null)?(' · best season '+rm.season):''); out._stored=true;
           return out;
         }
       }
     }catch(_e0){}
       try{ var _cs=card.stats||{}; if(_cs.ERA!=null) out.era=String(_cs.ERA); if(_cs.W!=null) out.w=String(_cs.W); if(_cs.L!=null) out.l=String(_cs.L); }catch(_e){}
-    // 1) MLB API by player name + card year
+    // 1) MLB API by player name + declared season (default: printed year)
     if(card.player && card.yr){
       var person=await mlbFindPlayer(card.player);
       if(person && !person.ambiguous && person.id){
         // Capture the player's actual fielding position from the same API lookup.
         out.pos=(person.primaryPosition && person.primaryPosition.abbreviation) || '';
-        var line=await mlbSeasonHitting(person.id, card.yr);
-        if(line){
-          var rates=lineToRates(line);
-          if(rates){ out.status='api'; out.rates=rates; out.avg=fmtAvg(line.AVG); out.hr=+line.HR||0; out.rbi=+line.RBI||0; out.note='MLB API '+card.yr; out._freshLine=line; out._freshRates=rates; return out; }
+        // [ladder] rung 1 = the card's declared season (meta.season override, else
+        // the printed year). rung 2 = the player's best season when rung 1 has no
+        // modelable line. Rungs 3-4 (MiLB best season / manual stats) are queued,
+        // not built here. Every rung routes through the SAME rates derivation; the
+        // sim never needs to know which rung fired, but the DISPLAY does -- hence
+        // out.season / out.seasonSource ride on every non-rung-1 resolution.
+        var seasonWanted=(card.season!=null)?card.season:card.yr;
+        if(normPos(out.pos)==='P'){
+          // [pitcher fix] Ask the question that matches the player. group=pitching
+          // for pitchers (incl. TWP) -- the lookup used to ask for hitting for
+          // EVERYBODY (docs/RESOLVER_COVERAGE.md 2.1: 'group=pitching' appeared
+          // zero times in this file), which is why 21 of Nick's 126 sat at "no MLB
+          // line" while the resolver held their personId the whole time.
+          var pline=await mlbSeasonPitching(person.id, seasonWanted);
+          var prates=pline?pitchLineToRates(pline):null;
+          var pyear=seasonWanted;
+          if(!prates){
+            var pbest=await mlbBestSeason(person.id,'pitching');
+            if(pbest){ var pbr=pitchLineToRates(pbest.line); if(pbr){ pline=pbest.line; prates=pbr; pyear=pbest.year; } }
+          }
+          if(prates){
+            out.status='api'; out.group='pitching'; out.rates=prates;
+            if(pline.ERA!=null&&pline.ERA!=='') out.era=String(pline.ERA);
+            if(pline.W!=null) out.w=String(pline.W);
+            if(pline.L!=null) out.l=String(pline.L);
+            out.season=pyear;
+            if(String(pyear)!==String(card.yr)){ out.seasonSource=(card.season!=null&&String(pyear)===String(card.season))?'declared':'best'; }
+            out.note=(out.seasonSource==='best')?('MLB API pitching, best season '+pyear):('MLB API pitching '+pyear);
+            out._freshLine=pline; out._freshRates=prates; return out;
+          }
+          out.note='MLB API: no pitching line for '+seasonWanted+' or any season';
+        } else {
+          var line=await mlbSeasonHitting(person.id, seasonWanted);
+          var rates=line?lineToRates(line):null;
+          var hyear=seasonWanted;
+          if(!rates){
+            // [ladder rung 2] No modelable line for the declared season -- the test
+            // is "is there a line", not "why is there not", so this covers both
+            // failure shapes: printed year outside the career (Jeter 1993, Ruth
+            // legacy inserts) AND inside-career years with no line (Bo Jackson
+            // 1992, the hip). See RESOLVER_COVERAGE.md 4.3.
+            var hbest=await mlbBestSeason(person.id,'hitting');
+            if(hbest){ var hbr=lineToRates(hbest.line); if(hbr){ line=hbest.line; rates=hbr; hyear=hbest.year; } }
+          }
+          if(rates){
+            out.status='api'; out.rates=rates; out.avg=fmtAvg(line.AVG); out.hr=+line.HR||0; out.rbi=+line.RBI||0;
+            out.season=hyear;
+            if(String(hyear)!==String(card.yr)){ out.seasonSource=(card.season!=null&&String(hyear)===String(card.season))?'declared':'best'; }
+            out.note=(out.seasonSource==='best')?('MLB API, best season '+hyear):('MLB API '+hyear);
+            out._freshLine=line; out._freshRates=rates; return out;
+          }
+          out.note='MLB API: no '+seasonWanted+' hitting line';
         }
-        out.note='MLB API: no '+card.yr+' hitting line';
       } else if(person && person.ambiguous){ out.note='MLB API: ambiguous name'; }
       else { out.note='MLB API: no match'; }
     } else { out.note='missing name or year'; }
@@ -910,8 +1096,13 @@
         var inOrd=inOrder(c.id)>=0;
         var isPit=(PITCHER===c.id);
         var sub=fmtMeta(c);
+        // [ladder] A card playing a season other than its face SAYS SO in the list
+        // (rung 2 "best season: 1987", or a declared-season override). The number
+        // shown must be the number used -- same rule as the engine side.
         var note=(st==='bad')?('no MLB line'+((c.yr!=null)?(' for '+c.yr):''))
-                   :((st==='pending')?'resolving\u2026':'');
+                   :((st==='pending')?'resolving\u2026'
+                   :((rv.seasonSource==='best'&&rv.season!=null)?('best season: '+rv.season)
+                   :((rv.seasonSource==='declared'&&rv.season!=null)?('season: '+rv.season):'')));
         // status text (no MLB-API pill): just a tiny dim note when unusable as a hitter
         var resPos = naturalPosFor(c.id);
         // "pitcher-ready": resolved position P, or no usable hitting line (still resolving -> neutral)
@@ -981,7 +1172,7 @@
           html+='<div class="bat filled'+(slot.outOfPos?' outpos':'')+'" draggable="true" data-slot="'+i+'">'
               +   '<div class="ord">'+(i+1)+'</div>'
               +   '<div class="who"><b>'+esc(c?c.player:'?')+'</b>'+(slot.outOfPos?' <span class="oop-flag" title="Natural position taken \u2013 set a position below">OUT OF POS</span>':'')
-              +     '<small>'+esc((rv.avg||'.000'))+' AVG \u00b7 '+(rv.hr||0)+' HR \u00b7 '+(rv.rbi||0)+' RBI</small></div>'
+              +     '<small>'+esc((rv.avg||'.000'))+' AVG \u00b7 '+(rv.hr||0)+' HR \u00b7 '+(rv.rbi||0)+' RBI'+((rv.seasonSource==='best'&&rv.season!=null)?(' \u00b7 best season '+rv.season):((rv.seasonSource==='declared'&&rv.season!=null)?(' \u00b7 season '+rv.season):''))+'</small></div>'
               +   __spBox
               +   posSel
               +   '<button class="rm-btn" data-rm="'+i+'">remove</button>'
@@ -1006,8 +1197,17 @@
     // ----- pitcher box -----
     function renderPitcher(){
       var box=$('pitcherBox'); if(!box) return;
-      if(PITCHER){ var c=cardById(PITCHER); var rv=RESOLVED[PITCHER]||{}; var era=(rv.era!=null&&rv.era!=='')?rv.era:'\u2014';
-        box.innerHTML='<div class="who"><b>'+esc(c?c.player:'?')+'</b><small>'+esc((c&&c.team)||'')+(rv.era?(' \u00b7 '+esc(rv.era)+' ERA'):'')+'</small></div><button class="rm-btn" id="rmPit">remove</button>';
+      if(PITCHER){ var c=cardById(PITCHER); var rv=RESOLVED[PITCHER]||{};
+        // [pitcher fix] The pitching box prints the RESOLVED line (ERA, W-L) --
+        // which is now a real MLB pitching line, not the card-sidecar ERA that
+        // pack-pulled cards never carried -- plus the rung-2 label when the line
+        // is a best-season line. The number shown is the number thrown.
+        var _pb=[];
+        if(rv.era!=null&&rv.era!=='') _pb.push(esc(rv.era)+' ERA');
+        if(rv.w!=null&&rv.l!=null) _pb.push(esc(rv.w)+'-'+esc(rv.l));
+        if(rv.seasonSource==='best'&&rv.season!=null) _pb.push('best season '+rv.season);
+        else if(rv.seasonSource==='declared'&&rv.season!=null) _pb.push('season '+rv.season);
+        box.innerHTML='<div class="who"><b>'+esc(c?c.player:'?')+'</b><small>'+esc((c&&c.team)||'')+(_pb.length?(' \u00b7 '+_pb.join(' \u00b7 ')):'')+'</small></div><button class="rm-btn" id="rmPit">remove</button>';
         var rb=$('rmPit'); if(rb) rb.addEventListener('click',function(){ PITCHER=null; renderAll(); });
       } else { box.innerHTML='<span class="muted">No pitcher chosen \u2014 pick one from your collection (\u201cSet as P\u201d).</span>'; }
     }
@@ -1026,7 +1226,13 @@
       var art=$('spotArt'); if(art){ art.innerHTML = c._imgUrl ? ('<img src="'+esc(c._imgUrl)+'" alt="'+esc(c.player||'card')+'">') : ('<div class="sp-ph">'+esc(c.player||'(unnamed)')+'</div>'); }
       var nm=$('spotName'); if(nm) nm.textContent = c.player||'(unnamed)';
       var mt=$('spotMeta'); if(mt) mt.textContent = fmtMeta(c) || [c.yr,c.team].filter(Boolean).join(' \u00b7 ');
-      var stt=$('spotStats'); if(stt){ var av=(rv.avg||'.000'); stt.innerHTML = esc(av)+' AVG \u00b7 '+(rv.hr||0)+' HR \u00b7 '+(rv.rbi||0)+' RBI'+(rv.era?(' \u00b7 '+esc(rv.era)+' ERA'):''); }
+      var stt=$('spotStats'); if(stt){
+        // [pitcher fix] A pitcher's spotlight shows his PITCHING line, not the
+        // .000 batting line he never had. [ladder] Season labels ride along.
+        var _lbl=(rv.seasonSource==='best'&&rv.season!=null)?(' \u00b7 best season: '+rv.season):((rv.seasonSource==='declared'&&rv.season!=null)?(' \u00b7 season: '+rv.season):'');
+        if(rv.group==='pitching'){ stt.innerHTML = esc(rv.era||'\u2014')+' ERA \u00b7 '+esc(rv.w!=null?rv.w:'0')+'-'+esc(rv.l!=null?rv.l:'0')+_lbl; }
+        else { var av=(rv.avg||'.000'); stt.innerHTML = esc(av)+' AVG \u00b7 '+(rv.hr||0)+' HR \u00b7 '+(rv.rbi||0)+' RBI'+(rv.era?(' \u00b7 '+esc(rv.era)+' ERA'):'')+_lbl; }
+      }
       var brk=$('spotBreak');
       if(brk){ if(window.DepotPrestige && DepotPrestige.compute){ brk.innerHTML = spotBreakdownHTML(DepotPrestige.compute({name:c.player,yr:c.yr,gem:c.gem,error:c.error,set:c.set,rookie_year:c.rookie_year})); } else { brk.innerHTML='<div class="muted">Prestige engine not loaded.</div>'; console.warn('[builder] spotlight: DepotPrestige missing'); } }
       b.classList.add('open');
@@ -1156,11 +1362,13 @@
     // Batting order = 9 hitters (8 fielders + DH), NO pitcher. Pitcher sent separately.
     async function buildTeamPayload(){
       var lineup=await Promise.all(ORDER.map(async function(slot){ var id=slot.id; var c=cardById(id); var rv=RESOLVED[id]||{};
-        return { name:(c.player||'PLAYER').toUpperCase(), avg:rv.avg, hr:rv.hr, rbi:rv.rbi, tendency:rv.tendency||'spray', rates:rv.rates, year:(c&&c.yr!=null?c.yr:null), pos:slot.pos, cardId:id, img:(c&&c.photoPath?await cardSignedUrl(c.photoPath):'') };
+        // [ladder] statsSeason/statsSeasonSource ride additively so downstream
+        // surfaces can label a rung-2 line; sim.js ignores unknown fields.
+        return { name:(c.player||'PLAYER').toUpperCase(), avg:rv.avg, hr:rv.hr, rbi:rv.rbi, tendency:rv.tendency||'spray', rates:rv.rates, year:(c&&c.yr!=null?c.yr:null), statsSeason:(rv.season!=null?rv.season:null), statsSeasonSource:(rv.seasonSource||null), pos:slot.pos, cardId:id, img:(c&&c.photoPath?await cardSignedUrl(c.photoPath):'') };
       }));
       var pitcher=null;
       if(PITCHER){ var pc=cardById(PITCHER); var prv=RESOLVED[PITCHER]||{};
-        pitcher={ cardId:PITCHER, name:(pc.player||'PITCHER').toUpperCase(), year:(pc&&pc.yr!=null?pc.yr:null), img:(pc&&pc.photoPath?await cardSignedUrl(pc.photoPath):'') };
+        pitcher={ cardId:PITCHER, name:(pc.player||'PITCHER').toUpperCase(), year:(pc&&pc.yr!=null?pc.yr:null), statsSeason:(prv.season!=null?prv.season:null), statsSeasonSource:(prv.seasonSource||null), img:(pc&&pc.photoPath?await cardSignedUrl(pc.photoPath):'') };
             if(prv.rates){ pitcher.rates=prv.rates; pitcher.BB=prv.rates.BB; pitcher.K=prv.rates.K; pitcher.HR=prv.rates.HR; pitcher._2B=prv.rates._2B; pitcher._3B=prv.rates._3B; pitcher._1B=prv.rates._1B; }
         if(prv.era!=null && prv.era!=='') pitcher.era=String(prv.era);
         if(prv.w!=null) pitcher.w=String(prv.w);
@@ -1195,12 +1403,12 @@
           var batters=ORDER.map(function(slot){
             var id=slot.id; var c=cardById(id)||{}; var rv=RESOLVED[id]||{};
             return { cardId:id, name:(c.player||'PLAYER').toUpperCase(), pos:slot.pos,
-                     avg:rv.avg, hr:rv.hr, rbi:rv.rbi, tendency:rv.tendency||'spray', rates:rv.rates, year:(c&&c.yr!=null?c.yr:null) };
+                     avg:rv.avg, hr:rv.hr, rbi:rv.rbi, tendency:rv.tendency||'spray', rates:rv.rates, year:(c&&c.yr!=null?c.yr:null), statsSeason:(rv.season!=null?rv.season:null), statsSeasonSource:(rv.seasonSource||null) };
           });
           var pitcher=null;
           if(PITCHER){
             var pc=cardById(PITCHER)||{}; var prv=RESOLVED[PITCHER]||{};
-            pitcher={ cardId:PITCHER, name:(pc.player||'PITCHER').toUpperCase(), year:(pc&&pc.yr!=null?pc.yr:null) };
+            pitcher={ cardId:PITCHER, name:(pc.player||'PITCHER').toUpperCase(), year:(pc&&pc.yr!=null?pc.yr:null), statsSeason:(prv.season!=null?prv.season:null), statsSeasonSource:(prv.seasonSource||null) };
             if(prv.rates){ pitcher.rates=prv.rates; pitcher.BB=prv.rates.BB; pitcher.K=prv.rates.K; pitcher.HR=prv.rates.HR; pitcher._2B=prv.rates._2B; pitcher._3B=prv.rates._3B; pitcher._1B=prv.rates._1B; }
             if(prv.era!=null && prv.era!=='') pitcher.era=String(prv.era);
             if(prv.w!=null) pitcher.w=String(prv.w);
@@ -1300,7 +1508,7 @@
     // avgToRates 'card' fallback, never the league-average floor, never an already-stored
     // one). Best-effort/non-blocking so a failed write can't break resolution or rendering.
     if(rv && rv.status==='api' && !rv._stored && rv._freshRates){
-      try{ await persistRichRates(c, rv._freshLine||null, rv._freshRates, rv.pos); }catch(_pe){}
+      try{ await persistRichRates(c, rv._freshLine||null, rv._freshRates, rv.pos, { group:rv.group||null, season:(rv.season!=null?rv.season:null), seasonSource:rv.seasonSource||null }); }catch(_pe){}
     }
     // Progressive fill: re-render as each card resolves (list already tolerates pending).
     renderCards(); renderStatus();
