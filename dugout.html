@@ -20,6 +20,10 @@
 <meta name="twitter:image" content="https://thedepot.cards/assets/og-depot.png">
 <script src="js/version.js?v=37d5dcc"></script>
 <script src="js/depot-core.js?v=37d5dcc"></script>
+<!-- The session hook: one module that owns its own auth subscription and calls
+     depot_ensure_onboarding. ADDITIVE - it does not touch this shell's existing
+     auth wiring. See js/depot-session-hook.js. -->
+<script src="js/depot-session-hook.js?v=37d5dcc"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">

@@ -3470,6 +3470,16 @@ setAuthUI(false);
   <script src="js/depot-card-detail-polish.js?v=37d5dcc"></script>
 <!-- browse: Group By Position / Team / Band on the proven renderGrouped path, plus mobile (<=500px) infinite scroll. Additive + guarded; desktop pagination untouched. -->
 <script src="js/depot-binder-browse.js?v=37d5dcc"></script>
+<!-- FUNNEL ITEMS 2 AND 3. All four are ADDITIVE: nothing above is removed, rewired
+     or wrapped. The session hook owns its OWN auth subscription and does not touch
+     the nine that already exist. The box modules load LAST because they read the
+     pool through depot-shop.js and positions through depot-position.js, both of
+     which are included above. -->
+<link rel="stylesheet" href="css/depot-redesign-starter.css?v=37d5dcc">
+<script src="js/depot-session-hook.js?v=37d5dcc"></script>
+<script src="js/depot-playability.js?v=37d5dcc"></script>
+<script src="js/depot-starter-box.js?v=37d5dcc"></script>
+<script src="js/depot-starter-box-view.js?v=37d5dcc"></script>
 <script>
 /* Franchise Economy Slice A: arm wallet chip + payout hook. Additive, fail-loud, graceful until DDL. */
 (function(){

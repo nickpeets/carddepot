@@ -1,0 +1,188 @@
+/* css/depot-redesign-starter.css — chapter 02b, the Starter Box ceremony.
+ *
+ * Every selector here is prefixed .rd-sb. Nothing in this file can reach a
+ * surface that does not opt in, and there is not one bare element selector —
+ * same discipline css/depot-redesign.css states in its own header.
+ *
+ * Tokens only: --rd-navy #10456b, --rd-cream #fff7df, --rd-gold #ffd23e,
+ * --rd-sky #2eb2e6, panels 4px / radius 20 / hard 0 7px 0. No blurred shadows.
+ * Motion reuses the shipped vocabulary (rd-cardpop, rd-twinkle, rd-starburst)
+ * rather than declaring a second one — a duplicate @keyframes name silently
+ * wins by source order, which depot-redesign.css already warns about.
+ *
+ * 390 IS ITS OWN LAYOUT (constitution rule 5), not a squeezed desktop: the box
+ * drops to 230px, waves go 2-up, the tray scrolls, and Skip stays reachable on
+ * every wave. 44px minimum touch targets throughout.
+ */
+
+.rd-sb{
+  position:fixed; inset:0; z-index:9000;
+  background:rgba(7,44,71,.94);
+  display:flex; align-items:center; justify-content:center;
+  padding:20px; overflow:auto;
+  font-family:'Baloo 2',system-ui,sans-serif;
+}
+.rd-sb__stage{ width:100%; max-width:1100px; margin:auto; }
+
+.rd-sb__panel{
+  background:var(--rd-cream,#fff7df);
+  border:4px solid var(--rd-navy,#10456b);
+  border-radius:20px;
+  box-shadow:0 7px 0 var(--rd-navy,#10456b);
+  padding:22px 24px;
+}
+.rd-sb__h{
+  font:800 26px/1.15 'Baloo 2',sans-serif; color:var(--rd-navy,#10456b);
+  text-align:center; margin:0 0 4px;
+}
+.rd-sb__sub{
+  font:600 13px/1.4 'Baloo 2',sans-serif; color:var(--rd-muted,#5b7f97);
+  text-align:center; margin:0 0 16px;
+}
+.rd-sb__micro{
+  font:400 8px/1.6 'Press Start 2P',monospace; color:var(--rd-muted,#5b7f97);
+  text-transform:uppercase; letter-spacing:.06em;
+}
+
+/* ---- the closed box ------------------------------------------------- */
+.rd-sb__box{
+  width:280px; margin:0 auto 18px; padding:20px 14px 16px;
+  background:linear-gradient(#0c3556,#072c47);
+  border:4px solid var(--rd-navy,#10456b); border-radius:18px;
+  box-shadow:0 7px 0 var(--rd-navy,#10456b);
+  text-align:center; position:relative;
+}
+.rd-sb__box::after{           /* the visible stack of card edges — a box, not a pack */
+  content:''; position:absolute; left:14px; right:14px; bottom:-9px; height:9px;
+  border-radius:0 0 12px 12px;
+  background:repeating-linear-gradient(90deg,#fff7df 0 6px,#e6d9b4 6px 8px);
+  border:3px solid var(--rd-navy,#10456b); border-top:0;
+}
+.rd-sb__boxmark{ font:400 9px/1.7 'Press Start 2P',monospace; color:var(--rd-gold,#ffd23e); letter-spacing:.08em }
+.rd-sb__boxname{ font:800 30px/1.05 'Baloo 2',sans-serif; color:var(--rd-cream,#fff7df); margin:6px 0 2px }
+.rd-sb__boxcount{ font:400 8px/1.7 'Press Start 2P',monospace; color:var(--rd-gold,#ffd23e) }
+.rd-sb__seal{
+  width:52px; height:52px; margin:12px auto 0; border-radius:50%;
+  background:var(--rd-gold,#ffd23e); border:3px solid var(--rd-navy,#10456b);
+  display:flex; align-items:center; justify-content:center; font-size:24px;
+  animation:rd-floaty 3.4s ease-in-out infinite;
+}
+.rd-sb__shape{ display:flex; flex-wrap:wrap; gap:8px; justify-content:center; margin:16px 0 4px }
+.rd-sb__shapechip{
+  font:400 8px/1.6 'Press Start 2P',monospace; color:var(--rd-navy,#10456b);
+  background:#fff; border:2px solid var(--rd-navy,#10456b); border-radius:9px; padding:6px 9px;
+}
+
+/* ---- the wave rail --------------------------------------------------- */
+.rd-sb__rail{ display:flex; gap:10px; justify-content:center; flex-wrap:wrap; margin:0 0 14px }
+.rd-sb__dot{ display:flex; flex-direction:column; align-items:center; gap:5px; min-width:64px }
+.rd-sb__dot i{
+  width:14px; height:14px; border-radius:50%; display:block;
+  background:#fff; border:3px solid var(--rd-navy,#10456b);
+}
+.rd-sb__dot.is-done i{ background:var(--rd-sky,#2eb2e6) }
+.rd-sb__dot.is-now  i{ background:var(--rd-gold,#ffd23e); transform:scale(1.25) }
+.rd-sb__dot span{ font:400 7px/1.5 'Press Start 2P',monospace; color:var(--rd-muted,#5b7f97); text-align:center }
+.rd-sb__dot.is-now span{ color:var(--rd-navy,#10456b) }
+
+.rd-sb__wavehead{ display:flex; align-items:baseline; justify-content:space-between; gap:12px; flex-wrap:wrap; margin-bottom:12px }
+.rd-sb__count{ font:700 22px/1 'VT323',ui-monospace,monospace; color:var(--rd-navy,#10456b) }
+
+/* ---- card tiles ------------------------------------------------------ */
+.rd-sb__grid{ display:grid; grid-template-columns:repeat(5,1fr); gap:12px }
+.rd-sb__card{
+  background:#fff; border:3px solid var(--rd-navy,#10456b); border-radius:14px;
+  box-shadow:0 4px 0 var(--rd-navy,#10456b); padding:8px; text-align:center;
+  animation:rd-cardpop .42s cubic-bezier(.2,1.2,.3,1) both;
+}
+.rd-sb__well{
+  height:96px; border-radius:9px; margin-bottom:7px;
+  border:2px dashed rgba(16,69,107,.45);
+  background:repeating-linear-gradient(45deg,rgba(16,69,107,.09) 0 9px,transparent 9px 18px);
+  display:flex; align-items:center; justify-content:center; overflow:hidden;
+}
+.rd-sb__well img{ width:100%; height:100%; object-fit:cover; border-radius:7px }
+.rd-sb__nm{ font:700 12px/1.2 'Baloo 2',sans-serif; color:var(--rd-navy,#10456b);
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+.rd-sb__yr{ font:400 7px/1.6 'Press Start 2P',monospace; color:var(--rd-muted,#5b7f97) }
+.rd-sb__pos{
+  display:inline-block; margin-top:5px; padding:3px 7px; border-radius:7px;
+  font:400 7px/1.4 'Press Start 2P',monospace;
+  background:var(--rd-navy,#10456b); color:var(--rd-cream,#fff7df);
+}
+.rd-sb__card--hit{ border-color:var(--rd-gold,#ffd23e); box-shadow:0 4px 0 #e8a90f; position:relative }
+.rd-sb__card--hit .rd-sb__pos{ background:var(--rd-gold,#ffd23e); color:var(--rd-navy,#10456b) }
+.rd-sb__burst{
+  position:absolute; inset:-14px; border-radius:50%; pointer-events:none;
+  border:4px solid var(--rd-gold,#ffd23e); animation:rd-starburst .9s ease-out both;
+}
+.rd-sb__band{
+  position:absolute; top:-11px; right:-6px; padding:3px 8px; border-radius:8px;
+  font:400 7px/1.4 'Press Start 2P',monospace; border:2px solid var(--rd-navy,#10456b);
+  background:var(--rd-gold,#ffd23e); color:var(--rd-navy,#10456b);
+  animation:rd-bannerpop .5s ease-out both;
+}
+
+/* ---- actions --------------------------------------------------------- */
+.rd-sb__acts{ display:flex; gap:12px; justify-content:center; flex-wrap:wrap; margin-top:18px }
+.rd-sb__acts .rd-btn{ min-height:44px }
+.rd-sb__skip{
+  background:none; border:0; cursor:pointer; min-height:44px; padding:0 8px;
+  font:400 8px/1.6 'Press Start 2P',monospace; color:var(--rd-muted,#5b7f97);
+  text-transform:uppercase; letter-spacing:.06em; text-decoration:underline;
+}
+.rd-sb__skip:hover{ color:var(--rd-navy,#10456b) }
+
+/* ---- the tray -------------------------------------------------------- */
+.rd-sb__group{ margin-top:18px }
+.rd-sb__grouph{ display:flex; align-items:baseline; gap:10px; margin-bottom:9px }
+.rd-sb__grouph b{ font:400 9px/1.6 'Press Start 2P',monospace; color:var(--rd-navy,#10456b); letter-spacing:.06em }
+.rd-sb__tray{ max-height:60vh; overflow:auto; padding-right:4px }
+
+/* ---- the next step: the free pack ------------------------------------ */
+.rd-sb__next{
+  margin-top:18px; padding:14px 16px; text-align:center;
+  background:#fff; border:3px solid var(--rd-navy,#10456b); border-radius:14px;
+  box-shadow:0 4px 0 var(--rd-navy,#10456b);
+}
+.rd-sb__next b{ font:800 15px/1.3 'Baloo 2',sans-serif; color:var(--rd-navy,#10456b); display:block }
+
+/* ---- the unopened-box bar (persistent, not dismissible) --------------- */
+.rd-sb-bar{
+  display:flex; align-items:center; gap:12px; flex-wrap:wrap; justify-content:center;
+  background:var(--rd-gold,#ffd23e); border:4px solid var(--rd-navy,#10456b);
+  border-radius:20px; box-shadow:0 7px 0 var(--rd-navy,#10456b);
+  padding:14px 18px; margin:0 0 20px;
+}
+.rd-sb-bar b{ font:800 16px/1.2 'Baloo 2',sans-serif; color:var(--rd-navy,#10456b) }
+.rd-sb-bar span{ font:600 13px/1.35 'Baloo 2',sans-serif; color:#7a5b00 }
+
+/* ---- the fail-closed state. A DELAY, not a breakage (spec 4.1) -------- */
+.rd-sb__wait{ text-align:center }
+.rd-sb__wait .rd-sb__seal{ animation:none; background:#fff }
+
+/* ---- 390 ------------------------------------------------------------- */
+@media (max-width:500px){
+  .rd-sb{ padding:12px }
+  .rd-sb__panel{ padding:16px 14px }
+  .rd-sb__h{ font-size:21px }
+  .rd-sb__box{ width:230px }
+  .rd-sb__boxname{ font-size:25px }
+  .rd-sb__grid{ grid-template-columns:repeat(2,1fr); gap:10px }
+  .rd-sb__well{ height:104px }
+  .rd-sb__rail{ gap:6px }
+  .rd-sb__dot{ min-width:52px }
+  .rd-sb__dot span{ font-size:6px }
+  .rd-sb__tray{ max-height:56vh }
+  .rd-sb__acts{ flex-direction:column }
+  .rd-sb__acts .rd-btn{ width:100% }
+}
+
+/* ---- reduced motion: waves cross-fade, the hit keeps its band --------- */
+@media (prefers-reduced-motion:reduce){
+  .rd-sb__card{ animation:rd-sb-fade .25s linear both }
+  .rd-sb__seal{ animation:none }
+  .rd-sb__burst{ display:none }
+  .rd-sb__band{ animation:none }
+}
+@keyframes rd-sb-fade{ from{opacity:0} to{opacity:1} }
