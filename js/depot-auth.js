@@ -140,7 +140,26 @@
      so the cheap fix is to make injection idempotent and re-assert it at the
      moment the modal is actually needed. Both functions no-op when their node
      is already present. */
-  function ensureDom(){ injectStyles(); injectMarkup(); }
+  /* js/depot-redesign.js dresses #authOverlay into .rd-modal at its own boot.
+     On a shell that throws the document away AFTER that boot - game/index.html
+     does documentElement.replaceWith() on DOMContentLoaded - the overlay does
+     not exist when dressAll() runs, so the dresser logs "nothing to dress" and
+     the re-injected modal comes back in its undressed base skin while the
+     other seven shells show .rd-modal. Re-assert the dressing on the
+     late-injection path. dressAuthModal() is idempotent (it returns early on
+     data-rd-dressed="1"), so this is a no-op wherever the boot already did it. */
+  function reassertDressing(){
+    try {
+      if (window.DepotRD && typeof window.DepotRD.dressAuthModal === 'function'){
+        window.DepotRD.dressAuthModal();
+      }
+    } catch(e){ console.warn('[DepotAuth] dressAuthModal re-assert threw:', e && e.message); }
+  }
+
+  /* dress=true only on the open path. At initial load the dressing is left to
+     depot-redesign.js's own boot, exactly as before - this file does not
+     change the load-time ordering on any shell. */
+  function ensureDom(dress){ injectStyles(); injectMarkup(); if (dress) reassertDressing(); }
 
   ensureDom();
 
@@ -216,13 +235,13 @@
     }
 
     var DepotAuth = {
-      openModal: function(){ ensureDom(); setMsg(''); mode='login'; reflectMode(); $('authOverlay').classList.add('open'); var e=$('authEmailInput'); if(e) e.focus(); },
+      openModal: function(){ ensureDom(true); setMsg(''); mode='login'; reflectMode(); $('authOverlay').classList.add('open'); var e=$('authEmailInput'); if(e) e.focus(); },
       closeModal: function(){ $('authOverlay').classList.remove('open'); },
       forgotMode: function(){ mode='forgot'; setMsg(''); reflectMode(); var e=$('authEmailInput'); if(e){ try{ e.focus(); }catch(_e){} } },
       backToLogin: function(){ mode='login'; setMsg(''); reflectMode(); },
       /* [auth recovery] called off the PASSWORD_RECOVERY auth event: the visitor
          arrived from the reset email and holds a live recovery session. */
-      recoveryMode: function(){ ensureDom(); mode='reset'; setMsg(''); reflectMode(); $('authOverlay').classList.add('open'); var p=$('authPassInput'); if(p){ p.value=''; try{ p.focus(); }catch(_e){} } },
+      recoveryMode: function(){ ensureDom(true); mode='reset'; setMsg(''); reflectMode(); $('authOverlay').classList.add('open'); var p=$('authPassInput'); if(p){ p.value=''; try{ p.focus(); }catch(_e){} } },
       toggleMode: function(){ mode = (mode==='login') ? 'signup' : 'login'; setMsg(''); reflectMode();
         /* fix/signup-flow: switching INTO sign-up wipes whatever the browser autofilled.
            One #authEmailInput / #authPassInput pair serves BOTH modes, so Chrome drops the
