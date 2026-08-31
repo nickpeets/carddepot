@@ -1,11 +1,11 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <script src="js/version.js?v=f670552"></script>
-  <script src="js/depot-core.js?v=f670552"></script>
-<script src="js/depot-root-route.js?v=f670552"></script>
+  <script src="js/version.js?v=fc7663a"></script>
+  <script src="js/depot-core.js?v=fc7663a"></script>
+<script src="js/depot-root-route.js?v=fc7663a"></script>
   <!-- roles shim: window.depotIsAdmin(). Dark-safe (resolves false) until db/proposals/MIGRATION_roles.sql runs. Must load AFTER depot-core: it reads depotSB()/depotUser(). -->
-  <script src="js/depot-roles.js?v=f670552"></script>
+  <script src="js/depot-roles.js?v=fc7663a"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>The Depot</title>
@@ -27,13 +27,13 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gshtatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Oswald:wght@400;500;600;700&family=Spectral:ital,wght@0,400;0,500;0,600;1,400&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="css/depot-style.css?v=f670552">
-  <link rel="stylesheet" href="css/season.css?v=f670552">
-  <link rel="stylesheet" href="css/depot-redesign.css?v=f670552">
-<link rel="stylesheet" href="css/depot-redesign-binder.css?v=f670552">
-    <script src="js/depot-shell.js?v=f670552"></script>
-  <script src="js/depot-redesign.js?v=f670552"></script>
-  <script src="js/depot-season-shell.js?v=f670552"></script>
+  <link rel="stylesheet" href="css/depot-style.css?v=fc7663a">
+  <link rel="stylesheet" href="css/season.css?v=fc7663a">
+  <link rel="stylesheet" href="css/depot-redesign.css?v=fc7663a">
+<link rel="stylesheet" href="css/depot-redesign-binder.css?v=fc7663a">
+    <script src="js/depot-shell.js?v=fc7663a"></script>
+  <script src="js/depot-redesign.js?v=fc7663a"></script>
+  <script src="js/depot-season-shell.js?v=fc7663a"></script>
   <style>
 /* The spotlight skin that used to live in this block - four interleaved
    layers, from the original leather/paper rules through the Phase-2 2b demo
@@ -812,249 +812,16 @@ body{padding:0 !important;}
 .rolo-noimg{margin-top:.4rem;font-size:.72rem;color:#7a5a00}
 .rolo-uphint{margin-top:.2rem;font-size:.68rem;opacity:.75}
 </style>
-<link rel="stylesheet" href="css/depot-spotlight-legacy.css?v=f670552">
+<link rel="stylesheet" href="css/depot-spotlight-legacy.css?v=fc7663a">
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
 <!-- ===== DEPOT AUTH (Phase 1): Supabase client + auth UI styles ===== -->
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
-
-<!-- ===== DEPOT AUTH (Phase 1): login/signup modal ===== -->
-<div class="auth-overlay" id="authOverlay" onclick="if(event.target===this)DepotAuth.closeModal()">
-  <div class="auth-modal" role="dialog" aria-modal="true">
-    <button class="auth-close" type="button" onclick="DepotAuth.closeModal()" aria-label="Close">&times;</button>
-    <h2 id="authTitle">Log in</h2>
-    <p class="sub" id="authSub">Sign in to sync your collection across devices.</p>
-    <label for="authEmailInput">Email</label>
-    <input type="email" id="authEmailInput" autocomplete="email" placeholder="you@example.com">
-    <label for="authPassInput">Password</label>
-    <input type="password" id="authPassInput" autocomplete="current-password" placeholder="password">
-    <div class="row">
-      <button class="auth-btn primary" id="authSubmitBtn" type="button" onclick="DepotAuth.submit()">Log in</button>
-    </div>
-    <div class="auth-msg" id="authMsg"></div>
-    <div class="auth-toggle" id="authToggle">
-      <span id="authToggleText">No account?</span> <a onclick="DepotAuth.toggleMode()" id="authToggleLink">Sign up</a>
-    </div>
-    <div class="auth-toggle" id="authForgotRow">
-      <a onclick="DepotAuth.forgotMode()" id="authForgotLink">Forgot password?</a>
-    </div>
-    <div class="auth-toggle" id="authBackRow" style="display:none">
-      <a onclick="DepotAuth.backToLogin()" id="authBackLink">Back to log in</a>
-    </div>
-  </div>
-</div>
-
-
-<!-- ===== DEPOT AUTH (Phase 1): session logic. Card storage UNCHANGED (still localStorage). ===== -->
-<script>
-(function(){
-  var SUPABASE_URL = 'https://nuymzokvbdntbvinsnda.supabase.co';
-  // publishable (anon) key, client-safe / RLS-protected; assembled from parts
-  var SUPABASE_KEY = ['sb','publishable','IiTsIBqYgGTIEnwdvQEXPA','4rmQdYVo'].join('_');
-  window.DEPOT_SUPABASE_CONFIG = { url: SUPABASE_URL, key: SUPABASE_KEY }; // depot-core config (additive)
-
-  if(!window.supabase || !window.supabase.createClient){
-    console.warn('[DepotAuth] supabase-js failed to load; auth disabled, card flow unaffected.');
-    return;
-  }
-  var sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-  window.supabaseClient = sb;
-
-  var mode = 'login'; // or 'signup'
-  function $(id){ return document.getElementById(id); }
-  function setMsg(t, cls){ var m=$('authMsg'); if(!m) return;
-      /* fix/signup-flow: the redesign dresser adds .rd-modal__msg to this node at
-         dress time (js/depot-redesign.js chapter 02) and setMsg used to blow the whole
-         className away, so the FIRST message a visitor ever saw fell out of the parts
-         language back to the legacy 11px line - part of why a refusal reads as nothing
-         happening. Keep the part, swap only the ok/err state class. */
-      var dressed = m.classList.contains('rd-modal__msg');
-      m.textContent=t||''; m.className='auth-msg'+(cls?(' '+cls):'');
-      if(dressed){ m.classList.add('rd-modal__msg'); } }
-
-  function reflectMode(){
-    /* [auth recovery] four modes now: login / signup / forgot (send reset link)
-       / reset (arrived via the email link; a recovery session is live). */
-    var login = mode==='login', signup = mode==='signup', forgot = mode==='forgot', reset = mode==='reset';
-    $('authTitle').textContent   = login ? 'Log in' : signup ? 'Sign up' : forgot ? 'Reset password' : 'Set a new password';
-    $('authSub').textContent     = login  ? 'Sign in to sync your collection across devices.'
-                                 : signup ? 'Create an account to sync your collection across devices.'
-                                 : forgot ? 'Enter your email and we\'ll send a reset link.'
-                                 :          'You followed a reset link - choose a new password.';
-    $('authSubmitBtn').textContent = login ? 'Log in' : signup ? 'Sign up' : forgot ? 'Send reset link' : 'Set password';
-    $('authToggleText').textContent = login ? 'No account?' : 'Have an account?';
-    $('authToggleLink').textContent = login ? 'Sign up' : 'Log in';
-    $('authPassInput').setAttribute('autocomplete', (login||forgot) ? 'current-password' : 'new-password');
-    var passLabel = document.querySelector('label[for="authPassInput"]');
-    var emailLabel = document.querySelector('label[for="authEmailInput"]');
-    // forgot needs no password; reset needs no email (the recovery session knows who)
-    [$('authPassInput'), passLabel].forEach(function(el){ if(el) el.style.display = forgot ? 'none' : ''; });
-    [$('authEmailInput'), emailLabel].forEach(function(el){ if(el) el.style.display = reset ? 'none' : ''; });
-    var tog=$('authToggle');       if(tog)  tog.style.display  = (forgot||reset) ? 'none' : '';
-    var fr =$('authForgotRow');    if(fr)   fr.style.display   = login ? '' : 'none';
-    var back=$('authBackRow');     if(back) back.style.display = forgot ? '' : 'none';
-  }
-
-  var DepotAuth = {
-    openModal: function(){ setMsg(''); mode='login'; reflectMode(); $('authOverlay').classList.add('open'); var e=$('authEmailInput'); if(e) e.focus(); },
-    closeModal: function(){ $('authOverlay').classList.remove('open'); },
-    forgotMode: function(){ mode='forgot'; setMsg(''); reflectMode(); var e=$('authEmailInput'); if(e){ try{ e.focus(); }catch(_e){} } },
-    backToLogin: function(){ mode='login'; setMsg(''); reflectMode(); },
-    /* [auth recovery] called off the PASSWORD_RECOVERY auth event: the visitor
-       arrived from the reset email and holds a live recovery session. */
-    recoveryMode: function(){ mode='reset'; setMsg(''); reflectMode(); $('authOverlay').classList.add('open'); var p=$('authPassInput'); if(p){ p.value=''; try{ p.focus(); }catch(_e){} } },
-    toggleMode: function(){ mode = (mode==='login') ? 'signup' : 'login'; setMsg(''); reflectMode();
-      /* fix/signup-flow: switching INTO sign-up wipes whatever the browser autofilled.
-         One #authEmailInput / #authPassInput pair serves BOTH modes, so Chrome drops the
-         saved LOGIN pair into the sign-up form. The visitor then registers an address
-         that already has an account, Supabase answers 'User already registered', and the
-         button reads as dead. A sign-up now carries only what was typed. */
-      if(mode==='signup'){ var __e=$('authEmailInput'), __p=$('authPassInput'); if(__e) __e.value=''; if(__p) __p.value=''; if(__e){ try{ __e.focus(); }catch(_e){} } }
-    },
-    submit: async function(){
-      var email = ($('authEmailInput').value||'').trim();
-      var pass = $('authPassInput').value||'';
-      if(mode==='forgot'){ if(!email){ setMsg('Enter your email.', 'err'); return; } }
-      else if(mode==='reset'){ if(!pass){ setMsg('Enter a new password.', 'err'); return; } }
-      else if(!email || !pass){ setMsg('Enter email and password.', 'err'); return; }
-      setMsg('Working...'); $('authSubmitBtn').disabled = true;
-      try{
-        var res;
-        if(mode==='forgot'){
-          /* [auth recovery] redirect back to THIS origin+path; index owns the
-             set-new-password modal. Supabase answers OK whether or not the address
-             exists, so the copy must not promise a mail is coming. */
-          var fr2 = await sb.auth.resetPasswordForEmail(email, { redirectTo: location.origin + location.pathname });
-          if(fr2.error){ console.warn('[DepotAuth] resetPasswordForEmail refused: status=' + (fr2.error.status||'?') + ' msg=' + (fr2.error.message||'')); setMsg(fr2.error.message || 'Could not send the reset link. Please try again.', 'err'); }
-          else { setMsg('If that address has an account, a reset link is on its way. Check your email.', 'ok'); }
-          return;
-        }
-        if(mode==='reset'){
-          var up = await sb.auth.updateUser({ password: pass });
-          if(up.error){ console.warn('[DepotAuth] updateUser(password) refused: status=' + (up.error.status||'?') + ' msg=' + (up.error.message||'')); setMsg(up.error.message || 'Could not set the new password. Please try again.', 'err'); }
-          else { (window.depotLog||function(){})('[DepotAuth] password updated off the recovery session'); setMsg('Password updated - you are signed in.', 'ok'); setTimeout(DepotAuth.closeModal, 1200); }
-          return;
-        }
-        if(mode==='signup'){
-          /* fix/signup-flow: emailRedirectTo was ABSENT, so every confirmation and
-             recovery link fell back to the project Site URL (now https://thedepot.cards
-             after the cutover). A sign-up begun on any other origin came back to the
-             wrong place. Pass THIS origin + path explicitly, never a query string. */
-          res = await sb.auth.signUp({ email: email, password: pass, options: { emailRedirectTo: location.origin + location.pathname } });
-        }
-        else { res = await sb.auth.signInWithPassword({ email: email, password: pass }); }
-        if(res.error){
-          var __m = (res.error.message||'')+'';
-          console.warn('[DepotAuth] ' + mode + ' refused by Supabase: status=' + (res.error.status||'?') + ' code=' + (res.error.code||'?') + ' msg=' + __m);
-          /* The commonest sign-up refusal is an address that already has an account.
-             Name it and move the visitor to Log in with the email kept, instead of
-             leaving a bare server string under the button (a silent bounce). */
-          if(/already registered|already exists|already been registered/i.test(__m)){
-            mode='login'; reflectMode();
-            var __p2=$('authPassInput'); if(__p2){ __p2.value=''; try{ __p2.focus(); }catch(_e){} }
-            setMsg('That email already has an account - switched you to Log in. Enter your password.', 'err');
-          } else { setMsg(__m || 'That did not go through. Please try again.', 'err'); }
-        }
-        else if(mode==='signup' && res.data && res.data.session===null){
-          var __u = (res.data && res.data.user) || null;
-          if(__u && __u.identities && __u.identities.length === 0){
-            /* Supabase obfuscates an existing address while confirmations are ON: it
-               answers with an identity-less user and NO session instead of an error. */
-            console.warn('[DepotAuth] sign-up returned an identity-less user -> that email already has an account');
-            mode='login'; reflectMode();
-            setMsg('That email already has an account - switched you to Log in. Enter your password.', 'err');
-          } else {
-            console.log('[DepotAuth] sign-up returned no session -> email confirmation is ON for this project; the visitor must confirm before logging in');
-            setMsg('Account created. Check your email to confirm, then come back and log in.', 'ok');
-          }
-        } else {
-          console.log('[DepotAuth] ' + mode + ' succeeded with a live session; the gate lifts on the SIGNED_IN event');
-          setMsg(mode==='signup' ? 'Account created - you are signed in.' : 'Success.', 'ok'); setTimeout(DepotAuth.closeModal, 900);
-        }
-      }catch(err){ setMsg(String(err && err.message || err), 'err'); }
-      finally{ $('authSubmitBtn').disabled = false; }
-    },
-    logout: async function(){ try{ await sb.auth.signOut(); }catch(e){ console.warn('[DepotAuth] signOut', e); } }
-  };
-  window.DepotAuth = DepotAuth;
-
-  function renderSession(session){
-    var loggedIn = !!(session && session.user);
-    var emailEl=$('authEmail'), loginBtn=$('authLoginBtn'), logoutBtn=$('authLogoutBtn'), playBtn=$('homePlayBtn'); var seasonBtn=$('depotSeasonBtn');
-    if(!emailEl){ if(document.readyState==="loading"){ document.addEventListener("DOMContentLoaded", function(){ renderSession(session); }, { once:true }); } else { setTimeout(function(){ renderSession(session); }, 0); } return; }
-    if(loggedIn){
-      emailEl.textContent = session.user.email || 'signed in';
-      emailEl.style.display=''; loginBtn.style.display='none'; logoutBtn.style.display=''; if(playBtn) playBtn.style.display=''; if(seasonBtn) seasonBtn.style.display='';
-    } else {
-      emailEl.style.display='none'; loginBtn.style.display=''; logoutBtn.style.display='none'; if(playBtn) playBtn.style.display='none'; if(seasonBtn) seasonBtn.style.display='none';
-    }
-  }
-
-  // NOTE: Phase 1 does NOT gate the card UI. Cards still load/save via localStorage, untouched.
-  sb.auth.onAuthStateChange(function(event, session){
-    console.log('[DepotAuth] onAuthStateChange:', event);
-    if(event === 'PASSWORD_RECOVERY'){
-      /* [auth recovery] the visitor arrived off the reset email; open the modal
-         in set-new-password mode against the live recovery session. */
-      (window.depotLog||function(){})('[DepotAuth] PASSWORD_RECOVERY -> set-new-password modal');
-      try{ DepotAuth.recoveryMode(); }catch(e){ console.warn('[DepotAuth] recoveryMode failed:', e && e.message); }
-    }
-    renderSession(session);
-  });
-  // Initial auth chrome render: run exactly once, AFTER the auth-area DOM exists.
-  // getSession() resolves from cached storage almost immediately (a microtask), which can
-  // beat the HTML parser reaching #authArea. Running it inline would call renderSession
-  // against not-yet-parsed elements and bail via `if(!emailEl) return`, leaving the auth
-  // chrome hidden (the PR #34 regression: all controls default to display:none).
-  var __depotAuthChromeInit = false;
-  function initAuthChrome(){
-    if(__depotAuthChromeInit) return;
-    __depotAuthChromeInit = true;
-    Promise.resolve()
-      .then(function(){ return sb.auth.getSession(); })
-      .then(function(r){ renderSession(r && r.data ? r.data.session : null); })
-      .catch(function(e){
-        console.warn('[DepotAuth] getSession failed; failing open to Log in.', e);
-        renderSession(null); // fail open: show the Log in button rather than nothing
-      });
-  }
-  if(document.readyState === 'loading'){
-    document.addEventListener('DOMContentLoaded', initAuthChrome, { once: true });
-  } else {
-    initAuthChrome();
-  }
-
-  // Enter key submits from modal inputs
-  document.addEventListener('keydown', function(e){
-    if(e.key==='Enter' && $('authOverlay') && $('authOverlay').classList.contains('open')){
-      var a=document.activeElement;
-      if(a && (a.id==='authEmailInput' || a.id==='authPassInput')){ e.preventDefault(); DepotAuth.submit(); }
-    }
-    if(e.key==='Escape' && $('authOverlay') && $('authOverlay').classList.contains('open')){ DepotAuth.closeModal(); }
-  });
-})();
-</script>
 
 <style>
   .auth-area{display:flex;align-items:center;gap:8px;margin-left:16px;font-size:11px}
   .auth-email{color:var(--brass);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .auth-btn{font-family:inherit;font-size:11px;border:2px solid var(--brass);background:var(--brass);color:#000;font-weight:600;padding:4px 10px;cursor:pointer;border-radius:3px}
   .auth-btn:hover{background:var(--sb-blue);color:var(--brass)}
-  .auth-overlay{display:none;position:fixed;inset:0;background:rgba(20,12,6,.78);z-index:9999;align-items:center;justify-content:center}
-  .auth-overlay.open{display:flex}
-  .auth-modal{background:var(--leather,#2a1c10);border:3px solid var(--brass,#c8a24a);border-radius:6px;padding:24px;width:320px;max-width:90vw;box-shadow:0 8px 40px rgba(0,0,0,.6)}
-  .auth-modal h2{margin:0 0 4px;font-size:16px;color:var(--brass)}
-  .auth-modal .sub{font-size:11px;opacity:.8;margin:0 0 16px}
-  .auth-modal label{display:block;font-size:11px;margin:10px 0 4px;opacity:.85}
-  .auth-modal input{width:100%;box-sizing:border-box;font-family:inherit;font-size:13px;padding:8px;border:2px solid var(--brass);border-radius:3px;background:rgba(0,0,0,.25);color:var(--ink)}
-  .auth-modal .row{display:flex;gap:8px;margin-top:18px}
-  .auth-modal .row .auth-btn{flex:1;text-align:center}
-  .auth-modal .auth-btn.primary{background:var(--brass);color:var(--leather)}
-  .auth-msg{font-size:11px;margin-top:12px;min-height:14px}
-  .auth-msg.err{color:#e08a8a}
-  .auth-msg.ok{color:#8ad08a}
-  .auth-close{float:right;cursor:pointer;color:var(--brass);font-size:18px;line-height:1;border:none;background:none}
-  .auth-toggle{font-size:11px;margin-top:14px;text-align:center;opacity:.85}
-  .auth-toggle a{color:var(--brass);cursor:pointer;text-decoration:underline}
 </style>
 
 <!-- PHASE5-SHARE-CSS -->
@@ -1087,10 +854,17 @@ body{padding:0 !important;}
 </style>
 <!-- /PHASE5-SHARE-CSS -->
 
-  <link rel="stylesheet" href="css/depot-redesign-shop.css?v=f670552">
-    <link rel="stylesheet" href="depot-v2.css?v=f670552">
+  <link rel="stylesheet" href="css/depot-redesign-shop.css?v=fc7663a">
+    <link rel="stylesheet" href="depot-v2.css?v=fc7663a">
 </head>
 <body class="v2-body">
+<!-- ===== DEPOT AUTH: the one shared modal. Markup + modal CSS + the whole
+     DepotAuth state machine now live in js/depot-auth.js so every shell gets
+     the same component (ch16: reachable from every locked action). Classic
+     script, and it must stay AHEAD of js/depot-redesign.js: dressAuthModal()
+     needs #authOverlay to already be in the DOM when it boots. ===== -->
+<script src="js/depot-auth.js?v=fc7663a"></script>
+
   <div id="sharedUnavailable"><div class="su-card"><div class="su-title">Not available</div><div class="su-sub">This collection isn&rsquo;t available.</div></div></div>
 
 <!-- Phase 4: login-required gate. Logged-out users see ONLY this; no collection. -->
@@ -3452,34 +3226,34 @@ setAuthUI(false);
   });
 })();
 </script>
-<script src="game/season.js?v=f670552" defer></script>
-<script src="js/depot-index-shell.js?v=f670552"></script>
-<script src="js/depot-prestige.js?v=f670552"></script>
-<script src="js/depot-wallet.js?v=f670552"></script>
-  <script src="js/depot-pack-engine.js?v=f670552"></script>
-  <script src="js/depot-pixel-card.js?v=f670552"></script>
-  <script src="js/depot-library-index.js?v=f670552"></script>
-  <script src="js/depot-shop.js?v=f670552"></script>
-  <script src="js/depot-shop-view.js?v=f670552"></script>
-  <script src="js/depot-pack-history.js?v=f670552"></script>
-  <script src="js/depot-binder-shop.js?v=f670552"></script>
-  <script src="js/depot-library-art.js?v=f670552"></script>
-  <script src="js/depot-add-card-search.js?v=f670552"></script>
-    <script src="js/depot-position.js?v=f670552"></script>
-  <script src="js/depot-card-detail-2b.js?v=f670552"></script>
-  <script src="js/depot-card-detail-polish.js?v=f670552"></script>
+<script src="game/season.js?v=fc7663a" defer></script>
+<script src="js/depot-index-shell.js?v=fc7663a"></script>
+<script src="js/depot-prestige.js?v=fc7663a"></script>
+<script src="js/depot-wallet.js?v=fc7663a"></script>
+  <script src="js/depot-pack-engine.js?v=fc7663a"></script>
+  <script src="js/depot-pixel-card.js?v=fc7663a"></script>
+  <script src="js/depot-library-index.js?v=fc7663a"></script>
+  <script src="js/depot-shop.js?v=fc7663a"></script>
+  <script src="js/depot-shop-view.js?v=fc7663a"></script>
+  <script src="js/depot-pack-history.js?v=fc7663a"></script>
+  <script src="js/depot-binder-shop.js?v=fc7663a"></script>
+  <script src="js/depot-library-art.js?v=fc7663a"></script>
+  <script src="js/depot-add-card-search.js?v=fc7663a"></script>
+    <script src="js/depot-position.js?v=fc7663a"></script>
+  <script src="js/depot-card-detail-2b.js?v=fc7663a"></script>
+  <script src="js/depot-card-detail-polish.js?v=fc7663a"></script>
 <!-- browse: Group By Position / Team / Band on the proven renderGrouped path, plus mobile (<=500px) infinite scroll. Additive + guarded; desktop pagination untouched. -->
-<script src="js/depot-binder-browse.js?v=f670552"></script>
+<script src="js/depot-binder-browse.js?v=fc7663a"></script>
 <!-- FUNNEL ITEMS 2 AND 3. All four are ADDITIVE: nothing above is removed, rewired
      or wrapped. The session hook owns its OWN auth subscription and does not touch
      the nine that already exist. The box modules load LAST because they read the
      pool through depot-shop.js and positions through depot-position.js, both of
      which are included above. -->
-<link rel="stylesheet" href="css/depot-redesign-starter.css?v=f670552">
-<script src="js/depot-session-hook.js?v=f670552"></script>
-<script src="js/depot-playability.js?v=f670552"></script>
-<script src="js/depot-starter-box.js?v=f670552"></script>
-<script src="js/depot-starter-box-view.js?v=f670552"></script>
+<link rel="stylesheet" href="css/depot-redesign-starter.css?v=fc7663a">
+<script src="js/depot-session-hook.js?v=fc7663a"></script>
+<script src="js/depot-playability.js?v=fc7663a"></script>
+<script src="js/depot-starter-box.js?v=fc7663a"></script>
+<script src="js/depot-starter-box-view.js?v=fc7663a"></script>
 <script>
 /* Franchise Economy Slice A: arm wallet chip + payout hook. Additive, fail-loud, graceful until DDL. */
 (function(){
@@ -3532,7 +3306,7 @@ setAuthUI(false);
   .group-grid{ display:grid !important; grid-template-columns:repeat(auto-fill, minmax(150px, 1fr)) !important; gap:12px !important; }
   .group-grid .slot{ aspect-ratio:auto !important; min-height:0 !important; }
 </style>
-<link rel="stylesheet" href="css/depot-redesign-addcard.css?v=f670552">
+<link rel="stylesheet" href="css/depot-redesign-addcard.css?v=fc7663a">
 
 <script>
 /* Route Group By = Set through the labeled-sections grid (renderGrouped) instead of the
