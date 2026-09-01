@@ -235,7 +235,7 @@
     }
 
     var DepotAuth = {
-      openModal: function(){ ensureDom(true); setMsg(''); mode='login'; reflectMode(); $('authOverlay').classList.add('open'); var e=$('authEmailInput'); if(e) e.focus(); },
+      openModal: function(m){ ensureDom(true); setMsg(''); mode=(m==='signup')?'signup':'login'; reflectMode(); $('authOverlay').classList.add('open'); var e=$('authEmailInput'); if(e) e.focus(); },
       closeModal: function(){ $('authOverlay').classList.remove('open'); },
       forgotMode: function(){ mode='forgot'; setMsg(''); reflectMode(); var e=$('authEmailInput'); if(e){ try{ e.focus(); }catch(_e){} } },
       backToLogin: function(){ mode='login'; setMsg(''); reflectMode(); },
@@ -389,6 +389,32 @@
     } else {
       initAuthChrome();
     }
+
+  // [welcome CTA] welcome.html's "Open a free Starter Box" links to index.html?auth=1.
+  // depot-root-route.js already reads ?auth, but only as its loop guard -- do not bounce
+  // this visitor back to welcome.html. Nothing ever opened the modal, so the click landed
+  // on a bare hub with the gate shut. Anyone arriving on that link has no account yet, so
+  // open in SIGNUP mode, not login.
+  function autoOpenFromQuery(){
+    var wanted = false;
+    try{ wanted = new URLSearchParams(location.search).get('auth') === '1'; }catch(_e){ return; }
+    if(!wanted) return;
+    try{ DepotAuth.openModal('signup'); }
+    catch(e){ console.warn('[DepotAuth] ?auth=1 auto-open failed:', e && e.message); return; }
+    // Strip the param so a refresh does not re-open the modal. Safe here: index.html loads
+    // depot-root-route.js up in <head> and this file at the end of <body>, so the loop
+    // guard has already had its look at location.search by the time we run.
+    try{
+      var u = new URL(location.href);
+      u.searchParams.delete('auth');
+      history.replaceState(null, '', u.pathname + u.search + u.hash);
+    }catch(_e2){}
+  }
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', autoOpenFromQuery, { once: true });
+  } else {
+    autoOpenFromQuery();
+  }
 
     // Enter key submits from modal inputs
     document.addEventListener('keydown', function(e){
