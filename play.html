@@ -18,12 +18,12 @@
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://thedepot.cards/assets/og-depot.png">
-<script src="js/version.js?v=cfd118a"></script>
-<script src="js/depot-core.js?v=cfd118a"></script>
+<script src="js/version.js?v=6b44e49"></script>
+<script src="js/depot-core.js?v=6b44e49"></script>
 <!-- The session hook: one module that owns its own auth subscription and calls
      depot_ensure_onboarding. ADDITIVE - it does not touch this shell's existing
      auth wiring. See js/depot-session-hook.js. -->
-<script src="js/depot-session-hook.js?v=cfd118a"></script>
+<script src="js/depot-session-hook.js?v=6b44e49"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
@@ -39,21 +39,21 @@ var sb=null;
 try{ if(window.supabase&&window.supabase.createClient){ sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY); } }catch(e){}
 try{ if(sb){ window.sb = sb; window.supabaseClient = sb; } }catch(e){}
 </script>
-<link rel="stylesheet" href="css/depot-style.css?v=cfd118a">
-<link rel="stylesheet" href="depot-v2.css?v=cfd118a">
-<link rel="stylesheet" href="css/depot-redesign.css?v=cfd118a">
-<script src="js/depot-wallet.js?v=cfd118a"></script>
-<script src="js/depot-shell.js?v=cfd118a" defer></script>
-<script src="js/depot-redesign.js?v=cfd118a" defer></script>
-<script src="js/depot-vs.js?v=cfd118a" defer></script>
-<script src="js/depot-play-hub.js?v=cfd118a" defer></script>
+<link rel="stylesheet" href="css/depot-style.css?v=6b44e49">
+<link rel="stylesheet" href="depot-v2.css?v=6b44e49">
+<link rel="stylesheet" href="css/depot-redesign.css?v=6b44e49">
+<script src="js/depot-wallet.js?v=6b44e49"></script>
+<script src="js/depot-shell.js?v=6b44e49" defer></script>
+<script src="js/depot-redesign.js?v=6b44e49" defer></script>
+<script src="js/depot-vs.js?v=6b44e49" defer></script>
+<script src="js/depot-play-hub.js?v=6b44e49" defer></script>
 </head>
 <body class="v2-body rd-page">
 <!-- ===== DEPOT AUTH: the one shared modal (ch16 - reachable from every locked
      action, not just the header). Classic script at the top of <body> so
      #authOverlay exists before js/depot-redesign.js dressAuthModal() boots;
      that file is deferred here, so it boots the moment parsing ends. ===== -->
-<script src="js/depot-auth.js?v=cfd118a"></script>
+<script src="js/depot-auth.js?v=6b44e49"></script>
 
 <script>
 /* CHAPTER 19 - the Play Ball hub. This surface is READ + ROUTE only: it starts
