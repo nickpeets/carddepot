@@ -18,12 +18,12 @@
 <meta property="og:image:height" content="630">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:image" content="https://thedepot.cards/assets/og-depot.png">
-<script src="js/version.js?v=6b44e49"></script>
-<script src="js/depot-core.js?v=6b44e49"></script>
+<script src="js/version.js?v=28b1810"></script>
+<script src="js/depot-core.js?v=28b1810"></script>
 <!-- The session hook: one module that owns its own auth subscription and calls
      depot_ensure_onboarding. ADDITIVE - it does not touch this shell's existing
      auth wiring. See js/depot-session-hook.js. -->
-<script src="js/depot-session-hook.js?v=6b44e49"></script>
+<script src="js/depot-session-hook.js?v=28b1810"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
@@ -39,12 +39,24 @@ var sb=null;
 try{ if(window.supabase&&window.supabase.createClient){ sb=window.supabase.createClient(SUPABASE_URL,SUPABASE_KEY); } }catch(e){}
 try{ if(sb){ window.sb = sb; window.supabaseClient = sb; } }catch(e){}
 </script>
-<link rel="stylesheet" href="css/depot-style.css?v=6b44e49">
-<link rel="stylesheet" href="depot-v2.css?v=6b44e49">
-<link rel="stylesheet" href="css/depot-redesign.css?v=6b44e49">
-<script src="js/depot-wallet.js?v=6b44e49"></script>
-<script src="js/depot-shell.js?v=6b44e49" defer></script>
-<script src="js/depot-redesign.js?v=6b44e49" defer></script>
+<link rel="stylesheet" href="css/depot-style.css?v=28b1810">
+<link rel="stylesheet" href="depot-v2.css?v=28b1810">
+<link rel="stylesheet" href="css/depot-redesign.css?v=28b1810">
+<script src="js/depot-wallet.js?v=28b1810"></script>
+<script src="js/depot-shell.js?v=28b1810" defer></script>
+<script src="js/depot-redesign.js?v=28b1810" defer></script>
+<style>
+/* [splash] welcome.html only. The shared shell lets .rd-hub run the full width
+   of the stage, which is right for the multi-panel surfaces (play.html, the
+   hub) but leaves this one-card landing reading as a full-width banner. Scoped
+   here, not in css/depot-redesign.css, so no other surface moves.
+   Everything inside the card is centred: label chip, headline, body copy, the
+   gold CTA and the trust chips all share one axis. */
+.rd-hub{ width:100%; max-width:900px; margin-left:auto; margin-right:auto; }
+.rd-hub .rd-panel--pad{ text-align:center; }
+.rd-hub .rd-hub__club{ justify-content:center; }
+.rd-hub .rd-hub__line{ justify-content:center; }
+</style>
 </head>
 <body class="v2-body rd-page">
 <!-- ===== DEPOT AUTH: the one shared modal (ch16 - reachable from every locked
@@ -52,7 +64,7 @@ try{ if(sb){ window.sb = sb; window.supabaseClient = sb; } }catch(e){}
      bounces anonymous visitors here (js/depot-root-route.js), so this is the
      first surface a stranger can ask to log in from. Classic script at the top
      of <body> so #authOverlay exists before deferred depot-redesign.js boots. ===== -->
-<script src="js/depot-auth.js?v=6b44e49"></script>
+<script src="js/depot-auth.js?v=28b1810"></script>
 
 <script>
 /* CHAPTER 16 - the onboarding shell. The anonymous visitor's first ten seconds.
@@ -86,7 +98,7 @@ document.addEventListener('DOMContentLoaded', function () {
         <span class="rd-hub__line" style="margin-top:14px">
           <a class="rd-btn rd-btn--gold" href="index.html?auth=1">Open a free Starter Box &#9986;</a>
         </span>
-        <span class="rd-hub__line" style="margin-top:14px;display:flex;flex-wrap:wrap;gap:12px">
+        <span class="rd-hub__line" style="margin-top:14px;display:flex;flex-wrap:wrap;gap:12px;justify-content:center">
           <span class="rd-team__chip">25 CARDS TO START</span>
           <span class="rd-team__chip">FREE DAILY PACK</span>
           <span class="rd-team__chip">NO CARD IS EVER PAYWALLED BEHIND ART</span>
