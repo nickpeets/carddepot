@@ -61,11 +61,10 @@ try{ if(sb){ window.sb = sb; window.supabaseClient = sb; } }catch(e){}
    Rule 7: the shell draws the one bar; signed-out it collapses to the LOG IN
    pill, which is exactly the chapter's drawn header. No page title below it.
    A visitor with a live session does not belong here - route them to the hub.
-   SCOPE, decided without a planner per the standing brief: the two hero panels
-   are the DESIGNED placeholders (rule 4's band language), not autoplaying
-   product loops - shipping a fake loop would promise motion the page does not
-   have. The secondary "watch a rip first" is LOCKED WITH ITS REASON (rule 6):
-   the no-account house rip does not exist yet. */
+   SCOPE: one splash card and one door. The hero placeholder panels, the
+   locked "watch a rip first" secondary and its disclaimer are gone - a page
+   whose only job is handing over a Starter Box should not spend the fold
+   explaining what it cannot do yet. The three promises ride under the CTA. */
 document.addEventListener('DOMContentLoaded', function () {
   if (window.DepotShell && window.DepotShell.mount) { window.DepotShell.mount({ active: 'binder', wordmark: 'THE <b>DEPOT</b>' }); }
   var t = 0;
@@ -86,37 +85,16 @@ document.addEventListener('DOMContentLoaded', function () {
         <span class="rd-hub__line"><span class="rd-hub__season">Scan the cards you own or pull them from a 176,000-card library. Build a lineup out of them. Play the season out. Win coins, rip more packs.</span></span>
         <span class="rd-hub__line" style="margin-top:14px">
           <a class="rd-btn rd-btn--gold" href="index.html?auth=1">Open a free Starter Box &#9986;</a>
-          <button class="rd-btn rd-btn--quiet" type="button" disabled>or watch a rip first &#9654;</button>
         </span>
-        <span class="rd-hub__line"><span class="rd-hub__countlbl">The no-account rip is not built yet &mdash; the ceremony currently needs a signed-in collector. The Starter Box does not.</span></span>
+        <span class="rd-hub__line" style="margin-top:14px;display:flex;flex-wrap:wrap;gap:12px">
+          <span class="rd-team__chip">25 CARDS TO START</span>
+          <span class="rd-team__chip">FREE DAILY PACK</span>
+          <span class="rd-team__chip">NO CARD IS EVER PAYWALLED BEHIND ART</span>
+        </span>
       </span>
     </div>
   </section>
 
-  <div class="rd-hub__grid">
-    <section class="rd-panel rd-hub__tile">
-      <div class="rd-hub__tileh"><span class="rd-hub__ticon">&#9986;</span><span class="rd-hub__tname">A rip, right now</span></div>
-      <div class="rd-scan-slot" style="aspect-ratio:16/9;display:flex;align-items:center;justify-content:center;margin-top:12px">
-        <span class="rd-hub__countlbl">card mid-reveal &middot; rays &middot; HIT stamp</span>
-      </div>
-      <p class="rd-hub__blurb">Rip a pack and the odds are computed live &mdash; never printed on the wrapper.</p>
-    </section>
-    <section class="rd-panel rd-hub__tile">
-      <div class="rd-hub__tileh"><span class="rd-hub__ticon">&#9918;</span><span class="rd-hub__tname">A game, in ten seconds</span></div>
-      <div class="rd-scan-slot" style="aspect-ratio:16/9;display:flex;align-items:center;justify-content:center;margin-top:12px">
-        <span class="rd-hub__countlbl">an at-bat resolving on the broadcast field</span>
-      </div>
-      <p class="rd-hub__blurb">Your nine against a friend's, from one seed &mdash; the sim owns the mechanics.</p>
-    </section>
-  </div>
-
-  <section class="rd-panel rd-panel--pad">
-    <div class="rd-hub__line" style="justify-content:center;gap:12px;display:flex;flex-wrap:wrap">
-      <span class="rd-team__chip">25 CARDS TO START</span>
-      <span class="rd-team__chip">FREE DAILY PACK</span>
-      <span class="rd-team__chip">NO CARD IS EVER PAYWALLED BEHIND ART</span>
-    </div>
-  </section>
 
 </div>
 </main>
