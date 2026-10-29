@@ -258,18 +258,40 @@
     var list = S.pack.cards.filter(function (c) { return isRot ? c.role === 'P' : c.role === 'H'; }).map(function (c) {
       var f = isRot ? 1 : R.fitFactor(c.pos, slot); return { c: c, f: f, v: (c.ovr || 0) * f };
     }).sort(function (a, b) { return b.v - a.v; });
+    /* Nick 2026-10-29: filling 3B should offer third basemen. The sheet shows
+     * only players who play this spot with no penalty (fit 1: the position
+     * itself; any outfielder in LF/RF; a shortstop at 2B; anyone at DH; any
+     * pitcher in the rotation). Everyone else sits behind one button, and opens
+     * by default only when the pack has nobody natural for the spot. */
+    var natural = list.filter(function (x) { return x.f >= 1; });
+    var others = list.filter(function (x) { return x.f < 1; });
+    function cardBtn(x) {
+      var lab = R.fitLabel(x.f), where = used[x.c.id];
+      // a star sitting elsewhere in the lineup is a swap, so it never breaks the cap
+      var capped = R.isMarquee(x.c) && !where && starsElsewhere >= R.MARQUEE_MAX;
+      return '<button class="card" data-tier="' + tier(x.c) + '" data-id="' + x.c.id + '"' + (capped ? ' disabled' : '') + '>' + cardHTML(x.c,
+        (capped ? '<div class="fitnote">All 3 star spots used</div>' : '') +
+        (lab ? '<div class="fitnote">Plays ' + esc(x.c.pos) + ', ' + esc(lab) + '</div>' : '') + (isRot && x.c.reliever ? '<div class="fitnote">Reliever, tires as a starter</div>' : '') +
+        (where && where !== slot ? '<div class="meta" style="margin-top:4px">Now at ' + where + '</div>' : '')) + '</button>';
+    }
+    var lower = SLOT_NAME[slot].toLowerCase();
+    var head = natural.length
+      ? ''
+      : '<p class="muted" style="margin:0 0 10px">Nobody in today\'s pack plays ' + esc(lower) + '. These are the best fits, with the penalty each one takes.</p>';
+    var more = (natural.length && others.length)
+      ? '<button class="btn ghost small" id="showOthers" aria-expanded="false" style="margin-top:14px">Show ' + others.length + ' player' + (others.length === 1 ? '' : 's') + ' from other positions</button>' +
+        '<div class="grid hidden" id="otherGrid" style="margin-top:12px">' + others.map(cardBtn).join('') + '</div>'
+      : '';
     var sh = document.createElement('div'); sh.className = 'sheet'; sh.setAttribute('role', 'dialog'); sh.setAttribute('aria-modal', 'true'); sh.setAttribute('aria-label', 'Pick a player for ' + SLOT_NAME[slot]);
-    sh.innerHTML = '<div class="inner"><div class="head"><h2>' + esc(SLOT_NAME[slot]) + '</h2><button class="btn small ghost" id="closeSheet">Close</button></div><div class="grid">' +
-      list.map(function (x) {
-        var lab = R.fitLabel(x.f), where = used[x.c.id];
-        // a star sitting elsewhere in the lineup is a swap, so it never breaks the cap
-        var capped = R.isMarquee(x.c) && !where && starsElsewhere >= R.MARQUEE_MAX;
-        return '<button class="card" data-tier="' + tier(x.c) + '" data-id="' + x.c.id + '"' + (capped ? ' disabled' : '') + '>' + cardHTML(x.c,
-          (capped ? '<div class="fitnote">All 3 star spots used</div>' : '') +
-          (lab ? '<div class="fitnote">' + esc(lab) + '</div>' : '') + (isRot && x.c.reliever ? '<div class="fitnote">Reliever, tires as a starter</div>' : '') +
-          (where && where !== slot ? '<div class="meta" style="margin-top:4px">Now at ' + where + '</div>' : '')) + '</button>';
-      }).join('') + '</div></div>';
+    sh.innerHTML = '<div class="inner"><div class="head"><h2>' + esc(SLOT_NAME[slot]) + '</h2><button class="btn small ghost" id="closeSheet">Close</button></div>' + head +
+      '<div class="grid">' + (natural.length ? natural : others).map(cardBtn).join('') + '</div>' + more + '</div>';
     document.body.appendChild(sh);
+    var so = document.getElementById('showOthers');
+    if (so) so.onclick = function () {
+      var g = document.getElementById('otherGrid'), open = g.classList.toggle('hidden') === false;
+      so.setAttribute('aria-expanded', String(open));
+      so.textContent = open ? 'Hide players from other positions' : 'Show ' + others.length + ' player' + (others.length === 1 ? '' : 's') + ' from other positions';
+    };
     function close() { sh.remove(); document.removeEventListener('keydown', onKey); var b = app.querySelector('[data-slot="' + slot + '"]'); if (b) b.focus(); }
     function onKey(e) { if (e.key === 'Escape') close(); }
     document.addEventListener('keydown', onKey);
