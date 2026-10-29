@@ -1,0 +1,152 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Daily Rip &mdash; The Depot</title>
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="canonical" href="https://thedepot.cards/rip.html">
+<meta name="description" content="One pack a day, the same for everyone. Build a nine from it and play an 8-game season.">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="The Depot">
+<meta property="og:title" content="The Daily Rip">
+<meta property="og:description" content="One pack a day, the same for everyone. Build a nine from it and play an 8-game season.">
+<meta property="og:url" content="https://thedepot.cards/rip.html">
+<meta property="og:image" content="https://thedepot.cards/assets/og-depot.png">
+<meta name="twitter:card" content="summary_large_image">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+:root{
+  --sky:#2eb2e6; --sky-deep:#1a8fc4; --navy:#10456b; --ink:#072c47; --cream:#fff7df; --panel:#dff1fb;
+  --gold:#ffd23e; --gold-deep:#e6a817; --orange:#f4823c; --green:#7be36b; --green-deep:#1d6b2a; --red:#e2543e;
+  --silver:#cfd8e0; --bronze:#d9925a;
+  --shadow:rgba(16,69,107,.9); --hard:0 6px 0 var(--shadow); --hard-sm:0 3px 0 var(--shadow);
+  --body:'Baloo 2','Trebuchet MS',sans-serif; --pix:'Press Start 2P',monospace;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--sky);color:var(--ink);font-family:var(--body);font-size:17px;line-height:1.45;min-height:100vh;
+  background-image:radial-gradient(rgba(255,255,255,.18) 1.5px,transparent 1.6px);background-size:22px 22px}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible,a:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
+a{color:var(--navy)}
+.wrap{max-width:860px;margin:0 auto;padding:16px 16px 64px}
+.top{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:18px}
+.top a.home{font-weight:800;color:var(--cream);text-decoration:none;text-shadow:0 2px 0 var(--navy)}
+.top .num{font-family:var(--pix);font-size:11px;color:var(--cream);text-shadow:0 2px 0 var(--navy)}
+
+.panel{background:var(--cream);border:4px solid var(--navy);border-radius:20px;box-shadow:var(--hard);padding:20px}
+h1,h2{margin:0;line-height:1.15}
+h1{font-size:clamp(30px,7vw,46px);font-weight:800;color:var(--navy)}
+h2{font-size:22px;font-weight:800;color:var(--navy)}
+p{margin:.4em 0}
+.muted{color:#3e6584}
+
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;background:var(--gold);border:4px solid var(--navy);border-radius:14px;
+  box-shadow:var(--hard);padding:10px 20px;font-weight:800;font-size:18px;color:var(--navy);transition:transform .06s,box-shadow .06s}
+.btn:active{transform:translateY(4px);box-shadow:0 2px 0 var(--shadow)}
+.btn[disabled]{background:#e6e0cc;color:#8a8a7a;cursor:not-allowed;box-shadow:var(--hard-sm)}
+.btn.ghost{background:var(--cream)}
+.btn.small{font-size:15px;padding:6px 14px;border-width:3px;box-shadow:var(--hard-sm)}
+
+/* ---------- the pack (the one loud thing) ---------- */
+.intro{text-align:center}
+.intro .sub{font-size:19px;margin:8px auto 22px;max-width:30em}
+.pack{position:relative;width:min(250px,64vw);aspect-ratio:5/7;margin:8px auto 28px;border:4px solid var(--navy);border-radius:18px;box-shadow:var(--hard);
+  background:conic-gradient(from 210deg at 50% 40%,#ffe98a,#ffd23e,#f4823c,#e2543e,#2eb2e6,#7be36b,#ffe98a);overflow:hidden;cursor:pointer}
+.pack::before{content:"";position:absolute;inset:0;background:repeating-linear-gradient(115deg,rgba(255,255,255,.35) 0 6px,transparent 6px 18px);mix-blend-mode:overlay}
+.pack .crimp{position:absolute;left:0;right:0;height:16px;background:repeating-linear-gradient(90deg,var(--navy) 0 6px,transparent 6px 12px);opacity:.55}
+.pack .crimp.t{top:0}.pack .crimp.b{bottom:0}
+.pack .label{position:absolute;left:10%;right:10%;top:30%;background:var(--cream);border:4px solid var(--navy);border-radius:12px;padding:12px 8px;text-align:center}
+.pack .label .yr{font-family:var(--pix);font-size:clamp(20px,6vw,28px);color:var(--red);display:block}
+.pack .label .set{font-weight:800;font-size:18px;color:var(--navy);display:block;margin-top:8px}
+.pack .label .ct{font-size:14px;color:#3e6584}
+.pack .tear{position:absolute;left:0;right:0;top:0;height:14%;background:inherit;border-bottom:3px dashed var(--navy)}
+.pack.ripping .tear{animation:tear .45s ease-in forwards}
+.pack.ripping{animation:shake .35s}
+@keyframes tear{to{transform:translate(70%,-140%) rotate(28deg);opacity:0}}
+@keyframes shake{20%{transform:rotate(-2deg)}40%{transform:rotate(2deg)}60%{transform:rotate(-1deg)}}
+@media (prefers-reduced-motion:reduce){.pack.ripping,.pack.ripping .tear{animation:none}.card.deal{animation:none}}
+
+/* ---------- cards ---------- */
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(138px,1fr));gap:10px}
+.card{display:flex;flex-direction:column;justify-content:flex-start;position:relative;background:var(--cream);border:3px solid var(--navy);border-radius:12px;box-shadow:var(--hard-sm);padding:8px 10px 10px;min-height:150px;text-align:left;width:100%}
+.card .band{position:absolute;left:0;right:0;top:0;height:34px;border-radius:9px 9px 0 0;background:var(--panel)}
+.card[data-tier="gold"] .band{background:linear-gradient(90deg,var(--gold),#fff1a8,var(--gold-deep))}
+.card[data-tier="silver"] .band{background:linear-gradient(90deg,var(--silver),#f4f7f9,#aab8c4)}
+.card[data-tier="bronze"] .band{background:linear-gradient(90deg,var(--bronze),#f2c49b,#b8713e)}
+.card .row1{position:relative;display:flex;justify-content:space-between;align-items:center;height:26px}
+.card .ovr{font-family:var(--pix);font-size:14px;color:var(--navy)}
+.card .pos{font-weight:800;font-size:13px;background:var(--navy);color:var(--cream);border-radius:6px;padding:0 7px;line-height:20px}
+.card .pos.p{background:var(--red)}
+.card .nm{font-weight:800;font-size:17px;line-height:1.15;margin-top:10px;color:var(--ink)}
+.card .meta{font-size:12.5px;color:#3e6584;line-height:1.3}
+.card .line{font-size:13.5px;margin-top:6px;font-weight:700;color:var(--navy)}
+.card .line.none{color:var(--red)}
+.card .load{font-size:13px;color:#3e6584;margin-top:6px}
+.card.deal{animation:deal .32s cubic-bezier(.2,.9,.3,1.3) both}
+@keyframes deal{from{transform:translateY(-30px) rotate(-6deg) scale(.9);opacity:0}}
+button.card:hover{border-color:var(--sky-deep)}
+.card.used{opacity:.4}
+.progress{font-weight:700;margin:14px 0}
+
+/* ---------- builder ---------- */
+.builder{display:grid;gap:16px}
+.slots{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px}
+.slot{display:flex;align-items:center;gap:10px;background:#fff;border:3px solid var(--navy);border-radius:12px;padding:8px 10px;text-align:left;box-shadow:var(--hard-sm);min-height:58px;width:100%}
+.slot .code{font-family:var(--pix);font-size:11px;min-width:34px;color:var(--navy)}
+.slot .who{flex:1;line-height:1.2}
+.slot .who b{display:block;font-size:16px}
+.slot .who small{color:#3e6584;font-size:13px}
+.slot .who small.warn{color:var(--red);font-weight:700}
+.slot.empty .who{color:#7d99ad}
+.slot .o{font-family:var(--pix);font-size:11px;color:var(--navy)}
+.actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+
+/* picker sheet */
+.sheet{position:fixed;inset:0;background:rgba(7,44,71,.55);display:flex;align-items:flex-end;justify-content:center;z-index:20}
+.sheet .inner{background:var(--cream);border:4px solid var(--navy);border-bottom:0;border-radius:20px 20px 0 0;width:min(860px,100%);max-height:82vh;overflow:auto;padding:16px}
+@media (min-width:700px){.sheet{align-items:center}.sheet .inner{border-bottom:4px solid var(--navy);border-radius:20px;box-shadow:var(--hard)}}
+.sheet .head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:10px}
+.fitnote{font-size:12.5px;font-weight:800;color:var(--red);margin-top:4px}
+
+/* ---------- season ---------- */
+.games{display:grid;gap:8px;margin-top:14px}
+.game{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;background:#fff;border:3px solid var(--navy);border-radius:12px;padding:8px 12px}
+.game .wl{font-family:var(--pix);font-size:14px;width:34px;height:34px;display:grid;place-items:center;border-radius:8px;border:3px solid var(--navy);color:var(--ink)}
+.game.w .wl{background:var(--green)}
+.game.l .wl{background:var(--red);color:var(--cream)}
+.game .opp b{display:block;line-height:1.2}
+.game .opp small{color:#3e6584}
+.game .sc{font-family:var(--pix);font-size:13px;white-space:nowrap}
+.game.pending{opacity:.35}
+.record{font-family:var(--pix);font-size:clamp(40px,12vw,72px);color:var(--navy);line-height:1;margin:6px 0 4px;text-shadow:4px 4px 0 var(--gold)}
+.verdict{font-weight:800;font-size:22px}
+.chips{font-size:24px;letter-spacing:2px;margin:6px 0}
+.result-grid{display:grid;gap:16px}
+.next{font-size:15px;color:#3e6584}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--navy);color:var(--cream);padding:10px 18px;border-radius:12px;font-weight:700;z-index:30}
+.err{background:#fff;border:3px solid var(--red);border-radius:12px;padding:12px 14px}
+footer{margin-top:28px;text-align:center;color:var(--cream);font-size:14px;text-shadow:0 1px 0 var(--navy)}
+footer a{color:var(--cream)}
+.hidden{display:none!important}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="top">
+    <a class="home" href="welcome.html">The Depot</a>
+    <span class="num" id="ripNum"></span>
+  </div>
+  <main id="app" aria-live="polite"><div class="panel"><p>Shuffling today's pack&hellip;</p></div></main>
+  <footer>Same pack for everyone today. New pack at midnight. Player stats from MLB StatsAPI; cards render as Depot stat cards.<br><a href="welcome.html">Collect the real thing at The Depot</a></footer>
+</div>
+<script src="js/version.js?v=28b1810"></script>
+<script src="js/depot-playability.js?v=28b1810"></script>
+<script src="js/depot-position.js?v=28b1810"></script>
+<script src="js/depot-rip-engine.js?v=28b1810"></script>
+<script src="js/depot-rip-ui.js?v=28b1810"></script>
+</body>
+</html>
