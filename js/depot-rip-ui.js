@@ -33,7 +33,9 @@
    * separate on-field number. */
   function tier(c) { return (c.prestige && c.prestige.band) || 'plain'; }
   function withTimeout(p, ms, label) {
-    return Promise.race([p, new Promise(function (res) { setTimeout(function () { console.warn('[rip] ' + label + ' timed out after ' + ms + 'ms; continuing without it'); res(null); }, ms); })]);
+    var t;
+    var timer = new Promise(function (res) { t = setTimeout(function () { console.warn('[rip] ' + label + ' timed out after ' + ms + 'ms; continuing without it'); res(null); }, ms); });
+    return Promise.race([Promise.resolve(p).then(function (v) { clearTimeout(t); return v; }, function (e) { clearTimeout(t); console.warn('[rip] ' + label + ' failed; continuing without it', e); return null; }), timer]);
   }
   /* Dress a dealt card with its cachet: prestige, marquee tier, library art. */
   function dress(c) {
