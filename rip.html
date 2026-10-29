@@ -72,16 +72,33 @@ p{margin:.4em 0}
 
 /* ---------- cards ---------- */
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(138px,1fr));gap:10px}
-.card{display:flex;flex-direction:column;justify-content:flex-start;position:relative;background:var(--cream);border:3px solid var(--navy);border-radius:12px;box-shadow:var(--hard-sm);padding:8px 10px 10px;min-height:150px;text-align:left;width:100%}
-.card .band{position:absolute;left:0;right:0;top:0;height:34px;border-radius:9px 9px 0 0;background:var(--panel)}
-.card[data-tier="gold"] .band{background:linear-gradient(90deg,var(--gold),#fff1a8,var(--gold-deep))}
-.card[data-tier="silver"] .band{background:linear-gradient(90deg,var(--silver),#f4f7f9,#aab8c4)}
-.card[data-tier="bronze"] .band{background:linear-gradient(90deg,var(--bronze),#f2c49b,#b8713e)}
-.card .row1{position:relative;display:flex;justify-content:space-between;align-items:center;height:26px}
-.card .ovr{font-family:var(--pix);font-size:14px;color:var(--navy)}
+/* The card is the art. The frame color is its PRESTIGE band (its cachet as a
+   collectible); the chips on the art are on-field rating, prestige, position. */
+.card{display:flex;flex-direction:column;justify-content:flex-start;position:relative;background:var(--cream);border:4px solid var(--navy);border-radius:12px;box-shadow:var(--hard-sm);padding:0;text-align:left;width:100%;overflow:hidden}
+.card[data-tier="gold"]{border-color:var(--gold-deep);box-shadow:0 3px 0 #9a6c06,0 0 0 2px var(--gold) inset}
+.card[data-tier="silver"]{border-color:#8fa1b0;box-shadow:0 3px 0 #5d6d7a,0 0 0 2px #e8eef2 inset}
+.card[data-tier="bronze"]{border-color:#b8713e;box-shadow:0 3px 0 #7a4520}
+.card .art{position:relative;aspect-ratio:5/7;background:linear-gradient(160deg,var(--panel),#b9def0);display:grid;place-items:center;overflow:hidden}
+.card[data-tier="gold"] .art{background:linear-gradient(160deg,#fff1a8,var(--gold),var(--gold-deep))}
+.card[data-tier="silver"] .art{background:linear-gradient(160deg,#f4f7f9,var(--silver),#aab8c4)}
+.card[data-tier="bronze"] .art{background:linear-gradient(160deg,#f2c49b,var(--bronze),#b8713e)}
+.card .art img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+.card .art .glyph{font-family:var(--pix);font-size:22px;color:rgba(16,69,107,.45)}
+.card .chips{position:absolute;left:6px;right:6px;top:6px;display:flex;gap:4px;align-items:center;z-index:2}
+.card .chips .pos{margin-left:auto}
+.card .ovr{font-family:var(--pix);font-size:11px;background:var(--cream);color:var(--navy);border:2px solid var(--navy);border-radius:6px;padding:3px 4px;line-height:1}
+.card .pres{font-weight:800;font-size:12px;background:var(--navy);color:var(--gold);border-radius:6px;padding:0 6px;line-height:20px}
+.card .pres::before{content:"✦ "}
 .card .pos{font-weight:800;font-size:13px;background:var(--navy);color:var(--cream);border-radius:6px;padding:0 7px;line-height:20px}
 .card .pos.p{background:var(--red)}
-.card .nm{font-weight:800;font-size:17px;line-height:1.15;margin-top:10px;color:var(--ink)}
+.card .body{padding:7px 9px 9px}
+.card .star,.slot .star{color:var(--gold-deep)}
+.card .nm{font-weight:800;font-size:16px;line-height:1.15;color:var(--ink)}
+button.card[disabled]{opacity:.45;cursor:not-allowed}
+.slot .thumb{width:34px;height:48px;object-fit:cover;border-radius:4px;border:2px solid var(--navy)}
+.slot[data-tier="gold"]{border-color:var(--gold-deep)}
+.stars{background:#fff;border:3px solid var(--navy);border-radius:12px;padding:8px 12px;margin:0}
+.stars.over{border-color:var(--red);color:var(--red)}
 .card .meta{font-size:12.5px;color:#3e6584;line-height:1.3}
 .card .line{font-size:13.5px;margin-top:6px;font-weight:700;color:var(--navy)}
 .card .line.none{color:var(--red)}
@@ -141,9 +158,25 @@ footer a{color:var(--cream)}
     <span class="num" id="ripNum"></span>
   </div>
   <main id="app" aria-live="polite"><div class="panel"><p>Shuffling today's pack&hellip;</p></div></main>
-  <footer>Same pack for everyone today. New pack at midnight. Player stats from MLB StatsAPI; cards render as Depot stat cards.<br><a href="welcome.html">Collect the real thing at The Depot</a></footer>
+  <footer>Same pack for everyone today. New pack at midnight. Card art from The Depot's card library; player stats from MLB StatsAPI.<br><a href="welcome.html">Collect the real thing at The Depot</a></footer>
 </div>
 <script src="js/version.js?v=28b1810"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+// depot-core config, set BEFORE depot-core loads (AGENTS.md section 8 new-page rule).
+// Publishable key only, same project and same construction as every other shell.
+// The Rip never signs anyone in: it reads the public card_library index and the
+// public art bucket, nothing else.
+(function(){
+  var SUPABASE_URL='https://nuymzokvbdntbvinsnda.supabase.co';
+  var SUPABASE_KEY=['sb','publishable','IiTsIBqYgGTIEnwdvQEXPA','4rmQdYVo'].join('_');
+  window.DEPOT_SUPABASE_CONFIG = window.DEPOT_SUPABASE_CONFIG || { url: SUPABASE_URL, key: SUPABASE_KEY };
+})();
+</script>
+<script src="js/depot-core.js?v=28b1810"></script>
+<script src="js/depot-library-art.js?v=28b1810"></script>
+<script src="js/depot-library-index.js?v=28b1810"></script>
+<script src="js/depot-prestige.js?v=28b1810"></script>
 <script src="js/depot-playability.js?v=28b1810"></script>
 <script src="js/depot-position.js?v=28b1810"></script>
 <script src="js/depot-rip-engine.js?v=28b1810"></script>

@@ -130,7 +130,10 @@
     var PA = +st.plateAppearances || (AB + bb + hbp + sf) || 0;
     if (PA < 50) return null;
     var singles = Math.max(0, H - d2 - t3 - hr);
-    return clampRates({ BB: (bb + hbp) / PA, K: so / PA, HR: hr / PA, _2B: d2 / PA, _3B: t3 / PA, _1B: singles / PA });
+    // Dead-ball lines (Cobb, Wagner) have no strikeout column. Treating that as
+    // zero would make them unstrikeoutable, so use a period-typical 7%.
+    var kRate = (st.strikeOuts == null || st.strikeOuts === '' || st.strikeOuts === '-') ? 0.07 : so / PA;
+    return clampRates({ BB: (bb + hbp) / PA, K: kRate, HR: hr / PA, _2B: d2 / PA, _3B: t3 / PA, _1B: singles / PA });
   }
   function pitRates(st) {
     var H = +st.hits || 0, d2 = +st.doubles || 0, t3 = +st.triples || 0, hr = +st.homeRuns || 0,
@@ -156,18 +159,27 @@
       if (!sp.team) { by[sp.season] = { sp: sp, size: size, total: true }; return; }
       if (size > cur.size) by[sp.season] = { sp: sp, size: size, total: false };
     });
+    /* Pitchers: a starter's best season is judged among seasons with 120+ IP,
+     * so a reliever's 60-inning gem can't masquerade as an ace. A pitcher who
+     * never threw 120 in a season is a RELIEVER and is flagged as one: he can
+     * still start in the Rip, at a cost (see ROTATION_RELIEVER). */
+    var ipFloor = 50, starter = false;
+    if (group === 'pitching') {
+      Object.keys(by).forEach(function (yr) { if (parseIP(by[yr].sp.stat.inningsPitched) >= 120) starter = true; });
+      if (starter) ipFloor = 120;
+    }
     var best = null, score = null, fullest = null, fsize = -1;
     Object.keys(by).forEach(function (yr) {
       var st = by[yr].sp.stat, s = by[yr].size;
       if (s > fsize) { fsize = s; fullest = yr; }
       if (group === 'pitching') {
-        if (parseIP(st.inningsPitched) >= 50) { var era = parseFloat(st.era); if (isFinite(era) && (score == null || era < score)) { score = era; best = yr; } }
+        if (parseIP(st.inningsPitched) >= ipFloor) { var era = parseFloat(st.era); if (isFinite(era) && (score == null || era < score)) { score = era; best = yr; } }
       } else if ((+st.plateAppearances || 0) >= 200) {
         var ops = parseFloat(st.ops); if (isFinite(ops) && (score == null || ops > score)) { score = ops; best = yr; }
       }
     });
     var pick = best || fullest;
-    return pick ? { season: +pick, stat: by[pick].sp.stat } : null;
+    return pick ? { season: +pick, stat: by[pick].sp.stat, reliever: group === 'pitching' && !starter } : null;
   }
 
   /* Replacement level: what a card with no modelable MLB line plays as.
@@ -188,6 +200,11 @@
       if (!person || !person.id) return null;
       card.personId = person.id;
       var ap = person.primaryPosition && String(person.primaryPosition.abbreviation || '').toUpperCase();
+      /* The resolved MLB person outranks player_positions.json, whose name-keyed
+       * rows collide (two Randy Johnsons, two Will Smiths). Playtest 2026-10-29
+       * dealt the Big Unit as a .124 hitter until this. */
+      if (isPitcherPos(ap) && card.role === 'H') { card.role = 'P'; card.pos = 'P'; group = 'pitching'; }
+      else if (FIELD_POS[ap] && card.role === 'P') { card.role = 'H'; group = 'hitting'; }
       if (card.role === 'H' && FIELD_POS[ap]) card.pos = ap;
       return fetchJSON(MLB + '/people/' + person.id + '/stats?stats=yearByYear&group=' + group + '&sportId=1', fetchImpl);
     }).then(function (j) {
@@ -204,6 +221,7 @@
       var st = b.stat;
       card.season = b.season;
       card.rates = rates;
+      card.reliever = !!b.reliever;
       card.line = group === 'pitching'
         ? { ERA: st.era, W: st.wins, L: st.losses, SO: st.strikeOuts, IP: st.inningsPitched, WHIP: st.whip }
         : { AVG: st.avg, HR: st.homeRuns, RBI: st.rbi, OPS: st.ops, SB: st.stolenBases };
@@ -220,49 +238,98 @@
   var LW = { BB: 0.31, HR: 1.40, _2B: 0.76, _3B: 1.03, _1B: 0.47, K: -0.27 };
   function runValue(r) { var v = 0; for (var k in LW) v += LW[k] * (r[k] || 0); return v; }
   var LG_RV = runValue(LG);
+  /* Scaled so an ordinary everyday line sits in the 60s and only historic
+   * seasons touch the 90s. The first scale (x520) pinned half of any
+   * best-season pack at 99, which flattened every card into the same card. */
+  var OVR_SCALE = 260;
   function overall(card) {
-    var d = runValue(card.rates) - LG_RV;     // + good for a hitter, - good for a pitcher
+    // A pitcher's OVR is what he's worth as a STARTER here, reliever tax included.
+    var d = runValue(card.role === 'P' ? starterRates(card) : card.rates) - LG_RV;     // + good for a hitter, - good for a pitcher
     var x = card.role === 'P' ? -d : d;
-    var o = Math.round(60 + x * 520);
-    return Math.max(30, Math.min(99, o));
+    var o = Math.round(62 + x * OVR_SCALE);
+    return Math.max(25, Math.min(99, o));
   }
 
-  /* ---------- lineup & position fit ---------- */
+  /* ---------- lineup & position fit ----------
+   * Playtest 2026-10-29: with soft penalties the best nine played wherever,
+   * Acuña caught and Will Clark played short, and a careful lineup was worth
+   * ~0.15 wins over a careless one. These bite. */
   var SLOTS = ['C', '1B', '2B', '3B', 'SS', 'LF', 'CF', 'RF', 'DH'];
-  function fitFactor(natural, slot) {
-    natural = String(natural || '').toUpperCase(); slot = String(slot || '').toUpperCase();
-    if (slot === 'DH' || natural === slot) return 1;
-    if (natural === 'DH') return 0.88;                    // a DH in the field
-    if (OF[natural] && OF[slot]) return natural === 'CF' || slot !== 'CF' ? 1 : 0.97;
-    if (natural === 'SS' && IF[slot]) return 1;           // a shortstop plays anywhere on the dirt
-    if (IF[natural] && IF[slot]) return slot === 'SS' ? 0.92 : 0.96;
-    if (slot === 'C') return 0.85;                        // nobody fakes catcher
-    if (natural === 'C') return 0.93;
-    return 0.90;                                          // IF <-> OF
+  var FIT = {
+    //            from: C     1B    2B    3B    SS    LF    CF    RF    DH
+    C:  { C: 1, '1B': .70, '2B': .70, '3B': .70, SS: .70, LF: .70, CF: .70, RF: .70, DH: .68 },
+    '1B': { C: .92, '1B': 1, '2B': .97, '3B': .96, SS: .97, LF: .95, CF: .95, RF: .95, DH: .92 },
+    '2B': { C: .80, '1B': .82, '2B': 1, '3B': .92, SS: 1, LF: .82, CF: .85, RF: .82, DH: .78 },
+    '3B': { C: .84, '1B': .86, '2B': .93, '3B': 1, SS: .98, LF: .85, CF: .86, RF: .86, DH: .80 },
+    SS: { C: .76, '1B': .76, '2B': .90, '3B': .88, SS: 1, LF: .78, CF: .82, RF: .78, DH: .72 },
+    LF: { C: .86, '1B': .88, '2B': .90, '3B': .89, SS: .92, LF: 1, CF: 1, RF: 1, DH: .86 },
+    CF: { C: .78, '1B': .78, '2B': .84, '3B': .82, SS: .86, LF: .90, CF: 1, RF: .91, DH: .75 },
+    RF: { C: .86, '1B': .88, '2B': .90, '3B': .89, SS: .92, LF: 1, CF: 1, RF: 1, DH: .86 },
+    DH: { C: 1, '1B': 1, '2B': 1, '3B': 1, SS: 1, LF: 1, CF: 1, RF: 1, DH: 1 }
+  };
+  function natOf(p) {
+    p = String(p || '').toUpperCase();
+    if (p === 'OF') return 'LF';
+    if (p === 'IF' || p === 'UT') return '2B';
+    if (p === 'TWP') return 'DH';
+    return p;
   }
-  function fitLabel(f) { return f >= 1 ? '' : f >= 0.96 ? 'stretch' : f >= 0.92 ? 'out of position' : 'way out of position'; }
+  function fitFactor(natural, slot) {
+    slot = String(slot || '').toUpperCase();
+    var row = FIT[slot]; if (!row) return 1;
+    var f = row[natOf(natural)];
+    return f == null ? 0.85 : f;
+  }
+  function fitLabel(f) { return f >= 1 ? '' : f >= 0.95 ? 'a stretch' : f >= 0.86 ? 'out of position' : 'way out of position'; }
   /* Apply a defensive-fit factor: fewer hits/walks on our side, more Ks. */
   function applyFit(rates, f) {
     if (f >= 1) return rates;
     return clampRates({ BB: rates.BB * f, K: rates.K / f, HR: rates.HR * f, _2B: rates._2B * f, _3B: rates._3B * f, _1B: rates._1B * f });
   }
+  /* A reliever starting: he tires the second time through. Modelled as a flat
+   * worsening of what he allows. */
+  var ROTATION_RELIEVER = 1.18;
+  function starterRates(card) {
+    if (!card.reliever) return card.rates;
+    var r = card.rates, m = ROTATION_RELIEVER;
+    return clampRates({ BB: r.BB * m, K: r.K / m, HR: r.HR * m, _2B: r._2B * m, _3B: r._3B * m, _1B: r._1B * m });
+  }
 
-  /* Greedy auto-manager: fill the scarcest slots first with the best fit. */
+  /* ---------- the marquee limit (Nick's Overall-rating ruling) ----------
+   * Prestige is capped by a marquee lineup limit. In the Rip: at most
+   * MARQUEE_MAX HOF/SUPERSTAR-tier players among your nine and two starters.
+   * An all-time-heroes pack is a pile of legends; this is what makes you choose. */
+  var MARQUEE_MAX = 3, MARQUEE_OVR = 88;
+  /* Marquee = prestige tier HOF/SUPERSTAR, OR a historic line (OVR 88+).
+   * player_tiers.json doesn't list pre-war legends (no Ruth, Gehrig, Cobb),
+   * and a cap that a legends pack walks straight past isn't a cap. */
+  function isMarquee(card) { return !!card && (card.tier === 'HOF' || card.tier === 'SUPERSTAR' || (card.ovr || 0) >= MARQUEE_OVR); }
+
+  /* Greedy auto-manager: fill the scarcest slots first with the best fit,
+   * respecting the marquee limit. Deliberately decent, not optimal. */
   function autoLineup(cards) {
     var hitters = cards.filter(function (c) { return c.role === 'H'; });
-    var used = {}, out = {};
+    var pit = cards.filter(function (c) { return c.role === 'P'; }).sort(function (a, b) { return (b.ovr || 0) - (a.ovr || 0); });
+    var used = {}, out = {}, stars = 0;
+    var rotation = [];
+    // the ace first: one marquee arm if he's the best arm
+    pit.forEach(function (p) {
+      if (rotation.length >= 2) return;
+      if (isMarquee(p) && stars >= 1) return;
+      rotation.push(p.id); if (isMarquee(p)) stars++;
+    });
     var order = ['C', 'SS', 'CF', '2B', '3B', '1B', 'LF', 'RF', 'DH'];
     order.forEach(function (slot) {
       var best = null, bestV = -1e9;
       hitters.forEach(function (c) {
         if (used[c.id]) return;
+        if (isMarquee(c) && stars >= MARQUEE_MAX) return;
         var v = (c.ovr || 50) * fitFactor(c.pos, slot);
         if (v > bestV) { bestV = v; best = c; }
       });
-      if (best) { used[best.id] = 1; out[slot] = best.id; }
+      if (best) { used[best.id] = 1; out[slot] = best.id; if (isMarquee(best)) stars++; }
     });
-    var pit = cards.filter(function (c) { return c.role === 'P'; }).sort(function (a, b) { return (b.ovr || 0) - (a.ovr || 0); });
-    return { slots: out, rotation: [pit[0] && pit[0].id, pit[1] && pit[1].id] };
+    return { slots: out, rotation: rotation };
   }
 
   /* Batting order: by run value, the old-school way (best OBP-ish up top,
@@ -359,28 +426,48 @@
   }
 
   /* ---------- the gauntlet ---------- */
+  /* Opponents are built from TODAY'S PACK, not from a fixed league: the
+   * baseline is the best nine and best three arms the pack offers, scaled by
+   * m. So a legends pack faces legends-grade opposition and a 1989 commons
+   * pack faces commons. Playtest 2026-10-29: against a fixed league, a
+   * best-season pack averaged 6-7 wins and an all-time pack went 8-0 73% of
+   * the time. The test now is how close you get to the pack's ceiling. */
   var OPPONENTS = [
-    { name: 'Sandlot Strays', m: 0.82 },
-    { name: 'Tri-County Tractors', m: 0.88 },
-    { name: 'Rust Belt Rollers', m: 0.94 },
-    { name: 'Gulf Coast Gators', m: 0.98 },
-    { name: 'Desert Sidewinders', m: 1.02 },
-    { name: 'Harbor City Clippers', m: 1.06 },
-    { name: 'Ironbound Express', m: 1.10 },
-    { name: 'The Dynasty', m: 1.15 }
+    { name: 'Sandlot Strays', m: 0.80 },
+    { name: 'Tri-County Tractors', m: 0.85 },
+    { name: 'Rust Belt Rollers', m: 0.89 },
+    { name: 'Gulf Coast Gators', m: 0.93 },
+    { name: 'Desert Sidewinders', m: 0.96 },
+    { name: 'Harbor City Clippers', m: 0.99 },
+    { name: 'Ironbound Express', m: 1.02 },
+    { name: 'The Dynasty', m: 1.06 }
   ];
-  function oppSide(o) {
-    var m = o.m, r = {};
-    KEYS.forEach(function (k) { r[k] = k === 'K' ? LGS[k] / m : LGS[k] * m; });
-    var p = {};
-    KEYS.forEach(function (k) { p[k] = k === 'K' ? LGS[k] * m : LGS[k] / m; });
+  function avgRates(list) {
+    var r = { BB: 0, K: 0, HR: 0, _2B: 0, _3B: 0, _1B: 0 };
+    if (!list.length) return Object.assign({}, LGS);
+    list.forEach(function (x) { KEYS.forEach(function (k) { r[k] += x[k] / list.length; }); });
+    return r;
+  }
+  function packBaseline(cards) {
+    if (!cards || !cards.length) return { hit: Object.assign({}, LGS), pit: Object.assign({}, LGS) };
+    var H = cards.filter(function (c) { return c.role === 'H' && c.rates; }).sort(function (a, b) { return (b.ovr || 0) - (a.ovr || 0); }).slice(0, 9);
+    var P = cards.filter(function (c) { return c.role === 'P' && c.rates; }).sort(function (a, b) { return (b.ovr || 0) - (a.ovr || 0); }).slice(0, 3);
+    return { hit: avgRates(H.map(function (c) { return c.rates; })), pit: avgRates(P.map(starterRates)) };
+  }
+  function oppSide(o, base) {
+    base = base || { hit: LGS, pit: LGS };
+    var m = o.m, r = {}, p = {};
+    KEYS.forEach(function (k) { r[k] = k === 'K' ? base.hit[k] / m : base.hit[k] * m; });
+    KEYS.forEach(function (k) { p[k] = k === 'K' ? base.pit[k] * m : base.pit[k] / m; });
     var lineup = []; for (var i = 0; i < 9; i++) lineup.push({ name: o.name, rates: clampRates(Object.assign({}, r)) });
     return { lineup: lineup, pitcher: { name: o.name + ' SP', rates: clampRates(p) } };
   }
 
   /* Play the season. lineupEntries: 9 x { card, slot } in any order;
-   * rotation: [cardA, cardB]. Deterministic in (dateKey, picks). */
-  function playSeason(dateKey, lineupEntries, rotation) {
+   * rotation: [cardA, cardB]; packCards: all cards in today's pack (sets the
+   * opposition). Deterministic in (dateKey, picks). */
+  function playSeason(dateKey, lineupEntries, rotation, packCards) {
+    var base = packBaseline(packCards);
     var seed = hashStr('rip-season|' + dateKey + '|' + lineupEntries.map(function (e) { return e.card.id + '@' + e.slot; }).sort().join(',') + '|' + rotation.map(function (c) { return c.id; }).join(','));
     var rng = makeRng(seed);
     var ordered = battingOrder(lineupEntries.map(function (e) {
@@ -390,8 +477,8 @@
     var games = [], w = 0, l = 0, rf = 0, ra = 0, stars = {};
     OPPONENTS.forEach(function (o, g) {
       var sp = rotation[g % rotation.length];
-      var me = { lineup: ordered, pitcher: { name: sp.name, rates: sp.rates } };
-      var them = oppSide(o);
+      var me = { lineup: ordered, pitcher: { name: sp.name, rates: starterRates(sp) } };
+      var them = oppSide(o, base);
       var meHome = g % 2 === 1;
       var res = meHome ? playGame(them, me, rng) : playGame(me, them, rng);
       var my = meHome ? res.home : res.away, their = meHome ? res.away : res.home;
@@ -432,7 +519,8 @@
     makeRng: makeRng, hashStr: hashStr, localDateKey: localDateKey, ripNumber: ripNumber,
     yearFor: yearFor, drawPack: drawPack, resolveCard: resolveCard, bestSeason: bestSeason,
     hitRates: hitRates, pitRates: pitRates, overall: overall, fitFactor: fitFactor, fitLabel: fitLabel,
-    autoLineup: autoLineup, playSeason: playSeason, playGame: playGame, oppSide: oppSide,
+    autoLineup: autoLineup, playSeason: playSeason, playGame: playGame, oppSide: oppSide, packBaseline: packBaseline,
+    MARQUEE_MAX: MARQUEE_MAX, isMarquee: isMarquee, starterRates: starterRates, runValue: runValue,
     verdict: verdict, shareText: shareText, isPitcherPos: isPitcherPos
   };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;

@@ -28,7 +28,33 @@
   function lsSet(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) {} }
   function toast(msg) { var t = document.createElement('div'); t.className = 'toast'; t.setAttribute('role', 'status'); t.textContent = msg; document.body.appendChild(t); setTimeout(function () { t.remove(); }, 2200); }
   function getJSON(url) { return fetch(url).then(function (r) { if (!r.ok) throw new Error(url + ' ' + r.status); return r.json(); }); }
-  function tier(c) { var o = c.ovr || 0; return o >= 85 ? 'gold' : o >= 72 ? 'silver' : o >= 60 ? 'bronze' : 'plain'; }
+  /* The frame is the card's PRESTIGE band (js/depot-prestige.js): its cachet
+   * as a collectible, the same number the binder and Lineup show. OVR is the
+   * separate on-field number. */
+  function tier(c) { return (c.prestige && c.prestige.band) || 'plain'; }
+  function withTimeout(p, ms, label) {
+    return Promise.race([p, new Promise(function (res) { setTimeout(function () { console.warn('[rip] ' + label + ' timed out after ' + ms + 'ms; continuing without it'); res(null); }, ms); })]);
+  }
+  /* Dress a dealt card with its cachet: prestige, marquee tier, library art. */
+  function dress(c) {
+    try {
+      var P = window.DepotPrestige;
+      if (P) {
+        c.tier = P.tierFor(c.name) || 'COMMON';
+        c.prestige = P.compute({ name: c.name, yr: c.year, year: c.year, set: c.set, tier: c.tier });
+      } else console.warn('[rip] DepotPrestige missing; cards render without prestige');
+      if (typeof window.depotResolveCardArt === 'function') {
+        var a = window.depotResolveCardArt({ year: c.year, set: c.set, number: c.number }, 'front');
+        c.art = a && a.url || null;
+      } else console.warn('[rip] depotResolveCardArt missing; cards render without art');
+    } catch (e) { console.warn('[rip] dress failed for ' + c.name, e); }
+  }
+  function artHTML(c) {
+    var initials = String(c.name || '').split(/\s+/).map(function (w) { return w.charAt(0); }).join('').slice(0, 3).toUpperCase();
+    return '<div class="art"><span class="glyph" aria-hidden="true">' + esc(initials) + '</span>' +
+      (c.art ? '<img src="' + esc(c.art) + '" alt="' + esc(c.year + ' ' + c.set + ' ' + c.name) + '" loading="lazy" onerror="this.remove()">' : '') +
+      '</div>';
+  }
   function fmtLine(c) {
     if (!c.line) return '';
     if (c.line.none) return c.role === 'P' ? 'No MLB line. Pitches as a mop-up arm.' : 'No MLB line. Bats like a bench scrub.';
@@ -38,28 +64,42 @@
       : c.season + ': ' + L.AVG + ', ' + L.HR + ' HR, ' + L.OPS + ' OPS';
   }
   function cardHTML(c, extra) {
-    var resolved = !!c.line;
-    return '<div class="row1"><span class="ovr">' + (resolved ? c.ovr : '··') + '</span>' +
-      '<span class="pos' + (c.role === 'P' ? ' p' : '') + '">' + esc(c.role === 'P' ? 'P' : c.pos) + '</span></div>' +
-      '<div class="nm">' + esc(c.name) + '</div>' +
-      '<div class="meta">' + esc(c.year + ' ' + c.set + (c.number ? ' #' + c.number : '')) + (c.team ? '<br>' + esc(c.team) : '') + '</div>' +
+    var resolved = !!c.line, star = resolved && R.isMarquee(c);
+    return artHTML(c) +
+      '<div class="chips"><span class="ovr" title="On-field rating">' + (resolved ? c.ovr : '··') + '</span>' +
+      (c.prestige ? '<span class="pres" title="Prestige">' + c.prestige.total + '</span>' : '') +
+      '<span class="pos' + (c.role === 'P' ? ' p' : '') + '">' + esc(c.role === 'P' ? (c.reliever ? 'RP' : 'SP') : c.pos) + '</span></div>' +
+      '<div class="body"><div class="nm">' + (star ? '<span class="star" title="Marquee player">★</span> ' : '') + esc(c.name) + '</div>' +
+      '<div class="meta">' + esc(c.year + ' ' + c.set + (c.number ? ' #' + c.number : '')) + '</div>' +
       (resolved ? '<div class="line' + (c.line.none ? ' none' : '') + '">' + esc(fmtLine(c)) + '</div>' : '<div class="load">Pulling stats…</div>') +
-      (extra || '');
+      (extra || '') + '</div>';
   }
-  function paintCard(el, c) { el.dataset.tier = c.line ? tier(c) : 'plain'; el.innerHTML = '<div class="band"></div>' + cardHTML(c); }
+  function paintCard(el, c) { el.dataset.tier = tier(c); el.innerHTML = cardHTML(c); }
 
   /* ---------- boot ---------- */
   function boot() {
     var saved = lsGet(KEY);
     if (saved && saved.season) return renderResult(saved, false);
     var year = R.yearFor(DATE);
-    Promise.all([getJSON(dataURL('cards-' + year + '.json')), getJSON(dataURL('player_positions.json'))]).then(function (res) {
+    var idx = (window.DepotLibraryIndex && window.DepotLibraryIndex.load) ? withTimeout(window.DepotLibraryIndex.load(), 9000, 'art index') : Promise.resolve(null);
+    var pres = (window.DepotPrestige && window.DepotPrestige.ready) ? withTimeout(window.DepotPrestige.ready(), 6000, 'prestige tables') : Promise.resolve(null);
+    Promise.all([getJSON(dataURL('cards-' + year + '.json')), getJSON(dataURL('player_positions.json')), idx, pres]).then(function (res) {
       var positions = (res[1] && res[1].positions) || {};
       var norm = window.depotNormName || function (x) { return String(x).toLowerCase(); };
       var clean = window.depotCleanName || function (x) { return String(x).trim(); };
-      var pack = R.drawPack(DATE, year, res[0], function (name) { return positions[norm(name)] || null; }, window.depotIsPlayable, clean);
+      /* Art gate, same rule as the pack shop: no image, no deal. Fails OPEN
+       * (unfiltered catalog) if the index can't be read, exactly like
+       * DepotShop.loadCatalog, so a slow index can't kill the daily game. */
+      var rows = res[0], keys = res[2];
+      if (keys && keys.size && typeof window.depotCatalogArtKey === 'function') {
+        var gated = rows.filter(function (r) { r.year = r.year || year; return keys.has(window.depotCatalogArtKey(r)); });
+        console.info('[rip] art-backed deal pool ' + gated.length + '/' + rows.length);
+        if (gated.length) rows = gated;
+        else console.warn('[rip] art gate emptied ' + year + '; dealing the unfiltered catalog');
+      } else console.warn('[rip] no art index; dealing the unfiltered catalog');
+      var pack = R.drawPack(DATE, year, rows, function (name) { return positions[norm(name)] || null; }, window.depotIsPlayable, clean);
       if (!pack) throw new Error('No set deep enough to deal from ' + year);
-      S.pack = pack; pack.cards.forEach(function (c) { S.byId[c.id] = c; });
+      S.pack = pack; pack.cards.forEach(function (c) { dress(c); S.byId[c.id] = c; });
       renderIntro();
     }).catch(function (e) {
       console.error('[rip] boot failed', e);
@@ -107,7 +147,7 @@
       var ck = STAT_KEY + c.year + '|' + c.name + '|' + c.role, hit = lsGet(ck);
       if (hit && hit.rates) { Object.assign(c, hit); return Promise.resolve(c); }
       return R.resolveCard(c, resolvePerson).then(function (r) {
-        if (r && !r.line.none) lsSet(ck, { personId: r.personId, pos: r.pos, season: r.season, rates: r.rates, line: r.line, ovr: r.ovr });
+        if (r && !r.line.none) lsSet(ck, { personId: r.personId, role: r.role, pos: r.pos, season: r.season, rates: r.rates, line: r.line, ovr: r.ovr, reliever: r.reliever });
         return r;
       });
     }
@@ -129,7 +169,9 @@
   function ripDone() {
     var none = S.pack.cards.filter(function (c) { return c.line && c.line.none; }).length;
     var btn = document.getElementById('toBuild');
-    btn.disabled = false; btn.onclick = function () { S.picks = R.autoLineup(S.pack.cards); renderBuilder(); };
+    // The builder opens EMPTY. Playtest 2026-10-29: a pre-filled lineup was
+    // within ~0.2 wins of the best one, so the game played itself.
+    btn.disabled = false; btn.onclick = function () { S.picks = { slots: {}, rotation: [null, null] }; renderBuilder(); };
     if (none > S.pack.cards.length / 2) {
       var w = document.createElement('div'); w.className = 'err'; w.style.marginTop = '14px';
       w.innerHTML = '<b>The stats service didn\'t answer for ' + none + ' cards.</b> They\'d play as replacement-level. <button class="btn small" id="reresolve">Try the stats again</button>';
@@ -154,31 +196,63 @@
       S.picks.slots[slot] = id;
     }
   }
-  function complete() { return FIELD.every(function (s) { return S.picks.slots[s]; }) && S.picks.rotation[0] && S.picks.rotation[1]; }
+  function pickedIds() {
+    var ids = []; FIELD.forEach(function (s) { if (S.picks.slots[s]) ids.push(S.picks.slots[s]); });
+    S.picks.rotation.forEach(function (id) { if (id) ids.push(id); }); return ids;
+  }
+  function starCount(ids) { return (ids || pickedIds()).filter(function (id) { return R.isMarquee(S.byId[id]); }).length; }
+  function complete() { return FIELD.every(function (s) { return S.picks.slots[s]; }) && S.picks.rotation[0] && S.picks.rotation[1] && starCount() <= R.MARQUEE_MAX; }
+  /* Fill only the EMPTY spots, greedily, around whatever the player already set. */
+  function fillRest() {
+    var used = {}; pickedIds().forEach(function (id) { used[id] = 1; });
+    var stars = starCount();
+    var arms = S.pack.cards.filter(function (c) { return c.role === 'P' && !used[c.id]; }).sort(function (a, b) { return b.ovr - a.ovr; });
+    [0, 1].forEach(function (i) {
+      if (S.picks.rotation[i]) return;
+      var p = arms.find(function (c) { return !used[c.id] && (!R.isMarquee(c) || stars < R.MARQUEE_MAX); });
+      if (p) { S.picks.rotation[i] = p.id; used[p.id] = 1; if (R.isMarquee(p)) stars++; }
+    });
+    ['C', 'SS', 'CF', '2B', '3B', '1B', 'LF', 'RF', 'DH'].forEach(function (slot) {
+      if (S.picks.slots[slot]) return;
+      var best = null, bv = -1;
+      S.pack.cards.forEach(function (c) {
+        if (c.role !== 'H' || used[c.id] || (R.isMarquee(c) && stars >= R.MARQUEE_MAX)) return;
+        var v = (c.ovr || 0) * R.fitFactor(c.pos, slot); if (v > bv) { bv = v; best = c; }
+      });
+      if (best) { S.picks.slots[slot] = best.id; used[best.id] = 1; if (R.isMarquee(best)) stars++; }
+    });
+  }
   function slotHTML(slot) {
     var c = slotCard(slot), isRot = ROT.indexOf(slot) >= 0;
     if (!c) return '<button class="slot empty" data-slot="' + slot + '"><span class="code">' + slot + '</span><span class="who"><b>Empty</b><small>' + SLOT_NAME[slot] + '</small></span></button>';
     var f = isRot ? 1 : R.fitFactor(c.pos, slot), lab = R.fitLabel(f);
-    var sub = isRot ? fmtLine(c) : (lab ? 'Plays ' + c.pos + ', ' + lab : fmtLine(c));
-    return '<button class="slot" data-slot="' + slot + '"><span class="code">' + slot + '</span><span class="who"><b>' + esc(c.name) + '</b><small' + (lab ? ' class="warn"' : '') + '>' + esc(sub) + '</small></span><span class="o">' + c.ovr + '</span></button>';
+    var sub = isRot ? (c.reliever ? 'Reliever, tires as a starter' : fmtLine(c)) : (lab ? 'Plays ' + c.pos + ', ' + lab : fmtLine(c));
+    var warn = lab || (isRot && c.reliever);
+    return '<button class="slot" data-slot="' + slot + '" data-tier="' + tier(c) + '"><span class="code">' + slot + '</span>' +
+      (c.art ? '<img class="thumb" src="' + esc(c.art) + '" alt="" loading="lazy" onerror="this.remove()">' : '') +
+      '<span class="who"><b>' + (R.isMarquee(c) ? '<span class="star" title="Marquee player">★</span> ' : '') + esc(c.name) + '</b><small' + (warn ? ' class="warn"' : '') + '>' + esc(sub) + '</small></span><span class="o">' + c.ovr + '</span></button>';
   }
   function renderBuilder() {
+    var stars = starCount(), over = stars > R.MARQUEE_MAX;
     app.innerHTML = '<section class="panel builder">' +
-      '<div><h2>Set your nine</h2><p class="muted">Tap a spot to change who plays it. Players out of position hit worse. Your two starters alternate games.</p></div>' +
+      '<div><h2>Set your nine</h2><p class="muted">Tap a spot to pick who plays it. Out of position hurts, catcher and shortstop most. Your two starters alternate games.</p></div>' +
+      '<p class="stars' + (over ? ' over' : '') + '"><b>★ ' + stars + ' of ' + R.MARQUEE_MAX + ' marquee spots used.</b> ' + (over ? 'Too many stars: bench one to play.' : 'Hall of Famers, superstars and historic seasons count. You can\'t play them all.') + '</p>' +
       '<div class="slots">' + FIELD.map(slotHTML).join('') + '</div>' +
       '<div><h2>Rotation</h2></div>' +
       '<div class="slots">' + ROT.map(slotHTML).join('') + '</div>' +
       '<div class="actions"><button class="btn" id="play"' + (complete() ? '' : ' disabled') + '>Play the season</button>' +
-      '<button class="btn ghost small" id="auto">Auto-fill</button></div>' +
+      '<button class="btn ghost small" id="auto">Fill the rest for me</button></div>' +
       '<p class="muted" style="font-size:14px">One official season per day. The same lineup always gets the same result, so set it how you want it.</p>' +
       '</section>';
     app.querySelectorAll('.slot').forEach(function (b) { b.onclick = function () { openPicker(b.dataset.slot); }; });
-    document.getElementById('auto').onclick = function () { S.picks = R.autoLineup(S.pack.cards); renderBuilder(); };
+    document.getElementById('auto').onclick = function () { fillRest(); renderBuilder(); };
     document.getElementById('play').onclick = function () { if (complete()) playSeason(); };
   }
   function openPicker(slot) {
     var isRot = ROT.indexOf(slot) >= 0;
     var used = {}; FIELD.forEach(function (s) { if (S.picks.slots[s]) used[S.picks.slots[s]] = s; }); S.picks.rotation.forEach(function (id, i) { if (id) used[id] = ROT[i]; });
+    var occupant = slotCard(slot);
+    var starsElsewhere = starCount(pickedIds().filter(function (id) { return !occupant || id !== occupant.id; }));
     var list = S.pack.cards.filter(function (c) { return isRot ? c.role === 'P' : c.role === 'H'; }).map(function (c) {
       var f = isRot ? 1 : R.fitFactor(c.pos, slot); return { c: c, f: f, v: (c.ovr || 0) * f };
     }).sort(function (a, b) { return b.v - a.v; });
@@ -186,8 +260,12 @@
     sh.innerHTML = '<div class="inner"><div class="head"><h2>' + esc(SLOT_NAME[slot]) + '</h2><button class="btn small ghost" id="closeSheet">Close</button></div><div class="grid">' +
       list.map(function (x) {
         var lab = R.fitLabel(x.f), where = used[x.c.id];
-        return '<button class="card" data-tier="' + tier(x.c) + '" data-id="' + x.c.id + '"><div class="band"></div>' + cardHTML(x.c,
-          (lab ? '<div class="fitnote">' + esc(lab) + '</div>' : '') + (where && where !== slot ? '<div class="meta" style="margin-top:4px">Now at ' + where + '</div>' : '')) + '</button>';
+        // a star sitting elsewhere in the lineup is a swap, so it never breaks the cap
+        var capped = R.isMarquee(x.c) && !where && starsElsewhere >= R.MARQUEE_MAX;
+        return '<button class="card" data-tier="' + tier(x.c) + '" data-id="' + x.c.id + '"' + (capped ? ' disabled' : '') + '>' + cardHTML(x.c,
+          (capped ? '<div class="fitnote">All 3 star spots used</div>' : '') +
+          (lab ? '<div class="fitnote">' + esc(lab) + '</div>' : '') + (isRot && x.c.reliever ? '<div class="fitnote">Reliever, tires as a starter</div>' : '') +
+          (where && where !== slot ? '<div class="meta" style="margin-top:4px">Now at ' + where + '</div>' : '')) + '</button>';
       }).join('') + '</div></div>';
     document.body.appendChild(sh);
     function close() { sh.remove(); document.removeEventListener('keydown', onKey); var b = app.querySelector('[data-slot="' + slot + '"]'); if (b) b.focus(); }
@@ -203,7 +281,7 @@
   function playSeason() {
     var entries = FIELD.map(function (s) { return { card: S.byId[S.picks.slots[s]], slot: s }; });
     var rot = S.picks.rotation.map(function (id) { return S.byId[id]; });
-    var season = R.playSeason(DATE, entries, rot);
+    var season = R.playSeason(DATE, entries, rot, S.pack.cards);
     var rec = {
       date: DATE, pack: { year: S.pack.year, set: S.pack.set },
       lineup: entries.map(function (e) { return { slot: e.slot, name: e.card.name, pos: e.card.pos, ovr: e.card.ovr } }),
