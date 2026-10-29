@@ -363,14 +363,23 @@
    * baserunning: runner from 2nd scores on a single 60%, 1st-to-3rd 28%,
    * runner from 1st scores on a double 45%, runner on 3rd tags on an out in
    * play (<2 outs) 45%, grounder with a man on 1st and <2 outs is a DP 12%. */
-  function half(team, pit, startIdx, rng, box, walkoffNeed) {
+  /* Box-score bookkeeping is counting only: it never draws from rng, so a
+   * lineup's results are identical with or without it. */
+  function blankLine() { return { AB: 0, H: 0, D: 0, T: 0, HR: 0, RBI: 0, BB: 0, K: 0, R: 0 }; }
+  function blankPitch() { return { outs: 0, BF: 0, H: 0, HR: 0, BB: 0, K: 0, R: 0 }; }
+  function half(team, pit, startIdx, rng, box, walkoffNeed, pst) {
     var outs = 0, runs = 0, b = [-1, -1, -1], idx = startIdx, hits = 0;
+    pst = pst || blankPitch();
     while (outs < 3) {
-      var bi = idx % 9, bat = team[bi];
+      var bi = idx % 9, bat = team[bi], outsBefore = outs;
       var o = draw(dist(bat.rates, pit), rng), scored = 0;
-      var line = box[bi] || (box[bi] = { AB: 0, H: 0, HR: 0, RBI: 0, BB: 0, R: 0 });
-      function score(i) { if (i >= 0) { scored++; (box[i] || (box[i] = { AB: 0, H: 0, HR: 0, RBI: 0, BB: 0, R: 0 })).R++; } }
-      if (o === 'K') { outs++; line.AB++; }
+      var line = box[bi] || (box[bi] = blankLine());
+      function score(i) { if (i >= 0) { scored++; (box[i] || (box[i] = blankLine())).R++; } }
+      pst.BF++;
+      if (o === 'K') { outs++; line.AB++; line.K++; pst.K++; }
+      else if (o === 'BB') { pst.BB++; }
+      else if (o !== 'OUT') { pst.H++; if (o === 'HR') pst.HR++; if (o === '_2B') line.D++; if (o === '_3B') line.T++; }
+      if (o === 'K') { /* counted above */ }
       else if (o === 'OUT') {
         line.AB++;
         if (b[0] >= 0 && outs < 2 && rng() < 0.12) { outs += 2; b[0] = -1; }
@@ -401,28 +410,31 @@
       }
       line.RBI += (o === 'OUT' && scored && outs < 3) || (o !== 'K' && o !== 'OUT') ? scored : 0;
       runs += scored; idx++;
+      pst.R += scored; pst.outs += Math.min(3, outs) - outsBefore;
       if (walkoffNeed != null && runs >= walkoffNeed) break;
     }
     return { runs: runs, hits: hits, next: idx % 9 };
   }
+  function ipText(outs) { return Math.floor(outs / 3) + '.' + (outs % 3); }
 
   /* One game. Sides are { lineup:[{name,rates}x9], pitcher:{name,rates} }.
    * Who bats last alternates by game; no side gets an edge from it. */
   function playGame(away, home, rng) {
     var ai = 0, hi = 0, as = 0, hs = 0, inn = 0, ab = {}, hb = {}, aH = 0, hH = 0, lineA = [], lineH = [];
+    var homeP = blankPitch(), awayP = blankPitch();   // what each side's starter allowed
     while (true) {
       inn++;
-      var t = half(away.lineup, home.pitcher.rates, ai, rng, ab, null); ai = t.next; as += t.runs; aH += t.hits; lineA.push(t.runs);
+      var t = half(away.lineup, home.pitcher.rates, ai, rng, ab, null, homeP); ai = t.next; as += t.runs; aH += t.hits; lineA.push(t.runs);
       if (inn >= 9 && hs > as) { lineH.push('X'); break; }
       var need = inn >= 9 ? (as - hs + 1) : null;
-      var u = half(home.lineup, away.pitcher.rates, hi, rng, hb, need); hi = u.next; hs += u.runs; hH += u.hits; lineH.push(u.runs);
+      var u = half(home.lineup, away.pitcher.rates, hi, rng, hb, need, awayP); hi = u.next; hs += u.runs; hH += u.hits; lineH.push(u.runs);
       if (inn >= 9 && as !== hs) break;
       if (inn >= 15) { // marathon guard: sudden death on a coin
-        if (rng() < 0.5) as++; else hs++;
+        if (rng() < 0.5) { as++; lineA[lineA.length - 1]++; homeP.R++; } else { hs++; lineH[lineH.length - 1]++; awayP.R++; }
         break;
       }
     }
-    return { away: as, home: hs, innings: inn, awayHits: aH, homeHits: hH, awayBox: ab, homeBox: hb, lineA: lineA, lineH: lineH };
+    return { away: as, home: hs, innings: inn, awayHits: aH, homeHits: hH, awayBox: ab, homeBox: hb, lineA: lineA, lineH: lineH, homePitch: homeP, awayPitch: awayP };
   }
 
   /* ---------- the gauntlet ---------- */
@@ -474,7 +486,7 @@
       var f = fitFactor(e.card.pos, e.slot);
       return { card: e.card, slot: e.slot, fit: f, name: e.card.name, rates: applyFit(e.card.rates, f) };
     }));
-    var games = [], w = 0, l = 0, rf = 0, ra = 0, stars = {};
+    var games = [], w = 0, l = 0, rf = 0, ra = 0, stars = {}, arms = {};
     OPPONENTS.forEach(function (o, g) {
       var sp = rotation[g % rotation.length];
       var me = { lineup: ordered, pitcher: { name: sp.name, rates: starterRates(sp) } };
@@ -483,21 +495,39 @@
       var res = meHome ? playGame(them, me, rng) : playGame(me, them, rng);
       var my = meHome ? res.home : res.away, their = meHome ? res.away : res.home;
       var box = meHome ? res.homeBox : res.awayBox;
+      var pit = meHome ? res.homePitch : res.awayPitch;   // our starter's line
       var win = my > their; if (win) w++; else l++;
       rf += my; ra += their;
       // star of the game: most H + 2*HR + RBI
-      var best = null, bv = -1;
-      Object.keys(box).forEach(function (i) {
-        var b = box[i], v = b.H + 2 * b.HR + b.RBI + 0.5 * b.R;
-        if (v > bv) { bv = v; best = { name: ordered[i].name, line: b }; }
-        var s = stars[ordered[i].name] || (stars[ordered[i].name] = { H: 0, AB: 0, HR: 0, RBI: 0 });
-        s.H += b.H; s.AB += b.AB; s.HR += b.HR; s.RBI += b.RBI;
+      var best = null, bv = -1, rows = [];
+      ordered.forEach(function (e, i) {
+        var b = box[i] || blankLine(), v = b.H + 2 * b.HR + b.RBI + 0.5 * b.R;
+        if (v > bv) { bv = v; best = { name: e.name, line: b }; }
+        var s = stars[e.name] || (stars[e.name] = Object.assign({ name: e.name, slot: e.slot }, blankLine()));
+        for (var k in b) s[k] += b[k];
+        rows.push(Object.assign({ name: e.name, slot: e.slot }, b));
       });
-      games.push({ n: g + 1, opp: o.name, home: meHome, my: my, their: their, win: win, innings: res.innings, sp: sp.name, star: best });
+      var a = arms[sp.name] || (arms[sp.name] = Object.assign({ name: sp.name, GS: 0, W: 0, L: 0 }, blankPitch()));
+      a.GS++; if (win) a.W++; else a.L++;
+      for (var pk in pit) a[pk] += pit[pk];
+      games.push({
+        n: g + 1, opp: o.name, home: meHome, my: my, their: their, win: win, innings: res.innings, sp: sp.name, star: best,
+        line: { my: meHome ? res.lineH : res.lineA, their: meHome ? res.lineA : res.lineH, myHits: meHome ? res.homeHits : res.awayHits, theirHits: meHome ? res.awayHits : res.homeHits },
+        box: rows,
+        pitch: { name: sp.name, IP: ipText(pit.outs), H: pit.H, R: pit.R, BB: pit.BB, K: pit.K, HR: pit.HR, dec: win ? 'W' : 'L' }
+      });
     });
     var mvp = null, mv = -1;
     Object.keys(stars).forEach(function (n) { var s = stars[n], v = s.H + 2 * s.HR + s.RBI; if (v > mv) { mv = v; mvp = { name: n, line: s }; } });
-    return { w: w, l: l, rf: rf, ra: ra, games: games, mvp: mvp, order: ordered.map(function (e) { return { name: e.name, slot: e.slot, fit: e.fit }; }) };
+    var batting = ordered.map(function (e) { var s = stars[e.name]; s.AVG = s.AB ? (s.H / s.AB).toFixed(3).replace(/^0/, '') : '.000'; return s; });
+    var pitching = rotation.map(function (c) {
+      var a = arms[c.name]; if (!a) return null;
+      var ip = a.outs / 3;
+      a.IP = ipText(a.outs); a.ERA = ip ? (a.R * 9 / ip).toFixed(2) : '-.--';
+      return a;
+    }).filter(Boolean);
+    return { w: w, l: l, rf: rf, ra: ra, games: games, mvp: mvp, batting: batting, pitching: pitching,
+      order: ordered.map(function (e) { return { name: e.name, slot: e.slot, fit: e.fit }; }) };
   }
 
   function verdict(w) {

@@ -316,6 +316,42 @@
     renderResult(rec, true);
   }
 
+  /* ---------- box scores ---------- */
+  function boxHTML(g) {
+    var us = 'Your nine', them = g.opp;
+    var awayName = g.home ? them : us, homeName = g.home ? us : them;
+    var awayLine = g.home ? g.line.their : g.line.my, homeLine = g.home ? g.line.my : g.line.their;
+    var awayR = g.home ? g.their : g.my, homeR = g.home ? g.my : g.their;
+    var awayH = g.home ? g.line.theirHits : g.line.myHits, homeH = g.home ? g.line.myHits : g.line.theirHits;
+    var n = Math.max(awayLine.length, homeLine.length), head = '', i;
+    for (i = 1; i <= n; i++) head += '<th scope="col">' + i + '</th>';
+    function cells(L) { var h = ''; for (var j = 0; j < n; j++) h += '<td>' + (L[j] == null ? '' : L[j]) + '</td>'; return h; }
+    var line = '<div class="scroll"><table class="ls"><caption class="sr">Line score</caption><thead><tr><th scope="col"></th>' + head + '<th scope="col">R</th><th scope="col">H</th></tr></thead><tbody>' +
+      '<tr><th scope="row">' + esc(awayName) + '</th>' + cells(awayLine) + '<td class="t">' + awayR + '</td><td class="t">' + awayH + '</td></tr>' +
+      '<tr><th scope="row">' + esc(homeName) + '</th>' + cells(homeLine) + '<td class="t">' + homeR + '</td><td class="t">' + homeH + '</td></tr></tbody></table></div>';
+    var bat = '<div class="scroll"><table class="bx"><caption>Batting</caption><thead><tr><th scope="col">Batter</th><th scope="col">AB</th><th scope="col">R</th><th scope="col">H</th><th scope="col">RBI</th><th scope="col">BB</th><th scope="col">K</th></tr></thead><tbody>' +
+      g.box.map(function (b) {
+        var xb = []; if (b.D) xb.push(b.D > 1 ? b.D + ' 2B' : '2B'); if (b.T) xb.push(b.T > 1 ? b.T + ' 3B' : '3B'); if (b.HR) xb.push(b.HR > 1 ? b.HR + ' HR' : 'HR');
+        return '<tr><th scope="row">' + esc(b.name) + ' <span class="pos-s">' + esc(b.slot) + '</span>' + (xb.length ? ' <span class="xb">' + xb.join(', ') + '</span>' : '') + '</th>' +
+          '<td>' + b.AB + '</td><td>' + b.R + '</td><td>' + b.H + '</td><td>' + b.RBI + '</td><td>' + b.BB + '</td><td>' + b.K + '</td></tr>';
+      }).join('') + '</tbody></table></div>';
+    var p = g.pitch;
+    var pit = '<div class="scroll"><table class="bx"><caption>Pitching</caption><thead><tr><th scope="col">Pitcher</th><th scope="col">IP</th><th scope="col">H</th><th scope="col">R</th><th scope="col">BB</th><th scope="col">K</th><th scope="col">HR</th></tr></thead><tbody>' +
+      '<tr><th scope="row">' + esc(p.name) + ' <span class="pos-s">(' + p.dec + ')</span></th><td>' + p.IP + '</td><td>' + p.H + '</td><td>' + p.R + '</td><td>' + p.BB + '</td><td>' + p.K + '</td><td>' + p.HR + '</td></tr></tbody></table></div>';
+    return line + bat + pit;
+  }
+  function seasonHTML(s) {
+    var bat = '<div class="scroll"><table class="bx"><caption>Batting</caption><thead><tr><th scope="col">Batter</th><th scope="col">AVG</th><th scope="col">AB</th><th scope="col">H</th><th scope="col">2B</th><th scope="col">HR</th><th scope="col">RBI</th><th scope="col">R</th><th scope="col">BB</th><th scope="col">K</th></tr></thead><tbody>' +
+      s.batting.map(function (b) {
+        return '<tr><th scope="row">' + esc(b.name) + ' <span class="pos-s">' + esc(b.slot) + '</span></th><td>' + b.AVG + '</td><td>' + b.AB + '</td><td>' + b.H + '</td><td>' + b.D + '</td><td>' + b.HR + '</td><td>' + b.RBI + '</td><td>' + b.R + '</td><td>' + b.BB + '</td><td>' + b.K + '</td></tr>';
+      }).join('') + '</tbody></table></div>';
+    var pit = '<div class="scroll"><table class="bx"><caption>Pitching</caption><thead><tr><th scope="col">Pitcher</th><th scope="col">W-L</th><th scope="col">ERA</th><th scope="col">IP</th><th scope="col">H</th><th scope="col">BB</th><th scope="col">K</th><th scope="col">HR</th></tr></thead><tbody>' +
+      s.pitching.map(function (p) {
+        return '<tr><th scope="row">' + esc(p.name) + '</th><td>' + p.W + '-' + p.L + '</td><td>' + p.ERA + '</td><td>' + p.IP + '</td><td>' + p.H + '</td><td>' + p.BB + '</td><td>' + p.K + '</td><td>' + p.HR + '</td></tr>';
+      }).join('') + '</tbody></table></div>';
+    return '<div class="season-stats"><h2>Season stats</h2>' + bat + pit + '</div>';
+  }
+
   function renderResult(rec, animate) {
     var s = rec.season, diff = s.rf - s.ra;
     var share = R.shareText(rec.date, rec.pack, s);
@@ -332,21 +368,26 @@
       FINAL +
       '<div class="games" id="games">' + s.games.map(function (g) {
         var star = g.star && g.star.line ? g.star.name + ' ' + g.star.line.H + '-for-' + g.star.line.AB + (g.star.line.HR ? ', ' + g.star.line.HR + ' HR' : '') + (g.star.line.RBI ? ', ' + g.star.line.RBI + ' RBI' : '') : '';
-        return '<div class="game ' + (g.win ? 'w' : 'l') + (animate ? ' pending' : '') + '" data-n="' + g.n + '">' +
-          '<span class="wl" aria-label="' + (g.win ? 'Win' : 'Loss') + '">' + (g.win ? 'W' : 'L') + '</span>' +
+        var row = '<span class="wl" aria-label="' + (g.win ? 'Win' : 'Loss') + '">' + (g.win ? 'W' : 'L') + '</span>' +
           '<span class="opp"><b>' + (g.home ? 'vs ' : 'at ') + esc(g.opp) + '</b><small>' + esc((g.sp ? g.sp + ' started. ' : '') + star + (g.innings > 9 ? ' (' + g.innings + ' inn)' : '')) + '</small></span>' +
-          '<span class="sc">' + g.my + '-' + g.their + '</span></div>';
-      }).join('') + '</div></section>';
+          '<span class="sc">' + g.my + '-' + g.their + '</span>';
+        // Results saved before box scores existed have no g.box: they stay a plain row.
+        if (!g.box) return '<div class="game ' + (g.win ? 'w' : 'l') + (animate ? ' pending' : '') + '" data-n="' + g.n + '">' + row + '</div>';
+        return '<details class="game-d ' + (g.win ? 'w' : 'l') + (animate ? ' pending' : '') + '" data-n="' + g.n + '"><summary class="game">' + row +
+          '<span class="more" aria-hidden="true">Box</span></summary><div class="boxscore">' + boxHTML(g) + '</div></details>';
+      }).join('') + '</div>' +
+      (s.batting ? seasonHTML(s).replace('<div class="season-stats">', '<div class="season-stats' + (animate ? ' hidden' : '') + '" id="seasonStats">') : '') +
+      '</section>';
     document.getElementById('share').onclick = function () {
       if (navigator.share && /Mobi|Android|iPhone|iPad/i.test(navigator.userAgent)) { navigator.share({ text: share }).catch(function () {}); return; }
       (navigator.clipboard ? navigator.clipboard.writeText(share) : Promise.reject()).then(function () { toast('Copied. Paste it in the group chat.'); }, function () { prompt('Copy your result:', share); });
     };
     if (OFFICIAL) tick();
     if (animate) {
-      var rows = app.querySelectorAll('.game'), i = 0, rm = matchMedia('(prefers-reduced-motion: reduce)').matches;
+      var rows = app.querySelectorAll('#games > .pending'), i = 0, rm = matchMedia('(prefers-reduced-motion: reduce)').matches;
       (function next() {
         if (i < rows.length) { rows[i++].classList.remove('pending'); setTimeout(next, rm ? 0 : 420); }
-        else document.getElementById('final').classList.remove('hidden');
+        else { document.getElementById('final').classList.remove('hidden'); var ss = document.getElementById('seasonStats'); if (ss) ss.classList.remove('hidden'); }
       })();
     }
   }

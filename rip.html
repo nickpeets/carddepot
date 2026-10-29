@@ -138,7 +138,36 @@ button.card:hover{border-color:var(--sky-deep)}
 .game .opp b{display:block;line-height:1.2}
 .game .opp small{color:#3e6584}
 .game .sc{font-family:var(--pix);font-size:13px;white-space:nowrap}
-.game.pending{opacity:.35}
+.game.pending,.game-d.pending{opacity:.35}
+/* box scores: each game row opens to its box score */
+.game-d{background:#fff;border:3px solid var(--navy);border-radius:12px}
+.game-d > summary.game{border:0;grid-template-columns:auto 1fr auto auto;cursor:pointer;list-style:none}
+.game-d > summary::-webkit-details-marker{display:none}
+.game-d > summary:focus-visible{outline:3px solid var(--gold);outline-offset:2px;border-radius:9px}
+.game-d.w .wl{background:var(--green)}
+.game-d.l .wl{background:var(--red);color:var(--cream)}
+.game-d .more{font-weight:800;font-size:13px;color:var(--navy);border:2px solid var(--navy);border-radius:8px;padding:0 8px;line-height:22px}
+.game-d .more::after{content:" ▾"}
+.game-d[open] .more::after{content:" ▴"}
+.boxscore{padding:4px 12px 12px;border-top:2px dashed #b9d3e3;display:grid;gap:10px}
+.scroll{overflow-x:auto;-webkit-overflow-scrolling:touch}
+table.ls,table.bx{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums;font-size:14px}
+table.ls th,table.ls td,table.bx th,table.bx td{padding:3px 6px;text-align:center;white-space:nowrap}
+table.ls thead th,table.bx thead th{font-size:12px;color:#3e6584;font-weight:700;border-bottom:2px solid var(--navy)}
+table.ls tbody th,table.bx tbody th{text-align:left;font-weight:700;color:var(--ink)}
+table.bx thead th:first-child{text-align:left}
+table.ls td.t{font-weight:800;color:var(--navy);border-left:2px solid #b9d3e3}
+table.bx tbody tr:nth-child(even){background:#f4f9fc}
+table.bx caption{text-align:left;font-weight:800;color:var(--navy);padding:2px 0 4px}
+.sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+.pos-s{font-weight:500;color:#3e6584;font-size:12px}
+.xb{font-weight:700;color:var(--orange-deep,#c9560f);font-size:12px}
+@media (max-width:480px){
+  table.ls,table.bx{font-size:13px}
+  table.ls th,table.ls td,table.bx th,table.bx td{padding:3px 4px}
+  .boxscore{padding:4px 8px 10px}
+}
+.season-stats{display:grid;gap:10px;background:#fff;border:3px solid var(--navy);border-radius:12px;padding:12px}
 .record{font-family:var(--pix);font-size:clamp(40px,12vw,72px);color:var(--navy);line-height:1;margin:6px 0 4px;text-shadow:4px 4px 0 var(--gold)}
 .verdict{font-weight:800;font-size:22px}
 .chips{font-size:24px;letter-spacing:2px;margin:6px 0}
